@@ -1,1 +1,38 @@
-/* You can add global styles to this file, and also import other style files */
+:root {
+  --allegria-primary: #d52f57;
+  --allegria-secondary: #f5a623;
+  --allegria-bg: #ffffff;
+  --allegria-bg-alt: #f7f7f9;
+  --allegria-text: #222222;
+  --allegria-muted: #777777;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--allegria-bg);
+  color: var(--allegria-text);
+  font-family: Inter, 'Segoe UI', Roboto, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.page {
+  padding: 1.25rem;
+  border: 1px solid #ececf1;
+  border-radius: 0.75rem;
+  background: #ffffff;
+}
+
+.page h1 {
+  margin: 0 0 0.5rem;
+  color: var(--allegria-primary);
+}
+
+.page p {
+  margin: 0;
+  color: var(--allegria-muted);
+}

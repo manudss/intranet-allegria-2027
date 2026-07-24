@@ -1,13 +1,11 @@
 import { Component } from '@angular/core';
-import { RouterModule } from '@angular/router';
-import { NxWelcome } from './nx-welcome';
+import { TuiRoot } from '@taiga-ui/core';
+import { Layout } from './layout';
 
 @Component({
-  imports: [NxWelcome, RouterModule],
+  imports: [TuiRoot, Layout],
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
-export class App {
-  protected title = 'web';
-}
+export class App {}

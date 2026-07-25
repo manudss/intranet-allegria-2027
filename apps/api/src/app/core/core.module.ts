@@ -1,4 +1,25 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from './auth/auth.module';
+import { AssignmentsModule } from './assignments/assignments.module';
+import { GroupsModule } from './groups/groups.module';
+import { HostFamiliesModule } from './host-families/host-families.module';
+import { ParticipantHealthModule } from './participant-health/participant-health.module';
+import { ParticipantsModule } from './participants/participants.module';
+import { TeamParticipantsModule } from './team-participants/team-participants.module';
+import { TeamsModule } from './teams/teams.module';
+import { VolunteersModule } from './volunteers/volunteers.module';
 
-@Module({})
+@Module({
+  imports: [
+    AuthModule,
+    GroupsModule,
+    ParticipantsModule,
+    TeamsModule,
+    TeamParticipantsModule,
+    VolunteersModule,
+    HostFamiliesModule,
+    AssignmentsModule,
+    ParticipantHealthModule,
+  ],
+})
 export class CoreModule {}

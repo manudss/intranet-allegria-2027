@@ -1,0 +1,41 @@
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Team } from './team.entity';
+import { User } from './user.entity';
+
+@Entity({ name: 'volunteers' })
+export class Volunteer {
+  @PrimaryGeneratedColumn()
+  id!: number;
+
+  @ManyToOne(() => User, (user) => user.volunteerProfiles, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'user_id' })
+  user!: User | null;
+
+  @Column({ type: 'varchar', length: 120 })
+  firstName!: string;
+
+  @Column({ type: 'varchar', length: 120 })
+  lastName!: string;
+
+  @Column({ type: 'varchar', length: 40, nullable: true })
+  phone!: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  email!: string | null;
+
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  team!: string | null;
+
+  @Column({ type: 'boolean', default: false })
+  isGroupLeader!: boolean;
+
+  @Column({ type: 'text', nullable: true })
+  notes!: string | null;
+
+  @OneToMany(() => Team, (team) => team.primaryAnimator)
+  primaryForTeams!: Team[];
+
+  @OneToMany(() => Team, (team) => team.secondaryAnimator)
+  secondaryForTeams!: Team[];
+}
+

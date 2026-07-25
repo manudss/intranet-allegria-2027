@@ -102,7 +102,9 @@
   overflow: hidden;
   border-right: 1px solid #ececf1;
   background: var(--allegria-bg-alt);
-  transition: width 0.24s ease, box-shadow 0.24s ease;
+  transition:
+    width 0.24s ease,
+    box-shadow 0.24s ease;
 }
 
 .allegria-sidebar.compact {
@@ -133,7 +135,10 @@
   opacity: 1;
   max-width: 18rem;
   transform: translateX(0);
-  transition: opacity 0.18s ease, transform 0.18s ease, max-width 0.18s ease;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    max-width 0.18s ease;
 }
 
 .nav-group {
@@ -153,7 +158,11 @@
   opacity: 1;
   max-height: 2rem;
   transform: translateX(0);
-  transition: opacity 0.18s ease, transform 0.18s ease, max-height 0.18s ease, margin 0.18s ease;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    max-height 0.18s ease,
+    margin 0.18s ease;
 }
 
 .allegria-sidebar a[tuiLink] {
@@ -172,7 +181,10 @@
   opacity: 1;
   max-width: 16rem;
   transform: translateX(0);
-  transition: opacity 0.18s ease, transform 0.18s ease, max-width 0.18s ease;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    max-width 0.18s ease;
 }
 
 .allegria-sidebar.compact .allegria-nav {
@@ -317,4 +329,3 @@
     padding: 1rem;
   }
 }
-

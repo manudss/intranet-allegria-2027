@@ -14,9 +14,9 @@
 	<div class="header-right">
 	  <button tuiButton appearance="secondary" type="button">
 		<tui-icon icon="@tui.user"></tui-icon>
-		<span>Coordination</span>
+		<span>{{ auth.currentUser()?.email ?? 'Utilisateur' }}</span>
 	  </button>
-	  <button tuiButton appearance="primary" type="button">Deconnexion</button>
+	  <button tuiButton appearance="primary" type="button" (click)="logout()">Deconnexion</button>
 	</div>
   </header>
 

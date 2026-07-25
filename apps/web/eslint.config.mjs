@@ -24,6 +24,8 @@ export default [
           style: 'kebab-case',
         },
       ],
+      // This application deliberately uses NgModules for feature boundaries.
+      '@angular-eslint/prefer-standalone': 'off',
     },
   },
   {

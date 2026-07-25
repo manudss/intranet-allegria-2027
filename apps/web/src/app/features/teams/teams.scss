@@ -1,0 +1,22 @@
+.filters,
+.member-add {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+}
+.over {
+  color: var(--tui-status-negative);
+}
+li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #eee;
+}
+@media (max-width: 700px) {
+  .filters,
+  .member-add {
+    grid-template-columns: 1fr;
+  }
+}

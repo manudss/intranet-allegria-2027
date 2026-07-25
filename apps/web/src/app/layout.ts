@@ -1,9 +1,9 @@
 import { Component, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
-import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { TuiButton, TuiIcon, TuiLink, TuiScrollbar } from '@taiga-ui/core';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { filter, startWith } from 'rxjs';
+import { AuthService } from './core/auth.service';
 
 type MenuItem = {
   label: string;
@@ -18,12 +18,12 @@ type MenuGroup = {
 
 @Component({
   selector: 'app-layout',
-  standalone: true,
-  imports: [RouterLink, RouterLinkActive, RouterOutlet, TuiButton, TuiIcon, TuiLink, TuiScrollbar],
+  standalone: false,
   templateUrl: './layout.html',
   styleUrl: './layout.scss',
 })
 export class Layout {
+  protected readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly titleService = inject(Title);
@@ -74,6 +74,10 @@ export class Layout {
       ],
     },
   ];
+
+  protected logout(): void {
+    this.auth.logout();
+  }
 
   constructor() {
     this.router.events

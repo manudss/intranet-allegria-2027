@@ -1,5 +1,6 @@
 import 'dotenv/config';
-import dataSource from '../typeorm.config';
+import { fakerFR as faker } from '@faker-js/faker';
+import { hashPassword } from '../../app/core/auth/password.util';
 import {
   AssignmentStatus,
   Group,
@@ -16,7 +17,7 @@ import {
   UserRole,
   Volunteer,
 } from '../../app/core/entities';
-import { hashPassword } from '../../app/core/auth/password.util';
+import dataSource from '../typeorm.config';
 
 type SeedProfileName = 'small' | 'medium' | 'large';
 
@@ -27,7 +28,6 @@ type SeedProfile = {
   hostFamilies: number;
   participantAssignmentRate: number;
   participantHealthRate: number;
-  participantTeamRate: number;
 };
 
 const PROFILES: Record<SeedProfileName, SeedProfile> = {
@@ -36,77 +36,26 @@ const PROFILES: Record<SeedProfileName, SeedProfile> = {
     participants: 450,
     volunteers: 110,
     hostFamilies: 120,
-    participantAssignmentRate: 0.82,
+    participantAssignmentRate: 0.84,
     participantHealthRate: 0.58,
-    participantTeamRate: 0.9,
   },
   medium: {
     groups: 20,
     participants: 4500,
     volunteers: 850,
     hostFamilies: 950,
-    participantAssignmentRate: 0.86,
+    participantAssignmentRate: 0.87,
     participantHealthRate: 0.64,
-    participantTeamRate: 0.93,
   },
   large: {
     groups: 36,
     participants: 24000,
     volunteers: 4200,
     hostFamilies: 6200,
-    participantAssignmentRate: 0.89,
+    participantAssignmentRate: 0.9,
     participantHealthRate: 0.68,
-    participantTeamRate: 0.95,
   },
 };
-
-class Rng {
-  private state: number;
-
-  constructor(seed: number) {
-    this.state = seed || 1;
-  }
-
-  next(): number {
-    // xorshift32 deterministic PRNG.
-    let x = this.state;
-    x ^= x << 13;
-    x ^= x >>> 17;
-    x ^= x << 5;
-    this.state = x >>> 0;
-    return (this.state % 1_000_000) / 1_000_000;
-  }
-
-  int(min: number, max: number): number {
-    return min + Math.floor(this.next() * (max - min + 1));
-  }
-
-  bool(probabilityTrue = 0.5): boolean {
-    return this.next() < probabilityTrue;
-  }
-
-  pick<T>(items: T[]): T {
-    return items[this.int(0, items.length - 1)];
-  }
-
-  pickNullable<T>(items: T[], probabilityNull: number): T | null {
-    if (this.bool(probabilityNull)) {
-      return null;
-    }
-
-    return this.pick(items);
-  }
-
-  shuffle<T>(items: T[]): T[] {
-    const copy = [...items];
-    for (let i = copy.length - 1; i > 0; i -= 1) {
-      const j = this.int(0, i);
-      [copy[i], copy[j]] = [copy[j], copy[i]];
-    }
-
-    return copy;
-  }
-}
 
 const dioceses = [
   'Paris',
@@ -131,93 +80,15 @@ const dioceses = [
   'Metz',
 ];
 
-const cities = [
-  'Lyon',
-  'Villeurbanne',
-  'Paris',
-  'Nanterre',
-  'Marseille',
-  'Aix-en-Provence',
-  'Lille',
-  'Roubaix',
-  'Nantes',
-  'Rennes',
-  'Grenoble',
-  'Bordeaux',
-  'Toulouse',
-  'Reims',
-  'Nancy',
-  'Dijon',
-  'Orleans',
-  'Rouen',
-  'Le Mans',
-  'Strasbourg',
-];
+const teamAdjectives = ['Aurore', 'Sillage', 'Kairos', 'Orion', 'Etincelle', 'Horizon', 'Azimut', 'Atlas'];
+const teamNouns = ['Nomades', 'Pionniers', 'Sentinelles', 'Voyageurs', 'Boussoles', 'Eclaireurs', 'Convergences'];
 
-const firstNames = [
-  'Emma',
-  'Lucas',
-  'Jade',
-  'Nathan',
-  'Louise',
-  'Gabriel',
-  'Chloe',
-  'Raphael',
-  'Ines',
-  'Arthur',
-  'Camille',
-  'Noah',
-  'Lena',
-  'Hugo',
-  'Sarah',
-  'Paul',
-  'Manon',
-  'Ethan',
-  'Lea',
-  'Louis',
-  'Sofia',
-  'Tom',
-  'Nina',
-  'Jules',
-  'Mila',
-  'Leo',
-  'Rose',
-  'Theo',
-  'Zoé',
-  'Maxime',
-];
-
-const lastNames = [
-  'Martin',
-  'Bernard',
-  'Thomas',
-  'Petit',
-  'Robert',
-  'Richard',
-  'Durand',
-  'Dubois',
-  'Moreau',
-  'Laurent',
-  'Simon',
-  'Michel',
-  'Lefebvre',
-  'Garcia',
-  'David',
-  'Bertrand',
-  'Roux',
-  'Vincent',
-  'Fournier',
-  'Morel',
-  'Girard',
-  'Andre',
-  'Lefevre',
-  'Mercier',
-  'Dupont',
-  'Lambert',
-  'Bonnet',
-  'Francois',
-  'Martinez',
-  'Legrand',
+const sexValues = [ParticipantSex.FEMALE, ParticipantSex.MALE, ParticipantSex.OTHER, ParticipantSex.UNDISCLOSED];
+const assignmentStatuses = [
+  AssignmentStatus.CONFIRMED,
+  AssignmentStatus.PLANNED,
+  AssignmentStatus.COMPLETED,
+  AssignmentStatus.CANCELLED,
 ];
 
 const ROLE_CODES = {
@@ -249,30 +120,95 @@ const parseProfile = (): SeedProfileName => {
   throw new Error(`Profil invalide: ${rawValue}. Valeurs autorisees: small|medium|large`);
 };
 
-const formatDate = (year: number, month: number, day: number): string => {
-  const mm = month.toString().padStart(2, '0');
-  const dd = day.toString().padStart(2, '0');
-  return `${year}-${mm}-${dd}`;
+const toDateString = (date: Date): string => date.toISOString().slice(0, 10);
+
+const chance = (probabilityTrue: number): boolean => faker.number.float({ min: 0, max: 1 }) < probabilityTrue;
+
+const pick = <T>(items: T[]): T => faker.helpers.arrayElement(items);
+
+const participantAgeDate = (): string => {
+  const birthday = faker.date.birthdate({ mode: 'age', min: 12, max: 18, refDate: new Date('2027-07-20') });
+  return toDateString(birthday);
 };
 
-const sexValues = [ParticipantSex.FEMALE, ParticipantSex.MALE, ParticipantSex.OTHER, ParticipantSex.UNDISCLOSED];
-const assignmentStatuses = [
-  AssignmentStatus.CONFIRMED,
-  AssignmentStatus.PLANNED,
-  AssignmentStatus.COMPLETED,
-  AssignmentStatus.CANCELLED,
-];
+const normalizeText = (value: string): string =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z]/g, '')
+    .toLowerCase();
+
+const splitEvenly = (total: number, parts: number): number[] => {
+  const base = Math.floor(total / parts);
+  const remainder = total % parts;
+  return Array.from({ length: parts }, (_, index) => base + (index < remainder ? 1 : 0));
+};
+
+const computeTeamCount = (participantsCount: number): number => {
+  const minTeams = Math.ceil(participantsCount / 10);
+  const maxTeams = Math.floor(participantsCount / 5);
+  const target = Math.ceil(participantsCount / 8);
+  return Math.min(maxTeams, Math.max(minTeams, target));
+};
+
+const buildTeamSizes = (participantsCount: number, teamCount: number): number[] => {
+  const sizes = splitEvenly(participantsCount, teamCount);
+
+  for (const size of sizes) {
+    if (size < 5 || size > 10) {
+      throw new Error(
+        `Impossible de generer des equipes 5-10 pour ${participantsCount} participants et ${teamCount} equipes`,
+      );
+    }
+  }
+
+  return sizes;
+};
+
+const allocateVolunteersPerGroup = (teamCountsPerGroup: number[], volunteersTotal: number): number[] => {
+  const minTotal = teamCountsPerGroup.reduce((sum, count) => sum + count, 0);
+  const maxTotal = teamCountsPerGroup.reduce((sum, count) => sum + count * 2, 0);
+
+  if (volunteersTotal < minTotal || volunteersTotal > maxTotal) {
+    throw new Error(
+      `Volumetrie animateurs invalide: volunteers=${volunteersTotal}, attendu entre ${minTotal} et ${maxTotal}`,
+    );
+  }
+
+  const allocated = [...teamCountsPerGroup];
+  let remaining = volunteersTotal - minTotal;
+  let cursor = 0;
+
+  while (remaining > 0) {
+    const index = cursor % allocated.length;
+    if (allocated[index] < teamCountsPerGroup[index] * 2) {
+      allocated[index] += 1;
+      remaining -= 1;
+    }
+    cursor += 1;
+  }
+
+  return allocated;
+};
+
+const teamNameFrom = (group: Group, groupTeamIndex: number, globalTeamIndex: number): string => {
+  const dioceseCode = (group.diocese ?? 'MEJ').slice(0, 3).toUpperCase();
+  const adjective = teamAdjectives[globalTeamIndex % teamAdjectives.length];
+  const noun = teamNouns[groupTeamIndex % teamNouns.length];
+  const serial = String(globalTeamIndex + 1).padStart(3, '0');
+  return `${dioceseCode}-${adjective}-${noun}-${serial}`;
+};
 
 async function run(): Promise<void> {
   const profileName = parseProfile();
   const profile = PROFILES[profileName];
-  const rng = new Rng(20270725 + profile.participants);
+
+  faker.seed(20270725 + profile.participants);
 
   await dataSource.initialize();
 
   try {
     const queryRunner = dataSource.createQueryRunner();
-
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
@@ -323,56 +259,13 @@ async function run(): Promise<void> {
     );
     const roleByCode = new Map(roles.map((role) => [role.code, role]));
 
-    const baseUsers: Array<Partial<User>> = [
-      {
-        email: 'admin@allegria.local',
-        passwordHash: hashPassword('Admin#2027!'),
-        isActive: true,
-      },
-      {
-        email: 'sante@allegria.local',
-        passwordHash: hashPassword('Health#2027!'),
-        isActive: true,
-      },
-      {
-        email: 'coordination@allegria.local',
-        passwordHash: hashPassword('Coord#2027!'),
-        isActive: true,
-      },
-    ];
-
-    const animatorUserCount = Math.floor(profile.volunteers * 0.45);
-    const logisticUserCount = Math.max(8, Math.floor(profile.groups * 1.2));
-
-    for (let i = 0; i < animatorUserCount; i += 1) {
-      baseUsers.push({
-        email: `animator.${i + 1}@allegria.local`,
-        passwordHash: hashPassword(`Anim#${(i + 1000).toString(36)}!`),
-        isActive: true,
-      });
-    }
-
-    for (let i = 0; i < logisticUserCount; i += 1) {
-      baseUsers.push({
-        email: `logistic.${i + 1}@allegria.local`,
-        passwordHash: hashPassword(`Log#${(i + 500).toString(36)}!`),
-        isActive: true,
-      });
-    }
-
-    const users = await userRepository.save(baseUsers.map((user) => userRepository.create(user)), { chunk: 500 });
-
-    const [adminUser, healthUser, coordinatorUser, ...otherUsers] = users;
-
-    const userRoles: UserRole[] = [];
-
-    const pushRole = (user: User, code: string): void => {
+    const pushRole = (list: UserRole[], user: User, code: string): void => {
       const role = roleByCode.get(code);
       if (!role) {
         return;
       }
 
-      userRoles.push(
+      list.push(
         userRoleRepository.create({
           user,
           role,
@@ -382,24 +275,56 @@ async function run(): Promise<void> {
       );
     };
 
-    pushRole(adminUser, ROLE_CODES.admin);
-    pushRole(adminUser, ROLE_CODES.coordinator);
-    pushRole(adminUser, ROLE_CODES.health);
-    pushRole(healthUser, ROLE_CODES.health);
-    pushRole(coordinatorUser, ROLE_CODES.coordinator);
+    const participantsPerGroup = splitEvenly(profile.participants, profile.groups);
+    const teamCountsPerGroup = participantsPerGroup.map((count) => computeTeamCount(count));
+    const volunteersPerGroup = allocateVolunteersPerGroup(teamCountsPerGroup, profile.volunteers);
 
-    for (let i = 0; i < otherUsers.length; i += 1) {
-      const user = otherUsers[i];
-      if (i < animatorUserCount) {
-        pushRole(user, ROLE_CODES.animator);
-        if (rng.bool(0.08)) {
-          pushRole(user, ROLE_CODES.coordinator);
-        }
-      } else {
-        pushRole(user, ROLE_CODES.logistics);
-        if (rng.bool(0.25)) {
-          pushRole(user, ROLE_CODES.viewer);
-        }
+    const baseUsers: Array<Partial<User>> = [
+      { email: 'admin@allegria.local', passwordHash: hashPassword('Admin#2027!'), isActive: true },
+      { email: 'sante@allegria.local', passwordHash: hashPassword('Health#2027!'), isActive: true },
+      { email: 'coordination@allegria.local', passwordHash: hashPassword('Coord#2027!'), isActive: true },
+    ];
+
+    for (let i = 0; i < profile.volunteers; i += 1) {
+      baseUsers.push({
+        email: `animator.${i + 1}@allegria.local`,
+        passwordHash: hashPassword(`Anim#${(i + 1000).toString(36)}!`),
+        isActive: true,
+      });
+    }
+
+    const logisticCount = Math.max(8, Math.ceil(profile.groups * 1.5));
+    for (let i = 0; i < logisticCount; i += 1) {
+      baseUsers.push({
+        email: `logistic.${i + 1}@allegria.local`,
+        passwordHash: hashPassword(`Log#${(i + 2000).toString(36)}!`),
+        isActive: true,
+      });
+    }
+
+    const users = await userRepository.save(baseUsers.map((user) => userRepository.create(user)), { chunk: 1000 });
+    const [adminUser, healthUser, coordinatorUser, ...remainingUsers] = users;
+    const animatorUsers = remainingUsers.slice(0, profile.volunteers);
+    const logisticUsers = remainingUsers.slice(profile.volunteers);
+
+    const userRoles: UserRole[] = [];
+    pushRole(userRoles, adminUser, ROLE_CODES.admin);
+    pushRole(userRoles, adminUser, ROLE_CODES.coordinator);
+    pushRole(userRoles, adminUser, ROLE_CODES.health);
+    pushRole(userRoles, healthUser, ROLE_CODES.health);
+    pushRole(userRoles, coordinatorUser, ROLE_CODES.coordinator);
+
+    for (const animatorUser of animatorUsers) {
+      pushRole(userRoles, animatorUser, ROLE_CODES.animator);
+      if (chance(0.07)) {
+        pushRole(userRoles, animatorUser, ROLE_CODES.coordinator);
+      }
+    }
+
+    for (const logisticUser of logisticUsers) {
+      pushRole(userRoles, logisticUser, ROLE_CODES.logistics);
+      if (chance(0.22)) {
+        pushRole(userRoles, logisticUser, ROLE_CODES.viewer);
       }
     }
 
@@ -410,175 +335,180 @@ async function run(): Promise<void> {
       const diocese = dioceses[i % dioceses.length];
       groupsToCreate.push(
         groupRepository.create({
-          name: `Groupe ${diocese} ${Math.floor(i / dioceses.length) + 1}`,
+          name: `Rassemblement ${diocese} ${Math.floor(i / dioceses.length) + 1}`,
           diocese,
           arrivalDatetime: new Date(`2027-07-${(19 + (i % 2)).toString().padStart(2, '0')}T08:00:00.000Z`),
-          departureDatetime: new Date(`2027-07-${(27 + (i % 2)).toString().padStart(2, '0')}T17:00:00.000Z`),
-          notes: rng.bool(0.2) ? 'Besoin d accompagnement transport gare.' : null,
+          departureDatetime: new Date(`2027-07-${(27 + (i % 2)).toString().padStart(2, '0')}T17:30:00.000Z`),
+          notes: chance(0.2) ? 'Arrivee en bus de nuit, accueil gare requis.' : null,
         }),
       );
     }
     const groups = await groupRepository.save(groupsToCreate, { chunk: 200 });
 
-    const animatorUsers = otherUsers.slice(0, animatorUserCount);
     const volunteersToCreate: Volunteer[] = [];
+    const volunteersByGroup = new Map<number, Volunteer[]>();
 
-    for (let i = 0; i < profile.volunteers; i += 1) {
-      const firstName = rng.pick(firstNames);
-      const lastName = rng.pick(lastNames);
-      const user = i < animatorUsers.length ? animatorUsers[i] : null;
-      const groupRef = groups[i % groups.length];
+    let animatorCursor = 0;
+    for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
+      const group = groups[groupIndex];
+      const groupVolunteers: Volunteer[] = [];
+      const localCount = volunteersPerGroup[groupIndex];
 
-      volunteersToCreate.push(
-        volunteerRepository.create({
+      for (let i = 0; i < localCount; i += 1) {
+        const user = animatorUsers[animatorCursor];
+        animatorCursor += 1;
+
+        const firstName = faker.person.firstName();
+        const lastName = faker.person.lastName();
+
+        const volunteer = volunteerRepository.create({
           user,
           firstName,
           lastName,
-          phone: `+336${rng.int(10_00_00_00, 99_99_99_99).toString().padStart(8, '0')}`,
-          email: user?.email ?? `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${i + 1}@example.org`,
-          team: `Pole ${groupRef.diocese}`,
-          isGroupLeader: i < groups.length * 2,
-          notes: rng.bool(0.08) ? 'Disponible en renfort nuit.' : null,
-        }),
-      );
+          phone: `+33${faker.string.numeric(9)}`,
+          email: user.email,
+          team: `Pole ${group.diocese}`,
+          isGroupLeader: i === 0 || chance(0.08),
+          notes: chance(0.09) ? 'Disponible en astreinte soir.' : null,
+        });
+
+        volunteersToCreate.push(volunteer);
+        groupVolunteers.push(volunteer);
+      }
+
+      volunteersByGroup.set(group.id, groupVolunteers);
     }
 
     const volunteers = await volunteerRepository.save(volunteersToCreate, { chunk: 1000 });
 
-    const participantsToCreate: Participant[] = [];
-    const groupPopulation = new Map<number, number>();
-
+    const volunteersByGroupSaved = new Map<number, Volunteer[]>();
+    let volunteerSaveCursor = 0;
     for (const group of groups) {
-      groupPopulation.set(group.id, 0);
+      const expectedCount = volunteersByGroup.get(group.id)?.length ?? 0;
+      volunteersByGroupSaved.set(group.id, volunteers.slice(volunteerSaveCursor, volunteerSaveCursor + expectedCount));
+      volunteerSaveCursor += expectedCount;
     }
 
-    for (let i = 0; i < profile.participants; i += 1) {
-      const group = groups[rng.int(0, groups.length - 1)];
-      const firstName = rng.pick(firstNames);
-      const lastName = rng.pick(lastNames);
-      const birthYear = rng.int(2009, 2015);
+    const participantsToCreate: Participant[] = [];
+    const participantsByGroup = new Map<number, Participant[]>();
 
-      participantsToCreate.push(
-        participantRepository.create({
+    for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
+      const group = groups[groupIndex];
+      const count = participantsPerGroup[groupIndex];
+      const localParticipants: Participant[] = [];
+
+      for (let i = 0; i < count; i += 1) {
+        const firstName = faker.person.firstName();
+        const lastName = faker.person.lastName();
+
+        const participant = participantRepository.create({
           firstName,
           lastName,
-          dateOfBirth: formatDate(birthYear, rng.int(1, 12), rng.int(1, 28)),
-          sex: sexValues[rng.int(0, sexValues.length - 1)],
-          emergencyContactName: `${rng.pick(firstNames)} ${lastName}`,
-          emergencyContactPhone: `+337${rng.int(10_00_00_00, 99_99_99_99).toString().padStart(8, '0')}`,
+          dateOfBirth: participantAgeDate(),
+          sex: pick(sexValues),
+          emergencyContactName: `${faker.person.firstName()} ${lastName}`,
+          emergencyContactPhone: `+33${faker.string.numeric(9)}`,
           diocese: group.diocese,
-          city: rng.pick(cities),
+          city: faker.location.city(),
           group,
-        }),
-      );
+        });
 
-      groupPopulation.set(group.id, (groupPopulation.get(group.id) ?? 0) + 1);
+        participantsToCreate.push(participant);
+        localParticipants.push(participant);
+      }
+
+      participantsByGroup.set(group.id, localParticipants);
     }
 
     const participants = await participantRepository.save(participantsToCreate, { chunk: 1000 });
 
-    const participantsByGroup = new Map<number, Participant[]>();
-    for (const participant of participants) {
-      const groupId = participant.group?.id;
-      if (!groupId) {
-        continue;
-      }
-
-      const current = participantsByGroup.get(groupId) ?? [];
-      current.push(participant);
-      participantsByGroup.set(groupId, current);
-    }
-
-    const volunteersByGroup = new Map<number, Volunteer[]>();
-    for (let i = 0; i < volunteers.length; i += 1) {
-      const group = groups[i % groups.length];
-      const current = volunteersByGroup.get(group.id) ?? [];
-      current.push(volunteers[i]);
-      volunteersByGroup.set(group.id, current);
+    const participantsByGroupSaved = new Map<number, Participant[]>();
+    let participantSaveCursor = 0;
+    for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
+      const group = groups[groupIndex];
+      const count = participantsPerGroup[groupIndex];
+      participantsByGroupSaved.set(group.id, participants.slice(participantSaveCursor, participantSaveCursor + count));
+      participantSaveCursor += count;
     }
 
     const teamsToCreate: Team[] = [];
+    const teamsByGroup = new Map<number, Team[]>();
+    let globalTeamIndex = 0;
 
-    for (const group of groups) {
-      const localParticipants = participantsByGroup.get(group.id) ?? [];
-      const localVolunteers = volunteersByGroup.get(group.id) ?? volunteers;
-      const targetSize = rng.int(7, 9);
-      const teamCount = Math.max(1, Math.ceil(localParticipants.length / targetSize));
+    for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
+      const group = groups[groupIndex];
+      const localParticipants = participantsByGroupSaved.get(group.id) ?? [];
+      const localVolunteers = volunteersByGroupSaved.get(group.id) ?? [];
+      const teamCount = teamCountsPerGroup[groupIndex];
+      const teamSizes = buildTeamSizes(localParticipants.length, teamCount);
 
+      const primaryVolunteers = [...localVolunteers.slice(0, teamCount)];
+      const secondaryVolunteers = localVolunteers.slice(teamCount);
+
+      const localTeams: Team[] = [];
       for (let i = 0; i < teamCount; i += 1) {
-        const primary = localVolunteers[i % localVolunteers.length];
-        const secondary = rng.bool(0.55) ? localVolunteers[(i + 3) % localVolunteers.length] : null;
-        const maxSize = rng.int(8, 10);
+        const primary = primaryVolunteers[i];
+        const secondary = i < secondaryVolunteers.length ? secondaryVolunteers[i] : null;
+        const maxSize = teamSizes[i];
 
-        teamsToCreate.push(
-          teamRepository.create({
-            name: `Equipe ${group.diocese} ${String(i + 1).padStart(2, '0')}`,
-            group,
-            primaryAnimator: primary,
-            secondaryAnimator: secondary,
-            maxSize,
-            notes: rng.bool(0.06) ? 'Equipe pilote pour l accueil.' : null,
-          }),
-        );
+        const team = teamRepository.create({
+          name: teamNameFrom(group, i, globalTeamIndex),
+          group,
+          primaryAnimator: primary,
+          secondaryAnimator: secondary,
+          maxSize,
+          notes: chance(0.07) ? 'Equipe repere pour accueil familles.' : null,
+        });
+
+        teamsToCreate.push(team);
+        localTeams.push(team);
+        globalTeamIndex += 1;
       }
+
+      teamsByGroup.set(group.id, localTeams);
     }
 
     const teams = await teamRepository.save(teamsToCreate, { chunk: 1000 });
 
-    const teamsByGroup = new Map<number, Team[]>();
-    for (const team of teams) {
-      const groupId = team.group?.id;
-      if (!groupId) {
-        continue;
-      }
-      const current = teamsByGroup.get(groupId) ?? [];
-      current.push(team);
-      teamsByGroup.set(groupId, current);
+    const teamsByGroupSaved = new Map<number, Team[]>();
+    let teamSaveCursor = 0;
+    for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
+      const group = groups[groupIndex];
+      const count = teamCountsPerGroup[groupIndex];
+      teamsByGroupSaved.set(group.id, teams.slice(teamSaveCursor, teamSaveCursor + count));
+      teamSaveCursor += count;
     }
 
     const teamParticipantsToCreate: TeamParticipant[] = [];
-    const assignedParticipantIds = new Set<number>();
 
-    for (const group of groups) {
-      const localParticipants = rng.shuffle(participantsByGroup.get(group.id) ?? []);
-      const localTeams = teamsByGroup.get(group.id) ?? [];
-      if (localTeams.length === 0) {
-        continue;
+    for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
+      const group = groups[groupIndex];
+      const localParticipants = faker.helpers.shuffle(participantsByGroupSaved.get(group.id) ?? []);
+      const localTeams = teamsByGroupSaved.get(group.id) ?? [];
+      const teamSizes = buildTeamSizes(localParticipants.length, localTeams.length);
+
+      let cursor = 0;
+      for (let teamIndex = 0; teamIndex < localTeams.length; teamIndex += 1) {
+        const team = localTeams[teamIndex];
+        const expectedSize = teamSizes[teamIndex];
+
+        for (let i = 0; i < expectedSize; i += 1) {
+          const participant = localParticipants[cursor];
+          cursor += 1;
+
+          teamParticipantsToCreate.push(
+            teamParticipantRepository.create({
+              team,
+              participant,
+              role: i === 0 && chance(0.2) ? TeamParticipantRole.ASSISTANT : TeamParticipantRole.MEMBER,
+              notes: chance(0.04) ? 'Referent logistique equipe.' : null,
+            }),
+          );
+        }
       }
 
-      const capacities = new Map<number, number>(localTeams.map((team) => [team.id, team.maxSize]));
-      let teamCursor = 0;
-
-      for (const participant of localParticipants) {
-        if (!rng.bool(profile.participantTeamRate)) {
-          continue;
-        }
-
-        let guard = 0;
-        while (guard < localTeams.length && (capacities.get(localTeams[teamCursor].id) ?? 0) <= 0) {
-          teamCursor = (teamCursor + 1) % localTeams.length;
-          guard += 1;
-        }
-
-        const team = localTeams[teamCursor];
-        const remaining = capacities.get(team.id) ?? 0;
-        if (remaining <= 0) {
-          continue;
-        }
-
-        capacities.set(team.id, remaining - 1);
-        teamCursor = (teamCursor + 1) % localTeams.length;
-
-        teamParticipantsToCreate.push(
-          teamParticipantRepository.create({
-            team,
-            participant,
-            role: rng.bool(0.12) ? TeamParticipantRole.ASSISTANT : TeamParticipantRole.MEMBER,
-            notes: rng.bool(0.05) ? 'Referent petits groupes.' : null,
-          }),
-        );
-
-        assignedParticipantIds.add(participant.id);
+      if (cursor !== localParticipants.length) {
+        throw new Error(`Affectation equipe incomplete pour le groupe ${group.id}`);
       }
     }
 
@@ -586,22 +516,23 @@ async function run(): Promise<void> {
 
     const hostFamiliesToCreate: HostFamily[] = [];
     for (let i = 0; i < profile.hostFamilies; i += 1) {
-      const lastName = rng.pick(lastNames);
-      const capacity = rng.int(2, 9);
+      const familyLastName = faker.person.lastName();
+      const capacity = faker.number.int({ min: 2, max: 9 });
+
       hostFamiliesToCreate.push(
         hostFamilyRepository.create({
-          familyName: `Famille ${lastName}-${i + 1}`,
-          address: `${rng.int(1, 160)} rue ${rng.pick(lastNames)}`,
-          postalCode: `${rng.int(10000, 95999)}`,
-          city: rng.pick(cities),
-          phone: rng.bool(0.96)
-            ? `+334${rng.int(10_00_00_00, 99_99_99_99).toString().padStart(8, '0')}`
+          familyName: `Famille ${familyLastName}`,
+          address: faker.location.streetAddress(),
+          postalCode: faker.location.zipCode('#####'),
+          city: faker.location.city(),
+          phone: chance(0.95) ? `+33${faker.string.numeric(9)}` : null,
+          email: chance(0.9)
+            ? `famille.${normalizeText(familyLastName)}.${i + 1}@example.org`
             : null,
-          email: rng.bool(0.92) ? `famille.${lastName.toLowerCase()}.${i + 1}@example.org` : null,
           maxCapacity: capacity,
-          maxUnder18: Math.max(0, capacity - rng.int(0, 2)),
-          parish: rng.bool(0.68) ? `Paroisse ${rng.pick(lastNames)}` : null,
-          notes: rng.bool(0.08) ? 'Animaux presents dans la maison.' : null,
+          maxUnder18: Math.max(0, capacity - faker.number.int({ min: 0, max: 2 })),
+          parish: chance(0.7) ? `Paroisse ${faker.person.lastName()}` : null,
+          notes: chance(0.1) ? 'Animaux de compagnie presents.' : null,
         }),
       );
     }
@@ -613,14 +544,13 @@ async function run(): Promise<void> {
     );
 
     const assignmentsToCreate: ParticipantHostFamilyAssignment[] = [];
-
     for (const participant of participants) {
-      if (!rng.bool(profile.participantAssignmentRate)) {
+      if (!chance(profile.participantAssignmentRate)) {
         continue;
       }
 
-      const family = hostFamilies[rng.int(0, hostFamilies.length - 1)];
-      const status = assignmentStatuses[rng.int(0, assignmentStatuses.length - 1)];
+      const family = pick(hostFamilies);
+      const status = pick(assignmentStatuses);
       const remaining = familyRemainingCapacity.get(family.id) ?? 0;
 
       if (status !== AssignmentStatus.CANCELLED && remaining <= 0) {
@@ -641,14 +571,13 @@ async function run(): Promise<void> {
           notes:
             status === AssignmentStatus.CANCELLED
               ? 'Affectation annulee suite desistement famille.'
-              : rng.bool(0.06)
-                ? 'Besoin lit bas en raison douleur genou.'
+              : chance(0.06)
+                ? 'Prefere dortoir calme.'
                 : null,
         }),
       );
 
-      // Small percentage with reassignment history for edge cases.
-      if (rng.bool(0.04) && status !== AssignmentStatus.CANCELLED) {
+      if (status !== AssignmentStatus.CANCELLED && chance(0.04)) {
         assignmentsToCreate.push(
           assignmentRepository.create({
             participant,
@@ -656,7 +585,7 @@ async function run(): Promise<void> {
             arrivalDate: '2027-07-19',
             departureDate: '2027-07-21',
             status: AssignmentStatus.CANCELLED,
-            notes: 'Historique: reassigne apres incident logistique.',
+            notes: 'Historique: reaffecte apres ajustement transport.',
           }),
         );
       }
@@ -666,36 +595,30 @@ async function run(): Promise<void> {
 
     const medicalAuthors = [adminUser, healthUser];
     const participantHealthToCreate: ParticipantHealth[] = [];
-
     for (const participant of participants) {
-      if (!rng.bool(profile.participantHealthRate)) {
+      if (!chance(profile.participantHealthRate)) {
         continue;
       }
 
       participantHealthToCreate.push(
         participantHealthRepository.create({
           participant,
-          medicalConditions: rng.pickNullable(['Asthme', 'Diabete de type 1', 'Epilepsie', 'Aucune'], 0.52),
-          allergies: rng.pickNullable(['Arachides', 'Pollen', 'Aucune', 'Lactose'], 0.5),
-          medications: rng.pickNullable(
-            ['Ventoline', 'Insuline', 'Traitement antihistaminique', 'Aucun traitement'],
-            0.5,
-          ),
-          specialNeeds: rng.pickNullable(
-            ['Suivi animateur de reference', 'Temps calme quotidien', 'Aucun besoin specifique'],
-            0.62,
-          ),
-          dietaryNotes: rng.pickNullable(['Sans porc', 'Vegetarien', 'Aucune consigne'], 0.6),
-          emergencyInstructions: rng.pickNullable(
-            [
-              'Appeler SAMU si detresse respiratoire.',
-              'Contacter medecin traitant avant toute medicamentation.',
-              'Informer immediatement les responsables sante.',
-            ],
-            0.55,
-          ),
-          lastUpdatedAt: new Date(`2027-07-${rng.int(1, 25).toString().padStart(2, '0')}T12:00:00.000Z`),
-          lastUpdatedBy: medicalAuthors[rng.int(0, medicalAuthors.length - 1)],
+          medicalConditions: chance(0.5) ? pick(['Asthme', 'Diabete type 1', 'Epilepsie', 'Aucune']) : null,
+          allergies: chance(0.5) ? pick(['Arachides', 'Pollen', 'Lactose', 'Aucune']) : null,
+          medications: chance(0.5) ? pick(['Ventoline', 'Insuline', 'Antihistaminique', 'Aucun traitement']) : null,
+          specialNeeds: chance(0.4)
+            ? pick(['Suivi animateur referent', 'Temps calme quotidien', 'Aucun besoin specifique'])
+            : null,
+          dietaryNotes: chance(0.4) ? pick(['Sans porc', 'Vegetarien', 'Sans lactose']) : null,
+          emergencyInstructions: chance(0.45)
+            ? pick([
+                'Appeler le SAMU si detresse respiratoire.',
+                'Contacter les responsables sante en priorite.',
+                'Suivre la fiche d urgence remise au groupe.',
+              ])
+            : null,
+          lastUpdatedAt: faker.date.between({ from: '2027-07-01T00:00:00.000Z', to: '2027-07-25T23:59:59.000Z' }),
+          lastUpdatedBy: pick(medicalAuthors),
         }),
       );
     }
@@ -714,7 +637,7 @@ async function run(): Promise<void> {
     console.log(`Host families: ${hostFamilies.length}`);
     console.log(`Assignments: ${assignmentsToCreate.length}`);
     console.log(`Health records: ${participantHealthToCreate.length}`);
-    console.log(`Unassigned participants (team): ${participants.length - assignedParticipantIds.size}`);
+    console.log(`Unassigned participants (team): ${participants.length - teamParticipantsToCreate.length}`);
     console.log('Comptes de test:');
     console.log('- admin@allegria.local / Admin#2027!');
     console.log('- sante@allegria.local / Health#2027!');
@@ -728,4 +651,3 @@ run().catch((error) => {
   console.error('Echec du seed:', error);
   process.exitCode = 1;
 });
-

@@ -65,7 +65,7 @@ export class GroupsService {
   getParticipants(groupId: number): Promise<Participant[]> {
     return this.participantsRepository.find({
       where: { group: { id: groupId } },
-      relations: ['group'],
+      relations: { group: true },
       order: { lastName: 'ASC', firstName: 'ASC' },
     });
   }
@@ -73,9 +73,10 @@ export class GroupsService {
   getTeams(groupId: number): Promise<Team[]> {
     return this.teamsRepository.find({
       where: { group: { id: groupId } },
-      relations: ['group', 'primaryAnimator', 'secondaryAnimator'],
+      relations: { group: true, primaryAnimator: true, secondaryAnimator: true },
       order: { name: 'ASC' },
     });
   }
 }
+
 

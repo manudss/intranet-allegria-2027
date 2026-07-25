@@ -30,7 +30,7 @@ export class TeamParticipantsService {
 
     const existingMembership = await this.teamParticipantsRepository.findOne({
       where: { team: { id: teamId }, participant: { id: dto.participantId } },
-      relations: ['team', 'participant'],
+      relations: { team: true, participant: true },
     });
 
     if (existingMembership) {
@@ -56,7 +56,7 @@ export class TeamParticipantsService {
   async removeParticipant(teamId: number, participantId: number): Promise<void> {
     const membership = await this.teamParticipantsRepository.findOne({
       where: { team: { id: teamId }, participant: { id: participantId } },
-      relations: ['team', 'participant'],
+      relations: { team: true, participant: true },
     });
 
     if (!membership) {
@@ -66,4 +66,6 @@ export class TeamParticipantsService {
     await this.teamParticipantsRepository.remove(membership);
   }
 }
+
+
 

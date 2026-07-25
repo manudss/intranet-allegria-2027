@@ -20,7 +20,7 @@ export class ParticipantHealthService {
 
     return this.participantHealthRepository.findOne({
       where: { participant: { id: participantId } },
-      relations: ['participant', 'lastUpdatedBy'],
+      relations: { participant: true, lastUpdatedBy: true },
     });
   }
 
@@ -39,7 +39,7 @@ export class ParticipantHealthService {
 
     const existing = await this.participantHealthRepository.findOne({
       where: { participant: { id: participantId } },
-      relations: ['participant', 'lastUpdatedBy'],
+      relations: { participant: true, lastUpdatedBy: true },
     });
 
     const health = existing ?? this.participantHealthRepository.create({ participant });
@@ -63,4 +63,5 @@ export class ParticipantHealthService {
     return participant;
   }
 }
+
 

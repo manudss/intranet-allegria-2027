@@ -18,9 +18,19 @@ This folder contains the first functional backend domains for Allegria 2027.
 
 `participant-health` endpoints are protected with `AuthTokenGuard` + `RoleGuard` and require role `ADMIN` or `HEALTH`.
 
+## Swagger
+
+- Swagger UI is exposed at `/api/docs`
+- Login once via `/api/auth/login`, then use `Authorize` with `Bearer <token>`
+
+## Seed data
+
+- Seed runner: `apps/api/src/database/seeds/seed.ts`
+- Profiles: `small`, `medium`, `large`
+- The seed is deterministic and regenerates coherent test data with edge cases and volume.
+
 ## Quick local flow
 
 1. Run migrations.
-2. Create a user with role `ADMIN`.
-3. Login with `/api/auth/login` and use `Authorization: Bearer <token>`.
-
+2. Run one seed profile.
+3. Open `/api/docs` and test the API with generated accounts.

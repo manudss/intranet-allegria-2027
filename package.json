@@ -16,9 +16,9 @@
     "migration:generate": "npm run typeorm -- migration:generate apps/api/src/database/migrations/InitSchema",
     "migration:run": "npm run typeorm -- migration:run",
     "migration:revert": "npm run typeorm -- migration:revert",
-    "seed:api": "node --loader ts-node/esm apps/api/src/database/seeds/seed.ts --profile=medium",
-    "seed:api:small": "node --loader ts-node/esm apps/api/src/database/seeds/seed.ts --profile=small",
-    "seed:api:large": "node --loader ts-node/esm apps/api/src/database/seeds/seed.ts --profile=large"
+    "seed:api": "tsx apps/api/src/database/seeds/seed.ts --profile=medium",
+    "seed:api:small": "tsx apps/api/src/database/seeds/seed.ts --profile=small",
+    "seed:api:large": "tsx apps/api/src/database/seeds/seed.ts --profile=large"
   },
   "private": true,
   "devDependencies": {
@@ -55,6 +55,7 @@
     "nx": "23.1.0",
     "prettier": "^3.9.6",
     "ts-node": "^10.9.2",
+    "tsx": "^4.20.5",
     "tslib": "^2.3.0",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.58.0",

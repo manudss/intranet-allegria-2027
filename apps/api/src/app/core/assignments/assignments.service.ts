@@ -46,7 +46,7 @@ export class AssignmentsService {
 
   findAll(): Promise<ParticipantHostFamilyAssignment[]> {
     return this.assignmentsRepository.find({
-      relations: ['participant', 'hostFamily'],
+      relations: { participant: true, hostFamily: true },
       order: { id: 'DESC' },
     });
   }
@@ -54,7 +54,7 @@ export class AssignmentsService {
   async findOne(id: number): Promise<ParticipantHostFamilyAssignment> {
     const assignment = await this.assignmentsRepository.findOne({
       where: { id },
-      relations: ['participant', 'hostFamily'],
+      relations: { participant: true, hostFamily: true },
     });
 
     if (!assignment) {
@@ -68,15 +68,23 @@ export class AssignmentsService {
     const assignment = await this.findOne(id);
 
     if (Object.prototype.hasOwnProperty.call(dto, 'participantId')) {
-      assignment.participant = dto.participantId
-        ? await this.participantsRepository.findOneBy({ id: dto.participantId })
-        : assignment.participant;
+      if (dto.participantId) {
+        const participant = await this.participantsRepository.findOneBy({ id: dto.participantId });
+        if (!participant) {
+          throw new NotFoundException(`Participant ${dto.participantId} introuvable`);
+        }
+        assignment.participant = participant;
+      }
     }
 
     if (Object.prototype.hasOwnProperty.call(dto, 'hostFamilyId')) {
-      assignment.hostFamily = dto.hostFamilyId
-        ? await this.hostFamiliesRepository.findOneBy({ id: dto.hostFamilyId })
-        : assignment.hostFamily;
+      if (dto.hostFamilyId) {
+        const hostFamily = await this.hostFamiliesRepository.findOneBy({ id: dto.hostFamilyId });
+        if (!hostFamily) {
+          throw new NotFoundException(`Famille d'accueil ${dto.hostFamilyId} introuvable`);
+        }
+        assignment.hostFamily = hostFamily;
+      }
     }
 
     Object.assign(assignment, {
@@ -94,4 +102,5 @@ export class AssignmentsService {
     await this.assignmentsRepository.remove(assignment);
   }
 }
+
 

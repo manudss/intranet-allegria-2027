@@ -71,10 +71,11 @@ export class AuthService {
   private async findUserRoleCodes(userId: number): Promise<string[]> {
     const userRoles = await this.userRolesRepository.find({
       where: { userId },
-      relations: ['role'],
+      relations: { role: true },
     });
 
     return userRoles.map((row) => row.role.code);
   }
 }
+
 

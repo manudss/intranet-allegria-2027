@@ -41,7 +41,10 @@ export class ParticipantsService {
   }
 
   async findOne(id: number): Promise<Participant> {
-    const participant = await this.participantsRepository.findOne({ where: { id }, relations: ['group'] });
+    const participant = await this.participantsRepository.findOne({
+      where: { id },
+      relations: { group: true },
+    });
 
     if (!participant) {
       throw new NotFoundException(`Participant ${id} introuvable`);
@@ -67,4 +70,5 @@ export class ParticipantsService {
     await this.participantsRepository.remove(participant);
   }
 }
+
 

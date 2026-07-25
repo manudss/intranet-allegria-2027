@@ -38,7 +38,7 @@ export class TeamsService {
 
   findAll(): Promise<Team[]> {
     return this.teamsRepository.find({
-      relations: ['group', 'primaryAnimator', 'secondaryAnimator'],
+      relations: { group: true, primaryAnimator: true, secondaryAnimator: true },
       order: { name: 'ASC' },
     });
   }
@@ -46,7 +46,7 @@ export class TeamsService {
   async findOne(id: number): Promise<Team> {
     const team = await this.teamsRepository.findOne({
       where: { id },
-      relations: ['group', 'primaryAnimator', 'secondaryAnimator'],
+      relations: { group: true, primaryAnimator: true, secondaryAnimator: true },
     });
 
     if (!team) {
@@ -94,7 +94,7 @@ export class TeamsService {
 
     const teamParticipants = await this.teamParticipantsRepository.find({
       where: { team: { id: teamId } },
-      relations: ['participant'],
+      relations: { participant: true },
     });
 
     const participantIds = teamParticipants.map((row) => row.participant.id);
@@ -109,4 +109,5 @@ export class TeamsService {
     });
   }
 }
+
 

@@ -28,11 +28,14 @@ export class VolunteersService {
   }
 
   findAll(): Promise<Volunteer[]> {
-    return this.volunteersRepository.find({ relations: ['user'], order: { lastName: 'ASC', firstName: 'ASC' } });
+    return this.volunteersRepository.find({
+      relations: { user: true },
+      order: { lastName: 'ASC', firstName: 'ASC' },
+    });
   }
 
   async findOne(id: number): Promise<Volunteer> {
-    const volunteer = await this.volunteersRepository.findOne({ where: { id }, relations: ['user'] });
+    const volunteer = await this.volunteersRepository.findOne({ where: { id }, relations: { user: true } });
 
     if (!volunteer) {
       throw new NotFoundException(`Benevole ${id} introuvable`);
@@ -61,4 +64,5 @@ export class VolunteersService {
     await this.volunteersRepository.remove(volunteer);
   }
 }
+
 

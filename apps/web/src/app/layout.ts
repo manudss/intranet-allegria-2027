@@ -31,6 +31,7 @@ export class Layout {
 
   protected currentPageTitle = 'Accueil';
   protected isCompactMenu = false;
+  protected isMenuExpandedByInteraction = false;
   protected isMobileMenuOpen = false;
 
   protected readonly navGroups: MenuGroup[] = [
@@ -84,12 +85,18 @@ export class Layout {
       .subscribe(() => {
         this.currentPageTitle = this.getRouteTitle();
         this.titleService.setTitle(`Allegria 2027 - ${this.currentPageTitle}`);
+        this.isMenuExpandedByInteraction = false;
         this.isMobileMenuOpen = false;
       });
   }
 
+  protected get isMenuVisuallyCompact(): boolean {
+    return this.isCompactMenu && !this.isMenuExpandedByInteraction;
+  }
+
   protected toggleCompactMenu(): void {
     this.isCompactMenu = !this.isCompactMenu;
+    this.isMenuExpandedByInteraction = false;
   }
 
   protected toggleMobileMenu(): void {
@@ -98,6 +105,36 @@ export class Layout {
 
   protected closeMobileMenu(): void {
     this.isMobileMenuOpen = false;
+  }
+
+  protected onMenuItemSelect(): void {
+    this.isMenuExpandedByInteraction = false;
+    this.closeMobileMenu();
+  }
+
+  protected onMenuMouseEnter(): void {
+    if (this.isCompactMenu) {
+      this.isMenuExpandedByInteraction = true;
+    }
+  }
+
+  protected onMenuMouseLeave(): void {
+    this.isMenuExpandedByInteraction = false;
+  }
+
+  protected onMenuFocusIn(): void {
+    if (this.isCompactMenu) {
+      this.isMenuExpandedByInteraction = true;
+    }
+  }
+
+  protected onMenuFocusOut(event: FocusEvent): void {
+    const sidebar = event.currentTarget as HTMLElement | null;
+    const nextFocused = event.relatedTarget as Node | null;
+
+    if (!sidebar || !nextFocused || !sidebar.contains(nextFocused)) {
+      this.isMenuExpandedByInteraction = false;
+    }
   }
 
   private getRouteTitle(): string {

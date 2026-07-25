@@ -12,10 +12,6 @@
 	</div>
 
 	<div class="header-right">
-	  <button tuiButton appearance="flat" type="button" class="compact-toggle-btn" (click)="toggleCompactMenu()">
-		<tui-icon [icon]="isCompactMenu ? '@tui.panel-left-open' : '@tui.panel-left-close'"></tui-icon>
-		<span>{{ isCompactMenu ? 'Menu large' : 'Menu compact' }}</span>
-	  </button>
 	  <button tuiButton appearance="secondary" type="button">
 		<tui-icon icon="@tui.user"></tui-icon>
 		<span>Coordination</span>
@@ -33,34 +29,48 @@
 	></button>
   }
 
-  <div class="allegria-body">
-	<aside class="allegria-sidebar" [class.compact]="isCompactMenu" [class.mobile-open]="isMobileMenuOpen">
+  <div class="allegria-body" [class.overlay-menu]="isCompactMenu">
+	<aside class="allegria-sidebar" [class.compact]="isMenuVisuallyCompact" [class.mobile-open]="isMobileMenuOpen">
 	  <tui-scrollbar>
-		<nav class="allegria-nav">
+		<nav
+		  class="allegria-nav"
+		  (mouseenter)="onMenuMouseEnter()"
+		  (mouseleave)="onMenuMouseLeave()"
+		  (focusin)="onMenuFocusIn()"
+		  (focusout)="onMenuFocusOut($event)"
+		>
 		  @for (group of navGroups; track group.label) {
 			<section class="nav-group">
-			  @if (!isCompactMenu) {
-				<h3>{{ group.label }}</h3>
-			  }
+			  <h3>{{ group.label }}</h3>
 
 			  @for (item of group.items; track item.path) {
 				<a
 				  tuiLink
 				  [routerLink]="item.path"
+				  [title]="isMenuVisuallyCompact ? item.label : ''"
 				  routerLinkActive="active"
 				  [routerLinkActiveOptions]="{ exact: true }"
-				  (click)="closeMobileMenu()"
+				  (click)="onMenuItemSelect()"
 				>
 				  <tui-icon [icon]="item.icon"></tui-icon>
-				  @if (!isCompactMenu) {
-					<span class="item-label">{{ item.label }}</span>
-				  }
+				  <span class="item-label">{{ item.label }}</span>
 				</a>
 			  }
 			</section>
 		  }
 		</nav>
 	  </tui-scrollbar>
+
+	  <button
+		tuiButton
+		appearance="flat"
+		type="button"
+		class="sidebar-compact-toggle"
+		(click)="toggleCompactMenu()"
+	  >
+		<tui-icon [icon]="isCompactMenu ? '@tui.panel-left-open' : '@tui.panel-left-close'"></tui-icon>
+		<span class="toggle-label">{{ isCompactMenu ? 'Passer en menu large' : 'Passer en menu compact' }}</span>
+	  </button>
 	</aside>
 
 	<main class="allegria-content">

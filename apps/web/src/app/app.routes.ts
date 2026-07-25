@@ -1,32 +1,71 @@
 import { Route } from '@angular/router';
-import { Accueil } from './pages/accueil';
-import { Benevoles } from './pages/benevoles';
-import { ConsignesDocs } from './pages/consignes-docs';
-import { DonneesExports } from './pages/donnees-exports';
-import { EquipesMissions } from './pages/equipes-missions';
-import { Familles } from './pages/familles';
-import { Hebergement } from './pages/hebergement';
-import { Incidents } from './pages/incidents';
-import { JourJ } from './pages/jour-j';
-import { ParametresRoles } from './pages/parametres-roles';
-import { Participants } from './pages/participants';
-import { Rassemblement } from './pages/rassemblement';
-import { Transports } from './pages/transports';
 
 export const appRoutes: Route[] = [
   { path: '', pathMatch: 'full', redirectTo: 'accueil' },
-  { path: 'accueil', component: Accueil },
-  { path: 'rassemblement', component: Rassemblement },
-  { path: 'participants', component: Participants },
-  { path: 'benevoles', component: Benevoles },
-  { path: 'familles', component: Familles },
-  { path: 'equipes-missions', component: EquipesMissions },
-  { path: 'transports', component: Transports },
-  { path: 'hebergement', component: Hebergement },
-  { path: 'jour-j', component: JourJ },
-  { path: 'incidents', component: Incidents },
-  { path: 'consignes-docs', component: ConsignesDocs },
-  { path: 'parametres-roles', component: ParametresRoles },
-  { path: 'donnees-exports', component: DonneesExports },
+  {
+    path: 'accueil',
+    title: 'Accueil',
+    loadComponent: () => import('./pages/accueil').then((m) => m.Accueil),
+  },
+  {
+    path: 'rassemblement',
+    title: 'Rassemblement',
+    loadComponent: () => import('./pages/rassemblement').then((m) => m.Rassemblement),
+  },
+  {
+    path: 'participants',
+    title: 'Participants',
+    loadComponent: () => import('./pages/participants').then((m) => m.Participants),
+  },
+  {
+    path: 'benevoles',
+    title: 'Benevoles',
+    loadComponent: () => import('./pages/benevoles').then((m) => m.Benevoles),
+  },
+  {
+    path: 'familles',
+    title: "Familles d'accueil",
+    loadComponent: () => import('./pages/familles').then((m) => m.Familles),
+  },
+  {
+    path: 'equipes-missions',
+    title: 'Equipes & missions',
+    loadComponent: () => import('./pages/equipes-missions').then((m) => m.EquipesMissions),
+  },
+  {
+    path: 'transports',
+    title: 'Transports',
+    loadComponent: () => import('./pages/transports').then((m) => m.Transports),
+  },
+  {
+    path: 'hebergement',
+    title: 'Hebergement',
+    loadComponent: () => import('./pages/hebergement').then((m) => m.Hebergement),
+  },
+  {
+    path: 'jour-j',
+    title: 'Tableau de bord Jour J',
+    loadComponent: () => import('./pages/jour-j').then((m) => m.JourJ),
+  },
+  {
+    path: 'incidents',
+    title: 'Incidents & demandes',
+    loadComponent: () => import('./pages/incidents').then((m) => m.Incidents),
+  },
+  {
+    path: 'consignes-docs',
+    title: 'Consignes & documents',
+    loadComponent: () => import('./pages/consignes-docs').then((m) => m.ConsignesDocs),
+  },
+  {
+    path: 'parametres-roles',
+    title: 'Parametres & roles',
+    loadComponent: () => import('./pages/parametres-roles').then((m) => m.ParametresRoles),
+  },
+  {
+    path: 'donnees-exports',
+    title: 'Donnees & exports',
+    loadComponent: () => import('./pages/donnees-exports').then((m) => m.DonneesExports),
+  },
   { path: '**', redirectTo: 'accueil' },
 ];

@@ -1,0 +1,70 @@
+<div class="allegria-shell">
+  <header class="allegria-header">
+	<div class="header-left">
+	  <button tuiIconButton type="button" appearance="flat" class="mobile-menu-btn" (click)="toggleMobileMenu()">
+		<tui-icon [icon]="isMobileMenuOpen ? '@tui.x' : '@tui.menu'"></tui-icon>
+	  </button>
+	  <img src="assets/logo-allegria.svg" alt="Allegria 2027" class="logo" />
+	  <div class="header-titles">
+		<span class="header-title">Allegria 2027 - Intranet benevoles</span>
+		<h1 class="page-title">{{ currentPageTitle }}</h1>
+	  </div>
+	</div>
+
+	<div class="header-right">
+	  <button tuiButton appearance="flat" type="button" class="compact-toggle-btn" (click)="toggleCompactMenu()">
+		<tui-icon [icon]="isCompactMenu ? '@tui.panel-left-open' : '@tui.panel-left-close'"></tui-icon>
+		<span>{{ isCompactMenu ? 'Menu large' : 'Menu compact' }}</span>
+	  </button>
+	  <button tuiButton appearance="secondary" type="button">
+		<tui-icon icon="@tui.user"></tui-icon>
+		<span>Coordination</span>
+	  </button>
+	  <button tuiButton appearance="primary" type="button">Deconnexion</button>
+	</div>
+  </header>
+
+  @if (isMobileMenuOpen) {
+	<button
+	  type="button"
+	  class="mobile-overlay"
+	  aria-label="Fermer le menu"
+	  (click)="closeMobileMenu()"
+	></button>
+  }
+
+  <div class="allegria-body">
+	<aside class="allegria-sidebar" [class.compact]="isCompactMenu" [class.mobile-open]="isMobileMenuOpen">
+	  <tui-scrollbar>
+		<nav class="allegria-nav">
+		  @for (group of navGroups; track group.label) {
+			<section class="nav-group">
+			  @if (!isCompactMenu) {
+				<h3>{{ group.label }}</h3>
+			  }
+
+			  @for (item of group.items; track item.path) {
+				<a
+				  tuiLink
+				  [routerLink]="item.path"
+				  routerLinkActive="active"
+				  [routerLinkActiveOptions]="{ exact: true }"
+				  (click)="closeMobileMenu()"
+				>
+				  <tui-icon [icon]="item.icon"></tui-icon>
+				  @if (!isCompactMenu) {
+					<span class="item-label">{{ item.label }}</span>
+				  }
+				</a>
+			  }
+			</section>
+		  }
+		</nav>
+	  </tui-scrollbar>
+	</aside>
+
+	<main class="allegria-content">
+	  <router-outlet></router-outlet>
+	</main>
+  </div>
+</div>

@@ -4,6 +4,7 @@ import { finalize } from 'rxjs';
 import { Volunteer, VolunteerPayload } from '../../models/models';
 import { VolunteersApiService } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
+import { DataTableColumn } from '../../shared/data-table';
 const blank = (): VolunteerPayload => ({
   userId: null,
   firstName: '',
@@ -27,14 +28,7 @@ const blank = (): VolunteerPayload => ({
       @if (loading()) {
         <tui-loader />
       } @else {
-        <cdk-virtual-scroll-viewport itemSize="58" class="viewport"
-          ><div class="table-head"><b>Nom</b><b>Équipe</b><b>Contact</b></div>
-          <button class="row" *cdkVirtualFor="let x of filtered()" (click)="open(x)">
-            <span>{{ x.lastName }} {{ x.firstName }}</span
-            ><span>{{ x.team || '—' }}</span
-            ><span>{{ x.email || x.phone || '—' }}</span>
-          </button></cdk-virtual-scroll-viewport
-        >
+        <app-data-table [rows]="filtered()" [columns]="tableColumns" (rowSelected)="open($event)" />
       }
     </app-page-layout>
     @if (opened()) {
@@ -108,6 +102,11 @@ const blank = (): VolunteerPayload => ({
   styleUrl: '../../shared/crud.scss',
 })
 export class VolunteersPage implements OnInit {
+  protected readonly tableColumns: readonly DataTableColumn<Volunteer>[] = [
+    { key: 'name', label: 'Nom', value: (x) => `${x.lastName} ${x.firstName}` },
+    { key: 'team', label: 'Équipe', value: (x) => x.team || '—' },
+    { key: 'contact', label: 'Contact', value: (x) => x.email || x.phone || '—' },
+  ];
   private api = inject(VolunteersApiService);
   items = signal<Volunteer[]>([]);
   query = signal('');

@@ -16,6 +16,7 @@ import {
   ParticipantsApiService,
 } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
+import { DataTableColumn } from '../../shared/data-table';
 const blank = (): ParticipantPayload => ({
   firstName: '',
   lastName: '',
@@ -56,14 +57,7 @@ const blankHealth = (): ParticipantHealthPayload => ({
       @if (loading()) {
         <tui-loader />
       } @else {
-        <cdk-virtual-scroll-viewport itemSize="58" class="viewport"
-          ><div class="table-head"><b>Participant</b><b>Groupe</b><b>Diocèse</b></div>
-          <button class="row" *cdkVirtualFor="let x of filtered()" (click)="open(x)">
-            <span>{{ x.lastName }} {{ x.firstName }}</span
-            ><span>{{ x.group?.name || 'Sans groupe' }}</span
-            ><span>{{ x.diocese || '—' }}</span>
-          </button></cdk-virtual-scroll-viewport
-        >
+        <app-data-table [rows]="filtered()" [columns]="tableColumns" (rowSelected)="open($event)" />
       }
     </app-page-layout>
     @if (opened()) {
@@ -185,6 +179,11 @@ const blankHealth = (): ParticipantHealthPayload => ({
   styleUrls: ['../../shared/crud.scss', './participants.scss'],
 })
 export class ParticipantsPage implements OnInit {
+  protected readonly tableColumns: readonly DataTableColumn<Participant>[] = [
+    { key: 'participant', label: 'Participant', value: (x) => `${x.lastName} ${x.firstName}` },
+    { key: 'group', label: 'Groupe', value: (x) => x.group?.name || 'Sans groupe' },
+    { key: 'diocese', label: 'Diocèse', value: (x) => x.diocese || '—' },
+  ];
   private api = inject(ParticipantsApiService);
   private groupsApi = inject(GroupsApiService);
   private healthApi = inject(HealthApiService);

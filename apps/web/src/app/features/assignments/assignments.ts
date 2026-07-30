@@ -14,6 +14,7 @@ import {
   ParticipantsApiService,
 } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
+import { DataTableColumn } from '../../shared/data-table';
 const blank = (): AssignmentPayload => ({
   participantId: 0,
   hostFamilyId: 0,
@@ -35,16 +36,7 @@ const blank = (): AssignmentPayload => ({
       @if (loading()) {
         <tui-loader />
       } @else {
-        <cdk-virtual-scroll-viewport itemSize="58" class="viewport"
-          ><div class="table-head"><b>Participant</b><b>Famille</b><b>Statut</b></div>
-          <button class="row" *cdkVirtualFor="let x of filtered()" (click)="open(x)">
-            <span>{{ x.participant.lastName }} {{ x.participant.firstName }}</span
-            ><span>{{ x.hostFamily.familyName }}</span
-            ><span
-              ><span tuiBadge>{{ x.status }}</span></span
-            >
-          </button></cdk-virtual-scroll-viewport
-        >
+        <app-data-table [rows]="filtered()" [columns]="tableColumns" (rowSelected)="open($event)" />
       }
     </app-page-layout>
     @if (opened()) {
@@ -113,6 +105,11 @@ const blank = (): AssignmentPayload => ({
   styleUrl: '../../shared/crud.scss',
 })
 export class AssignmentsPage implements OnInit {
+  protected readonly tableColumns: readonly DataTableColumn<ParticipantHostFamilyAssignment>[] = [
+    { key: 'participant', label: 'Participant', value: (x) => `${x.participant.lastName} ${x.participant.firstName}` },
+    { key: 'family', label: 'Famille', value: (x) => x.hostFamily.familyName },
+    { key: 'status', label: 'Statut', value: (x) => x.status },
+  ];
   private api = inject(AssignmentsApiService);
   private participantsApi = inject(ParticipantsApiService);
   private familiesApi = inject(HostFamiliesApiService);

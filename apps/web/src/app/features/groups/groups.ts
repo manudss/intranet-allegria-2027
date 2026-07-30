@@ -4,6 +4,7 @@ import { finalize, forkJoin } from 'rxjs';
 import { Group, GroupPayload, Participant, Team } from '../../models/models';
 import { GroupsApiService } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
+import { DataTableColumn } from '../../shared/data-table';
 
 const emptyGroup = (): GroupPayload => ({
   name: '',
@@ -27,14 +28,7 @@ const emptyGroup = (): GroupPayload => ({
       @if (loading()) {
         <tui-loader />
       } @else {
-        <cdk-virtual-scroll-viewport itemSize="58" class="viewport"
-          ><div class="table-head"><b>Nom</b><b>Diocèse</b><b>Arrivée</b></div>
-          <button class="row" *cdkVirtualFor="let group of filtered()" (click)="open(group)">
-            <span>{{ group.name }}</span
-            ><span>{{ group.diocese || '—' }}</span
-            ><span>{{ group.arrivalDatetime | date: 'short' }}</span>
-          </button></cdk-virtual-scroll-viewport
-        >
+        <app-data-table [rows]="filtered()" [columns]="tableColumns" (rowSelected)="open($event)" />
       }
       @if (error()) {
         <p class="api-error">{{ error() }}</p>
@@ -98,6 +92,11 @@ const emptyGroup = (): GroupPayload => ({
   styleUrl: '../../shared/crud.scss',
 })
 export class GroupsPage implements OnInit {
+  protected readonly tableColumns: readonly DataTableColumn<Group>[] = [
+    { key: 'name', label: 'Nom', value: (x) => x.name },
+    { key: 'diocese', label: 'Diocèse', value: (x) => x.diocese || '—' },
+    { key: 'arrival', label: 'Arrivée', value: (x) => x.arrivalDatetime ? new Date(x.arrivalDatetime).toLocaleString('fr-FR') : '—' },
+  ];
   private readonly api = inject(GroupsApiService);
   readonly items = signal<Group[]>([]);
   readonly query = signal('');

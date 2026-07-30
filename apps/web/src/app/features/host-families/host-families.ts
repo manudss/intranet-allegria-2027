@@ -4,6 +4,7 @@ import { finalize } from 'rxjs';
 import { HostFamily, HostFamilyPayload } from '../../models/models';
 import { HostFamiliesApiService } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
+import { DataTableColumn } from '../../shared/data-table';
 const blank = (): HostFamilyPayload => ({
   familyName: '',
   address: '',
@@ -29,14 +30,7 @@ const blank = (): HostFamilyPayload => ({
       @if (loading()) {
         <tui-loader />
       } @else {
-        <cdk-virtual-scroll-viewport itemSize="58" class="viewport"
-          ><div class="table-head"><b>Famille</b><b>Ville</b><b>Capacité</b></div>
-          <button class="row" *cdkVirtualFor="let x of filtered()" (click)="open(x)">
-            <span>{{ x.familyName }}</span
-            ><span>{{ x.postalCode }} {{ x.city }}</span
-            ><span>{{ x.maxCapacity }} places</span>
-          </button></cdk-virtual-scroll-viewport
-        >
+        <app-data-table [rows]="filtered()" [columns]="tableColumns" (rowSelected)="open($event)" />
       }
     </app-page-layout>
     @if (opened()) {
@@ -117,6 +111,11 @@ const blank = (): HostFamilyPayload => ({
   styleUrl: '../../shared/crud.scss',
 })
 export class HostFamiliesPage implements OnInit {
+  protected readonly tableColumns: readonly DataTableColumn<HostFamily>[] = [
+    { key: 'family', label: 'Famille', value: (x) => x.familyName },
+    { key: 'city', label: 'Ville', value: (x) => `${x.postalCode} ${x.city}` },
+    { key: 'capacity', label: 'Capacité', value: (x) => `${x.maxCapacity} places`, sorter: (a, b) => a.maxCapacity - b.maxCapacity },
+  ];
   private api = inject(HostFamiliesApiService);
   items = signal<HostFamily[]>([]);
   query = signal('');

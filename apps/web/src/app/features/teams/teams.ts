@@ -10,6 +10,7 @@ import {
   VolunteersApiService,
 } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
+import { DataTableColumn } from '../../shared/data-table';
 const blank = (): TeamPayload => ({
   name: '',
   groupId: null,
@@ -37,16 +38,7 @@ const blank = (): TeamPayload => ({
       @if (loading()) {
         <tui-loader />
       } @else {
-        <cdk-virtual-scroll-viewport itemSize="58" class="viewport"
-          ><div class="table-head"><b>Équipe</b><b>Groupe</b><b>Animateur</b></div>
-          <button class="row" *cdkVirtualFor="let x of filtered()" (click)="open(x)">
-            <span>{{ x.name }}</span
-            ><span>{{ x.group?.name || '—' }}</span
-            ><span
-              >{{ x.primaryAnimator?.firstName || '—' }} {{ x.primaryAnimator?.lastName }}</span
-            >
-          </button></cdk-virtual-scroll-viewport
-        >
+        <app-data-table [rows]="filtered()" [columns]="tableColumns" (rowSelected)="open($event)" />
       }
     </app-page-layout>
     @if (opened()) {
@@ -133,6 +125,11 @@ const blank = (): TeamPayload => ({
   styleUrls: ['../../shared/crud.scss', './teams.scss'],
 })
 export class TeamsPage implements OnInit {
+  protected readonly tableColumns: readonly DataTableColumn<Team>[] = [
+    { key: 'team', label: 'Équipe', value: (x) => x.name },
+    { key: 'group', label: 'Groupe', value: (x) => x.group?.name || '—' },
+    { key: 'animator', label: 'Animateur', value: (x) => x.primaryAnimator ? `${x.primaryAnimator.firstName} ${x.primaryAnimator.lastName}` : '—' },
+  ];
   private api = inject(TeamsApiService);
   private membersApi = inject(TeamParticipantsApiService);
   private groupsApi = inject(GroupsApiService);

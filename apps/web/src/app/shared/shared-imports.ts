@@ -19,12 +19,14 @@ import {
   TuiTextarea,
 } from '@taiga-ui/kit';
 import { PageLayoutComponent } from './ui-components';
+import { DataTableComponent } from './data-table';
 
 export const SHARED_IMPORTS = [
   CommonModule,
   ScrollingModule,
   FormField,
   PageLayoutComponent,
+  DataTableComponent,
   TuiButton,
   TuiIcon,
   TuiLoader,

@@ -113,7 +113,7 @@ const blank = (): HostFamilyPayload => ({
 export class HostFamiliesPage implements OnInit {
   protected readonly tableColumns: readonly DataTableColumn<HostFamily>[] = [
     { key: 'family', label: 'Famille', type: 'text', value: (x) => x.familyName, presentation: { type: 'icon', icon: () => '@tui.house' } },
-    { key: 'city', label: 'Ville', type: 'list', value: (x) => `${x.postalCode} ${x.city}`, presentation: { type: 'badge', appearance: () => 'info', icon: () => '@tui.map-pin' } },
+    { key: 'city', label: 'Ville', type: 'list', value: (x) => `${x.postalCode} ${x.city}`, presentation: { type: 'chip', autoColor: true, icon: () => '@tui.map-pin' } },
     { key: 'capacity', label: 'Capacité', type: 'number', value: (x) => `${x.maxCapacity} places`, filterValue: (x) => x.maxCapacity, sorter: (a, b) => a.maxCapacity - b.maxCapacity, presentation: { type: 'number' } },
   ];
   private api = inject(HostFamiliesApiService);

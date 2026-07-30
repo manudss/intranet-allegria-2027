@@ -4,11 +4,11 @@ import { RouterLink } from '@angular/router';
 import { TuiComparator, TuiReorder, TuiTable } from '@taiga-ui/addon-table';
 import { TuiContext, TuiStringHandler } from '@taiga-ui/cdk';
 import { TuiButton, TuiDataList, TuiDropdown, TuiIcon, TuiInput, TuiLink, TuiSelectLike, TuiTextfield } from '@taiga-ui/core';
-import { TuiAvatar, TuiBadge, TuiChevron, TuiInputChip, TuiMultiSelect, TuiSelect } from '@taiga-ui/kit';
+import { TuiAutoColorPipe, TuiAvatar, TuiBadge, TuiChevron, TuiChip, TuiInputChip, TuiMultiSelect, TuiSelect } from '@taiga-ui/kit';
 
 export type DataTableColumnType = 'text' | 'list' | 'number' | 'date' | 'boolean';
 export type DataTableValue = string | number | boolean | null | undefined;
-export type DataTableCellType = 'text' | 'person' | 'badge' | 'icon' | 'link' | 'date' | 'number' | 'boolean';
+export type DataTableCellType = 'text' | 'person' | 'badge' | 'chip' | 'icon' | 'link' | 'date' | 'number' | 'boolean';
 
 export interface DataTableCellPresentation<T> {
   readonly type: DataTableCellType;
@@ -16,6 +16,7 @@ export interface DataTableCellPresentation<T> {
   readonly icon?: (row: T) => string;
   readonly iconColor?: (row: T) => string;
   readonly appearance?: (row: T) => string;
+  readonly autoColor?: boolean;
   readonly link?: (row: T) => string | readonly (string | number)[];
   readonly href?: (row: T) => string;
 }
@@ -47,10 +48,12 @@ interface ColumnFilterState {
   imports: [
     FormsModule,
     RouterLink,
+    TuiAutoColorPipe,
     TuiAvatar,
     TuiBadge,
     TuiButton,
     TuiChevron,
+    TuiChip,
     TuiDataList,
     TuiDropdown,
     TuiIcon,
@@ -151,6 +154,9 @@ interface ColumnFilterState {
                     }
                     @case ('badge') {
                       <span size="l" tuiBadge [appearance]="cellAppearance(column, row)" [iconStart]="cellIcon(column, row)">{{ column.value(row) }}</span>
+                    }
+                    @case ('chip') {
+                      <span size="s" tuiChip [appearance]="column.presentation?.autoColor ? 'custom' : cellAppearance(column, row)" [iconStart]="cellIcon(column, row)" [style.background-color]="column.presentation?.autoColor ? (cellText(column, row) | tuiAutoColor) : null">{{ column.value(row) }}</span>
                     }
                     @case ('icon') {
                       <span class="icon-cell"><tui-icon [icon]="cellIcon(column, row)" [style.color]="cellIconColor(column, row)" />{{ column.value(row) }}</span>
@@ -278,6 +284,9 @@ export class DataTableComponent<T extends { readonly id: number }> {
   }
   cellAppearance(column: DataTableColumn<T>, row: T): string {
     return column.presentation?.appearance?.(row) || 'neutral';
+  }
+  cellText(column: DataTableColumn<T>, row: T): string {
+    return String(column.value(row) ?? '');
   }
   cellIcon(column: DataTableColumn<T>, row: T): string {
     return column.presentation?.icon?.(row) || '';

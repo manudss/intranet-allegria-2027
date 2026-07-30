@@ -94,7 +94,7 @@ const emptyGroup = (): GroupPayload => ({
 export class GroupsPage implements OnInit {
   protected readonly tableColumns: readonly DataTableColumn<Group>[] = [
     { key: 'name', label: 'Nom', type: 'text', value: (x) => x.name, presentation: { type: 'icon', icon: () => '@tui.users' } },
-    { key: 'diocese', label: 'Diocèse', type: 'list', value: (x) => x.diocese || '—', presentation: { type: 'badge', appearance: () => 'info', icon: () => '@tui.map-pin' } },
+    { key: 'diocese', label: 'Diocèse', type: 'list', value: (x) => x.diocese || '—', presentation: { type: 'chip', autoColor: true, icon: () => '@tui.map-pin' } },
     { key: 'arrival', label: 'Arrivée', type: 'date', value: (x) => x.arrivalDatetime ? new Date(x.arrivalDatetime).toLocaleString('fr-FR') : '—', filterValue: (x) => x.arrivalDatetime, presentation: { type: 'date' } },
   ];
   private readonly api = inject(GroupsApiService);

@@ -106,9 +106,9 @@ const blank = (): AssignmentPayload => ({
 })
 export class AssignmentsPage implements OnInit {
   protected readonly tableColumns: readonly DataTableColumn<ParticipantHostFamilyAssignment>[] = [
-    { key: 'participant', label: 'Participant', type: 'list', value: (x) => `${x.participant.lastName} ${x.participant.firstName}`, presentation: { type: 'link', link: () => '/participants' } },
+    { key: 'participant', label: 'Participant', type: 'text', value: (x) => `${x.participant.lastName} ${x.participant.firstName}`, presentation: { type: 'link', link: () => '/participants' } },
     { key: 'family', label: 'Famille', type: 'list', value: (x) => x.hostFamily.familyName, presentation: { type: 'link', link: () => '/familles' } },
-    { key: 'status', label: 'Statut', type: 'list', value: (x) => x.status, presentation: { type: 'badge', appearance: (x) => ({ CONFIRMED: 'positive', CANCELLED: 'negative', COMPLETED: 'info', PLANNED: 'warning' })[x.status] || 'neutral', icon: (x) => x.status === 'CONFIRMED' ? '@tui.check' : x.status === 'CANCELLED' ? '@tui.x' : '@tui.clock' } },
+    { key: 'status', label: 'Statut', type: 'list', value: (x) => x.status, presentation: { type: 'chip', appearance: (x) => ({ CONFIRMED: 'positive', CANCELLED: 'negative', COMPLETED: 'info', PLANNED: 'warning' })[x.status] || 'neutral', icon: (x) => x.status === 'CONFIRMED' ? '@tui.check' : x.status === 'CANCELLED' ? '@tui.x' : '@tui.clock' } },
   ];
   private api = inject(AssignmentsApiService);
   private participantsApi = inject(ParticipantsApiService);

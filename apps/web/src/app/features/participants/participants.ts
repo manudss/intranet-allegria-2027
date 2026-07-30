@@ -181,7 +181,7 @@ const blankHealth = (): ParticipantHealthPayload => ({
 export class ParticipantsPage implements OnInit {
   protected readonly tableColumns: readonly DataTableColumn<Participant>[] = [
     { key: 'participant', label: 'Participant', type: 'text', value: (x) => `${x.lastName} ${x.firstName}`, presentation: { type: 'person', subtitle: (x) => x.city || x.diocese } },
-    { key: 'group', label: 'Groupe', type: 'list', value: (x) => x.group?.name || 'Sans groupe', presentation: { type: 'badge', appearance: (x) => x.group ? 'primary' : 'neutral', icon: () => '@tui.users' } },
+    { key: 'group', label: 'Groupe', type: 'list', value: (x) => x.group?.name || 'Sans groupe', presentation: { type: 'chip', autoColor: true, icon: () => '@tui.users' } },
     { key: 'diocese', label: 'Diocèse', type: 'list', value: (x) => x.diocese || '—', presentation: { type: 'icon', icon: () => '@tui.map-pin' } },
   ];
   private api = inject(ParticipantsApiService);

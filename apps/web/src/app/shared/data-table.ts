@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -8,7 +9,7 @@ import { TuiAutoColorPipe, TuiAvatar, TuiBadge, TuiChevron, TuiChip, TuiInputChi
 
 export type DataTableColumnType = 'text' | 'list' | 'number' | 'date' | 'boolean';
 export type DataTableValue = string | number | boolean | null | undefined;
-export type DataTableCellType = 'text' | 'person' | 'badge' | 'chip' | 'icon' | 'link' | 'date' | 'number' | 'boolean';
+export type DataTableCellType = 'text' | 'person' | 'badge' | 'chip' | 'icon' | 'date' | 'number' | 'boolean';
 
 export interface DataTableCellPresentation<T> {
   readonly type: DataTableCellType;
@@ -17,8 +18,6 @@ export interface DataTableCellPresentation<T> {
   readonly iconColor?: (row: T) => string;
   readonly appearance?: (row: T) => string;
   readonly autoColor?: boolean;
-  readonly link?: (row: T) => string | readonly (string | number)[];
-  readonly href?: (row: T) => string;
 }
 
 export interface DataTableColumn<T> {
@@ -29,7 +28,23 @@ export interface DataTableColumn<T> {
   /** Raw value used when the displayed value is formatted. */
   readonly filterValue?: (row: T) => DataTableValue;
   readonly presentation?: DataTableCellPresentation<T>;
+  /** Navigation is independent from presentation: any cell type can be linked. */
+  readonly link?: (row: T) => string | readonly (string | number)[];
+  readonly href?: (row: T) => string;
   readonly sorter?: TuiComparator<T>;
+}
+
+export interface DataTableAction<T> {
+  readonly id: string;
+  readonly label: string;
+  readonly icon: string;
+  readonly appearance?: string;
+  readonly disabled?: (row: T) => boolean;
+}
+
+export interface DataTableActionEvent<T> {
+  readonly action: DataTableAction<T>;
+  readonly row: T;
 }
 
 interface ColumnFilterState {
@@ -47,6 +62,7 @@ interface ColumnFilterState {
   standalone: true,
   imports: [
     FormsModule,
+    NgTemplateOutlet,
     RouterLink,
     TuiAutoColorPipe,
     TuiAvatar,
@@ -87,7 +103,7 @@ interface ColumnFilterState {
       </details>
     </div>
     <div class="table-scroll">
-      <table tuiTable size="l" [columns]="columnKeys()">
+      <table tuiTable size="l" [columns]="tableColumnKeys()">
         <thead>
           <tr tuiThGroup>
             @for (column of enabledColumns(); track column.key) {
@@ -137,6 +153,7 @@ interface ColumnFilterState {
                 </div>
               </th>
             }
+            <th *tuiHead="'actions'" tuiTh [sorter]="null" [sticky]="true" [minWidth]="96">Actions</th>
           </tr>
         </thead>
         @let sortedRows = filteredRows() | tuiTableSort;
@@ -145,40 +162,34 @@ interface ColumnFilterState {
             <tr tuiTr tabindex="0" (click)="rowSelected.emit(row)" (keydown.enter)="rowSelected.emit(row)" (keydown.space)="selectFromKeyboard($event, row)">
               @for (column of enabledColumns(); track column.key) {
                 <td *tuiCell="column.key" tuiTd>
-                  @switch (column.presentation?.type || 'text') {
-                    @case ('person') {
-                      <div class="person-cell">
-                        <div appearance="secondary" size="s" [tuiAvatar]="initials(column.value(row))"></div>
-                        <span class="cell-copy"><strong>{{ column.value(row) }}</strong>@if (column.presentation?.subtitle; as subtitle) { <small>{{ subtitle(row) }}</small> }</span>
-                      </div>
+                  <ng-template #cellContent>
+                    @switch (column.presentation?.type || 'text') {
+                      @case ('person') { <div class="person-cell"><div appearance="secondary" size="s" [tuiAvatar]="initials(column.value(row))"></div><span class="cell-copy"><strong>{{ column.value(row) }}</strong>@if (column.presentation?.subtitle; as subtitle) { <small>{{ subtitle(row) }}</small> }</span></div> }
+                      @case ('badge') { <span size="l" tuiBadge [appearance]="cellAppearance(column, row)" [iconStart]="cellIcon(column, row)">{{ column.value(row) }}</span> }
+                      @case ('chip') { <span size="s" tuiChip [appearance]="column.presentation?.autoColor ? 'custom' : cellAppearance(column, row)" [iconStart]="cellIcon(column, row)" [style.background-color]="column.presentation?.autoColor ? (cellText(column, row) | tuiAutoColor) : null">{{ column.value(row) }}</span> }
+                      @case ('icon') { <span class="icon-cell"><tui-icon [icon]="cellIcon(column, row)" [style.color]="cellIconColor(column, row)" />{{ column.value(row) }}</span> }
+                      @case ('boolean') { <span size="s" tuiBadge [appearance]="column.value(row) ? 'positive' : 'neutral'">{{ column.value(row) ? 'Oui' : 'Non' }}</span> }
+                      @case ('date') { <time class="data-value">{{ column.value(row) }}</time> }
+                      @case ('number') { <span class="data-value number-value">{{ column.value(row) }}</span> }
+                      @default { <span class="cell-copy">{{ column.value(row) }}@if (column.presentation?.subtitle; as subtitle) { <small>{{ subtitle(row) }}</small> }</span> }
                     }
-                    @case ('badge') {
-                      <span size="l" tuiBadge [appearance]="cellAppearance(column, row)" [iconStart]="cellIcon(column, row)">{{ column.value(row) }}</span>
-                    }
-                    @case ('chip') {
-                      <span size="s" tuiChip [appearance]="column.presentation?.autoColor ? 'custom' : cellAppearance(column, row)" [iconStart]="cellIcon(column, row)" [style.background-color]="column.presentation?.autoColor ? (cellText(column, row) | tuiAutoColor) : null">{{ column.value(row) }}</span>
-                    }
-                    @case ('icon') {
-                      <span class="icon-cell"><tui-icon [icon]="cellIcon(column, row)" [style.color]="cellIconColor(column, row)" />{{ column.value(row) }}</span>
-                    }
-                    @case ('link') {
-                      @if (cellHref(column, row); as href) {
-                        <a iconEnd="@tui.external-link" tuiLink target="_blank" rel="noopener noreferrer" [href]="href" (click)="$event.stopPropagation()">{{ column.value(row) }}</a>
-                      } @else {
-                        <a tuiLink [routerLink]="cellLink(column, row)" (click)="$event.stopPropagation()">{{ column.value(row) }}</a>
-                      }
-                    }
-                    @case ('boolean') {
-                      <span size="s" tuiBadge [appearance]="column.value(row) ? 'positive' : 'neutral'">{{ column.value(row) ? 'Oui' : 'Non' }}</span>
-                    }
-                    @case ('date') { <time class="data-value">{{ column.value(row) }}</time> }
-                    @case ('number') { <span class="data-value number-value">{{ column.value(row) }}</span> }
-                    @default {
-                      <span class="cell-copy">{{ column.value(row) }}@if (column.presentation?.subtitle; as subtitle) { <small>{{ subtitle(row) }}</small> }</span>
-                    }
+                  </ng-template>
+                  @if (cellHref(column, row); as href) {
+                    <a class="cell-link" tuiLink target="_blank" rel="noopener noreferrer" [href]="href" (click)="$event.stopPropagation()"><ng-container [ngTemplateOutlet]="cellContent" /></a>
+                  } @else if (cellLink(column, row); as link) {
+                    <a class="cell-link" tuiLink [routerLink]="link" (click)="$event.stopPropagation()"><ng-container [ngTemplateOutlet]="cellContent" /></a>
+                  } @else {
+                    <ng-container [ngTemplateOutlet]="cellContent" />
                   }
                 </td>
               }
+              <td *tuiCell="'actions'" tuiTd>
+                <span class="row-actions">
+                  @for (action of tableActions(); track action.id) {
+                    <button tuiIconButton size="s" type="button" [appearance]="action.appearance || 'action'" [iconStart]="action.icon" [attr.aria-label]="action.label" [title]="action.label" [disabled]="action.disabled?.(row) || false" (click)="runAction($event, action, row)"></button>
+                  }
+                </span>
+              </td>
             </tr>
           }
         </tbody>
@@ -186,12 +197,12 @@ interface ColumnFilterState {
     </div>
   `,
   styles: `
-    :host { display: block; }
+    :host { display: block; min-inline-size: 0; max-inline-size: 100%; }
     .table-tools { display: flex; justify-content: flex-end; align-items: center; gap: .75rem; margin-block-end: .75rem; }
     details { position: relative; }
     summary { color: var(--tui-text-secondary); cursor: pointer; }
     tui-reorder { position: absolute; z-index: 5; inset-inline-end: 0; inline-size: 15rem; padding: .75rem; border: 1px solid var(--tui-border-normal); border-radius: .75rem; background: var(--tui-background-base); box-shadow: var(--tui-shadow-medium); }
-    .table-scroll { max-block-size: calc(100vh - 17rem); min-block-size: 24rem; overflow: auto; border-radius: .75rem; }
+    .table-scroll { inline-size: 100%; max-inline-size: 100%; max-block-size: calc(100vh - 17rem); min-block-size: 24rem; overflow: auto; border-radius: .75rem; }
     table { inline-size: 100%; }
     [tuiTh] { z-index: 2; background: var(--tui-background-base); }
     [tuiTh] > span { display: block; margin-block-end: .375rem; }
@@ -205,6 +216,8 @@ interface ColumnFilterState {
     .icon-cell tui-icon { flex: 0 0 auto; }
     .data-value { font-variant-numeric: tabular-nums; }
     .number-value { display: block; text-align: end; }
+    .cell-link { color: inherit; text-decoration: none; }
+    .row-actions { display: flex; align-items: center; justify-content: flex-end; gap: .25rem; }
     tr[tabindex] { cursor: pointer; }
     tr[tabindex]:hover td, tr[tabindex]:focus-visible td { background: var(--tui-background-neutral-1-hover); }
   `,
@@ -212,7 +225,9 @@ interface ColumnFilterState {
 export class DataTableComponent<T extends { readonly id: number }> {
   readonly rows = input.required<readonly T[]>();
   readonly columns = input.required<readonly DataTableColumn<T>[]>();
+  readonly lineActions = input<readonly DataTableAction<T>[]>([]);
   readonly rowSelected = output<T>();
+  readonly actionSelected = output<DataTableActionEvent<T>>();
 
   readonly orderedColumns = signal<readonly DataTableColumn<T>[]>([]);
   readonly enabledColumns = signal<readonly DataTableColumn<T>[]>([]);
@@ -236,6 +251,11 @@ export class DataTableComponent<T extends { readonly id: number }> {
     ));
   });
   readonly columnKeys = () => this.enabledColumns().map(({ key }) => key);
+  readonly tableColumnKeys = () => [...this.columnKeys(), 'actions'];
+  readonly tableActions = computed<readonly DataTableAction<T>[]>(() => [
+    { id: 'details', label: 'Détails', icon: '@tui.eye' },
+    ...this.lineActions(),
+  ]);
   readonly trackBy = (row: T): number => row.id;
   readonly columnLabel: TuiStringHandler<TuiContext<DataTableColumn<T>>> = ({ $implicit }) => $implicit.label;
   readonly standaloneModel = { standalone: true } as const;
@@ -294,11 +314,20 @@ export class DataTableComponent<T extends { readonly id: number }> {
   cellIconColor(column: DataTableColumn<T>, row: T): string {
     return column.presentation?.iconColor?.(row) || 'var(--tui-text-action)';
   }
-  cellLink(column: DataTableColumn<T>, row: T): string | readonly (string | number)[] {
-    return column.presentation?.link?.(row) || [];
+  cellLink(column: DataTableColumn<T>, row: T): string | readonly (string | number)[] | null {
+    return column.link?.(row) || null;
   }
   cellHref(column: DataTableColumn<T>, row: T): string {
-    return column.presentation?.href?.(row) || '';
+    return column.href?.(row) || '';
+  }
+
+  runAction(event: Event, action: DataTableAction<T>, row: T): void {
+    event.stopPropagation();
+    if (action.id === 'details') {
+      this.rowSelected.emit(row);
+    } else {
+      this.actionSelected.emit({ action, row });
+    }
   }
 
   clearFilters(): void { this.filterValues.set({}); }

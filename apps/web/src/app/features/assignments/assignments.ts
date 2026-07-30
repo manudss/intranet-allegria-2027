@@ -14,7 +14,7 @@ import {
   ParticipantsApiService,
 } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
-import { DataTableColumn } from '../../shared/data-table';
+import { DataTableAction, DataTableActionEvent, DataTableColumn } from '../../shared/data-table';
 const blank = (): AssignmentPayload => ({
   participantId: 0,
   hostFamilyId: 0,
@@ -36,7 +36,7 @@ const blank = (): AssignmentPayload => ({
       @if (loading()) {
         <tui-loader />
       } @else {
-        <app-data-table [rows]="filtered()" [columns]="tableColumns" (rowSelected)="open($event)" />
+        <app-data-table [rows]="filtered()" [columns]="tableColumns" [lineActions]="tableActions" (rowSelected)="open($event)" (actionSelected)="onTableAction($event)" />
       }
     </app-page-layout>
     @if (opened()) {
@@ -106,9 +106,12 @@ const blank = (): AssignmentPayload => ({
 })
 export class AssignmentsPage implements OnInit {
   protected readonly tableColumns: readonly DataTableColumn<ParticipantHostFamilyAssignment>[] = [
-    { key: 'participant', label: 'Participant', type: 'text', value: (x) => `${x.participant.lastName} ${x.participant.firstName}`, presentation: { type: 'link', link: () => '/participants' } },
-    { key: 'family', label: 'Famille', type: 'list', value: (x) => x.hostFamily.familyName, presentation: { type: 'link', link: () => '/familles' } },
+    { key: 'participant', label: 'Participant', type: 'text', value: (x) => `${x.participant.lastName} ${x.participant.firstName}`, presentation: { type: 'person', subtitle: (x) => x.participant.group?.name }, link: () => '/participants' },
+    { key: 'family', label: 'Famille', type: 'list', value: (x) => x.hostFamily.familyName, presentation: { type: 'icon', icon: () => '@tui.house' }, link: () => '/familles' },
     { key: 'status', label: 'Statut', type: 'list', value: (x) => x.status, presentation: { type: 'chip', appearance: (x) => ({ CONFIRMED: 'positive', CANCELLED: 'negative', COMPLETED: 'info', PLANNED: 'warning' })[x.status] || 'neutral', icon: (x) => x.status === 'CONFIRMED' ? '@tui.check' : x.status === 'CANCELLED' ? '@tui.x' : '@tui.clock' } },
+  ];
+  protected readonly tableActions: readonly DataTableAction<ParticipantHostFamilyAssignment>[] = [
+    { id: 'edit', label: 'Modifier', icon: '@tui.pencil' },
   ];
   private api = inject(AssignmentsApiService);
   private participantsApi = inject(ParticipantsApiService);
@@ -179,6 +182,12 @@ export class AssignmentsPage implements OnInit {
       notes: x.notes ?? '',
     });
     this.mode.set('edit');
+  }
+  onTableAction({ action, row }: DataTableActionEvent<ParticipantHostFamilyAssignment>) {
+    if (action.id === 'edit') {
+      this.open(row);
+      this.edit();
+    }
   }
   save() {
     submit(this.assignmentForm, async () => {

@@ -19,10 +19,15 @@ import { Component, input } from '@angular/core';
       }
       .page-layout {
         display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        grid-auto-flow: row;
+        align-items: start;
         gap: 1rem;
+        min-inline-size: 0;
       }
       .page-layout > header {
         display: flex;
+        min-inline-size: 0;
         align-items: center;
         justify-content: space-between;
         gap: 1rem;

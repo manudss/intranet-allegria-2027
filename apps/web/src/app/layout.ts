@@ -1,7 +1,14 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
-import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import {
+  ActivatedRouteSnapshot,
+  NavigationEnd,
+  Router,
+  RouterLink,
+  RouterLinkActive,
+  RouterOutlet,
+} from '@angular/router';
 import { TuiButton, TuiIcon, TuiLink, TuiScrollbar } from '@taiga-ui/core';
 import { filter, map, startWith } from 'rxjs';
 import { AuthService } from './core/auth.service';
@@ -27,7 +34,6 @@ type MenuGroup = {
 export class Layout {
   protected readonly auth = inject(AuthService);
   private readonly router = inject(Router);
-  private readonly activatedRoute = inject(ActivatedRoute);
   private readonly titleService = inject(Title);
 
   protected readonly currentPageTitle = toSignal(
@@ -144,13 +150,13 @@ export class Layout {
   }
 
   private getRouteTitle(): string {
-    let route = this.activatedRoute;
+    let route: ActivatedRouteSnapshot | undefined = this.router.routerState.snapshot.root;
 
-    while (route.firstChild) {
+    while (route?.firstChild) {
       route = route.firstChild;
     }
 
-    const routeTitle = route.snapshot.title;
+    const routeTitle = route?.title;
 
     return typeof routeTitle === 'string' && routeTitle.trim().length > 0 ? routeTitle : 'Accueil';
   }

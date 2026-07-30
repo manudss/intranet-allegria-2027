@@ -73,7 +73,7 @@ const blank = (): AssignmentPayload => ({
            <form class="drawer-form">
              <tui-textfield iconStart="@tui.user">
                <label tuiLabel>Participant</label>
-               <select tuiSelect [value]="model().participantId" (change)="model.update(x=>({...x,participantId:+$any($event.target).value}))">
+               <select [value]="model().participantId" (change)="model.update(x=>({...x,participantId:+$any($event.target).value}))">
                  <option [value]="0">Sélectionner…</option>
                  @for (p of participants(); track p.id) {
                    <option [value]="p.id">{{ p.lastName }} {{ p.firstName }}</option>
@@ -82,7 +82,7 @@ const blank = (): AssignmentPayload => ({
              </tui-textfield>
              <tui-textfield iconStart="@tui.home">
                <label tuiLabel>Famille d'accueil</label>
-               <select tuiSelect [value]="model().hostFamilyId" (change)="model.update(x=>({...x,hostFamilyId:+$any($event.target).value}))">
+               <select [value]="model().hostFamilyId" (change)="model.update(x=>({...x,hostFamilyId:+$any($event.target).value}))">
                  <option [value]="0">Sélectionner…</option>
                  @for (f of families(); track f.id) {
                    <option [value]="f.id">{{ f.familyName }}</option>
@@ -99,7 +99,7 @@ const blank = (): AssignmentPayload => ({
              </tui-textfield>
              <tui-textfield iconStart="@tui.circle-check">
                <label tuiLabel>Statut</label>
-               <select tuiSelect [formField]="assignmentForm.status">
+               <select [formField]="assignmentForm.status">
                  @for (s of statuses; track s) {
                    <option [value]="s">{{ s }}</option>
                  }

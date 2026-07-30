@@ -31,7 +31,7 @@ const blank = (): TeamPayload => ({
         </tui-textfield>
         <tui-textfield iconStart="@tui.filter">
           <label tuiLabel>Groupe</label>
-          <select tuiSelect [value]="groupFilter() ?? ''" (change)="groupFilter.set($any($event.target).value ? +$any($event.target).value : null)">
+          <select [value]="groupFilter() ?? ''" (change)="groupFilter.set($any($event.target).value ? +$any($event.target).value : null)">
             <option value="">Tous les groupes</option>
             @for (g of groups(); track g.id) {
               <option [value]="g.id">{{ g.name }}</option>
@@ -82,7 +82,7 @@ const blank = (): TeamPayload => ({
            <div class="member-add">
              <tui-textfield iconStart="@tui.user-plus">
                <label tuiLabel>Ajouter un participant</label>
-               <select tuiSelect [value]="candidateId() ?? ''" (change)="candidateId.set(+$any($event.target).value)">
+               <select [value]="candidateId() ?? ''" (change)="candidateId.set(+$any($event.target).value)">
                  <option value="">Sélectionner…</option>
                  @for (p of availableParticipants(); track p.id) {
                    <option [value]="p.id">{{ p.lastName }} {{ p.firstName }}</option>
@@ -107,7 +107,7 @@ const blank = (): TeamPayload => ({
              </tui-textfield>
              <tui-textfield iconStart="@tui.users">
                <label tuiLabel>Groupe</label>
-               <select tuiSelect [value]="model().groupId??''" (change)="model.update(x=>({...x,groupId:$any($event.target).value?+$any($event.target).value:null}))">
+               <select [value]="model().groupId??''" (change)="model.update(x=>({...x,groupId:$any($event.target).value?+$any($event.target).value:null}))">
                  <option value="">Sans groupe</option>
                  @for (g of groups(); track g.id) {
                    <option [value]="g.id">{{ g.name }}</option>
@@ -116,7 +116,7 @@ const blank = (): TeamPayload => ({
              </tui-textfield>
              <tui-textfield iconStart="@tui.user-check">
                <label tuiLabel>Animateur</label>
-               <select tuiSelect [value]="model().primaryAnimatorId??''" (change)="model.update(x=>({...x,primaryAnimatorId:$any($event.target).value?+$any($event.target).value:null}))">
+               <select [value]="model().primaryAnimatorId??''" (change)="model.update(x=>({...x,primaryAnimatorId:$any($event.target).value?+$any($event.target).value:null}))">
                  <option value="">Aucun</option>
                  @for (v of volunteers(); track v.id) {
                    <option [value]="v.id">{{ v.lastName }} {{ v.firstName }}</option>
@@ -125,7 +125,7 @@ const blank = (): TeamPayload => ({
              </tui-textfield>
              <tui-textfield iconStart="@tui.user">
                <label tuiLabel>Co-animateur</label>
-               <select tuiSelect [value]="model().secondaryAnimatorId??''" (change)="model.update(x=>({...x,secondaryAnimatorId:$any($event.target).value?+$any($event.target).value:null}))">
+               <select [value]="model().secondaryAnimatorId??''" (change)="model.update(x=>({...x,secondaryAnimatorId:$any($event.target).value?+$any($event.target).value:null}))">
                  <option value="">Aucun</option>
                  @for (v of volunteers(); track v.id) {
                    <option [value]="v.id">{{ v.lastName }} {{ v.firstName }}</option>

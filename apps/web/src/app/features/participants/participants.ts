@@ -50,7 +50,7 @@ const blankHealth = (): ParticipantHealthPayload => ({
         </tui-textfield>
         <tui-textfield iconStart="@tui.filter" tuiChevron>
           <label tuiLabel>Groupe</label>
-          <select tuiSelect [value]="groupFilter() ?? ''" (change)="setGroupFilter($any($event.target).value)">
+          <select [value]="groupFilter() ?? ''" (change)="setGroupFilter($any($event.target).value)">
             <option value="">Tous les groupes</option>
             @for (g of groups(); track g.id) {
               <option [value]="g.id">{{ g.name }}</option>
@@ -147,7 +147,7 @@ const blankHealth = (): ParticipantHealthPayload => ({
              </tui-textfield>
              <tui-textfield iconStart="@tui.user-round">
                <label tuiLabel>Sexe</label>
-               <select tuiSelect [formField]="participantForm.sex">
+               <select [formField]="participantForm.sex">
                  @for (s of sexes; track s) {
                    <option [value]="s">{{ s }}</option>
                  }
@@ -155,7 +155,7 @@ const blankHealth = (): ParticipantHealthPayload => ({
              </tui-textfield>
              <tui-textfield iconStart="@tui.users">
                <label tuiLabel>Groupe</label>
-               <select tuiSelect [value]="model().groupId??''" (change)="model.update(x=>({...x,groupId:$any($event.target).value?+$any($event.target).value:null}))">
+               <select [value]="model().groupId??''" (change)="model.update(x=>({...x,groupId:$any($event.target).value?+$any($event.target).value:null}))">
                  <option value="">Sans groupe</option>
                  @for (g of groups(); track g.id) {
                    <option [value]="g.id">{{ g.name }}</option>

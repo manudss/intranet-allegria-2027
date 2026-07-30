@@ -1,12 +1,24 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { TuiComparator, TuiReorder, TuiTable } from '@taiga-ui/addon-table';
 import { TuiContext, TuiStringHandler } from '@taiga-ui/cdk';
-import { TuiButton, TuiDataList, TuiDropdown, TuiInput, TuiSelectLike, TuiTextfield } from '@taiga-ui/core';
-import { TuiChevron, TuiInputChip, TuiMultiSelect, TuiSelect } from '@taiga-ui/kit';
+import { TuiButton, TuiDataList, TuiDropdown, TuiIcon, TuiInput, TuiLink, TuiSelectLike, TuiTextfield } from '@taiga-ui/core';
+import { TuiAvatar, TuiBadge, TuiChevron, TuiInputChip, TuiMultiSelect, TuiSelect } from '@taiga-ui/kit';
 
 export type DataTableColumnType = 'text' | 'list' | 'number' | 'date' | 'boolean';
 export type DataTableValue = string | number | boolean | null | undefined;
+export type DataTableCellType = 'text' | 'person' | 'badge' | 'icon' | 'link' | 'date' | 'number' | 'boolean';
+
+export interface DataTableCellPresentation<T> {
+  readonly type: DataTableCellType;
+  readonly subtitle?: (row: T) => DataTableValue;
+  readonly icon?: (row: T) => string;
+  readonly iconColor?: (row: T) => string;
+  readonly appearance?: (row: T) => string;
+  readonly link?: (row: T) => string | readonly (string | number)[];
+  readonly href?: (row: T) => string;
+}
 
 export interface DataTableColumn<T> {
   readonly key: string;
@@ -15,6 +27,7 @@ export interface DataTableColumn<T> {
   readonly value: (row: T) => DataTableValue;
   /** Raw value used when the displayed value is formatted. */
   readonly filterValue?: (row: T) => DataTableValue;
+  readonly presentation?: DataTableCellPresentation<T>;
   readonly sorter?: TuiComparator<T>;
 }
 
@@ -33,12 +46,17 @@ interface ColumnFilterState {
   standalone: true,
   imports: [
     FormsModule,
+    RouterLink,
+    TuiAvatar,
+    TuiBadge,
     TuiButton,
     TuiChevron,
     TuiDataList,
     TuiDropdown,
+    TuiIcon,
     ...TuiInput,
     TuiInputChip,
+    TuiLink,
     TuiMultiSelect,
     TuiReorder,
     TuiSelect,
@@ -123,7 +141,37 @@ interface ColumnFilterState {
           @for (row of sortedRows; track trackBy(row)) {
             <tr tuiTr tabindex="0" (click)="rowSelected.emit(row)" (keydown.enter)="rowSelected.emit(row)" (keydown.space)="selectFromKeyboard($event, row)">
               @for (column of enabledColumns(); track column.key) {
-                <td *tuiCell="column.key" tuiTd>{{ column.value(row) }}</td>
+                <td *tuiCell="column.key" tuiTd>
+                  @switch (column.presentation?.type || 'text') {
+                    @case ('person') {
+                      <div class="person-cell">
+                        <div appearance="secondary" size="s" [tuiAvatar]="initials(column.value(row))"></div>
+                        <span class="cell-copy"><strong>{{ column.value(row) }}</strong>@if (column.presentation?.subtitle; as subtitle) { <small>{{ subtitle(row) }}</small> }</span>
+                      </div>
+                    }
+                    @case ('badge') {
+                      <span size="l" tuiBadge [appearance]="cellAppearance(column, row)" [iconStart]="cellIcon(column, row)">{{ column.value(row) }}</span>
+                    }
+                    @case ('icon') {
+                      <span class="icon-cell"><tui-icon [icon]="cellIcon(column, row)" [style.color]="cellIconColor(column, row)" />{{ column.value(row) }}</span>
+                    }
+                    @case ('link') {
+                      @if (cellHref(column, row); as href) {
+                        <a iconEnd="@tui.external-link" tuiLink target="_blank" rel="noopener noreferrer" [href]="href" (click)="$event.stopPropagation()">{{ column.value(row) }}</a>
+                      } @else {
+                        <a tuiLink [routerLink]="cellLink(column, row)" (click)="$event.stopPropagation()">{{ column.value(row) }}</a>
+                      }
+                    }
+                    @case ('boolean') {
+                      <span size="s" tuiBadge [appearance]="column.value(row) ? 'positive' : 'neutral'">{{ column.value(row) ? 'Oui' : 'Non' }}</span>
+                    }
+                    @case ('date') { <time class="data-value">{{ column.value(row) }}</time> }
+                    @case ('number') { <span class="data-value number-value">{{ column.value(row) }}</span> }
+                    @default {
+                      <span class="cell-copy">{{ column.value(row) }}@if (column.presentation?.subtitle; as subtitle) { <small>{{ subtitle(row) }}</small> }</span>
+                    }
+                  }
+                </td>
               }
             </tr>
           }
@@ -145,6 +193,12 @@ interface ColumnFilterState {
     .range-filter { display: grid; grid-template-columns: minmax(5.5rem, 1fr) minmax(5.5rem, 1fr); gap: .25rem; }
     .option-search { margin: .25rem; }
     .empty-options { padding: .75rem; margin: 0; color: var(--tui-text-secondary); text-align: center; }
+    .person-cell, .icon-cell { display: flex; align-items: center; gap: .625rem; }
+    .cell-copy { display: flex; min-inline-size: 0; flex-direction: column; }
+    .cell-copy small { overflow: hidden; color: var(--tui-text-secondary); font-size: .75rem; text-overflow: ellipsis; }
+    .icon-cell tui-icon { flex: 0 0 auto; }
+    .data-value { font-variant-numeric: tabular-nums; }
+    .number-value { display: block; text-align: end; }
     tr[tabindex] { cursor: pointer; }
     tr[tabindex]:hover td, tr[tabindex]:focus-visible td { background: var(--tui-background-neutral-1-hover); }
   `,
@@ -217,6 +271,25 @@ export class DataTableComponent<T extends { readonly id: number }> {
   booleanLabel(key: string): string {
     const value = this.filterValues()[key]?.boolean;
     return value === 'true' ? 'Oui' : value === 'false' ? 'Non' : 'Tous';
+  }
+
+  initials(value: DataTableValue): string {
+    return String(value ?? '').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toLocaleUpperCase('fr');
+  }
+  cellAppearance(column: DataTableColumn<T>, row: T): string {
+    return column.presentation?.appearance?.(row) || 'neutral';
+  }
+  cellIcon(column: DataTableColumn<T>, row: T): string {
+    return column.presentation?.icon?.(row) || '';
+  }
+  cellIconColor(column: DataTableColumn<T>, row: T): string {
+    return column.presentation?.iconColor?.(row) || 'var(--tui-text-action)';
+  }
+  cellLink(column: DataTableColumn<T>, row: T): string | readonly (string | number)[] {
+    return column.presentation?.link?.(row) || [];
+  }
+  cellHref(column: DataTableColumn<T>, row: T): string {
+    return column.presentation?.href?.(row) || '';
   }
 
   clearFilters(): void { this.filterValues.set({}); }

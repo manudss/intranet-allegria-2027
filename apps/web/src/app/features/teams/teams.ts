@@ -126,9 +126,9 @@ const blank = (): TeamPayload => ({
 })
 export class TeamsPage implements OnInit {
   protected readonly tableColumns: readonly DataTableColumn<Team>[] = [
-    { key: 'team', label: 'Équipe', type: 'text', value: (x) => x.name },
-    { key: 'group', label: 'Groupe', type: 'list', value: (x) => x.group?.name || '—' },
-    { key: 'animator', label: 'Animateur', type: 'list', value: (x) => x.primaryAnimator ? `${x.primaryAnimator.firstName} ${x.primaryAnimator.lastName}` : '—' },
+    { key: 'team', label: 'Équipe', type: 'text', value: (x) => x.name, presentation: { type: 'icon', icon: () => '@tui.users' } },
+    { key: 'group', label: 'Groupe', type: 'list', value: (x) => x.group?.name || '—', presentation: { type: 'badge', appearance: (x) => x.group ? 'primary' : 'neutral', icon: () => '@tui.users' } },
+    { key: 'animator', label: 'Animateur', type: 'list', value: (x) => x.primaryAnimator ? `${x.primaryAnimator.firstName} ${x.primaryAnimator.lastName}` : '—', presentation: { type: 'person', subtitle: (x) => x.primaryAnimator?.email } },
   ];
   private api = inject(TeamsApiService);
   private membersApi = inject(TeamParticipantsApiService);

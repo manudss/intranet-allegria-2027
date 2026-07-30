@@ -23,22 +23,19 @@ const blank = (): TeamPayload => ({
   template: `<app-page-layout title="Équipes & missions" description="Composition et animateurs"
       ><button actions tuiButton (click)="create()">Nouvelle équipe</button>
       <div class="filters">
-        <tui-textfield
-          ><input
-            tuiTextfield
-            placeholder="Rechercher une équipe"
-            [value]="query()"
-            (input)="query.set($any($event.target).value)" /></tui-textfield
-        ><select
-          tuiTextfield
-          [value]="groupFilter() ?? ''"
-          (change)="groupFilter.set($any($event.target).value ? +$any($event.target).value : null)"
-        >
-          <option value="">Tous les groupes</option>
-          @for (g of groups(); track g.id) {
-            <option [value]="g.id">{{ g.name }}</option>
-          }
-        </select>
+        <tui-textfield iconStart="@tui.search">
+          <label tuiLabel>Rechercher une équipe</label>
+          <input tuiInput placeholder="Nom d'équipe…" [value]="query()" (input)="query.set($any($event.target).value)" />
+        </tui-textfield>
+        <tui-textfield iconStart="@tui.filter">
+          <label tuiLabel>Groupe</label>
+          <select tuiSelect [value]="groupFilter() ?? ''" (change)="groupFilter.set($any($event.target).value ? +$any($event.target).value : null)">
+            <option value="">Tous les groupes</option>
+            @for (g of groups(); track g.id) {
+              <option [value]="g.id">{{ g.name }}</option>
+            }
+          </select>
+        </tui-textfield>
       </div>
       @if (loading()) {
         <tui-loader />
@@ -79,68 +76,70 @@ const blank = (): TeamPayload => ({
               <span tuiBadge [class.over]="members().length > (selected()?.maxSize || 10)">{{ members().length }} / {{ selected()?.maxSize }}</span>
             </dd>
           </dl>
-          <h3>Membres</h3>
-          <div class="member-add">
-            <select
-              tuiTextfield
-              [value]="candidateId() ?? ''"
-              (change)="candidateId.set(+$any($event.target).value)"
-            >
-              <option value="">Ajouter un participant</option>
-              @for (p of availableParticipants(); track p.id) {
-                <option [value]="p.id">{{ p.lastName }} {{ p.firstName }}</option>
-              }</select
-            ><button tuiButton size="s" [disabled]="!candidateId()" (click)="addMember()">
-              Ajouter
-            </button>
-          </div>
+           <h3>Membres</h3>
+           <div class="member-add">
+             <tui-textfield iconStart="@tui.user-plus">
+               <label tuiLabel>Ajouter un participant</label>
+               <select tuiSelect [value]="candidateId() ?? ''" (change)="candidateId.set(+$any($event.target).value)">
+                 <option value="">Sélectionner…</option>
+                 @for (p of availableParticipants(); track p.id) {
+                   <option [value]="p.id">{{ p.lastName }} {{ p.firstName }}</option>
+                 }
+               </select>
+             </tui-textfield>
+             <button tuiButton size="s" [disabled]="!candidateId()" (click)="addMember()">Ajouter</button>
+           </div>
           <ul>
             @for (p of members(); track p.id) {
               <li>
                 {{ p.lastName }} {{ p.firstName }}
-                <button
-                  tuiButton
-                  size="xs"
-                  appearance="flat-destructive"
-                  (click)="removeMember(p.id)"
-                >
-                  Retirer
-                </button>
+                <button tuiButton size="xs" appearance="flat-destructive" (click)="removeMember(p.id)">Retirer</button>
               </li>
             }
           </ul>
-        } @else {
-          <form class="drawer-form">
-            <label>Nom<input tuiTextfield [formField]="teamForm.name" /></label
-            ><label
-              >Groupe<select tuiTextfield [value]="model().groupId??''" (change)="model.update(x=>({...x,groupId:$any($event.target).value?+$any($event.target).value:null}))">
-                <option value="">Sans groupe</option>
-                @for (g of groups(); track g.id) {
-                  <option [value]="g.id">{{ g.name }}</option>
-                }
-              </select></label
-            ><label
-              >Animateur<select tuiTextfield [value]="model().primaryAnimatorId??''" (change)="model.update(x=>({...x,primaryAnimatorId:$any($event.target).value?+$any($event.target).value:null}))">
-                <option value="">Aucun</option>
-                @for (v of volunteers(); track v.id) {
-                  <option [value]="v.id">{{ v.lastName }} {{ v.firstName }}</option>
-                }
-              </select></label
-            ><label
-              >Co-animateur<select tuiTextfield [value]="model().secondaryAnimatorId??''" (change)="model.update(x=>({...x,secondaryAnimatorId:$any($event.target).value?+$any($event.target).value:null}))">
-                <option value="">Aucun</option>
-                @for (v of volunteers(); track v.id) {
-                  <option [value]="v.id">{{ v.lastName }} {{ v.firstName }}</option>
-                }
-              </select></label
-            ><label
-              >Taille maximale<input
-                tuiTextfield
-                type="number"
-                [formField]="teamForm.maxSize" /></label
-            ><label>Notes<textarea tuiTextfield [formField]="teamForm.notes"></textarea></label>
-          </form>
-        }
+         } @else {
+           <form class="drawer-form">
+             <tui-textfield iconStart="@tui.briefcase">
+               <label tuiLabel>Nom de l'équipe</label>
+               <input tuiInput [formField]="teamForm.name" />
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.users">
+               <label tuiLabel>Groupe</label>
+               <select tuiSelect [value]="model().groupId??''" (change)="model.update(x=>({...x,groupId:$any($event.target).value?+$any($event.target).value:null}))">
+                 <option value="">Sans groupe</option>
+                 @for (g of groups(); track g.id) {
+                   <option [value]="g.id">{{ g.name }}</option>
+                 }
+               </select>
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.user-check">
+               <label tuiLabel>Animateur</label>
+               <select tuiSelect [value]="model().primaryAnimatorId??''" (change)="model.update(x=>({...x,primaryAnimatorId:$any($event.target).value?+$any($event.target).value:null}))">
+                 <option value="">Aucun</option>
+                 @for (v of volunteers(); track v.id) {
+                   <option [value]="v.id">{{ v.lastName }} {{ v.firstName }}</option>
+                 }
+               </select>
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.user">
+               <label tuiLabel>Co-animateur</label>
+               <select tuiSelect [value]="model().secondaryAnimatorId??''" (change)="model.update(x=>({...x,secondaryAnimatorId:$any($event.target).value?+$any($event.target).value:null}))">
+                 <option value="">Aucun</option>
+                 @for (v of volunteers(); track v.id) {
+                   <option [value]="v.id">{{ v.lastName }} {{ v.firstName }}</option>
+                 }
+               </select>
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.hash">
+               <label tuiLabel>Taille maximale</label>
+               <input tuiInput type="number" [formField]="teamForm.maxSize" />
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.file-text" class="wide">
+               <label tuiLabel>Notes</label>
+               <textarea tuiTextarea [formField]="$any(teamForm.notes)"></textarea>
+             </tui-textfield>
+           </form>
+         }
         <footer>
           <button tuiButton appearance="flat" (click)="opened.set(false)">Fermer</button>
           @if (mode() === 'detail') {

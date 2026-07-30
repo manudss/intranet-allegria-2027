@@ -16,15 +16,12 @@ const blank = (): VolunteerPayload => ({
 @Component({
   selector: 'app-volunteers',
   standalone: false,
-  template: `<app-page-layout title="Bénévoles" description="Annuaire et responsabilités"
-      ><button actions tuiButton (click)="create()">Nouveau bénévole</button
-      ><tui-textfield
-        ><input
-          tuiTextfield
-          placeholder="Rechercher"
-          [value]="query()"
-          (input)="query.set($any($event.target).value)"
-      /></tui-textfield>
+  template: `<app-page-layout title="Bénévoles" description="Annuaire et responsabilités">
+      <button actions tuiButton (click)="create()">Nouveau bénévole</button>
+      <tui-textfield iconStart="@tui.search">
+        <label tuiLabel>Rechercher un bénévole</label>
+        <input tuiInput placeholder="Nom, équipe…" [value]="query()" (input)="query.set($any($event.target).value)" />
+      </tui-textfield>
       @if (loading()) {
         <tui-loader />
       } @else {
@@ -62,22 +59,37 @@ const blank = (): VolunteerPayload => ({
             <dt>Notes</dt>
             <dd>{{ selected()?.notes || '—' }}</dd>
           </dl>
-        } @else {
-          <form class="drawer-form">
-            <label>Prénom<input tuiTextfield [formField]="volunteerForm.firstName" /></label
-            ><label>Nom<input tuiTextfield [formField]="volunteerForm.lastName" /></label
-            ><label
-              >Email<input tuiTextfield type="email" [formField]="volunteerForm.email" /></label
-            ><label>Téléphone<input tuiTextfield [formField]="volunteerForm.phone" /></label
-            ><label>Équipe<input tuiTextfield [formField]="volunteerForm.team" /></label
-            ><label class="check"
-              ><input type="checkbox" [formField]="volunteerForm.isGroupLeader" /> Responsable de
-              groupe</label
-            ><label
-              >Notes<textarea tuiTextfield [formField]="volunteerForm.notes"></textarea>
-            </label>
-          </form>
-        }
+         } @else {
+           <form class="drawer-form">
+             <tui-textfield iconStart="@tui.user">
+               <label tuiLabel>Prénom</label>
+               <input tuiInput [formField]="volunteerForm.firstName" />
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.user">
+               <label tuiLabel>Nom</label>
+               <input tuiInput [formField]="volunteerForm.lastName" />
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.mail">
+               <label tuiLabel>Email</label>
+               <input tuiInput type="email" [formField]="volunteerForm.email" />
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.phone">
+               <label tuiLabel>Téléphone</label>
+               <input tuiInput [formField]="volunteerForm.phone" />
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.users">
+               <label tuiLabel>Équipe</label>
+               <input tuiInput [formField]="volunteerForm.team" />
+             </tui-textfield>
+             <label class="check">
+               <input type="checkbox" [formField]="volunteerForm.isGroupLeader" /> Responsable de groupe
+             </label>
+             <tui-textfield iconStart="@tui.file-text" class="wide">
+               <label tuiLabel>Notes</label>
+               <textarea tuiTextarea [formField]="$any(volunteerForm.notes)"></textarea>
+             </tui-textfield>
+           </form>
+         }
         <footer>
           <button tuiButton appearance="flat" (click)="opened.set(false)">Fermer</button>
           @if (mode() === 'detail') {

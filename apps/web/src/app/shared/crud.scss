@@ -60,18 +60,16 @@ tui-drawer footer {
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
 }
-.drawer-form label {
+/*.drawer-form label {
   display: grid;
   gap: 0.35rem;
   color: #555;
-}
+}*/
 .drawer-form label:has(textarea),
 .drawer-form .wide {
   grid-column: 1/-1;
 }
-.drawer-form textarea {
-  min-height: 6rem;
-}
+
 dl {
   display: grid;
   grid-template-columns: 10rem 1fr;

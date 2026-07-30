@@ -42,22 +42,19 @@ const blankHealth = (): ParticipantHealthPayload => ({
       description="Inscriptions, groupes et informations individuelles"
       ><button actions tuiButton (click)="create()">Nouveau participant</button>
       <div class="filters">
-        <tui-textfield
-          ><input
-            tuiTextfield
-            placeholder="Nom, diocèse ou ville"
-            [value]="query()"
-            (input)="query.set($any($event.target).value)" /></tui-textfield
-        ><select
-          tuiTextfield
-          [value]="groupFilter() ?? ''"
-          (change)="setGroupFilter($any($event.target).value)"
-        >
-          <option value="">Tous les groupes</option>
-          @for (g of groups(); track g.id) {
-            <option [value]="g.id">{{ g.name }}</option>
-          }
-        </select>
+        <tui-textfield iconStart="@tui.search">
+          <label tuiLabel>Rechercher un participant</label>
+          <input tuiInput placeholder="Nom, diocèse ou ville…" [value]="query()" (input)="query.set($any($event.target).value)" />
+        </tui-textfield>
+        <tui-textfield iconStart="@tui.filter" tuiChevron>
+          <label tuiLabel>Groupe</label>
+          <select tuiSelect [value]="groupFilter() ?? ''" (change)="setGroupFilter($any($event.target).value)">
+            <option value="">Tous les groupes</option>
+            @for (g of groups(); track g.id) {
+              <option [value]="g.id">{{ g.name }}</option>
+            }
+          </select>
+        </tui-textfield>
       </div>
       @if (loading()) {
         <tui-loader />
@@ -99,78 +96,88 @@ const blankHealth = (): ParticipantHealthPayload => ({
               {{ selected()?.emergencyContactPhone || '—' }}
             </dd>
           </dl>
-        } @else if (mode() === 'health') {
-          <form class="drawer-form">
-            <label
-              >Pathologies<textarea
-                tuiTextfield
-                [formField]="healthForm.medicalConditions"
-              ></textarea></label
-            ><label
-              >Allergies<textarea tuiTextfield [formField]="healthForm.allergies"></textarea></label
-            ><label
-              >Médicaments<textarea
-                tuiTextfield
-                [formField]="healthForm.medications"
-              ></textarea></label
-            ><label
-              >Besoins spécifiques<textarea
-                tuiTextfield
-                [formField]="healthForm.specialNeeds"
-              ></textarea></label
-            ><label
-              >Alimentation<textarea
-                tuiTextfield
-                [formField]="healthForm.dietaryNotes"
-              ></textarea></label
-            ><label
-              >Consignes d'urgence<textarea
-                tuiTextfield
-                [formField]="healthForm.emergencyInstructions"
-              ></textarea>
-            </label>
-          </form>
-          @if (health()) {
-            <p>
-              Dernière modification : {{ health()?.lastUpdatedAt | date: 'short' }} par
-              {{ health()?.lastUpdatedBy?.email || 'inconnu' }}
-            </p>
-          }
-        } @else {
-          <form class="drawer-form">
-            <label>Prénom<input tuiTextfield [formField]="participantForm.firstName" /></label
-            ><label>Nom<input tuiTextfield [formField]="participantForm.lastName" /></label
-            ><label
-              >Date de naissance<input
-                tuiTextfield
-                type="date"
-                [formField]="participantForm.dateOfBirth" /></label
-            ><label
-              >Sexe<select tuiTextfield [formField]="participantForm.sex">
-                @for (s of sexes; track s) {
-                  <option [value]="s">{{ s }}</option>
-                }
-              </select></label
-            ><label
-              >Groupe<select tuiTextfield [value]="model().groupId??''" (change)="model.update(x=>({...x,groupId:$any($event.target).value?+$any($event.target).value:null}))">
-                <option value="">Sans groupe</option>
-                @for (g of groups(); track g.id) {
-                  <option [value]="g.id">{{ g.name }}</option>
-                }
-              </select></label
-            ><label>Diocèse<input tuiTextfield [formField]="participantForm.diocese" /></label
-            ><label>Ville<input tuiTextfield [formField]="participantForm.city" /></label
-            ><label
-              >Contact urgence<input
-                tuiTextfield
-                [formField]="participantForm.emergencyContactName" /></label
-            ><label
-              >Téléphone urgence<input
-                tuiTextfield
-                [formField]="participantForm.emergencyContactPhone"
-            /></label>
-          </form>
-        }
+         } @else if (mode() === 'health') {
+           <form class="drawer-form">
+             <tui-textfield iconStart="@tui.heart-pulse" class="wide">
+               <label tuiLabel>Pathologies</label>
+               <textarea tuiTextarea [formField]="$any(healthForm.medicalConditions)"></textarea>
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.triangle-alert" class="wide">
+               <label tuiLabel>Allergies</label>
+               <textarea tuiTextarea [formField]="$any(healthForm.allergies)"></textarea>
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.pill" class="wide">
+               <label tuiLabel>Médicaments</label>
+               <textarea tuiTextarea [formField]="$any(healthForm.medications)"></textarea>
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.star" class="wide">
+               <label tuiLabel>Besoins spécifiques</label>
+               <textarea tuiTextarea [formField]="$any(healthForm.specialNeeds)"></textarea>
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.utensils" class="wide">
+               <label tuiLabel>Alimentation</label>
+               <textarea tuiTextarea [formField]="$any(healthForm.dietaryNotes)"></textarea>
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.shield-alert" class="wide">
+               <label tuiLabel>Consignes d'urgence</label>
+               <textarea tuiTextarea [formField]="$any(healthForm.emergencyInstructions)"></textarea>
+             </tui-textfield>
+           </form>
+           @if (health()) {
+             <p>
+               Dernière modification : {{ health()?.lastUpdatedAt | date: 'short' }} par
+               {{ health()?.lastUpdatedBy?.email || 'inconnu' }}
+             </p>
+           }
+         } @else {
+           <form class="drawer-form">
+             <tui-textfield iconStart="@tui.user">
+               <label tuiLabel>Prénom</label>
+               <input tuiInput [formField]="participantForm.firstName" />
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.user">
+               <label tuiLabel>Nom</label>
+               <input tuiInput [formField]="participantForm.lastName" />
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.calendar">
+               <label tuiLabel>Date de naissance</label>
+               <input tuiInput type="date" [formField]="participantForm.dateOfBirth" />
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.user-round">
+               <label tuiLabel>Sexe</label>
+               <select tuiSelect [formField]="participantForm.sex">
+                 @for (s of sexes; track s) {
+                   <option [value]="s">{{ s }}</option>
+                 }
+               </select>
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.users">
+               <label tuiLabel>Groupe</label>
+               <select tuiSelect [value]="model().groupId??''" (change)="model.update(x=>({...x,groupId:$any($event.target).value?+$any($event.target).value:null}))">
+                 <option value="">Sans groupe</option>
+                 @for (g of groups(); track g.id) {
+                   <option [value]="g.id">{{ g.name }}</option>
+                 }
+               </select>
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.map-pin">
+               <label tuiLabel>Diocèse</label>
+               <input tuiInput [formField]="participantForm.diocese" />
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.map-pin">
+               <label tuiLabel>Ville</label>
+               <input tuiInput [formField]="participantForm.city" />
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.shield-alert">
+               <label tuiLabel>Contact urgence</label>
+               <input tuiInput [formField]="participantForm.emergencyContactName" />
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.phone">
+               <label tuiLabel>Téléphone urgence</label>
+               <input tuiInput [formField]="participantForm.emergencyContactPhone" />
+             </tui-textfield>
+           </form>
+         }
         <footer>
           <button tuiButton appearance="flat" (click)="opened.set(false)">Fermer</button>
           @if (mode() === 'detail') {

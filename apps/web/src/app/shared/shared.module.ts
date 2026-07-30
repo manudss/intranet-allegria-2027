@@ -1,46 +1,37 @@
-import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { FormField } from '@angular/forms/signals';
-import { TuiButton, TuiDropdownContent, TuiIcon, TuiLabel, TuiLoader, TuiTextfieldComponent, TuiTextfieldMultiComponent, TuiTextfieldOptionsDirective } from '@taiga-ui/core';
-import { TuiBadge, TuiDrawer } from '@taiga-ui/kit';
+import {
+  TuiButton,
+  TuiDataList,
+  TuiDropdownContent,
+  TuiIcon,
+  TuiInput,
+  TuiLabel,
+  TuiLoader,
+} from '@taiga-ui/core';
+import {TuiBadge, TuiChevron, TuiDataListWrapper, TuiDrawer, TuiSelect, TuiTextarea, TuiTooltip} from '@taiga-ui/kit';
 import { TuiItem } from '@taiga-ui/cdk';
 import { PageLayoutComponent } from './ui-components';
 
-@NgModule({
-  imports: [
-    CommonModule,
-    ScrollingModule,
-    FormField,
-    PageLayoutComponent,
-    TuiButton,
-    TuiIcon,
-    TuiLoader,
-    TuiItem,
-    TuiLabel,
-    TuiTextfieldComponent,
-    TuiTextfieldOptionsDirective,
-    TuiTextfieldMultiComponent,
-    TuiDropdownContent,
-    TuiBadge,
-    TuiDrawer,
-  ],
-  exports: [
-    CommonModule,
-    ScrollingModule,
-    FormField,
-    PageLayoutComponent,
-    TuiButton,
-    TuiIcon,
-    TuiLoader,
-    TuiItem,
-    TuiLabel,
-    TuiTextfieldComponent,
-    TuiTextfieldOptionsDirective,
-    TuiTextfieldMultiComponent,
-    TuiDropdownContent,
-    TuiBadge,
-    TuiDrawer,
-  ],
-})
-export class SharedModule {}
+export const SHARED_IMPORTS = [
+  CommonModule,
+  ScrollingModule,
+  FormField,
+  PageLayoutComponent,
+  TuiButton,
+  TuiIcon,
+  TuiLoader,
+  TuiItem,
+  TuiLabel,
+  ...TuiInput,
+  ...TuiTextarea,
+    ...TuiSelect,
+  TuiChevron,
+    ...TuiDataListWrapper,
+    ...TuiDataList,
+  TuiTooltip,
+  TuiDropdownContent,
+  TuiBadge,
+  TuiDrawer,
+] as const;

@@ -25,14 +25,11 @@ const blank = (): AssignmentPayload => ({
   selector: 'app-assignments',
   standalone: false,
   template: `<app-page-layout title="Hébergement" description="Affectations des participants"
-      ><button actions tuiButton (click)="create()">Nouvelle affectation</button
-      ><tui-textfield
-        ><input
-          tuiTextfield
-          placeholder="Rechercher"
-          [value]="query()"
-          (input)="query.set($any($event.target).value)"
-      /></tui-textfield>
+      ><button actions tuiButton (click)="create()">Nouvelle affectation</button>
+      <tui-textfield iconStart="@tui.search">
+        <label tuiLabel>Rechercher</label>
+        <input tuiInput placeholder="Participant, famille…" [value]="query()" (input)="query.set($any($event.target).value)" />
+      </tui-textfield>
       @if (loading()) {
         <tui-loader />
       } @else {
@@ -70,43 +67,48 @@ const blank = (): AssignmentPayload => ({
             <dt>Notes</dt>
             <dd>{{ selected()?.notes || '—' }}</dd>
           </dl>
-        } @else {
-          <form class="drawer-form">
-            <label
-              >Participant<select tuiTextfield [value]="model().participantId" (change)="model.update(x=>({...x,participantId:+$any($event.target).value}))">
-                <option [value]="0">Sélectionner</option>
-                @for (p of participants(); track p.id) {
-                  <option [value]="p.id">{{ p.lastName }} {{ p.firstName }}</option>
-                }
-              </select></label
-            ><label
-              >Famille<select tuiTextfield [value]="model().hostFamilyId" (change)="model.update(x=>({...x,hostFamilyId:+$any($event.target).value}))">
-                <option [value]="0">Sélectionner</option>
-                @for (f of families(); track f.id) {
-                  <option [value]="f.id">{{ f.familyName }}</option>
-                }
-              </select></label
-            ><label
-              >Arrivée<input
-                tuiTextfield
-                type="date"
-                [formField]="assignmentForm.arrivalDate" /></label
-            ><label
-              >Départ<input
-                tuiTextfield
-                type="date"
-                [formField]="assignmentForm.departureDate" /></label
-            ><label
-              >Statut<select tuiTextfield [formField]="assignmentForm.status">
-                @for (s of statuses; track s) {
-                  <option [value]="s">{{ s }}</option>
-                }
-              </select></label
-            ><label
-              >Notes<textarea tuiTextfield [formField]="assignmentForm.notes"></textarea>
-            </label>
-          </form>
-        }
+         } @else {
+           <form class="drawer-form">
+             <tui-textfield iconStart="@tui.user">
+               <label tuiLabel>Participant</label>
+               <select tuiSelect [value]="model().participantId" (change)="model.update(x=>({...x,participantId:+$any($event.target).value}))">
+                 <option [value]="0">Sélectionner…</option>
+                 @for (p of participants(); track p.id) {
+                   <option [value]="p.id">{{ p.lastName }} {{ p.firstName }}</option>
+                 }
+               </select>
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.home">
+               <label tuiLabel>Famille d'accueil</label>
+               <select tuiSelect [value]="model().hostFamilyId" (change)="model.update(x=>({...x,hostFamilyId:+$any($event.target).value}))">
+                 <option [value]="0">Sélectionner…</option>
+                 @for (f of families(); track f.id) {
+                   <option [value]="f.id">{{ f.familyName }}</option>
+                 }
+               </select>
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.calendar">
+               <label tuiLabel>Arrivée</label>
+               <input tuiInput type="date" [formField]="assignmentForm.arrivalDate" />
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.calendar">
+               <label tuiLabel>Départ</label>
+               <input tuiInput type="date" [formField]="assignmentForm.departureDate" />
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.circle-check">
+               <label tuiLabel>Statut</label>
+               <select tuiSelect [formField]="assignmentForm.status">
+                 @for (s of statuses; track s) {
+                   <option [value]="s">{{ s }}</option>
+                 }
+               </select>
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.file-text" class="wide">
+               <label tuiLabel>Notes</label>
+               <textarea tuiTextarea [formField]="$any(assignmentForm.notes)"></textarea>
+             </tui-textfield>
+           </form>
+         }
         <footer>
           <button tuiButton appearance="flat" (click)="opened.set(false)">Fermer</button>
           @if (mode() === 'detail') {

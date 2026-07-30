@@ -17,14 +17,11 @@ const emptyGroup = (): GroupPayload => ({
   template: `<app-page-layout
       title="Rassemblement"
       description="Groupes diocésains, arrivées et départs"
-      ><button actions tuiButton appearance="primary" (click)="create()">Nouveau groupe</button
-      ><tui-textfield
-        ><tui-icon icon="@tui.search" /><input
-          tuiTextfield
-          placeholder="Rechercher un groupe"
-          [value]="query()"
-          (input)="query.set($any($event.target).value)"
-      /></tui-textfield>
+      ><button actions tuiButton appearance="primary" (click)="create()">Nouveau groupe</button>
+      <tui-textfield iconStart="@tui.search">
+        <label tuiLabel>Rechercher un groupe</label>
+        <input tuiInput placeholder="Nom ou diocèse…" [value]="query()" (input)="query.set($any($event.target).value)" />
+      </tui-textfield>
       @if (loading()) {
         <tui-loader />
       } @else {
@@ -57,23 +54,30 @@ const emptyGroup = (): GroupPayload => ({
             <dt>Notes</dt>
             <dd>{{ selected()?.notes || '—' }}</dd>
           </dl>
-        } @else {
-          <form class="drawer-form" (submit)="save($event)">
-            <label>Nom<input tuiTextfield [formField]="groupForm.name" /></label
-            ><label>Diocèse<input tuiTextfield [formField]="groupForm.diocese" /></label
-            ><label
-              >Arrivée<input
-                tuiTextfield
-                type="datetime-local"
-                [formField]="groupForm.arrivalDatetime" /></label
-            ><label
-              >Départ<input
-                tuiTextfield
-                type="datetime-local"
-                [formField]="groupForm.departureDatetime" /></label
-            ><label>Notes<textarea tuiTextfield [formField]="groupForm.notes"></textarea></label>
-          </form>
-        }
+         } @else {
+           <form class="drawer-form" (submit)="save($event)">
+             <tui-textfield iconStart="@tui.users">
+               <label tuiLabel>Nom du groupe</label>
+               <input tuiInput [formField]="groupForm.name" />
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.map-pin">
+               <label tuiLabel>Diocèse</label>
+               <input tuiInput [formField]="groupForm.diocese" />
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.calendar">
+               <label tuiLabel>Arrivée</label>
+               <input tuiInput type="datetime-local" [formField]="groupForm.arrivalDatetime" />
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.calendar">
+               <label tuiLabel>Départ</label>
+               <input tuiInput type="datetime-local" [formField]="groupForm.departureDatetime" />
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.file-text" class="wide">
+               <label tuiLabel>Notes</label>
+               <textarea tuiTextarea [formField]="$any(groupForm.notes)"></textarea>
+             </tui-textfield>
+           </form>
+         }
         <footer>
           <button tuiButton appearance="flat" (click)="close()">Fermer</button>
           @if (mode() === 'detail') {

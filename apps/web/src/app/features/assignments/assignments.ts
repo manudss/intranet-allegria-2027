@@ -106,9 +106,9 @@ const blank = (): AssignmentPayload => ({
 })
 export class AssignmentsPage implements OnInit {
   protected readonly tableColumns: readonly DataTableColumn<ParticipantHostFamilyAssignment>[] = [
-    { key: 'participant', label: 'Participant', value: (x) => `${x.participant.lastName} ${x.participant.firstName}` },
-    { key: 'family', label: 'Famille', value: (x) => x.hostFamily.familyName },
-    { key: 'status', label: 'Statut', value: (x) => x.status },
+    { key: 'participant', label: 'Participant', type: 'list', value: (x) => `${x.participant.lastName} ${x.participant.firstName}` },
+    { key: 'family', label: 'Famille', type: 'list', value: (x) => x.hostFamily.familyName },
+    { key: 'status', label: 'Statut', type: 'list', value: (x) => x.status },
   ];
   private api = inject(AssignmentsApiService);
   private participantsApi = inject(ParticipantsApiService);

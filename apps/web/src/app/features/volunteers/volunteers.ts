@@ -103,9 +103,9 @@ const blank = (): VolunteerPayload => ({
 })
 export class VolunteersPage implements OnInit {
   protected readonly tableColumns: readonly DataTableColumn<Volunteer>[] = [
-    { key: 'name', label: 'Nom', value: (x) => `${x.lastName} ${x.firstName}` },
-    { key: 'team', label: 'Équipe', value: (x) => x.team || '—' },
-    { key: 'contact', label: 'Contact', value: (x) => x.email || x.phone || '—' },
+    { key: 'name', label: 'Nom', type: 'text', value: (x) => `${x.lastName} ${x.firstName}` },
+    { key: 'team', label: 'Équipe', type: 'list', value: (x) => x.team || '—' },
+    { key: 'contact', label: 'Contact', type: 'text', value: (x) => x.email || x.phone || '—' },
   ];
   private api = inject(VolunteersApiService);
   items = signal<Volunteer[]>([]);

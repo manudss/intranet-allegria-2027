@@ -93,9 +93,9 @@ const emptyGroup = (): GroupPayload => ({
 })
 export class GroupsPage implements OnInit {
   protected readonly tableColumns: readonly DataTableColumn<Group>[] = [
-    { key: 'name', label: 'Nom', value: (x) => x.name },
-    { key: 'diocese', label: 'Diocèse', value: (x) => x.diocese || '—' },
-    { key: 'arrival', label: 'Arrivée', value: (x) => x.arrivalDatetime ? new Date(x.arrivalDatetime).toLocaleString('fr-FR') : '—' },
+    { key: 'name', label: 'Nom', type: 'text', value: (x) => x.name },
+    { key: 'diocese', label: 'Diocèse', type: 'list', value: (x) => x.diocese || '—' },
+    { key: 'arrival', label: 'Arrivée', type: 'date', value: (x) => x.arrivalDatetime ? new Date(x.arrivalDatetime).toLocaleString('fr-FR') : '—', filterValue: (x) => x.arrivalDatetime },
   ];
   private readonly api = inject(GroupsApiService);
   readonly items = signal<Group[]>([]);

@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, input, output, signal } f
 import { FormsModule } from '@angular/forms';
 import { TuiComparator, TuiReorder, TuiTable } from '@taiga-ui/addon-table';
 import { TuiContext, TuiStringHandler } from '@taiga-ui/cdk';
-import { TuiButton, TuiInput, TuiTextfield } from '@taiga-ui/core';
-import { TuiChevron, TuiMultiSelect, TuiSelect } from '@taiga-ui/kit';
+import { TuiButton, TuiDataList, TuiDropdown, TuiInput, TuiSelectLike, TuiTextfield } from '@taiga-ui/core';
+import { TuiChevron, TuiInputChip, TuiMultiSelect, TuiSelect } from '@taiga-ui/kit';
 
 export type DataTableColumnType = 'text' | 'list' | 'number' | 'date' | 'boolean';
 export type DataTableValue = string | number | boolean | null | undefined;
@@ -35,10 +35,14 @@ interface ColumnFilterState {
     FormsModule,
     TuiButton,
     TuiChevron,
+    TuiDataList,
+    TuiDropdown,
     ...TuiInput,
+    TuiInputChip,
     TuiMultiSelect,
     TuiReorder,
     TuiSelect,
+    TuiSelectLike,
     TuiTable,
     TuiTextfield,
   ],
@@ -72,7 +76,20 @@ interface ColumnFilterState {
                   @switch (column.type || 'text') {
                     @case ('list') {
                       <tui-textfield multi tuiChevron>
-                        <select tuiMultiSelect [attr.aria-label]="'Filtrer la colonne ' + column.label" [items]="listValues()[column.key] || []" [ngModel]="filterValues()[column.key]?.list || []" [ngModelOptions]="standaloneModel" (ngModelChange)="setListFilter(column.key, $event)"></select>
+                        <input tuiInputChip tuiSelectLike [attr.aria-label]="'Filtrer la colonne ' + column.label" [placeholder]="filterValues()[column.key]?.list?.length ? '' : 'Sélectionner'" [ngModel]="filterValues()[column.key]?.list || []" [ngModelOptions]="standaloneModel" (ngModelChange)="setListFilter(column.key, $event)" />
+                        <ng-template tuiItem />
+                        <ng-container *tuiDropdown>
+                          <tui-textfield class="option-search">
+                            <input tuiInput type="search" placeholder="Rechercher une option…" [attr.aria-label]="'Rechercher dans ' + column.label" [value]="optionSearch()[column.key] || ''" (input)="setOptionSearch(column.key, $any($event.target).value)" />
+                          </tui-textfield>
+                          <tui-data-list tuiMultiSelectGroup>
+                            @for (option of filteredListValues(column.key); track option) {
+                              <button tuiOption type="button" [value]="option">{{ option }}</button>
+                            } @empty {
+                              <p class="empty-options">Aucune option</p>
+                            }
+                          </tui-data-list>
+                        </ng-container>
                       </tui-textfield>
                     }
                     @case ('number') {
@@ -126,6 +143,8 @@ interface ColumnFilterState {
     [tuiTh] > span { display: block; margin-block-end: .375rem; }
     .column-filter { min-inline-size: 9rem; font-weight: normal; }
     .range-filter { display: grid; grid-template-columns: minmax(5.5rem, 1fr) minmax(5.5rem, 1fr); gap: .25rem; }
+    .option-search { margin: .25rem; }
+    .empty-options { padding: .75rem; margin: 0; color: var(--tui-text-secondary); text-align: center; }
     tr[tabindex] { cursor: pointer; }
     tr[tabindex]:hover td, tr[tabindex]:focus-visible td { background: var(--tui-background-neutral-1-hover); }
   `,
@@ -138,6 +157,7 @@ export class DataTableComponent<T extends { readonly id: number }> {
   readonly orderedColumns = signal<readonly DataTableColumn<T>[]>([]);
   readonly enabledColumns = signal<readonly DataTableColumn<T>[]>([]);
   readonly filterValues = signal<Readonly<Record<string, ColumnFilterState>>>({});
+  readonly optionSearch = signal<Readonly<Record<string, string>>>({});
   readonly hasFilters = computed(() => Object.values(this.filterValues()).some((filter) =>
     Boolean(filter.text || filter.list?.length || filter.min != null || filter.max != null || filter.from || filter.to || filter.boolean),
   ));
@@ -178,6 +198,15 @@ export class DataTableComponent<T extends { readonly id: number }> {
 
   setTextFilter(key: string, text: string): void { this.updateFilter(key, { text }); }
   setListFilter(key: string, list: readonly string[]): void { this.updateFilter(key, { list }); }
+  setOptionSearch(key: string, value: string): void {
+    this.optionSearch.update((searches) => ({ ...searches, [key]: value }));
+  }
+  filteredListValues(key: string): readonly string[] {
+    const search = this.normalize(this.optionSearch()[key] || '');
+    return search
+      ? (this.listValues()[key] || []).filter((value) => this.normalize(value).includes(search))
+      : (this.listValues()[key] || []);
+  }
   setNumberFilter(key: string, bound: 'min' | 'max', value: string): void {
     this.updateFilter(key, { [bound]: value === '' ? undefined : Number(value) });
   }

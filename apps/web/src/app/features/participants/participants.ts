@@ -48,14 +48,9 @@ const blankHealth = (): ParticipantHealthPayload => ({
           <label tuiLabel>Rechercher un participant</label>
           <input tuiInput placeholder="Nom, diocèse ou ville…" [value]="query()" (input)="query.set($any($event.target).value)" />
         </tui-textfield>
-        <tui-textfield iconStart="@tui.filter" tuiChevron>
+        <tui-textfield iconStart="@tui.filter" tuiChevron [stringify]="stringifyGroup">
           <label tuiLabel>Groupe</label>
-          <select [value]="groupFilter() ?? ''" (change)="setGroupFilter($any($event.target).value)">
-            <option value="">Tous les groupes</option>
-            @for (g of groups(); track g.id) {
-              <option [value]="g.id">{{ g.name }}</option>
-            }
-          </select>
+          <select tuiSelect placeholder="Tous les groupes" [items]="groupIds()" [formField]="groupFilterForm"></select>
         </tui-textfield>
       </div>
       @if (loading()) {
@@ -145,22 +140,13 @@ const blankHealth = (): ParticipantHealthPayload => ({
                <label tuiLabel>Date de naissance</label>
                <input tuiInput type="date" [formField]="participantForm.dateOfBirth" />
              </tui-textfield>
-             <tui-textfield iconStart="@tui.user-round">
+             <tui-textfield iconStart="@tui.user-round" tuiChevron>
                <label tuiLabel>Sexe</label>
-               <select [formField]="participantForm.sex">
-                 @for (s of sexes; track s) {
-                   <option [value]="s">{{ s }}</option>
-                 }
-               </select>
+               <select tuiSelect [items]="sexes" [formField]="participantForm.sex"></select>
              </tui-textfield>
-             <tui-textfield iconStart="@tui.users">
+             <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyGroup">
                <label tuiLabel>Groupe</label>
-               <select [value]="model().groupId??''" (change)="model.update(x=>({...x,groupId:$any($event.target).value?+$any($event.target).value:null}))">
-                 <option value="">Sans groupe</option>
-                 @for (g of groups(); track g.id) {
-                   <option [value]="g.id">{{ g.name }}</option>
-                 }
-               </select>
+               <select tuiSelect placeholder="Sans groupe" [items]="groupIds()" [formField]="participantForm.groupId"></select>
              </tui-textfield>
              <tui-textfield iconStart="@tui.map-pin">
                <label tuiLabel>Diocèse</label>
@@ -205,8 +191,11 @@ export class ParticipantsPage implements OnInit {
   private auth = inject(AuthService);
   items = signal<Participant[]>([]);
   groups = signal<Group[]>([]);
+  groupIds = computed(() => this.groups().map(({ id }) => id));
+  stringifyGroup = (id: number) => this.groups().find((group) => group.id === id)?.name ?? '';
   query = signal('');
   groupFilter = signal<number | null>(null);
+  groupFilterForm = form(this.groupFilter);
   loading = signal(true);
   opened = signal(false);
   mode = signal<'detail' | 'create' | 'edit' | 'health'>('detail');

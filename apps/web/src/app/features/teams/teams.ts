@@ -29,14 +29,9 @@ const blank = (): TeamPayload => ({
           <label tuiLabel>Rechercher une équipe</label>
           <input tuiInput placeholder="Nom d'équipe…" [value]="query()" (input)="query.set($any($event.target).value)" />
         </tui-textfield>
-        <tui-textfield iconStart="@tui.filter">
+        <tui-textfield iconStart="@tui.filter" tuiChevron [stringify]="stringifyGroup">
           <label tuiLabel>Groupe</label>
-          <select [value]="groupFilter() ?? ''" (change)="groupFilter.set($any($event.target).value ? +$any($event.target).value : null)">
-            <option value="">Tous les groupes</option>
-            @for (g of groups(); track g.id) {
-              <option [value]="g.id">{{ g.name }}</option>
-            }
-          </select>
+          <select tuiSelect placeholder="Tous les groupes" [items]="groupIds()" [formField]="groupFilterForm"></select>
         </tui-textfield>
       </div>
       @if (loading()) {
@@ -80,14 +75,9 @@ const blank = (): TeamPayload => ({
           </dl>
            <h3>Membres</h3>
            <div class="member-add">
-             <tui-textfield iconStart="@tui.user-plus">
+             <tui-textfield iconStart="@tui.user-plus" tuiChevron [stringify]="stringifyParticipant">
                <label tuiLabel>Ajouter un participant</label>
-               <select [value]="candidateId() ?? ''" (change)="candidateId.set(+$any($event.target).value)">
-                 <option value="">Sélectionner…</option>
-                 @for (p of availableParticipants(); track p.id) {
-                   <option [value]="p.id">{{ p.lastName }} {{ p.firstName }}</option>
-                 }
-               </select>
+               <select tuiSelect placeholder="Sélectionner…" [items]="availableParticipantIds()" [formField]="candidateForm"></select>
              </tui-textfield>
              <button tuiButton size="s" [disabled]="!candidateId()" (click)="addMember()">Ajouter</button>
            </div>
@@ -105,32 +95,17 @@ const blank = (): TeamPayload => ({
                <label tuiLabel>Nom de l'équipe</label>
                <input tuiInput [formField]="teamForm.name" />
              </tui-textfield>
-             <tui-textfield iconStart="@tui.users">
+             <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyGroup">
                <label tuiLabel>Groupe</label>
-               <select [value]="model().groupId??''" (change)="model.update(x=>({...x,groupId:$any($event.target).value?+$any($event.target).value:null}))">
-                 <option value="">Sans groupe</option>
-                 @for (g of groups(); track g.id) {
-                   <option [value]="g.id">{{ g.name }}</option>
-                 }
-               </select>
+               <select tuiSelect placeholder="Sans groupe" [items]="groupIds()" [formField]="teamForm.groupId"></select>
              </tui-textfield>
-             <tui-textfield iconStart="@tui.user-check">
+             <tui-textfield iconStart="@tui.user-check" tuiChevron [stringify]="stringifyVolunteer">
                <label tuiLabel>Animateur</label>
-               <select [value]="model().primaryAnimatorId??''" (change)="model.update(x=>({...x,primaryAnimatorId:$any($event.target).value?+$any($event.target).value:null}))">
-                 <option value="">Aucun</option>
-                 @for (v of volunteers(); track v.id) {
-                   <option [value]="v.id">{{ v.lastName }} {{ v.firstName }}</option>
-                 }
-               </select>
+               <select tuiSelect placeholder="Aucun" [items]="volunteerIds()" [formField]="teamForm.primaryAnimatorId"></select>
              </tui-textfield>
-             <tui-textfield iconStart="@tui.user">
+             <tui-textfield iconStart="@tui.user" tuiChevron [stringify]="stringifyVolunteer">
                <label tuiLabel>Co-animateur</label>
-               <select [value]="model().secondaryAnimatorId??''" (change)="model.update(x=>({...x,secondaryAnimatorId:$any($event.target).value?+$any($event.target).value:null}))">
-                 <option value="">Aucun</option>
-                 @for (v of volunteers(); track v.id) {
-                   <option [value]="v.id">{{ v.lastName }} {{ v.firstName }}</option>
-                 }
-               </select>
+               <select tuiSelect placeholder="Aucun" [items]="volunteerIds()" [formField]="teamForm.secondaryAnimatorId"></select>
              </tui-textfield>
              <tui-textfield iconStart="@tui.hash">
                <label tuiLabel>Taille maximale</label>
@@ -167,10 +142,14 @@ export class TeamsPage implements OnInit {
   groups = signal<Group[]>([]);
   volunteers = signal<Volunteer[]>([]);
   participants = signal<Participant[]>([]);
+  groupIds = computed(() => this.groups().map(({ id }) => id));
+  volunteerIds = computed(() => this.volunteers().map(({ id }) => id));
   members = signal<Participant[]>([]);
   query = signal('');
   groupFilter = signal<number | null>(null);
+  groupFilterForm = form(this.groupFilter);
   candidateId = signal<number | null>(null);
+  candidateForm = form(this.candidateId);
   loading = signal(true);
   opened = signal(false);
   mode = signal<'detail' | 'create' | 'edit'>('detail');
@@ -192,6 +171,16 @@ export class TeamsPage implements OnInit {
     const ids = new Set(this.members().map((x) => x.id));
     return this.participants().filter((x) => !ids.has(x.id));
   });
+  availableParticipantIds = computed(() => this.availableParticipants().map(({ id }) => id));
+  stringifyGroup = (id: number) => this.groups().find((group) => group.id === id)?.name ?? '';
+  stringifyVolunteer = (id: number) => {
+    const volunteer = this.volunteers().find((item) => item.id === id);
+    return volunteer ? `${volunteer.lastName} ${volunteer.firstName}` : '';
+  };
+  stringifyParticipant = (id: number) => {
+    const participant = this.participants().find((item) => item.id === id);
+    return participant ? `${participant.lastName} ${participant.firstName}` : '';
+  };
   ngOnInit() {
     forkJoin({
       items: this.api.list(),

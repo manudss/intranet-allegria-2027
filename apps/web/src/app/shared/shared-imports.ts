@@ -15,6 +15,7 @@ import {
   TuiBadge,
   TuiChevron,
   TuiDrawer,
+  TuiSelect,
   TuiTextarea,
 } from '@taiga-ui/kit';
 import { PageLayoutComponent } from './ui-components';
@@ -34,4 +35,5 @@ export const SHARED_IMPORTS = [
   TuiChevron,
   TuiBadge,
   TuiDrawer,
+  TuiSelect,
 ] as const;

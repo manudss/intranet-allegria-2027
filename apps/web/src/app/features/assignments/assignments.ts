@@ -71,23 +71,13 @@ const blank = (): AssignmentPayload => ({
           </dl>
          } @else {
            <form class="drawer-form">
-             <tui-textfield iconStart="@tui.user">
+             <tui-textfield iconStart="@tui.user" tuiChevron [stringify]="stringifyParticipant">
                <label tuiLabel>Participant</label>
-               <select [value]="model().participantId" (change)="model.update(x=>({...x,participantId:+$any($event.target).value}))">
-                 <option [value]="0">Sélectionner…</option>
-                 @for (p of participants(); track p.id) {
-                   <option [value]="p.id">{{ p.lastName }} {{ p.firstName }}</option>
-                 }
-               </select>
+               <select tuiSelect [items]="participantIds()" [formField]="assignmentForm.participantId"></select>
              </tui-textfield>
-             <tui-textfield iconStart="@tui.home">
+             <tui-textfield iconStart="@tui.home" tuiChevron [stringify]="stringifyFamily">
                <label tuiLabel>Famille d'accueil</label>
-               <select [value]="model().hostFamilyId" (change)="model.update(x=>({...x,hostFamilyId:+$any($event.target).value}))">
-                 <option [value]="0">Sélectionner…</option>
-                 @for (f of families(); track f.id) {
-                   <option [value]="f.id">{{ f.familyName }}</option>
-                 }
-               </select>
+               <select tuiSelect [items]="familyIds()" [formField]="assignmentForm.hostFamilyId"></select>
              </tui-textfield>
              <tui-textfield iconStart="@tui.calendar">
                <label tuiLabel>Arrivée</label>
@@ -97,13 +87,9 @@ const blank = (): AssignmentPayload => ({
                <label tuiLabel>Départ</label>
                <input tuiInput type="date" [formField]="assignmentForm.departureDate" />
              </tui-textfield>
-             <tui-textfield iconStart="@tui.circle-check">
+             <tui-textfield iconStart="@tui.circle-check" tuiChevron>
                <label tuiLabel>Statut</label>
-               <select [formField]="assignmentForm.status">
-                 @for (s of statuses; track s) {
-                   <option [value]="s">{{ s }}</option>
-                 }
-               </select>
+               <select tuiSelect [items]="statuses" [formField]="assignmentForm.status"></select>
              </tui-textfield>
              <tui-textfield iconStart="@tui.file-text" class="wide">
                <label tuiLabel>Notes</label>
@@ -133,6 +119,15 @@ export class AssignmentsPage implements OnInit {
   items = signal<ParticipantHostFamilyAssignment[]>([]);
   participants = signal<Participant[]>([]);
   families = signal<HostFamily[]>([]);
+  participantIds = computed(() => [0, ...this.participants().map(({ id }) => id)]);
+  familyIds = computed(() => [0, ...this.families().map(({ id }) => id)]);
+  stringifyParticipant = (id: number) => {
+    if (!id) return 'Sélectionner…';
+    const participant = this.participants().find((item) => item.id === id);
+    return participant ? `${participant.lastName} ${participant.firstName}` : '';
+  };
+  stringifyFamily = (id: number) =>
+    id ? (this.families().find((family) => family.id === id)?.familyName ?? '') : 'Sélectionner…';
   query = signal('');
   loading = signal(true);
   opened = signal(false);

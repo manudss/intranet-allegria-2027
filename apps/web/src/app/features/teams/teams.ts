@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { form, min, required, submit } from '@angular/forms/signals';
 import { forkJoin } from 'rxjs';
 import { Group, Participant, Team, TeamPayload, Volunteer } from '../../models/models';
@@ -9,6 +9,7 @@ import {
   TeamsApiService,
   VolunteersApiService,
 } from '../../services/api.services';
+import { SHARED_IMPORTS } from '../../shared/shared-imports';
 const blank = (): TeamPayload => ({
   name: '',
   groupId: null,
@@ -19,7 +20,8 @@ const blank = (): TeamPayload => ({
 });
 @Component({
   selector: 'app-teams',
-  standalone: false,
+  standalone: true,
+  imports: [...SHARED_IMPORTS],
   template: `<app-page-layout title="Équipes & missions" description="Composition et animateurs"
       ><button actions tuiButton (click)="create()">Nouvelle équipe</button>
       <div class="filters">
@@ -178,18 +180,18 @@ export class TeamsPage implements OnInit {
     required(p.name);
     min(p.maxSize, 1);
   });
-  filtered = () => {
+  filtered = computed(() => {
     const q = this.query().toLowerCase(),
       g = this.groupFilter();
     return this.items().filter(
       (x) =>
         (!g || x.group?.id === g) && `${x.name} ${x.group?.name ?? ''}`.toLowerCase().includes(q),
     );
-  };
-  availableParticipants = () => {
+  });
+  availableParticipants = computed(() => {
     const ids = new Set(this.members().map((x) => x.id));
     return this.participants().filter((x) => !ids.has(x.id));
-  };
+  });
   ngOnInit() {
     forkJoin({
       items: this.api.list(),
@@ -216,7 +218,7 @@ export class TeamsPage implements OnInit {
     this.opened.set(true);
   }
   edit() {
-    const x = this.selected()!;
+    const x = this.requireSelectedTeam();
     this.model.set({
       name: x.name,
       groupId: x.group?.id ?? null,
@@ -232,7 +234,7 @@ export class TeamsPage implements OnInit {
       const req =
         this.mode() === 'create'
           ? this.api.create(this.model())
-          : this.api.update(this.selected()!.id, this.model());
+          : this.api.update(this.requireSelectedTeam().id, this.model());
       req.subscribe((x) => {
         this.items.update((a) =>
           this.mode() === 'create' ? [...a, x] : a.map((i) => (i.id === x.id ? x : i)),
@@ -242,7 +244,7 @@ export class TeamsPage implements OnInit {
     });
   }
   remove() {
-    const x = this.selected()!;
+    const x = this.requireSelectedTeam();
     if (confirm(`Supprimer ${x.name} ?`))
       this.api.delete(x.id).subscribe(() => {
         this.items.update((a) => a.filter((i) => i.id !== x.id));
@@ -265,5 +267,12 @@ export class TeamsPage implements OnInit {
       this.membersApi
         .remove(team.id, id)
         .subscribe(() => this.members.update((a) => a.filter((x) => x.id !== id)));
+  }
+  private requireSelectedTeam(): Team {
+    const team = this.selected();
+    if (!team) {
+      throw new Error('No team selected');
+    }
+    return team;
   }
 }

@@ -1,16 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
 import { form, FormField, required, email, submit } from '@angular/forms/signals';
 import { ActivatedRoute, Router } from '@angular/router';
-import { TuiButton, TuiError, TuiRoot, TuiTextfield } from '@taiga-ui/core';
+import { TuiButton, TuiError, TuiTextfield } from '@taiga-ui/core';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormField, TuiButton, TuiError, TuiRoot, TuiTextfield],
-  template: `<tui-root
-    ><main class="login">
+  imports: [FormField, TuiButton, TuiError, TuiTextfield],
+  template: `<main class="login">
       <section class="card">
         <img src="assets/logo-allegria.svg" alt="Allegria 2027" />
         <h1>Connexion</h1>
@@ -44,15 +43,14 @@ import { AuthService } from '../../core/auth.service';
             "
           />
           @if (error()) {
-            <p class="error">{{ error() }}</p>
+            <p class="error" role="alert">{{ error() }}</p>
           }
           <button tuiButton appearance="primary" type="submit" [disabled]="loading()">
             {{ loading() ? 'Connexion…' : 'Se connecter' }}
           </button>
         </form>
       </section>
-    </main></tui-root
-  >`,
+    </main>`,
   styles: [
     `
       .login {

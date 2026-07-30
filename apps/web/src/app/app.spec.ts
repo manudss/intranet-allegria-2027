@@ -1,6 +1,8 @@
+import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { provideTaiga } from '@taiga-ui/core';
 import { App } from './app';
-import { AppModule } from './app.module';
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -27,13 +29,14 @@ Object.defineProperty(window, 'matchMedia', {
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AppModule],
+      imports: [App],
+      providers: [provideRouter([]), provideTaiga(), provideZonelessChangeDetection()],
     }).compileComponents();
   });
 
-  it('should render intranet layout shell', async () => {
+  it('should render intranet layout shell', () => {
     const fixture = TestBed.createComponent(App);
-    await fixture.whenStable();
+    fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('router-outlet')).not.toBeNull();
     expect(compiled.querySelector('tui-root')).not.toBeNull();

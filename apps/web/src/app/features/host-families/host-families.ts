@@ -1,8 +1,9 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { form, min, required, submit } from '@angular/forms/signals';
 import { finalize } from 'rxjs';
 import { HostFamily, HostFamilyPayload } from '../../models/models';
 import { HostFamiliesApiService } from '../../services/api.services';
+import { SHARED_IMPORTS } from '../../shared/shared-imports';
 const blank = (): HostFamilyPayload => ({
   familyName: '',
   address: '',
@@ -17,7 +18,8 @@ const blank = (): HostFamilyPayload => ({
 });
 @Component({
   selector: 'app-host-families',
-  standalone: false,
+  standalone: true,
+  imports: [...SHARED_IMPORTS],
   template: `<app-page-layout title="Familles d'accueil" description="Capacités et coordonnées"
       ><button actions tuiButton (click)="create()">Nouvelle famille</button>
       <tui-textfield iconStart="@tui.search">
@@ -131,12 +133,12 @@ export class HostFamiliesPage implements OnInit {
     min(p.maxCapacity, 1);
     min(p.maxUnder18, 0);
   });
-  filtered = () => {
+  filtered = computed(() => {
     const q = this.query().toLowerCase();
     return this.items().filter((x) =>
       `${x.familyName} ${x.city} ${x.postalCode}`.toLowerCase().includes(q),
     );
-  };
+  });
   ngOnInit() {
     this.api
       .list()
@@ -154,8 +156,14 @@ export class HostFamiliesPage implements OnInit {
     this.opened.set(true);
   }
   edit() {
-    const x = this.selected()!;
-    this.model.set({...x, phone:x.phone??'', email:x.email??'', parish:x.parish??'', notes:x.notes??''});
+    const x = this.requireSelectedFamily();
+    this.model.set({
+      ...x,
+      phone: x.phone ?? '',
+      email: x.email ?? '',
+      parish: x.parish ?? '',
+      notes: x.notes ?? '',
+    });
     this.mode.set('edit');
   }
   save() {
@@ -163,7 +171,7 @@ export class HostFamiliesPage implements OnInit {
       const req =
         this.mode() === 'create'
           ? this.api.create(this.model())
-          : this.api.update(this.selected()!.id, this.model());
+          : this.api.update(this.requireSelectedFamily().id, this.model());
       req.subscribe((x) => {
         this.items.update((a) =>
           this.mode() === 'create' ? [...a, x] : a.map((i) => (i.id === x.id ? x : i)),
@@ -173,11 +181,18 @@ export class HostFamiliesPage implements OnInit {
     });
   }
   remove() {
-    const x = this.selected()!;
+    const x = this.requireSelectedFamily();
     if (confirm(`Supprimer ${x.familyName} ?`))
       this.api.delete(x.id).subscribe(() => {
         this.items.update((a) => a.filter((i) => i.id !== x.id));
         this.opened.set(false);
       });
+  }
+  private requireSelectedFamily(): HostFamily {
+    const family = this.selected();
+    if (!family) {
+      throw new Error('No host family selected');
+    }
+    return family;
   }
 }

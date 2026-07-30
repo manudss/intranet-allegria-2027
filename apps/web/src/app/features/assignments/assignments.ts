@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { form, required, submit } from '@angular/forms/signals';
 import { forkJoin } from 'rxjs';
 import {
@@ -13,6 +13,7 @@ import {
   HostFamiliesApiService,
   ParticipantsApiService,
 } from '../../services/api.services';
+import { SHARED_IMPORTS } from '../../shared/shared-imports';
 const blank = (): AssignmentPayload => ({
   participantId: 0,
   hostFamilyId: 0,
@@ -23,7 +24,8 @@ const blank = (): AssignmentPayload => ({
 });
 @Component({
   selector: 'app-assignments',
-  standalone: false,
+  standalone: true,
+  imports: [...SHARED_IMPORTS],
   template: `<app-page-layout title="Hébergement" description="Affectations des participants"
       ><button actions tuiButton (click)="create()">Nouvelle affectation</button>
       <tui-textfield iconStart="@tui.search">
@@ -144,14 +146,14 @@ export class AssignmentsPage implements OnInit {
     required(p.departureDate);
   });
   statuses = Object.values(AssignmentStatus);
-  filtered = () => {
+  filtered = computed(() => {
     const q = this.query().toLowerCase();
     return this.items().filter((x) =>
       `${x.participant.firstName} ${x.participant.lastName} ${x.hostFamily.familyName} ${x.status}`
         .toLowerCase()
         .includes(q),
     );
-  };
+  });
   ngOnInit() {
     forkJoin({
       items: this.api.list(),
@@ -175,7 +177,7 @@ export class AssignmentsPage implements OnInit {
     this.opened.set(true);
   }
   edit() {
-    const x = this.selected()!;
+    const x = this.requireSelectedAssignment();
     this.model.set({
       participantId: x.participant.id,
       hostFamilyId: x.hostFamily.id,
@@ -191,7 +193,7 @@ export class AssignmentsPage implements OnInit {
       const req =
         this.mode() === 'create'
           ? this.api.create(this.model())
-          : this.api.update(this.selected()!.id, this.model());
+          : this.api.update(this.requireSelectedAssignment().id, this.model());
       req.subscribe((x) => {
         this.items.update((a) =>
           this.mode() === 'create' ? [x, ...a] : a.map((i) => (i.id === x.id ? x : i)),
@@ -201,11 +203,18 @@ export class AssignmentsPage implements OnInit {
     });
   }
   remove() {
-    const x = this.selected()!;
+    const x = this.requireSelectedAssignment();
     if (confirm(`Supprimer l'affectation #${x.id} ?`))
       this.api.delete(x.id).subscribe(() => {
         this.items.update((a) => a.filter((i) => i.id !== x.id));
         this.opened.set(false);
       });
+  }
+  private requireSelectedAssignment(): ParticipantHostFamilyAssignment {
+    const assignment = this.selected();
+    if (!assignment) {
+      throw new Error('No assignment selected');
+    }
+    return assignment;
   }
 }

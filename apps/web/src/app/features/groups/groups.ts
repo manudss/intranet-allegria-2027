@@ -1,8 +1,9 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { form, required, submit } from '@angular/forms/signals';
 import { finalize, forkJoin } from 'rxjs';
 import { Group, GroupPayload, Participant, Team } from '../../models/models';
 import { GroupsApiService } from '../../services/api.services';
+import { SHARED_IMPORTS } from '../../shared/shared-imports';
 
 const emptyGroup = (): GroupPayload => ({
   name: '',
@@ -13,7 +14,8 @@ const emptyGroup = (): GroupPayload => ({
 });
 @Component({
   selector: 'app-groups',
-  standalone: false,
+  standalone: true,
+  imports: [...SHARED_IMPORTS],
   template: `<app-page-layout
       title="Rassemblement"
       description="Groupes diocésains, arrivées et départs"
@@ -109,10 +111,10 @@ export class GroupsPage implements OnInit {
   readonly teams = signal<Team[]>([]);
   readonly model = signal<GroupPayload>(emptyGroup());
   readonly groupForm = form(this.model, (p) => required(p.name));
-  readonly filtered = () => {
+  readonly filtered = computed(() => {
     const q = this.query().toLowerCase();
     return this.items().filter((x) => `${x.name} ${x.diocese ?? ''}`.toLowerCase().includes(q));
-  };
+  });
   ngOnInit() {
     this.reload();
   }
@@ -167,7 +169,7 @@ export class GroupsPage implements OnInit {
       const req =
         this.mode() === 'create'
           ? this.api.create(this.model())
-          : this.api.update(this.selected()!.id, this.model());
+          : this.api.update(this.requireSelectedGroup().id, this.model());
       req.pipe(finalize(() => this.saving.set(false))).subscribe((x) => {
         this.items.update((all) =>
           this.mode() === 'create' ? [...all, x] : all.map((i) => (i.id === x.id ? x : i)),
@@ -183,5 +185,12 @@ export class GroupsPage implements OnInit {
         this.items.update((a) => a.filter((i) => i.id !== x.id));
         this.close();
       });
+  }
+  private requireSelectedGroup(): Group {
+    const group = this.selected();
+    if (!group) {
+      throw new Error('No group selected');
+    }
+    return group;
   }
 }

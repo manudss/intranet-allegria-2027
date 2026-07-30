@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { BehaviorSubject, catchError, finalize, map, of, tap } from 'rxjs';
-import { User, LoginCredentials } from '../models/models';
+import { catchError, finalize, map, of, tap } from 'rxjs';
+import { LoginCredentials, User } from '../models/models';
 import { AuthApiService } from '../services/api.services';
 
 @Injectable({ providedIn: 'root' })
@@ -12,7 +12,6 @@ export class AuthService {
   private readonly userState = signal<User | null>(null);
   private readonly restoredState = signal(false);
   readonly currentUser = this.userState.asReadonly();
-  readonly currentUser$ = new BehaviorSubject<User | null>(null);
   readonly restored = this.restoredState.asReadonly();
   readonly isAuthenticated = computed(() => !!this.userState() && !!this.token);
   get token(): string | null {
@@ -55,7 +54,6 @@ export class AuthService {
   }
   private setUser(user: User | null) {
     this.userState.set(user);
-    this.currentUser$.next(user);
   }
   private clear() {
     localStorage.removeItem(this.tokenKey);

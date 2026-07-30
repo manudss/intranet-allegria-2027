@@ -1,8 +1,9 @@
-import { Component, DestroyRef, inject } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, computed, effect, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
-import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
-import { filter, startWith } from 'rxjs';
+import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { TuiButton, TuiIcon, TuiLink, TuiScrollbar } from '@taiga-ui/core';
+import { filter, map, startWith } from 'rxjs';
 import { AuthService } from './core/auth.service';
 
 type MenuItem = {
@@ -18,7 +19,8 @@ type MenuGroup = {
 
 @Component({
   selector: 'app-layout',
-  standalone: false,
+  standalone: true,
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, TuiButton, TuiIcon, TuiLink, TuiScrollbar],
   templateUrl: './layout.html',
   styleUrl: './layout.scss',
 })
@@ -27,12 +29,21 @@ export class Layout {
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly titleService = inject(Title);
-  private readonly destroyRef = inject(DestroyRef);
 
-  protected currentPageTitle = 'Accueil';
-  protected isCompactMenu = false;
-  protected isMenuExpandedByInteraction = false;
-  protected isMobileMenuOpen = false;
+  protected readonly currentPageTitle = toSignal(
+    this.router.events.pipe(
+      filter((event) => event instanceof NavigationEnd),
+      startWith(null),
+      map(() => this.getRouteTitle()),
+    ),
+    { initialValue: 'Accueil' },
+  );
+  protected readonly isCompactMenu = signal(false);
+  protected readonly isMenuExpandedByInteraction = signal(false);
+  protected readonly isMobileMenuOpen = signal(false);
+  protected readonly isMenuVisuallyCompact = computed(
+    () => this.isCompactMenu() && !this.isMenuExpandedByInteraction(),
+  );
 
   protected readonly navGroups: MenuGroup[] = [
     {
@@ -80,55 +91,46 @@ export class Layout {
   }
 
   constructor() {
-    this.router.events
-      .pipe(
-        filter((event) => event instanceof NavigationEnd),
-        startWith(null),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe(() => {
-        this.currentPageTitle = this.getRouteTitle();
-        this.titleService.setTitle(`Allegria 2027 - ${this.currentPageTitle}`);
-        this.isMenuExpandedByInteraction = false;
-        this.isMobileMenuOpen = false;
-      });
-  }
+    effect(() => {
+      const currentPageTitle = this.currentPageTitle();
 
-  protected get isMenuVisuallyCompact(): boolean {
-    return this.isCompactMenu && !this.isMenuExpandedByInteraction;
+      this.titleService.setTitle(`Allegria 2027 - ${currentPageTitle}`);
+      this.isMenuExpandedByInteraction.set(false);
+      this.isMobileMenuOpen.set(false);
+    });
   }
 
   protected toggleCompactMenu(): void {
-    this.isCompactMenu = !this.isCompactMenu;
-    this.isMenuExpandedByInteraction = false;
+    this.isCompactMenu.update((value) => !value);
+    this.isMenuExpandedByInteraction.set(false);
   }
 
   protected toggleMobileMenu(): void {
-    this.isMobileMenuOpen = !this.isMobileMenuOpen;
+    this.isMobileMenuOpen.update((value) => !value);
   }
 
   protected closeMobileMenu(): void {
-    this.isMobileMenuOpen = false;
+    this.isMobileMenuOpen.set(false);
   }
 
   protected onMenuItemSelect(): void {
-    this.isMenuExpandedByInteraction = false;
+    this.isMenuExpandedByInteraction.set(false);
     this.closeMobileMenu();
   }
 
   protected onMenuMouseEnter(): void {
-    if (this.isCompactMenu) {
-      this.isMenuExpandedByInteraction = true;
+    if (this.isCompactMenu()) {
+      this.isMenuExpandedByInteraction.set(true);
     }
   }
 
   protected onMenuMouseLeave(): void {
-    this.isMenuExpandedByInteraction = false;
+    this.isMenuExpandedByInteraction.set(false);
   }
 
   protected onMenuFocusIn(): void {
-    if (this.isCompactMenu) {
-      this.isMenuExpandedByInteraction = true;
+    if (this.isCompactMenu()) {
+      this.isMenuExpandedByInteraction.set(true);
     }
   }
 
@@ -137,7 +139,7 @@ export class Layout {
     const nextFocused = event.relatedTarget as Node | null;
 
     if (!sidebar || !nextFocused || !sidebar.contains(nextFocused)) {
-      this.isMenuExpandedByInteraction = false;
+      this.isMenuExpandedByInteraction.set(false);
     }
   }
 

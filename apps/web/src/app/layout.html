@@ -1,13 +1,21 @@
 <div class="allegria-shell">
   <header class="allegria-header">
 	<div class="header-left">
-	  <button tuiIconButton type="button" appearance="flat" class="mobile-menu-btn" (click)="toggleMobileMenu()">
-		<tui-icon [icon]="isMobileMenuOpen ? '@tui.x' : '@tui.menu'"></tui-icon>
+	  <button
+		tuiIconButton
+		type="button"
+		appearance="flat"
+		class="mobile-menu-btn"
+		aria-controls="main-navigation"
+		[attr.aria-expanded]="isMobileMenuOpen()"
+		(click)="toggleMobileMenu()"
+	  >
+		<tui-icon [icon]="isMobileMenuOpen() ? '@tui.x' : '@tui.menu'"></tui-icon>
 	  </button>
 	  <img src="assets/logo-allegria.svg" alt="Allegria 2027" class="logo" />
 	  <div class="header-titles">
 		<span class="header-title">Allegria 2027 - Intranet benevoles</span>
-		<h1 class="page-title">{{ currentPageTitle }}</h1>
+		<h1 class="page-title">{{ currentPageTitle() }}</h1>
 	  </div>
 	</div>
 
@@ -20,7 +28,7 @@
 	</div>
   </header>
 
-  @if (isMobileMenuOpen) {
+  @if (isMobileMenuOpen()) {
 	<button
 	  type="button"
 	  class="mobile-overlay"
@@ -29,10 +37,16 @@
 	></button>
   }
 
-  <div class="allegria-body" [class.overlay-menu]="isCompactMenu">
-	<aside class="allegria-sidebar" [class.compact]="isMenuVisuallyCompact" [class.mobile-open]="isMobileMenuOpen">
+  <div class="allegria-body" [class.overlay-menu]="isCompactMenu()">
+	<aside
+	  id="main-navigation"
+	  class="allegria-sidebar"
+	  [class.compact]="isMenuVisuallyCompact()"
+	  [class.mobile-open]="isMobileMenuOpen()"
+	>
 	  <tui-scrollbar>
 		<nav
+		  aria-label="Navigation principale"
 		  class="allegria-nav"
 		  (mouseenter)="onMenuMouseEnter()"
 		  (mouseleave)="onMenuMouseLeave()"
@@ -47,7 +61,7 @@
 				<a
 				  tuiLink
 				  [routerLink]="item.path"
-				  [title]="isMenuVisuallyCompact ? item.label : ''"
+				  [title]="isMenuVisuallyCompact() ? item.label : ''"
 				  routerLinkActive="active"
 				  [routerLinkActiveOptions]="{ exact: true }"
 				  (click)="onMenuItemSelect()"
@@ -66,10 +80,11 @@
 		appearance="flat"
 		type="button"
 		class="sidebar-compact-toggle"
+		[attr.aria-pressed]="isCompactMenu()"
 		(click)="toggleCompactMenu()"
 	  >
-		<tui-icon [icon]="isCompactMenu ? '@tui.panel-left-open' : '@tui.panel-left-close'"></tui-icon>
-		<span class="toggle-label">{{ isCompactMenu ? 'Passer en menu large' : 'Passer en menu compact' }}</span>
+		<tui-icon [icon]="isCompactMenu() ? '@tui.panel-left-open' : '@tui.panel-left-close'"></tui-icon>
+		<span class="toggle-label">{{ isCompactMenu() ? 'Passer en menu large' : 'Passer en menu compact' }}</span>
 	  </button>
 	</aside>
 

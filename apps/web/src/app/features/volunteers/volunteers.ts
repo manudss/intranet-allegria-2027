@@ -1,8 +1,9 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { form, required, submit } from '@angular/forms/signals';
 import { finalize } from 'rxjs';
 import { Volunteer, VolunteerPayload } from '../../models/models';
 import { VolunteersApiService } from '../../services/api.services';
+import { SHARED_IMPORTS } from '../../shared/shared-imports';
 const blank = (): VolunteerPayload => ({
   userId: null,
   firstName: '',
@@ -15,7 +16,8 @@ const blank = (): VolunteerPayload => ({
 });
 @Component({
   selector: 'app-volunteers',
-  standalone: false,
+  standalone: true,
+  imports: [...SHARED_IMPORTS],
   template: `<app-page-layout title="Bénévoles" description="Annuaire et responsabilités">
       <button actions tuiButton (click)="create()">Nouveau bénévole</button>
       <tui-textfield iconStart="@tui.search">
@@ -118,12 +120,12 @@ export class VolunteersPage implements OnInit {
     required(p.firstName);
     required(p.lastName);
   });
-  filtered = () => {
+  filtered = computed(() => {
     const q = this.query().toLowerCase();
     return this.items().filter((x) =>
       `${x.firstName} ${x.lastName} ${x.team ?? ''}`.toLowerCase().includes(q),
     );
-  };
+  });
   ngOnInit() {
     this.api
       .list()
@@ -142,7 +144,7 @@ export class VolunteersPage implements OnInit {
     this.opened.set(true);
   }
   edit() {
-    const x = this.selected()!;
+    const x = this.requireSelectedVolunteer();
     this.model.set({
       userId: x.user?.id ?? null,
       firstName: x.firstName,
@@ -160,7 +162,7 @@ export class VolunteersPage implements OnInit {
       const req =
         this.mode() === 'create'
           ? this.api.create(this.model())
-          : this.api.update(this.selected()!.id, this.model());
+          : this.api.update(this.requireSelectedVolunteer().id, this.model());
       req.subscribe((x) => {
         this.items.update((a) =>
           this.mode() === 'create' ? [...a, x] : a.map((i) => (i.id === x.id ? x : i)),
@@ -170,11 +172,18 @@ export class VolunteersPage implements OnInit {
     });
   }
   remove() {
-    const x = this.selected()!;
+    const x = this.requireSelectedVolunteer();
     if (confirm(`Supprimer ${x.firstName} ${x.lastName} ?`))
       this.api.delete(x.id).subscribe(() => {
         this.items.update((a) => a.filter((i) => i.id !== x.id));
         this.opened.set(false);
       });
+  }
+  private requireSelectedVolunteer(): Volunteer {
+    const volunteer = this.selected();
+    if (!volunteer) {
+      throw new Error('No volunteer selected');
+    }
+    return volunteer;
   }
 }

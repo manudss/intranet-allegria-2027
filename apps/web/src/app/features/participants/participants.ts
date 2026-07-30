@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { form, required, submit } from '@angular/forms/signals';
 import { forkJoin } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
@@ -15,6 +15,7 @@ import {
   HealthApiService,
   ParticipantsApiService,
 } from '../../services/api.services';
+import { SHARED_IMPORTS } from '../../shared/shared-imports';
 const blank = (): ParticipantPayload => ({
   firstName: '',
   lastName: '',
@@ -36,7 +37,8 @@ const blankHealth = (): ParticipantHealthPayload => ({
 });
 @Component({
   selector: 'app-participants',
-  standalone: false,
+  standalone: true,
+  imports: [...SHARED_IMPORTS],
   template: `<app-page-layout
       title="Participants"
       description="Inscriptions, groupes et informations individuelles"
@@ -181,7 +183,7 @@ const blankHealth = (): ParticipantHealthPayload => ({
         <footer>
           <button tuiButton appearance="flat" (click)="opened.set(false)">Fermer</button>
           @if (mode() === 'detail') {
-            @if (canSeeHealth) {
+            @if (canSeeHealth()) {
               <button tuiButton appearance="secondary" (click)="openHealth()">Santé</button>
             }
             <button tuiButton (click)="edit()">Modifier</button
@@ -220,10 +222,8 @@ export class ParticipantsPage implements OnInit {
   });
   healthForm = form(this.healthModel);
   sexes = Object.values(ParticipantSex);
-  get canSeeHealth() {
-    return this.auth.hasAnyRole(['ADMIN', 'HEALTH']);
-  }
-  filtered = () => {
+  readonly canSeeHealth = computed(() => this.auth.hasAnyRole(['ADMIN', 'HEALTH']));
+  filtered = computed(() => {
     const q = this.query().toLowerCase();
     const gid = this.groupFilter();
     return this.items().filter(
@@ -231,7 +231,7 @@ export class ParticipantsPage implements OnInit {
         (!gid || x.group?.id === gid) &&
         `${x.firstName} ${x.lastName} ${x.diocese ?? ''} ${x.city ?? ''}`.toLowerCase().includes(q),
     );
-  };
+  });
   ngOnInit() {
     forkJoin({ items: this.api.getParticipants(), groups: this.groupsApi.list() }).subscribe(
       (x) => {
@@ -255,7 +255,7 @@ export class ParticipantsPage implements OnInit {
     this.opened.set(true);
   }
   edit() {
-    const x = this.selected()!;
+    const x = this.requireSelectedParticipant();
     this.model.set({
       firstName: x.firstName,
       lastName: x.lastName,
@@ -270,7 +270,7 @@ export class ParticipantsPage implements OnInit {
     this.mode.set('edit');
   }
   openHealth() {
-    this.healthApi.getParticipantHealth(this.selected()!.id).subscribe((x) => {
+    this.healthApi.getParticipantHealth(this.requireSelectedParticipant().id).subscribe((x) => {
       this.health.set(x);
       this.healthModel.set(
         x
@@ -291,7 +291,7 @@ export class ParticipantsPage implements OnInit {
     if (this.mode() === 'health') {
       submit(this.healthForm, async () => {
         this.healthApi
-          .updateParticipantHealth(this.selected()!.id, this.healthModel())
+          .updateParticipantHealth(this.requireSelectedParticipant().id, this.healthModel())
           .subscribe((x) => {
             this.health.set(x);
             this.mode.set('detail');
@@ -303,7 +303,7 @@ export class ParticipantsPage implements OnInit {
       const req =
         this.mode() === 'create'
           ? this.api.createParticipant(this.model())
-          : this.api.updateParticipant(this.selected()!.id, this.model());
+          : this.api.updateParticipant(this.requireSelectedParticipant().id, this.model());
       req.subscribe((x) => {
         this.items.update((a) =>
           this.mode() === 'create' ? [...a, x] : a.map((i) => (i.id === x.id ? x : i)),
@@ -313,11 +313,18 @@ export class ParticipantsPage implements OnInit {
     });
   }
   remove() {
-    const x = this.selected()!;
+    const x = this.requireSelectedParticipant();
     if (confirm(`Supprimer ${x.firstName} ${x.lastName} ?`))
       this.api.deleteParticipant(x.id).subscribe(() => {
         this.items.update((a) => a.filter((i) => i.id !== x.id));
         this.opened.set(false);
       });
+  }
+  private requireSelectedParticipant(): Participant {
+    const participant = this.selected();
+    if (!participant) {
+      throw new Error('No participant selected');
+    }
+    return participant;
   }
 }

@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
+import { HostFamilyStatus } from '../entities';
 
 export class CreateHostFamilyDto {
   @ApiProperty({ example: 'Famille Bernard' })
@@ -30,6 +31,13 @@ export class CreateHostFamilyDto {
 
   @ApiPropertyOptional({ example: 'Dispose de deux chambres separees.' })
   notes?: string | null;
+
+  @ApiPropertyOptional({ example: 45.7602, nullable: true }) latitude?: number | null;
+  @ApiPropertyOptional({ example: 4.8357, nullable: true }) longitude?: number | null;
+  @ApiPropertyOptional({ example: 2, nullable: true }) maxAnimators?: number | null;
+  @ApiPropertyOptional({ type: [String], nullable: true }) constraints?: string[] | null;
+  @ApiPropertyOptional({ type: [String], nullable: true }) tags?: string[] | null;
+  @ApiPropertyOptional({ enum: HostFamilyStatus, default: HostFamilyStatus.DRAFT }) status?: HostFamilyStatus;
 }
 
 export class UpdateHostFamilyDto extends PartialType(CreateHostFamilyDto) {}

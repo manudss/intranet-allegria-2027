@@ -1,7 +1,6 @@
 export enum AssignmentStatus {
-  PLANNED = 'PLANNED',
+  PENDING = 'PENDING',
   CONFIRMED = 'CONFIRMED',
   CANCELLED = 'CANCELLED',
-  COMPLETED = 'COMPLETED',
 }
 

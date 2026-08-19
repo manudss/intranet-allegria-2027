@@ -1,12 +1,18 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ParticipantsService } from './participants.service';
-import { CreateParticipantDto, UpdateParticipantDto } from './participants.types';
+import { CreateParticipantDto, SearchParticipantsQuery, UpdateParticipantDto } from './participants.types';
 
 @ApiTags('Participants')
 @Controller('participants')
 export class ParticipantsController {
   constructor(private readonly participantsService: ParticipantsService) {}
+
+  @Get('search')
+  @ApiOperation({ summary: 'Rechercher des participants disponibles' })
+  search(@Query() query: SearchParticipantsQuery) {
+    return this.participantsService.search(query);
+  }
 
   @ApiOperation({ summary: 'Creer un participant' })
   @Post()

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { ParticipantSex } from '../entities';
+import { MejAgeGroup, ParticipantSex, PersonType } from '../entities';
 
 export class CreateParticipantDto {
   @ApiProperty({ example: 'Marie' })
@@ -13,6 +13,12 @@ export class CreateParticipantDto {
 
   @ApiProperty({ enum: ParticipantSex, example: ParticipantSex.FEMALE })
   sex!: ParticipantSex;
+
+  @ApiProperty({ enum: MejAgeGroup, example: MejAgeGroup.TA })
+  mejAgeGroup!: MejAgeGroup;
+
+  @ApiPropertyOptional({ enum: PersonType, default: PersonType.JEUNE })
+  type?: PersonType;
 
   @ApiPropertyOptional({ example: 'Sophie Durand' })
   emergencyContactName?: string | null;
@@ -31,5 +37,14 @@ export class CreateParticipantDto {
 }
 
 export class UpdateParticipantDto extends PartialType(CreateParticipantDto) {}
+
+export class SearchParticipantsQuery {
+  @ApiPropertyOptional({ type: Boolean }) unassignedOnly?: boolean | string;
+  @ApiPropertyOptional({ enum: PersonType }) type?: PersonType;
+  @ApiPropertyOptional({ type: Number }) teamId?: number | string;
+  @ApiPropertyOptional() q?: string;
+  @ApiPropertyOptional({ default: 20, maximum: 100 }) limit?: number | string;
+  @ApiPropertyOptional({ default: 0 }) offset?: number | string;
+}
 
 

@@ -4,6 +4,7 @@ import { forkJoin } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import {
   Group,
+  MejAgeGroup,
   Participant,
   ParticipantHealth,
   ParticipantHealthPayload,
@@ -22,6 +23,7 @@ const blank = (): ParticipantPayload => ({
   lastName: '',
   dateOfBirth: '',
   sex: ParticipantSex.UNDISCLOSED,
+  mejAgeGroup: null,
   emergencyContactName: '',
   emergencyContactPhone: '',
   diocese: '',
@@ -77,6 +79,8 @@ const blankHealth = (): ParticipantHealthPayload => ({
             <dd>{{ selected()?.dateOfBirth | date }}</dd>
             <dt>Sexe</dt>
             <dd>{{ selected()?.sex }}</dd>
+            <dt>Tranche d'âge MEJ</dt>
+            <dd>{{ selected()?.mejAgeGroup || '—' }}</dd>
             <dt>Groupe</dt>
             <dd>{{ selected()?.group?.name || '—' }}</dd>
             <dt>Ville</dt>
@@ -137,6 +141,10 @@ const blankHealth = (): ParticipantHealthPayload => ({
              <tui-textfield iconStart="@tui.user-round" tuiChevron>
                <label tuiLabel>Sexe</label>
                <select tuiSelect [items]="sexes" [formField]="participantForm.sex"></select>
+             </tui-textfield>
+             <tui-textfield iconStart="@tui.users" tuiChevron>
+               <label tuiLabel>Tranche d'âge MEJ</label>
+               <select tuiSelect [items]="mejAgeGroups" [formField]="participantForm.mejAgeGroup"></select>
              </tui-textfield>
              <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyGroup">
                <label tuiLabel>Groupe</label>
@@ -207,9 +215,11 @@ export class ParticipantsPage implements OnInit {
     required(p.lastName);
     required(p.dateOfBirth);
     required(p.sex);
+    required(p.mejAgeGroup);
   });
   healthForm = form(this.healthModel);
   sexes = Object.values(ParticipantSex);
+  mejAgeGroups = Object.values(MejAgeGroup);
   readonly canSeeHealth = computed(() => this.auth.hasAnyRole(['ADMIN', 'HEALTH']));
   filtered = computed(() => {
     const q = this.query().toLowerCase();
@@ -249,6 +259,7 @@ export class ParticipantsPage implements OnInit {
       lastName: x.lastName,
       dateOfBirth: x.dateOfBirth,
       sex: x.sex,
+      mejAgeGroup: x.mejAgeGroup,
       emergencyContactName: x.emergencyContactName ?? '',
       emergencyContactPhone: x.emergencyContactPhone ?? '',
       diocese: x.diocese ?? '',

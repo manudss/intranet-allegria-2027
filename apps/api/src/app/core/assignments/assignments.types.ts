@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { AssignmentStatus } from '../entities';
+import { AssignmentStatus, PersonType } from '../entities';
 
 export class CreateAssignmentDto {
   @ApiProperty({ example: 501 })
@@ -19,6 +19,12 @@ export class CreateAssignmentDto {
 
   @ApiPropertyOptional({ example: 'Preferer chambre avec un camarade du meme groupe.' })
   notes?: string | null;
+
+  @ApiProperty({ enum: PersonType, example: PersonType.JEUNE })
+  type!: PersonType;
+
+  @ApiPropertyOptional({ example: 12, nullable: true }) groupId?: number | null;
+  @ApiPropertyOptional({ example: 'Chambre bleue', nullable: true }) roomLabel?: string | null;
 }
 
 export class UpdateAssignmentDto extends PartialType(CreateAssignmentDto) {}

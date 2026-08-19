@@ -37,8 +37,11 @@ export class AssignmentsService {
       hostFamily,
       arrivalDate: dto.arrivalDate,
       departureDate: dto.departureDate,
-      status: dto.status ?? AssignmentStatus.PLANNED,
+      status: dto.status ?? AssignmentStatus.PENDING,
       notes: dto.notes ?? null,
+      type: dto.type,
+      groupId: dto.groupId ?? null,
+      roomLabel: dto.roomLabel ?? null,
     });
 
     return this.assignmentsRepository.save(assignment);
@@ -48,6 +51,14 @@ export class AssignmentsService {
     return this.assignmentsRepository.find({
       relations: { participant: true, hostFamily: true },
       order: { id: 'DESC' },
+    });
+  }
+
+  findByHostFamily(hostFamilyId: number): Promise<ParticipantHostFamilyAssignment[]> {
+    return this.assignmentsRepository.find({
+      where: { hostFamily: { id: hostFamilyId } },
+      relations: { participant: { group: true }, hostFamily: true },
+      order: { arrivalDate: 'ASC', id: 'ASC' },
     });
   }
 
@@ -92,6 +103,9 @@ export class AssignmentsService {
       departureDate: dto.departureDate ?? assignment.departureDate,
       status: dto.status ?? assignment.status,
       notes: Object.prototype.hasOwnProperty.call(dto, 'notes') ? dto.notes ?? null : assignment.notes,
+      type: dto.type ?? assignment.type,
+      groupId: Object.prototype.hasOwnProperty.call(dto, 'groupId') ? dto.groupId ?? null : assignment.groupId,
+      roomLabel: Object.prototype.hasOwnProperty.call(dto, 'roomLabel') ? dto.roomLabel ?? null : assignment.roomLabel,
     });
 
     return this.assignmentsRepository.save(assignment);

@@ -5,6 +5,7 @@ import {
   AssignmentStatus,
   Group,
   HostFamily,
+  MejAgeGroup,
   Participant,
   ParticipantHealth,
   ParticipantHostFamilyAssignment,
@@ -86,8 +87,8 @@ const teamNouns = ['Nomades', 'Pionniers', 'Sentinelles', 'Voyageurs', 'Boussole
 const sexValues = [ParticipantSex.FEMALE, ParticipantSex.MALE, ParticipantSex.OTHER, ParticipantSex.UNDISCLOSED];
 const assignmentStatuses = [
   AssignmentStatus.CONFIRMED,
-  AssignmentStatus.PLANNED,
-  AssignmentStatus.COMPLETED,
+  AssignmentStatus.PENDING,
+  AssignmentStatus.CONFIRMED,
   AssignmentStatus.CANCELLED,
 ];
 
@@ -406,6 +407,7 @@ async function run(): Promise<void> {
           lastName,
           dateOfBirth: participantAgeDate(),
           sex: pick(sexValues),
+          mejAgeGroup: pick([MejAgeGroup.TA, MejAgeGroup.ES]),
           emergencyContactName: `${faker.person.firstName()} ${lastName}`,
           emergencyContactPhone: `+33${faker.string.numeric(9)}`,
           diocese: group.diocese,

@@ -15,6 +15,8 @@ import {
   ParticipantHealthPayload,
   ParticipantHostFamilyAssignment,
   ParticipantPayload,
+  ParticipantSearchResult,
+  PersonType,
   Team,
   TeamParticipant,
   TeamParticipantRole,
@@ -66,6 +68,13 @@ export class ParticipantsApiService extends CrudApi<Participant, ParticipantPayl
   deleteParticipant(id: number) {
     return this.delete(id);
   }
+  search(filters: { unassignedOnly?: boolean; type?: PersonType | null; teamId?: number | null; q?: string; limit?: number; offset?: number }) {
+    let params = new HttpParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') params = params.set(key, String(value));
+    });
+    return this.http.get<ParticipantSearchResult>(`${this.path}/search`, { params });
+  }
 }
 @Injectable({ providedIn: 'root' })
 export class GroupsApiService extends CrudApi<Group, GroupPayload> {
@@ -110,6 +119,9 @@ export class TeamParticipantsApiService {
 @Injectable({ providedIn: 'root' })
 export class HostFamiliesApiService extends CrudApi<HostFamily, HostFamilyPayload> {
   protected readonly path = '/api/host-families';
+  getAssignments(id: number) {
+    return this.http.get<ParticipantHostFamilyAssignment[]>(`${this.path}/${id}/assignments`);
+  }
 }
 @Injectable({ providedIn: 'root' })
 export class AssignmentsApiService extends CrudApi<

@@ -1,221 +1,143 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { form, required, submit } from '@angular/forms/signals';
-import { forkJoin } from 'rxjs';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { TuiButton, TuiCheckbox, TuiInput, TuiLabel } from '@taiga-ui/core';
+import { TuiChip, TuiDataListWrapper, TuiDrawer, TuiSelect, TuiTabs } from '@taiga-ui/kit';
+import { debounceTime, distinctUntilChanged, finalize, forkJoin, startWith, switchMap } from 'rxjs';
 import {
   AssignmentPayload,
   AssignmentStatus,
   HostFamily,
   Participant,
   ParticipantHostFamilyAssignment,
+  PersonType,
 } from '../../models/models';
-import {
-  AssignmentsApiService,
-  HostFamiliesApiService,
-  ParticipantsApiService,
-} from '../../services/api.services';
+import { AssignmentsApiService, HostFamiliesApiService, ParticipantsApiService } from '../../services/api.services';
+import { DataTableColumn } from '../../shared/data-table';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
-import { DataTableAction, DataTableActionEvent, DataTableColumn } from '../../shared/data-table';
-const blank = (): AssignmentPayload => ({
-  participantId: 0,
-  hostFamilyId: 0,
-  arrivalDate: '2027-07-19',
-  departureDate: '2027-07-27',
-  status: AssignmentStatus.PLANNED,
-  notes: '',
-});
+
+@Component({
+  selector: 'app-host-family-cards',
+  imports: [TuiChip],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `<div class="cards">@for (family of families(); track family.id) {
+    <button class="family-card" type="button" (click)="selectFamily.emit(family)">
+      <strong>{{ family.familyName }}</strong><span>{{ family.city }} · {{ family.parish || 'Sans paroisse' }}</span>
+      <span>Capacité : {{ family.maxCapacity }} places</span>
+      <span class="chips">@for (tag of family.tags || []; track tag) { <span tuiChip>{{ tag }}</span> }</span>
+    </button>
+  } @empty { <p>Aucune famille enregistrée.</p> }</div>`,
+  styles: `.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(15rem,1fr));gap:1rem}.family-card{display:flex;flex-direction:column;gap:.5rem;padding:1rem;border:1px solid var(--tui-border-normal);border-radius:1rem;background:var(--tui-background-base);text-align:start;cursor:pointer}.family-card:hover{box-shadow:var(--tui-shadow-small)}.chips{display:flex;flex-wrap:wrap;gap:.25rem}`,
+})
+export class HostFamilyCardsComponent {
+  readonly families = input.required<readonly HostFamily[]>();
+  readonly selectFamily = output<HostFamily>();
+}
+
+@Component({
+  selector: 'app-host-family-assignments-selector',
+  imports: [ReactiveFormsModule, TuiButton, TuiCheckbox, TuiDataListWrapper, TuiInput, TuiLabel, TuiSelect],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `<section class="selector"><h3>Ajouter des personnes</h3>
+    <form [formGroup]="filters"><label><input tuiCheckbox type="checkbox" formControlName="unassignedOnly" /> Non affectés uniquement</label>
+      <tui-textfield tuiChevron><label tuiLabel>Type</label><input tuiSelect formControlName="type" /><tui-data-list-wrapper *tuiDropdown [items]="types" /></tui-textfield>
+      <tui-textfield><label tuiLabel>Équipe</label><input tuiInput type="number" formControlName="teamId" /></tui-textfield>
+      <tui-textfield><label tuiLabel>Recherche</label><input tuiInput formControlName="q" /></tui-textfield>
+    </form>
+    <div class="results">@for (participant of participants(); track participant.id) {
+      <label><input tuiCheckbox type="checkbox" [checked]="isSelected(participant.id)" (change)="toggle(participant.id)" />
+        <span>{{ participant.lastName }} {{ participant.firstName }} · {{ participant.type }}</span></label>
+    } @empty { <p>Aucun participant disponible.</p> }</div>
+    <div class="dates"><label>Arrivée <input type="date" [formControl]="arrivalDate" /></label><label>Départ <input type="date" [formControl]="departureDate" /></label></div>
+    <button tuiButton type="button" [disabled]="!selectedIds().length || saving()" (click)="addSelected()">Ajouter {{ selectedIds().length }} sélectionné(s)</button>
+  </section>`,
+  styles: `.selector{display:grid;gap:1rem}.selector form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}.results{display:grid;gap:.5rem;max-block-size:15rem;overflow:auto}.results label,.selector>form>label{display:flex;align-items:center;gap:.5rem}.dates{display:flex;gap:1rem;flex-wrap:wrap}.dates label{display:grid;gap:.25rem}@media(max-width:40rem){.selector form{grid-template-columns:1fr}}`,
+})
+export class HostFamilyAssignmentsSelectorComponent {
+  private readonly participantsApi = inject(ParticipantsApiService);
+  private readonly assignmentsApi = inject(AssignmentsApiService);
+  readonly family = input.required<HostFamily>();
+  readonly currentAssignments = input.required<readonly ParticipantHostFamilyAssignment[]>();
+  readonly assign = output<{ participantIds: number[] }>();
+  readonly changed = output<void>();
+  readonly types: readonly (PersonType | null)[] = [null, 'JEUNE', 'ANIMATEUR', 'BENEVOLE'];
+  readonly participants = signal<Participant[]>([]);
+  readonly selectedIds = signal<number[]>([]);
+  readonly saving = signal(false);
+  readonly arrivalDate = new FormControl('2027-07-19', { nonNullable: true });
+  readonly departureDate = new FormControl('2027-07-27', { nonNullable: true });
+  readonly filters = new FormGroup({
+    unassignedOnly: new FormControl(true, { nonNullable: true }),
+    type: new FormControl<PersonType | null>(null),
+    teamId: new FormControl<number | null>(null),
+    q: new FormControl('', { nonNullable: true }),
+  });
+
+  constructor() {
+    this.filters.valueChanges.pipe(startWith(this.filters.getRawValue()), debounceTime(300), distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)), switchMap((filters) => this.participantsApi.search(filters))).subscribe((result) => this.participants.set(result.items));
+  }
+  isSelected(id: number): boolean { return this.selectedIds().includes(id); }
+  toggle(id: number): void { this.selectedIds.update((ids) => ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id]); }
+  addSelected(): void {
+    const ids = this.selectedIds();
+    const byId = new Map(this.participants().map((participant) => [participant.id, participant]));
+    const payloads: AssignmentPayload[] = ids.map((participantId) => ({ participantId, hostFamilyId: this.family().id, type: byId.get(participantId)?.type ?? 'JEUNE', groupId: byId.get(participantId)?.group?.id ?? null, roomLabel: null, arrivalDate: this.arrivalDate.value, departureDate: this.departureDate.value, status: AssignmentStatus.PENDING, notes: '' }));
+    this.saving.set(true);
+    forkJoin(payloads.map((payload) => this.assignmentsApi.create(payload))).pipe(finalize(() => this.saving.set(false))).subscribe(() => { this.assign.emit({ participantIds: ids }); this.selectedIds.set([]); this.changed.emit(); });
+  }
+}
+
+@Component({
+  selector: 'app-host-family-detail-drawer',
+  imports: [TuiButton, TuiChip, TuiDrawer, TuiTabs, HostFamilyAssignmentsSelectorComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `@if (family(); as current) { <tui-drawer direction="end" [overlay]="true">
+    <header><h2>{{ current.familyName }}</h2><p>{{ current.city }} · {{ current.parish || 'Sans paroisse' }} · {{ assignments()?.length || 0 }}/{{ current.maxCapacity }}</p>
+      <tui-tabs [(activeItemIndex)]="tab"><button tuiTab type="button">Infos famille</button><button tuiTab type="button">Personnes hébergées</button></tui-tabs></header>
+    @if (tab === 0) { <dl><dt>Adresse</dt><dd>{{ current.address }}, {{ current.postalCode }} {{ current.city }}</dd><dt>Contact</dt><dd>{{ current.phone }} · {{ current.email }}</dd><dt>Capacités</dt><dd>{{ current.maxUnder18 }} mineurs · {{ current.maxAnimators ?? 0 }} animateurs</dd></dl>
+      <div class="chips">@for (tag of current.tags || []; track tag) { <span tuiChip>{{ tag }}</span> } @for (constraint of current.constraints || []; track constraint) { <span tuiChip appearance="warning">{{ constraint }}</span> }</div>
+    } @else { <div class="assignments">@for (assignment of assignments() || []; track assignment.id) { <article><span><strong>{{ assignment.participant.lastName }} {{ assignment.participant.firstName }}</strong><small>{{ assignment.type }} · {{ assignment.groupId || 'sans groupe' }}</small></span><span>{{ assignment.arrivalDate }} → {{ assignment.departureDate }} · {{ assignment.status }}</span><button tuiButton size="s" appearance="secondary-destructive" type="button" (click)="remove(assignment.id)">Retirer</button></article> }
+      <app-host-family-assignments-selector [family]="current" [currentAssignments]="assignments() || []" (changed)="changed.emit()" />
+    </div> }
+    <footer><button tuiButton appearance="flat" type="button" (click)="close.emit()">Fermer</button></footer>
+  </tui-drawer> }`,
+  styles: `:host tui-drawer{inline-size:min(42rem,100vw)}header,footer{position:sticky;z-index:1;background:var(--tui-background-base)}.chips{display:flex;flex-wrap:wrap;gap:.4rem}.assignments{display:grid;gap:1rem}.assignments article{display:flex;align-items:center;justify-content:space-between;gap:1rem;border-block-end:1px solid var(--tui-border-normal);padding-block:.75rem}.assignments article span:first-child{display:grid}.assignments small{color:var(--tui-text-secondary)}`,
+})
+export class HostFamilyDetailDrawerComponent {
+  private readonly assignmentsApi = inject(AssignmentsApiService);
+  readonly family = input<HostFamily | null>(null);
+  readonly assignments = input<ParticipantHostFamilyAssignment[] | null>(null);
+  readonly close = output<void>();
+  readonly changed = output<void>();
+  tab = 0;
+  remove(id: number): void { this.assignmentsApi.delete(id).subscribe(() => this.changed.emit()); }
+}
+
 @Component({
   selector: 'app-assignments',
-  standalone: true,
-  imports: [...SHARED_IMPORTS],
-  template: `<app-page-layout title="Hébergement" description="Affectations des participants"
-      ><button actions tuiButton (click)="create()">Nouvelle affectation</button>
-      <tui-textfield iconStart="@tui.search">
-        <label tuiLabel>Rechercher</label>
-        <input tuiInput placeholder="Participant, famille…" [value]="query()" (input)="query.set($any($event.target).value)" />
-      </tui-textfield>
-      @if (loading()) {
-        <tui-loader />
-      } @else {
-        <app-data-table [rows]="filtered()" [columns]="tableColumns" [lineActions]="tableActions" (rowSelected)="open($event)" (actionSelected)="onTableAction($event)" />
-      }
-    </app-page-layout>
-    @if (opened()) {
-      <tui-drawer direction="end"
-        ><header>
-          <h2>
-            {{ mode() === 'create' ? 'Nouvelle affectation' : 'Affectation #' + selected()?.id }}
-          </h2>
-        </header>
-        @if (mode() === 'detail') {
-          <dl>
-            <dt>Participant</dt>
-            <dd>
-              {{ selected()?.participant?.firstName }} {{ selected()?.participant?.lastName }}
-            </dd>
-            <dt>Famille</dt>
-            <dd>{{ selected()?.hostFamily?.familyName }}</dd>
-            <dt>Période</dt>
-            <dd>{{ selected()?.arrivalDate }} – {{ selected()?.departureDate }}</dd>
-            <dt>Statut</dt>
-            <dd>{{ selected()?.status }}</dd>
-            <dt>Notes</dt>
-            <dd>{{ selected()?.notes || '—' }}</dd>
-          </dl>
-         } @else {
-           <form class="drawer-form">
-             <tui-textfield iconStart="@tui.user" tuiChevron [stringify]="stringifyParticipant">
-               <label tuiLabel>Participant</label>
-               <select tuiSelect [items]="participantIds()" [formField]="assignmentForm.participantId"></select>
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.home" tuiChevron [stringify]="stringifyFamily">
-               <label tuiLabel>Famille d'accueil</label>
-               <select tuiSelect [items]="familyIds()" [formField]="assignmentForm.hostFamilyId"></select>
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.calendar">
-               <label tuiLabel>Arrivée</label>
-               <input tuiInput type="date" [formField]="assignmentForm.arrivalDate" />
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.calendar">
-               <label tuiLabel>Départ</label>
-               <input tuiInput type="date" [formField]="assignmentForm.departureDate" />
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.circle-check" tuiChevron>
-               <label tuiLabel>Statut</label>
-               <select tuiSelect [items]="statuses" [formField]="assignmentForm.status"></select>
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.file-text" class="wide">
-               <label tuiLabel>Notes</label>
-               <textarea tuiTextarea [formField]="$any(assignmentForm.notes)"></textarea>
-             </tui-textfield>
-           </form>
-         }
-        <footer>
-          <button tuiButton appearance="flat" (click)="opened.set(false)">Fermer</button>
-          @if (mode() === 'detail') {
-            <button tuiButton (click)="edit()">Modifier</button
-            ><button tuiButton appearance="secondary-destructive" (click)="remove()">
-              Supprimer
-            </button>
-          } @else {
-            <button tuiButton (click)="save()">Enregistrer</button>
-          }
-        </footer></tui-drawer
-      >
-    }`,
-  styleUrl: '../../shared/crud.scss',
+  imports: [...SHARED_IMPORTS, TuiTabs, HostFamilyCardsComponent, HostFamilyDetailDrawerComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `<app-page-layout title="Hébergement – Familles d’accueil" description="Capacités et affectations">
+    <tui-tabs [(activeItemIndex)]="view"><button tuiTab type="button">Table</button><button tuiTab type="button">Cards</button></tui-tabs>
+    @if (loading()) { <tui-loader /> } @else if (view === 0) { <app-data-table [rows]="families()" [columns]="tableColumns" (rowSelected)="select($event)" /> } @else { <app-host-family-cards [families]="families()" (selectFamily)="select($event)" /> }
+  </app-page-layout>
+  @if (selectedFamily()) { <app-host-family-detail-drawer [family]="selectedFamily()" [assignments]="selectedFamilyAssignments()" (close)="closeDrawer()" (changed)="reloadAssignments()" /> }`,
 })
 export class AssignmentsPage implements OnInit {
-  protected readonly tableColumns: readonly DataTableColumn<ParticipantHostFamilyAssignment>[] = [
-    { key: 'participant', label: 'Participant', type: 'text', value: (x) => `${x.participant.lastName} ${x.participant.firstName}`, presentation: { type: 'person', subtitle: (x) => x.participant.group?.name }, link: () => '/participants' },
-    { key: 'family', label: 'Famille', type: 'list', value: (x) => x.hostFamily.familyName, presentation: { type: 'icon', icon: () => '@tui.house' }, link: () => '/familles' },
-    { key: 'status', label: 'Statut', type: 'list', value: (x) => x.status, presentation: { type: 'chip', appearance: (x) => ({ CONFIRMED: 'positive', CANCELLED: 'negative', COMPLETED: 'info', PLANNED: 'warning' })[x.status] || 'neutral', icon: (x) => x.status === 'CONFIRMED' ? '@tui.check' : x.status === 'CANCELLED' ? '@tui.x' : '@tui.clock' } },
+  private readonly api = inject(HostFamiliesApiService);
+  readonly families = signal<HostFamily[]>([]);
+  readonly selectedFamily = signal<HostFamily | null>(null);
+  readonly selectedFamilyAssignments = signal<ParticipantHostFamilyAssignment[] | null>(null);
+  readonly loading = signal(true);
+  view = 0;
+  readonly tableColumns: readonly DataTableColumn<HostFamily>[] = [
+    { key: 'family', label: 'Famille', value: (family) => family.familyName, presentation: { type: 'icon', icon: () => '@tui.house' } },
+    { key: 'city', label: 'Ville', type: 'list', value: (family) => family.city },
+    { key: 'parish', label: 'Paroisse', type: 'list', value: (family) => family.parish || '—' },
+    { key: 'capacity', label: 'Capacité', type: 'number', value: (family) => family.maxCapacity, presentation: { type: 'number' } },
+    { key: 'status', label: 'Statut', type: 'list', value: (family) => family.status, presentation: { type: 'badge' } },
   ];
-  protected readonly tableActions: readonly DataTableAction<ParticipantHostFamilyAssignment>[] = [
-    { id: 'edit', label: 'Modifier', icon: '@tui.pencil' },
-  ];
-  private api = inject(AssignmentsApiService);
-  private participantsApi = inject(ParticipantsApiService);
-  private familiesApi = inject(HostFamiliesApiService);
-  items = signal<ParticipantHostFamilyAssignment[]>([]);
-  participants = signal<Participant[]>([]);
-  families = signal<HostFamily[]>([]);
-  participantIds = computed(() => [0, ...this.participants().map(({ id }) => id)]);
-  familyIds = computed(() => [0, ...this.families().map(({ id }) => id)]);
-  stringifyParticipant = (id: number) => {
-    if (!id) return 'Sélectionner…';
-    const participant = this.participants().find((item) => item.id === id);
-    return participant ? `${participant.lastName} ${participant.firstName}` : '';
-  };
-  stringifyFamily = (id: number) =>
-    id ? (this.families().find((family) => family.id === id)?.familyName ?? '') : 'Sélectionner…';
-  query = signal('');
-  loading = signal(true);
-  opened = signal(false);
-  mode = signal<'detail' | 'create' | 'edit'>('detail');
-  selected = signal<ParticipantHostFamilyAssignment | null>(null);
-  model = signal<AssignmentPayload>(blank());
-  assignmentForm = form(this.model, (p) => {
-    required(p.participantId);
-    required(p.hostFamilyId);
-    required(p.arrivalDate);
-    required(p.departureDate);
-  });
-  statuses = Object.values(AssignmentStatus);
-  filtered = computed(() => {
-    const q = this.query().toLowerCase();
-    return this.items().filter((x) =>
-      `${x.participant.firstName} ${x.participant.lastName} ${x.hostFamily.familyName} ${x.status}`
-        .toLowerCase()
-        .includes(q),
-    );
-  });
-  ngOnInit() {
-    forkJoin({
-      items: this.api.list(),
-      participants: this.participantsApi.list(),
-      families: this.familiesApi.list(),
-    }).subscribe((x) => {
-      this.items.set(x.items);
-      this.participants.set(x.participants);
-      this.families.set(x.families);
-      this.loading.set(false);
-    });
-  }
-  open(x: ParticipantHostFamilyAssignment) {
-    this.selected.set(x);
-    this.mode.set('detail');
-    this.opened.set(true);
-  }
-  create() {
-    this.model.set(blank());
-    this.mode.set('create');
-    this.opened.set(true);
-  }
-  edit() {
-    const x = this.requireSelectedAssignment();
-    this.model.set({
-      participantId: x.participant.id,
-      hostFamilyId: x.hostFamily.id,
-      arrivalDate: x.arrivalDate,
-      departureDate: x.departureDate,
-      status: x.status,
-      notes: x.notes ?? '',
-    });
-    this.mode.set('edit');
-  }
-  onTableAction({ action, row }: DataTableActionEvent<ParticipantHostFamilyAssignment>) {
-    if (action.id === 'edit') {
-      this.open(row);
-      this.edit();
-    }
-  }
-  save() {
-    submit(this.assignmentForm, async () => {
-      const req =
-        this.mode() === 'create'
-          ? this.api.create(this.model())
-          : this.api.update(this.requireSelectedAssignment().id, this.model());
-      req.subscribe((x) => {
-        this.items.update((a) =>
-          this.mode() === 'create' ? [x, ...a] : a.map((i) => (i.id === x.id ? x : i)),
-        );
-        this.open(x);
-      });
-    });
-  }
-  remove() {
-    const x = this.requireSelectedAssignment();
-    if (confirm(`Supprimer l'affectation #${x.id} ?`))
-      this.api.delete(x.id).subscribe(() => {
-        this.items.update((a) => a.filter((i) => i.id !== x.id));
-        this.opened.set(false);
-      });
-  }
-  private requireSelectedAssignment(): ParticipantHostFamilyAssignment {
-    const assignment = this.selected();
-    if (!assignment) {
-      throw new Error('No assignment selected');
-    }
-    return assignment;
-  }
+  ngOnInit(): void { this.api.list().pipe(finalize(() => this.loading.set(false))).subscribe((families) => this.families.set(families)); }
+  select(family: HostFamily): void { this.selectedFamily.set(family); this.reloadAssignments(); }
+  reloadAssignments(): void { const family = this.selectedFamily(); if (family) this.api.getAssignments(family.id).subscribe((assignments) => this.selectedFamilyAssignments.set(assignments)); }
+  closeDrawer(): void { this.selectedFamily.set(null); this.selectedFamilyAssignments.set(null); }
 }

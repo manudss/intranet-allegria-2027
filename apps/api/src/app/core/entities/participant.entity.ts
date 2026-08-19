@@ -3,7 +3,9 @@ import { Group } from './group.entity';
 import { ParticipantHostFamilyAssignment } from './participant-host-family-assignment.entity';
 import { ParticipantHealth } from './participant-health.entity';
 import { ParticipantSex } from './participant-sex.enum';
+import { MejAgeGroup } from './mej-age-group.enum';
 import { TeamParticipant } from './team-participant.entity';
+import { PersonType } from './person-type.enum';
 
 @Entity({ name: 'participants' })
 export class Participant {
@@ -21,6 +23,17 @@ export class Participant {
 
   @Column({ type: 'enum', enum: ParticipantSex })
   sex!: ParticipantSex;
+
+  @Column({ type: 'enum', enum: MejAgeGroup, nullable: true })
+  mejAgeGroup!: MejAgeGroup | null;
+
+  @Column({
+    type: 'enum',
+    enum: PersonType,
+    enumName: 'person_type_enum',
+    default: PersonType.JEUNE,
+  })
+  type!: PersonType;
 
   @Column({ type: 'varchar', length: 180, nullable: true })
   emergencyContactName!: string | null;

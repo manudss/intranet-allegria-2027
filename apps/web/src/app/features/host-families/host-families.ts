@@ -16,6 +16,12 @@ const blank = (): HostFamilyPayload => ({
   maxUnder18: 0,
   parish: '',
   notes: '',
+  latitude: null,
+  longitude: null,
+  maxAnimators: null,
+  constraints: null,
+  tags: null,
+  status: 'DRAFT',
 });
 @Component({
   selector: 'app-host-families',

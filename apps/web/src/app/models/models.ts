@@ -4,12 +4,17 @@ export enum ParticipantSex {
   OTHER = 'OTHER',
   UNDISCLOSED = 'UNDISCLOSED',
 }
+export enum MejAgeGroup {
+  TA = 'TA',
+  ES = 'ES',
+}
 export enum AssignmentStatus {
-  PLANNED = 'PLANNED',
+  PENDING = 'PENDING',
   CONFIRMED = 'CONFIRMED',
   CANCELLED = 'CANCELLED',
-  COMPLETED = 'COMPLETED',
 }
+export type PersonType = 'JEUNE' | 'ANIMATEUR' | 'BENEVOLE';
+export type HostFamilyStatus = 'DRAFT' | 'VALIDATED' | 'INACTIVE';
 export enum TeamParticipantRole {
   MEMBER = 'MEMBER',
   ASSISTANT = 'ASSISTANT',
@@ -29,6 +34,8 @@ export interface Participant {
   lastName: string;
   dateOfBirth: string;
   sex: ParticipantSex;
+  mejAgeGroup: MejAgeGroup | null;
+  type: PersonType;
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
   diocese: string | null;
@@ -87,6 +94,12 @@ export interface HostFamily {
   maxUnder18: number;
   parish: string | null;
   notes: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  maxAnimators: number | null;
+  constraints: string[] | null;
+  tags: string[] | null;
+  status: HostFamilyStatus;
 }
 export interface ParticipantHostFamilyAssignment {
   id: number;
@@ -96,6 +109,9 @@ export interface ParticipantHostFamilyAssignment {
   departureDate: string;
   status: AssignmentStatus;
   notes: string | null;
+  type: PersonType;
+  groupId: number | null;
+  roomLabel: string | null;
 }
 export interface ParticipantHealth {
   id: number;
@@ -110,7 +126,7 @@ export interface ParticipantHealth {
   lastUpdatedBy: User | null;
 }
 
-export type ParticipantPayload = Pick<Participant, 'firstName' | 'lastName' | 'dateOfBirth' | 'sex'> & { emergencyContactName:string; emergencyContactPhone:string; diocese:string; city:string; groupId: number | null };
+export type ParticipantPayload = Pick<Participant, 'firstName' | 'lastName' | 'dateOfBirth' | 'sex'> & { mejAgeGroup: MejAgeGroup | null; emergencyContactName:string; emergencyContactPhone:string; diocese:string; city:string; groupId: number | null };
 export interface GroupPayload { name:string; diocese:string; arrivalDatetime:string; departureDatetime:string; notes:string }
 export type VolunteerPayload = Pick<Volunteer, 'firstName' | 'lastName' | 'isGroupLeader'> & { userId: number | null; phone:string; email:string; team:string; notes:string };
 export type TeamPayload = Pick<Team, 'name' | 'maxSize'> & {
@@ -119,8 +135,9 @@ export type TeamPayload = Pick<Team, 'name' | 'maxSize'> & {
   primaryAnimatorId: number | null;
   secondaryAnimatorId: number | null;
 };
-export type HostFamilyPayload = Pick<HostFamily,'familyName'|'address'|'postalCode'|'city'|'maxCapacity'|'maxUnder18'> & {phone:string;email:string;parish:string;notes:string};
-export type AssignmentPayload = Pick<ParticipantHostFamilyAssignment,'arrivalDate'|'departureDate'|'status'> & { notes:string; participantId: number; hostFamilyId: number };
+export type HostFamilyPayload = Pick<HostFamily,'familyName'|'address'|'postalCode'|'city'|'maxCapacity'|'maxUnder18'|'latitude'|'longitude'|'maxAnimators'|'constraints'|'tags'|'status'> & {phone:string;email:string;parish:string;notes:string};
+export type AssignmentPayload = Pick<ParticipantHostFamilyAssignment,'arrivalDate'|'departureDate'|'status'|'type'|'groupId'|'roomLabel'> & { notes:string; participantId: number; hostFamilyId: number };
+export interface ParticipantSearchResult { items: Participant[]; total: number; limit: number; offset: number }
 export interface ParticipantHealthPayload {medicalConditions:string;allergies:string;medications:string;specialNeeds:string;dietaryNotes:string;emergencyInstructions:string}
 export interface LoginCredentials {
   email: string;

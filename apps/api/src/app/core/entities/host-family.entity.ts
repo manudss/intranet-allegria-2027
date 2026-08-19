@@ -1,5 +1,6 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { ParticipantHostFamilyAssignment } from './participant-host-family-assignment.entity';
+import { HostFamilyStatus } from './host-family-status.enum';
 
 @Entity({ name: 'host_families' })
 export class HostFamily {
@@ -35,6 +36,24 @@ export class HostFamily {
 
   @Column({ type: 'text', nullable: true })
   notes!: string | null;
+
+  @Column({ type: 'double precision', nullable: true })
+  latitude!: number | null;
+
+  @Column({ type: 'double precision', nullable: true })
+  longitude!: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  maxAnimators!: number | null;
+
+  @Column({ type: 'text', array: true, nullable: true })
+  constraints!: string[] | null;
+
+  @Column({ type: 'text', array: true, nullable: true })
+  tags!: string[] | null;
+
+  @Column({ type: 'enum', enum: HostFamilyStatus, default: HostFamilyStatus.DRAFT })
+  status!: HostFamilyStatus;
 
   @OneToMany(() => ParticipantHostFamilyAssignment, (assignment) => assignment.hostFamily)
   assignments!: ParticipantHostFamilyAssignment[];

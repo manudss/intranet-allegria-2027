@@ -2,6 +2,7 @@ import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 't
 import { AssignmentStatus } from './assignment-status.enum';
 import { HostFamily } from './host-family.entity';
 import { Participant } from './participant.entity';
+import { PersonType } from './person-type.enum';
 
 @Entity({ name: 'participant_host_family_assignments' })
 export class ParticipantHostFamilyAssignment {
@@ -22,10 +23,19 @@ export class ParticipantHostFamilyAssignment {
   @Column({ type: 'date' })
   departureDate!: string;
 
-  @Column({ type: 'enum', enum: AssignmentStatus, default: AssignmentStatus.PLANNED })
+  @Column({ type: 'enum', enum: AssignmentStatus, default: AssignmentStatus.PENDING })
   status!: AssignmentStatus;
 
   @Column({ type: 'text', nullable: true })
   notes!: string | null;
+
+  @Column({ type: 'enum', enum: PersonType, enumName: 'person_type_enum' })
+  type!: PersonType;
+
+  @Column({ type: 'int', nullable: true })
+  groupId!: number | null;
+
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  roomLabel!: string | null;
 }
 

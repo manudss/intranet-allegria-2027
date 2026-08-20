@@ -53,6 +53,14 @@ export const appRoutes: Route[] = [
         loadComponent: () => import('./features/teams/teams').then((m) => m.TeamsPage),
       },
       {
+        path: 'hebergement/carte',
+        title: 'Hebergement - Carte',
+        loadComponent: () =>
+          import('./features/assignments/host-families-map-page').then(
+            (m) => m.HostFamiliesMapPageComponent,
+          ),
+      },
+      {
         path: 'hebergement',
         title: 'Hebergement',
         loadComponent: () =>

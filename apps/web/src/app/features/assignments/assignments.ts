@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { TuiButton, TuiCheckbox, TuiInput, TuiLabel } from '@taiga-ui/core';
 import { TuiChip, TuiDataListWrapper, TuiDrawer, TuiSelect, TuiTabs } from '@taiga-ui/kit';
 import { debounceTime, distinctUntilChanged, finalize, forkJoin, startWith, switchMap } from 'rxjs';
@@ -114,10 +115,10 @@ export class HostFamilyDetailDrawerComponent {
 
 @Component({
   selector: 'app-assignments',
-  imports: [...SHARED_IMPORTS, TuiTabs, HostFamilyCardsComponent, HostFamilyDetailDrawerComponent],
+  imports: [...SHARED_IMPORTS, RouterLink, TuiTabs, HostFamilyCardsComponent, HostFamilyDetailDrawerComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<app-page-layout title="Hébergement – Familles d’accueil" description="Capacités et affectations">
-    <tui-tabs [(activeItemIndex)]="view"><button tuiTab type="button">Table</button><button tuiTab type="button">Cards</button></tui-tabs>
+    <tui-tabs [(activeItemIndex)]="view"><button tuiTab type="button">Table</button><button tuiTab type="button">Cards</button><boutton tuiTab routerLink="/hebergement/carte">🗺 Carte</boutton></tui-tabs>
     @if (loading()) { <tui-loader /> } @else if (view === 0) { <app-data-table [rows]="families()" [columns]="tableColumns" (rowSelected)="select($event)" /> } @else { <app-host-family-cards [families]="families()" (selectFamily)="select($event)" /> }
   </app-page-layout>
   @if (selectedFamily()) { <app-host-family-detail-drawer [family]="selectedFamily()" [assignments]="selectedFamilyAssignments()" (close)="closeDrawer()" (changed)="reloadAssignments()" /> }`,

@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { HostFamily } from '../../models/models';
@@ -16,7 +17,7 @@ describe('AssignmentsPage', () => {
     const api = { list: vi.fn(() => of([family])), getAssignments: vi.fn(() => of([])) };
     await TestBed.configureTestingModule({
       imports: [AssignmentsPage],
-      providers: [{ provide: HostFamiliesApiService, useValue: api }],
+      providers: [{ provide: HostFamiliesApiService, useValue: api }, provideRouter([])],
     }).compileComponents();
     const fixture = TestBed.createComponent(AssignmentsPage);
     fixture.componentInstance.ngOnInit();

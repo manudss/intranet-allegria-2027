@@ -21,6 +21,16 @@
             "input": "apps/web/public"
           },
           {
+            "glob": "marker-icon*.png",
+            "input": "node_modules/leaflet/dist/images",
+            "output": "assets/leaflet"
+          },
+          {
+            "glob": "marker-shadow.png",
+            "input": "node_modules/leaflet/dist/images",
+            "output": "assets/leaflet"
+          },
+          {
             "glob": "**/*",
             "input": "node_modules/@taiga-ui/icons/src",
             "output": "assets/taiga-ui/icons"
@@ -29,6 +39,9 @@
         "styles": [
           "@taiga-ui/styles/taiga-ui-theme.less",
           "@taiga-ui/styles/taiga-ui-fonts.less",
+          "node_modules/leaflet/dist/leaflet.css",
+          "node_modules/leaflet.markercluster/dist/MarkerCluster.css",
+          "node_modules/leaflet.markercluster/dist/MarkerCluster.Default.css",
           "apps/web/src/styles.scss"
         ]
       },

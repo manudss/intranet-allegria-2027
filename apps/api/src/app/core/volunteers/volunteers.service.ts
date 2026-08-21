@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, Volunteer } from '../entities';
 import { CreateVolunteerDto, UpdateVolunteerDto } from './volunteers.types';
+import { FindVolunteersQueryDto } from '../volunteer-skills/volunteer-skills.types';
 
 @Injectable()
 export class VolunteersService {
@@ -27,11 +28,23 @@ export class VolunteersService {
     return this.volunteersRepository.save(volunteer);
   }
 
-  findAll(): Promise<Volunteer[]> {
-    return this.volunteersRepository.find({
-      relations: { user: true },
-      order: { lastName: 'ASC', firstName: 'ASC' },
-    });
+  findAll(query?: FindVolunteersQueryDto): Promise<Volunteer[]> {
+    const qb = this.volunteersRepository
+      .createQueryBuilder('volunteer')
+      .leftJoinAndSelect('volunteer.user', 'user')
+      .orderBy('volunteer.lastName', 'ASC')
+      .addOrderBy('volunteer.firstName', 'ASC');
+
+    if (query?.skill) {
+      qb.innerJoin('volunteer.skills', 'skill', 'skill.skill = :skill', { skill: query.skill });
+    }
+
+    if (query?.tag) {
+      const normalizedTag = query.tag.trim().toLowerCase();
+      qb.innerJoin('volunteer.tags', 'tag', 'tag.value = :tag', { tag: normalizedTag });
+    }
+
+    return qb.getMany();
   }
 
   async findOne(id: number): Promise<Volunteer> {

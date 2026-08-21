@@ -1,6 +1,8 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Team } from './team.entity';
 import { User } from './user.entity';
+import { VolunteerSkill } from './volunteer-skill.entity';
+import { VolunteerTag } from './volunteer-tag.entity';
 import { VolunteerTeamMembership } from './volunteer-team-membership.entity';
 
 @Entity({ name: 'volunteers' })
@@ -41,4 +43,10 @@ export class Volunteer {
 
   @OneToMany(() => VolunteerTeamMembership, (membership) => membership.volunteer)
   teamMemberships!: VolunteerTeamMembership[];
+
+  @OneToMany(() => VolunteerSkill, (skill) => skill.volunteer)
+  skills!: VolunteerSkill[];
+
+  @OneToMany(() => VolunteerTag, (tag) => tag.volunteer)
+  tags!: VolunteerTag[];
 }

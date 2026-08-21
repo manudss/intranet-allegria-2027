@@ -20,6 +20,22 @@ export enum TeamParticipantRole {
   ASSISTANT = 'ASSISTANT',
 }
 
+export enum VolunteerSkillType {
+  SECURITY = 'SECURITY',
+  ANIMATION = 'ANIMATION',
+  LITURGY = 'LITURGY',
+  LOGISTICS = 'LOGISTICS',
+  HEALTH = 'HEALTH',
+  RECEPTION = 'RECEPTION',
+  TRANSPORT = 'TRANSPORT',
+  ACCOMMODATION = 'ACCOMMODATION',
+  COMMUNICATION = 'COMMUNICATION',
+  CATERING = 'CATERING',
+  CLEANING = 'CLEANING',
+  MISCELLANEOUS = 'MISCELLANEOUS',
+  OTHER = 'OTHER',
+}
+
 export interface Group {
   id: number;
   name: string;
@@ -66,6 +82,8 @@ export interface Volunteer {
   isGroupLeader: boolean;
   notes: string | null;
   teamMemberships?: VolunteerTeamMembership[];
+  skills?: VolunteerSkill[];
+  tags?: VolunteerTag[];
 }
 export interface VolunteerTeam {
   id: number;
@@ -88,6 +106,22 @@ export interface VolunteerTeamMembership {
   role: string | null;
   createdAt: string;
   updatedAt: string;
+}
+export interface VolunteerSkill {
+  id: number;
+  volunteerId: number;
+  skill: VolunteerSkillType;
+  createdAt: string;
+}
+export interface VolunteerTag {
+  id: number;
+  volunteerId: number;
+  value: string;
+  createdAt: string;
+}
+export interface SkillCount {
+  skill: VolunteerSkillType;
+  count: number;
 }
 export interface Team {
   id: number;
@@ -161,6 +195,8 @@ export type VolunteerTeamMembershipPayload = {
   endAt: string | null;
   role: string;
 };
+export type VolunteerSkillPayload = { skill: VolunteerSkillType };
+export type VolunteerTagPayload = { value: string };
 export type TeamPayload = Pick<Team, 'name' | 'maxSize'> & {
   notes: string;
   groupId: number | null;

@@ -17,12 +17,18 @@ import {
   ParticipantPayload,
   ParticipantSearchResult,
   PersonType,
+  SkillCount,
   Team,
   TeamParticipant,
   TeamParticipantRole,
   TeamPayload,
   User,
   Volunteer,
+  VolunteerSkill,
+  VolunteerSkillPayload,
+  VolunteerSkillType,
+  VolunteerTag,
+  VolunteerTagPayload,
   VolunteerTeam,
   VolunteerTeamMembership,
   VolunteerTeamMembershipPayload,
@@ -93,6 +99,46 @@ export class GroupsApiService extends CrudApi<Group, GroupPayload> {
 @Injectable({ providedIn: 'root' })
 export class VolunteersApiService extends CrudApi<Volunteer, VolunteerPayload> {
   protected readonly path = '/api/volunteers';
+  listFiltered(filters?: { skill?: VolunteerSkillType | null; tag?: string }): Observable<Volunteer[]> {
+    let params = new HttpParams();
+    if (filters?.skill) params = params.set('skill', filters.skill);
+    if (filters?.tag) params = params.set('tag', filters.tag);
+    return this.http.get<Volunteer[]>(this.path, { params });
+  }
+}
+@Injectable({ providedIn: 'root' })
+export class VolunteerSkillsApiService {
+  private readonly http = inject(HttpClient);
+  list(volunteerId: number): Observable<VolunteerSkill[]> {
+    return this.http.get<VolunteerSkill[]>(`/api/volunteers/${volunteerId}/skills`);
+  }
+  add(volunteerId: number, payload: VolunteerSkillPayload): Observable<VolunteerSkill> {
+    return this.http.post<VolunteerSkill>(`/api/volunteers/${volunteerId}/skills`, payload);
+  }
+  remove(volunteerId: number, skillId: number): Observable<DeleteResponse> {
+    return this.http.delete<DeleteResponse>(`/api/volunteers/${volunteerId}/skills/${skillId}`);
+  }
+  getCounts(): Observable<SkillCount[]> {
+    return this.http.get<SkillCount[]>('/api/volunteer-skills/counts');
+  }
+}
+@Injectable({ providedIn: 'root' })
+export class VolunteerTagsApiService {
+  private readonly http = inject(HttpClient);
+  list(volunteerId: number): Observable<VolunteerTag[]> {
+    return this.http.get<VolunteerTag[]>(`/api/volunteers/${volunteerId}/tags`);
+  }
+  add(volunteerId: number, payload: VolunteerTagPayload): Observable<VolunteerTag> {
+    return this.http.post<VolunteerTag>(`/api/volunteers/${volunteerId}/tags`, payload);
+  }
+  remove(volunteerId: number, tagId: number): Observable<DeleteResponse> {
+    return this.http.delete<DeleteResponse>(`/api/volunteers/${volunteerId}/tags/${tagId}`);
+  }
+  getSuggestions(q?: string): Observable<string[]> {
+    let params = new HttpParams();
+    if (q) params = params.set('q', q);
+    return this.http.get<string[]>('/api/volunteer-tags/suggestions', { params });
+  }
 }
 @Injectable({ providedIn: 'root' })
 export class VolunteerTeamsApiService extends CrudApi<VolunteerTeam, VolunteerTeamPayload> {

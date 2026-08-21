@@ -1,6 +1,7 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Team } from './team.entity';
 import { User } from './user.entity';
+import { VolunteerTeamMembership } from './volunteer-team-membership.entity';
 
 @Entity({ name: 'volunteers' })
 export class Volunteer {
@@ -37,5 +38,7 @@ export class Volunteer {
 
   @OneToMany(() => Team, (team) => team.secondaryAnimator)
   secondaryForTeams!: Team[];
-}
 
+  @OneToMany(() => VolunteerTeamMembership, (membership) => membership.volunteer)
+  teamMemberships!: VolunteerTeamMembership[];
+}

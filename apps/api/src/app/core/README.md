@@ -8,6 +8,7 @@ This folder contains the first functional backend domains for Allegria 2027.
 - `groups`: diocesan groups
 - `participants`: participants CRUD with filters by `groupId` and `diocese`
 - `volunteers`: volunteer profiles linked to users
+- `volunteer-teams`: operational volunteer teams and memberships
 - `teams`: teams CRUD and team participant listing
 - `team-participants`: add/remove participants with team max-size enforcement
 - `host-families`: host families CRUD
@@ -17,6 +18,7 @@ This folder contains the first functional backend domains for Allegria 2027.
 ## Security note
 
 `participant-health` endpoints are protected with `AuthTokenGuard` + `RoleGuard` and require role `ADMIN` or `HEALTH`.
+`volunteer-teams` endpoints are protected with `AuthTokenGuard` + `RoleGuard` and require write roles `ADMIN|COORDINATOR` for mutations, plus read roles `ADMIN|COORDINATOR|HEALTH|VOLUNTEERS|LOGISTICS|VIEWER` for reads.
 
 ## Swagger
 

@@ -1,5 +1,6 @@
 import { Route } from '@angular/router';
 import { authGuard } from './core/auth.guard';
+import { roleGuard } from './core/role.guard';
 import { Layout } from './layout';
 
 export const appRoutes: Route[] = [
@@ -51,6 +52,14 @@ export const appRoutes: Route[] = [
         path: 'equipes-missions',
         title: 'Equipes & missions',
         loadComponent: () => import('./features/teams/teams').then((m) => m.TeamsPage),
+      },
+      {
+        path: 'equipes-operationnelles',
+        title: 'Équipes opérationnelles',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'COORDINATOR', 'HEALTH', 'VOLUNTEERS', 'LOGISTICS', 'VIEWER'] },
+        loadComponent: () =>
+          import('./features/volunteer-teams/volunteer-teams').then((m) => m.VolunteerTeamsPage),
       },
       {
         path: 'hebergement/carte',

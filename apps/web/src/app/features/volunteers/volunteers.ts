@@ -1,8 +1,19 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { form, required, submit } from '@angular/forms/signals';
 import { finalize } from 'rxjs';
-import { Volunteer, VolunteerPayload } from '../../models/models';
-import { VolunteersApiService } from '../../services/api.services';
+import { AuthService } from '../../core/auth.service';
+import {
+  Volunteer,
+  VolunteerPayload,
+  VolunteerTeam,
+  VolunteerTeamMembership,
+  VolunteerTeamMembershipPayload,
+} from '../../models/models';
+import {
+  VolunteerTeamsApiService,
+  VolunteerTeamMembershipsApiService,
+  VolunteersApiService,
+} from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { DataTableColumn } from '../../shared/data-table';
 const blank = (): VolunteerPayload => ({
@@ -14,6 +25,12 @@ const blank = (): VolunteerPayload => ({
   team: '',
   isGroupLeader: false,
   notes: '',
+});
+const blankMembership = () => ({
+  volunteerTeamId: null,
+  startAt: '',
+  endAt: '',
+  role: '',
 });
 @Component({
   selector: 'app-volunteers',
@@ -55,6 +72,90 @@ const blank = (): VolunteerPayload => ({
             <dt>Notes</dt>
             <dd>{{ selected()?.notes || '—' }}</dd>
           </dl>
+          @if (canSeeMemberships()) {
+           <section class="membership-section">
+             <h3>Rattachements opérationnels</h3>
+             @if (teamMemberships().length === 0) {
+               <p>Aucun rattachement enregistré.</p>
+             } @else {
+               <ul class="membership-list">
+                 @for (membership of teamMemberships(); track membership.id) {
+                   <li class="membership-item">
+                     <div>
+                       <strong>{{ membership.volunteerTeam.name }}</strong>
+                       <div>{{ formatPeriod(membership.startAt, membership.endAt) }}</div>
+                       <small>{{ membership.role || 'Sans role' }}</small>
+                     </div>
+                     @if (canEditMemberships()) {
+                       <div class="membership-actions-inline">
+                         <button tuiButton size="s" appearance="secondary" type="button" (click)="editMembership(membership)">
+                           Modifier
+                         </button>
+                         <button tuiButton size="s" appearance="secondary-destructive" type="button" (click)="removeMembership(membership.id)">
+                           Retirer
+                         </button>
+                       </div>
+                     }
+                   </li>
+                 }
+               </ul>
+             }
+
+             @if (canEditMemberships()) {
+               @if (membershipMode() === 'edit') {
+                 <h4>Modifier un rattachement</h4>
+                 <form class="drawer-form membership-form">
+                   <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyVolunteerTeam">
+                     <label tuiLabel>Équipe opérationnelle</label>
+                     <select tuiSelect placeholder="Choisir…" [items]="activeTeamIds()" [formField]="membershipForm.volunteerTeamId"></select>
+                   </tui-textfield>
+                   <tui-textfield iconStart="@tui.calendar">
+                     <label tuiLabel>Début</label>
+                     <input tuiInput type="date" [formField]="membershipForm.startAt" />
+                   </tui-textfield>
+                   <tui-textfield iconStart="@tui.calendar">
+                     <label tuiLabel>Fin</label>
+                     <input tuiInput type="date" [formField]="membershipForm.endAt" />
+                   </tui-textfield>
+                   <tui-textfield iconStart="@tui.file-text" class="wide">
+                     <label tuiLabel>Rôle</label>
+                     <input tuiInput [formField]="membershipForm.role" />
+                   </tui-textfield>
+                 </form>
+                 <div class="membership-form-actions">
+                   <button tuiButton appearance="flat" type="button" (click)="cancelMembershipEdit()">Annuler</button>
+                   <button tuiButton type="button" (click)="saveMembership()">Mettre à jour</button>
+                 </div>
+               } @else if (membershipMode() === 'create') {
+                 <h4>Ajouter un rattachement</h4>
+                 <form class="drawer-form membership-form">
+                   <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyVolunteerTeam">
+                     <label tuiLabel>Équipe opérationnelle</label>
+                     <select tuiSelect placeholder="Choisir…" [items]="activeTeamIds()" [formField]="membershipForm.volunteerTeamId"></select>
+                   </tui-textfield>
+                   <tui-textfield iconStart="@tui.calendar">
+                     <label tuiLabel>Début</label>
+                     <input tuiInput type="date" [formField]="membershipForm.startAt" />
+                   </tui-textfield>
+                   <tui-textfield iconStart="@tui.calendar">
+                     <label tuiLabel>Fin</label>
+                     <input tuiInput type="date" [formField]="membershipForm.endAt" />
+                   </tui-textfield>
+                   <tui-textfield iconStart="@tui.file-text" class="wide">
+                     <label tuiLabel>Rôle</label>
+                     <input tuiInput [formField]="membershipForm.role" />
+                   </tui-textfield>
+                 </form>
+                 <div class="membership-form-actions">
+                   <button tuiButton appearance="flat" type="button" (click)="cancelMembershipEdit()">Annuler</button>
+                   <button tuiButton type="button" (click)="saveMembership()">Ajouter</button>
+                 </div>
+               } @else {
+                 <button tuiButton type="button" (click)="createMembership()">Ajouter un rattachement</button>
+               }
+             }
+           </section>
+          }
          } @else {
            <form class="drawer-form">
              <tui-textfield iconStart="@tui.user">
@@ -108,33 +209,59 @@ export class VolunteersPage implements OnInit {
     { key: 'contact', label: 'Contact', type: 'text', value: (x) => x.email || x.phone || '—', presentation: { type: 'icon', icon: (x) => x.email ? '@tui.mail' : '@tui.phone' } },
   ];
   private api = inject(VolunteersApiService);
+  private readonly teamsApi = inject(VolunteerTeamsApiService);
+  private readonly membershipsApi = inject(VolunteerTeamMembershipsApiService);
+  private readonly auth = inject(AuthService);
   items = signal<Volunteer[]>([]);
+  teams = signal<VolunteerTeam[]>([]);
+  teamMemberships = signal<VolunteerTeamMembership[]>([]);
   query = signal('');
   loading = signal(true);
   opened = signal(false);
   mode = signal<'detail' | 'create' | 'edit'>('detail');
   selected = signal<Volunteer | null>(null);
+  selectedMembership = signal<VolunteerTeamMembership | null>(null);
+  membershipMode = signal<'create' | 'edit' | null>(null);
   model = signal<VolunteerPayload>(blank());
+  membershipModel = signal<VolunteerTeamMembershipPayload>(blankMembership());
   volunteerForm = form(this.model, (p) => {
     required(p.firstName);
     required(p.lastName);
   });
+  membershipForm = form(this.membershipModel, (p) => {
+    required(p.volunteerTeamId);
+  });
+  readonly canSeeMemberships = computed(() =>
+    this.auth.hasAnyRole(['ADMIN', 'COORDINATOR', 'HEALTH', 'VOLUNTEERS', 'LOGISTICS', 'VIEWER']),
+  );
+  readonly canEditMemberships = computed(() => this.auth.hasAnyRole(['ADMIN', 'COORDINATOR']));
+  readonly activeTeamIds = computed(() => this.teams().filter((team) => team.isActive).map(({ id }) => id));
   filtered = computed(() => {
     const q = this.query().toLowerCase();
     return this.items().filter((x) =>
       `${x.firstName} ${x.lastName} ${x.team ?? ''}`.toLowerCase().includes(q),
     );
   });
+  stringifyVolunteerTeam = (id: number) => {
+    const team = this.teams().find((item) => item.id === id);
+    return team ? `${team.code} · ${team.name}` : '';
+  };
   ngOnInit() {
+    this.loading.set(true);
     this.api
       .list()
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe((x) => this.items.set(x));
+    this.teamsApi.list().subscribe((teams) => this.teams.set(teams));
   }
   open(x: Volunteer) {
     this.selected.set(x);
     this.mode.set('detail');
     this.opened.set(true);
+    this.membershipMode.set(null);
+    this.selectedMembership.set(null);
+    this.membershipModel.set(blankMembership());
+    this.membershipsApi.list(x.id).subscribe((memberships) => this.teamMemberships.set(memberships));
   }
   create() {
     this.model.set(blank());
@@ -155,6 +282,57 @@ export class VolunteersPage implements OnInit {
       notes: x.notes ?? '',
     });
     this.mode.set('edit');
+  }
+  createMembership() {
+    this.membershipModel.set(blankMembership());
+    this.selectedMembership.set(null);
+    this.membershipMode.set('create');
+  }
+  editMembership(membership: VolunteerTeamMembership) {
+    this.selectedMembership.set(membership);
+    this.membershipModel.set({
+      volunteerTeamId: membership.volunteerTeam.id,
+      startAt: membership.startAt ?? '',
+      endAt: membership.endAt ?? '',
+      role: membership.role ?? '',
+    });
+    this.membershipMode.set('edit');
+  }
+  cancelMembershipEdit() {
+    this.selectedMembership.set(null);
+    this.membershipModel.set(blankMembership());
+    this.membershipMode.set(null);
+  }
+  saveMembership() {
+    const volunteer = this.requireSelectedVolunteer();
+
+    submit(this.membershipForm, async () => {
+      const selectedMembership = this.selectedMembership();
+      const request =
+        this.membershipMode() === 'edit' && selectedMembership
+          ? this.membershipsApi.update(volunteer.id, selectedMembership.id, this.membershipModel())
+          : this.membershipsApi.create(volunteer.id, this.membershipModel());
+
+      request.subscribe((membership) => {
+        this.teamMemberships.update((memberships) =>
+          this.membershipMode() === 'edit'
+            ? memberships.map((item) => (item.id === membership.id ? membership : item))
+            : [membership, ...memberships],
+        );
+        this.cancelMembershipEdit();
+      });
+    });
+  }
+  removeMembership(membershipId: number) {
+    const volunteer = this.requireSelectedVolunteer();
+    if (confirm('Retirer ce rattachement ?')) {
+      this.membershipsApi.delete(volunteer.id, membershipId).subscribe(() => {
+        this.teamMemberships.update((memberships) => memberships.filter((item) => item.id !== membershipId));
+        if (this.selectedMembership()?.id === membershipId) {
+          this.cancelMembershipEdit();
+        }
+      });
+    }
   }
   save() {
     submit(this.volunteerForm, async () => {
@@ -184,5 +362,20 @@ export class VolunteersPage implements OnInit {
       throw new Error('No volunteer selected');
     }
     return volunteer;
+  }
+  protected formatPeriod(startAt: string | null, endAt: string | null): string {
+    if (startAt && endAt) {
+      return `${startAt} → ${endAt}`;
+    }
+
+    if (startAt) {
+      return `À partir du ${startAt}`;
+    }
+
+    if (endAt) {
+      return `Jusqu'au ${endAt}`;
+    }
+
+    return 'Période libre';
   }
 }

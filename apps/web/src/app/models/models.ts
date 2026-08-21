@@ -65,6 +65,29 @@ export interface Volunteer {
   team: string | null;
   isGroupLeader: boolean;
   notes: string | null;
+  teamMemberships?: VolunteerTeamMembership[];
+}
+export interface VolunteerTeam {
+  id: number;
+  name: string;
+  code: string;
+  description: string | null;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  memberships?: VolunteerTeamMembership[];
+}
+export interface VolunteerTeamMembership {
+  id: number;
+  volunteerId: number;
+  volunteerTeamId: number;
+  volunteer: Volunteer;
+  volunteerTeam: VolunteerTeam;
+  startAt: string | null;
+  endAt: string | null;
+  role: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 export interface Team {
   id: number;
@@ -129,6 +152,15 @@ export interface ParticipantHealth {
 export type ParticipantPayload = Pick<Participant, 'firstName' | 'lastName' | 'dateOfBirth' | 'sex'> & { mejAgeGroup: MejAgeGroup | null; emergencyContactName:string; emergencyContactPhone:string; diocese:string; city:string; groupId: number | null };
 export interface GroupPayload { name:string; diocese:string; arrivalDatetime:string; departureDatetime:string; notes:string }
 export type VolunteerPayload = Pick<Volunteer, 'firstName' | 'lastName' | 'isGroupLeader'> & { userId: number | null; phone:string; email:string; team:string; notes:string };
+export type VolunteerTeamPayload = Pick<VolunteerTeam, 'name' | 'code' | 'isActive'> & {
+  description: string;
+};
+export type VolunteerTeamMembershipPayload = {
+  volunteerTeamId: number | null;
+  startAt: string | null;
+  endAt: string | null;
+  role: string;
+};
 export type TeamPayload = Pick<Team, 'name' | 'maxSize'> & {
   notes: string;
   groupId: number | null;

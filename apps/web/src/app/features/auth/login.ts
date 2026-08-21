@@ -1,41 +1,43 @@
 import { Component, inject, signal } from '@angular/core';
 import { form, FormField, required, email, submit } from '@angular/forms/signals';
 import { ActivatedRoute, Router } from '@angular/router';
-import { TuiButton, TuiError, TuiTextfield } from '@taiga-ui/core';
+import {TuiButton, TuiError, TuiInput, TuiTextfield} from '@taiga-ui/core';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormField, TuiButton, TuiError, TuiTextfield],
+  imports: [FormField, TuiButton, TuiError, TuiTextfield, TuiInput],
   template: `<main class="login">
       <section class="card">
         <img src="assets/logo-allegria.svg" alt="Allegria 2027" />
         <h1>Connexion</h1>
         <p>Intranet des bénévoles</p>
         <form (submit)="onSubmit($event)">
-          <tui-textfield
-            ><span>Email</span
-            ><input
-              tuiTextfield
+          <tui-textfield>
+            <span>Email</span>
+            <input
+              tuiInput
               type="email"
               autocomplete="username"
-              [formField]="loginForm.email" /></tui-textfield
-          ><tui-error
+              [formField]="loginForm.email" />
+          </tui-textfield>
+          <tui-error
             [error]="
               loginForm.email().touched() && loginForm.email().invalid()
                 ? 'Adresse email requise'
                 : null
-            "
-          /><tui-textfield
-            ><span>Mot de passe</span
-            ><input
-              tuiTextfield
+            "/>
+          <tui-textfield>
+            <span>Mot de passe</span>
+            <input
+              tuiInput
               type="password"
               autocomplete="current-password"
-              [formField]="loginForm.password" /></tui-textfield
-          ><tui-error
+              [formField]="loginForm.password" />
+          </tui-textfield>
+          <tui-error
             [error]="
               loginForm.password().touched() && loginForm.password().invalid()
                 ? 'Mot de passe requis'

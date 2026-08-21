@@ -12,7 +12,8 @@ export { Role } from './role.entity';
 export { TeamParticipantRole } from './team-participant-role.enum';
 export { TeamParticipant } from './team-participant.entity';
 export { Team } from './team.entity';
+export { VolunteerTeamMembership } from './volunteer-team-membership.entity';
+export { VolunteerTeam } from './volunteer-team.entity';
 export { UserRole } from './user-role.entity';
 export { User } from './user.entity';
 export { Volunteer } from './volunteer.entity';
-

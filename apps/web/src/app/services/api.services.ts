@@ -23,6 +23,10 @@ import {
   TeamPayload,
   User,
   Volunteer,
+  VolunteerTeam,
+  VolunteerTeamMembership,
+  VolunteerTeamMembershipPayload,
+  VolunteerTeamPayload,
   VolunteerPayload,
 } from '../models/models';
 
@@ -89,6 +93,29 @@ export class GroupsApiService extends CrudApi<Group, GroupPayload> {
 @Injectable({ providedIn: 'root' })
 export class VolunteersApiService extends CrudApi<Volunteer, VolunteerPayload> {
   protected readonly path = '/api/volunteers';
+}
+@Injectable({ providedIn: 'root' })
+export class VolunteerTeamsApiService extends CrudApi<VolunteerTeam, VolunteerTeamPayload> {
+  protected readonly path = '/api/volunteer-teams';
+}
+@Injectable({ providedIn: 'root' })
+export class VolunteerTeamMembershipsApiService {
+  private readonly http = inject(HttpClient);
+  list(volunteerId: number) {
+    return this.http.get<VolunteerTeamMembership[]>(`/api/volunteers/${volunteerId}/team-memberships`);
+  }
+  create(volunteerId: number, payload: VolunteerTeamMembershipPayload) {
+    return this.http.post<VolunteerTeamMembership>(`/api/volunteers/${volunteerId}/team-memberships`, payload);
+  }
+  update(volunteerId: number, membershipId: number, payload: Partial<VolunteerTeamMembershipPayload>) {
+    return this.http.patch<VolunteerTeamMembership>(
+      `/api/volunteers/${volunteerId}/team-memberships/${membershipId}`,
+      payload,
+    );
+  }
+  delete(volunteerId: number, membershipId: number) {
+    return this.http.delete<DeleteResponse>(`/api/volunteers/${volunteerId}/team-memberships/${membershipId}`);
+  }
 }
 @Injectable({ providedIn: 'root' })
 export class TeamsApiService extends CrudApi<Team, TeamPayload> {

@@ -71,6 +71,7 @@ export class Layout {
       label: 'Organisation & logistique',
       items: [
         { label: 'Equipes & missions', path: '/equipes-missions', icon: '@tui.briefcase' },
+        { label: 'Équipes opérationnelles', path: '/equipes-operationnelles', icon: '@tui.users' },
         { label: 'Transports', path: '/transports', icon: '@tui.bus' },
         { label: 'Hebergement', path: '/hebergement', icon: '@tui.building' },
       ],

@@ -5,6 +5,7 @@ import {
   AssignmentStatus,
   Group,
   HostFamily,
+  HostFamilyStatus,
   MejAgeGroup,
   Participant,
   ParticipantHealth,
@@ -81,6 +82,114 @@ const dioceses = [
   'Metz',
 ];
 
+/** Point de rassemblement du rassemblement 2027 : Saint-Etienne (45deg 26' 05" N, 4deg 23' 25" E). */
+const GATHERING_POINT = { latitude: 45.439695, longitude: 4.387178 } as const;
+
+/** Rayon maximal (km) autour du point de rassemblement pour les familles d'accueil. */
+const HOST_FAMILY_RADIUS_KM = 100;
+
+const EARTH_RADIUS_KM = 6371;
+const KM_PER_DEGREE_LAT = 111.32;
+
+type HostTown = {
+  readonly city: string;
+  readonly postalCode: string;
+  readonly latitude: number;
+  readonly longitude: number;
+};
+
+/** Communes reelles situees a moins de 100 km de Saint-Etienne. */
+const hostTowns: HostTown[] = [
+  { city: 'Saint-Etienne', postalCode: '42000', latitude: 45.4397, longitude: 4.3872 },
+  { city: 'Saint-Chamond', postalCode: '42400', latitude: 45.476, longitude: 4.514 },
+  { city: 'Firminy', postalCode: '42700', latitude: 45.387, longitude: 4.289 },
+  { city: 'Rive-de-Gier', postalCode: '42800', latitude: 45.528, longitude: 4.616 },
+  { city: 'Le Chambon-Feugerolles', postalCode: '42500', latitude: 45.393, longitude: 4.319 },
+  { city: 'Roche-la-Moliere', postalCode: '42230', latitude: 45.429, longitude: 4.326 },
+  { city: 'La Ricamarie', postalCode: '42150', latitude: 45.416, longitude: 4.349 },
+  { city: 'Unieux', postalCode: '42240', latitude: 45.403, longitude: 4.266 },
+  { city: 'Villars', postalCode: '42390', latitude: 45.47, longitude: 4.362 },
+  { city: 'Sorbiers', postalCode: '42290', latitude: 45.493, longitude: 4.44 },
+  { city: 'Saint-Just-Saint-Rambert', postalCode: '42170', latitude: 45.495, longitude: 4.241 },
+  { city: 'Andrezieux-Boutheon', postalCode: '42160', latitude: 45.529, longitude: 4.26 },
+  { city: 'Montbrison', postalCode: '42600', latitude: 45.608, longitude: 4.066 },
+  { city: 'Saint-Galmier', postalCode: '42330', latitude: 45.596, longitude: 4.317 },
+  { city: 'Chazelles-sur-Lyon', postalCode: '42140', latitude: 45.639, longitude: 4.39 },
+  { city: 'Feurs', postalCode: '42110', latitude: 45.744, longitude: 4.226 },
+  { city: 'Bourg-Argental', postalCode: '42220', latitude: 45.301, longitude: 4.558 },
+  { city: 'Roanne', postalCode: '42300', latitude: 46.035, longitude: 4.068 },
+  { city: 'Riorges', postalCode: '42153', latitude: 46.04, longitude: 4.04 },
+  { city: 'Charlieu', postalCode: '42190', latitude: 46.159, longitude: 4.174 },
+  { city: 'Lyon', postalCode: '69007', latitude: 45.764, longitude: 4.8357 },
+  { city: 'Villeurbanne', postalCode: '69100', latitude: 45.766, longitude: 4.88 },
+  { city: 'Venissieux', postalCode: '69200', latitude: 45.697, longitude: 4.885 },
+  { city: 'Oullins', postalCode: '69600', latitude: 45.714, longitude: 4.808 },
+  { city: 'Givors', postalCode: '69700', latitude: 45.59, longitude: 4.769 },
+  { city: 'Tarare', postalCode: '69170', latitude: 45.896, longitude: 4.434 },
+  { city: "L'Arbresle", postalCode: '69210', latitude: 45.836, longitude: 4.618 },
+  { city: 'Vienne', postalCode: '38200', latitude: 45.525, longitude: 4.874 },
+  { city: 'Annonay', postalCode: '07100', latitude: 45.24, longitude: 4.67 },
+  { city: 'Tournon-sur-Rhone', postalCode: '07300', latitude: 45.068, longitude: 4.833 },
+  { city: 'Le Puy-en-Velay', postalCode: '43000', latitude: 45.043, longitude: 3.885 },
+  { city: 'Yssingeaux', postalCode: '43200', latitude: 45.143, longitude: 4.123 },
+  { city: 'Monistrol-sur-Loire', postalCode: '43120', latitude: 45.293, longitude: 4.173 },
+  { city: 'Aurec-sur-Loire', postalCode: '43110', latitude: 45.367, longitude: 4.2 },
+  { city: 'Ambert', postalCode: '63600', latitude: 45.55, longitude: 3.742 },
+  { city: 'Thiers', postalCode: '63300', latitude: 45.856, longitude: 3.548 },
+  { city: 'Valence', postalCode: '26000', latitude: 44.933, longitude: 4.892 },
+];
+
+const toRadians = (degrees: number): number => (degrees * Math.PI) / 180;
+
+const distanceKm = (
+  from: { latitude: number; longitude: number },
+  to: { latitude: number; longitude: number },
+): number => {
+  const deltaLat = toRadians(to.latitude - from.latitude);
+  const deltaLng = toRadians(to.longitude - from.longitude);
+  const a =
+    Math.sin(deltaLat / 2) ** 2 +
+    Math.cos(toRadians(from.latitude)) * Math.cos(toRadians(to.latitude)) * Math.sin(deltaLng / 2) ** 2;
+  return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
+const offsetCoordinates = (
+  origin: { latitude: number; longitude: number },
+  bearingRad: number,
+  km: number,
+): { latitude: number; longitude: number } => {
+  const latitude = origin.latitude + (km / KM_PER_DEGREE_LAT) * Math.cos(bearingRad);
+  const longitude =
+    origin.longitude + (km / (KM_PER_DEGREE_LAT * Math.cos(toRadians(origin.latitude)))) * Math.sin(bearingRad);
+  return { latitude, longitude };
+};
+
+const roundCoordinate = (value: number): number => Math.round(value * 1e6) / 1e6;
+
+/**
+ * Genere un point d'habitation proche d'une commune reelle, en garantissant
+ * qu'il reste dans le perimetre de 100 km autour du point de rassemblement.
+ */
+const buildHostFamilyLocation = (): HostTown => {
+  const town = pick(hostTowns);
+
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const bearing = toRadians(faker.number.float({ min: 0, max: 360 }));
+    const spreadKm = Math.sqrt(faker.number.float({ min: 0, max: 1 })) * 6;
+    const point = offsetCoordinates(town, bearing, spreadKm);
+
+    if (distanceKm(GATHERING_POINT, point) <= HOST_FAMILY_RADIUS_KM) {
+      return {
+        ...town,
+        latitude: roundCoordinate(point.latitude),
+        longitude: roundCoordinate(point.longitude),
+      };
+    }
+  }
+
+  return { ...town, latitude: roundCoordinate(town.latitude), longitude: roundCoordinate(town.longitude) };
+};
+
 const teamAdjectives = ['Aurore', 'Sillage', 'Kairos', 'Orion', 'Etincelle', 'Horizon', 'Azimut', 'Atlas'];
 const teamNouns = ['Nomades', 'Pionniers', 'Sentinelles', 'Voyageurs', 'Boussoles', 'Eclaireurs', 'Convergences'];
 
@@ -92,12 +201,21 @@ const assignmentStatuses = [
   AssignmentStatus.CANCELLED,
 ];
 
+const hostFamilyStatuses = [
+  HostFamilyStatus.VALIDATED,
+  HostFamilyStatus.VALIDATED,
+  HostFamilyStatus.VALIDATED,
+  HostFamilyStatus.DRAFT,
+  HostFamilyStatus.INACTIVE,
+];
+
 const ROLE_CODES = {
   admin: 'ADMIN',
   coordinator: 'COORDINATOR',
   health: 'HEALTH',
   animator: 'ANIMATOR',
   logistics: 'LOGISTICS',
+  volunteers: 'VOLUNTEERS',
   viewer: 'VIEWER',
 } as const;
 
@@ -107,6 +225,7 @@ const roleLabels: Record<string, string> = {
   HEALTH: 'Equipe sante',
   ANIMATOR: 'Animateur',
   LOGISTICS: 'Logistique',
+  VOLUNTEERS: 'Bénévoles',
   VIEWER: 'Lecture seule',
 };
 
@@ -520,21 +639,26 @@ async function run(): Promise<void> {
     for (let i = 0; i < profile.hostFamilies; i += 1) {
       const familyLastName = faker.person.lastName();
       const capacity = faker.number.int({ min: 2, max: 9 });
+      const location = buildHostFamilyLocation();
 
       hostFamiliesToCreate.push(
         hostFamilyRepository.create({
           familyName: `Famille ${familyLastName}`,
           address: faker.location.streetAddress(),
-          postalCode: faker.location.zipCode('#####'),
-          city: faker.location.city(),
+          postalCode: location.postalCode,
+          city: location.city,
+          latitude: location.latitude,
+          longitude: location.longitude,
           phone: chance(0.95) ? `+33${faker.string.numeric(9)}` : null,
           email: chance(0.9)
             ? `famille.${normalizeText(familyLastName)}.${i + 1}@example.org`
             : null,
           maxCapacity: capacity,
           maxUnder18: Math.max(0, capacity - faker.number.int({ min: 0, max: 2 })),
+          maxAnimators: chance(0.6) ? faker.number.int({ min: 1, max: 2 }) : null,
           parish: chance(0.7) ? `Paroisse ${faker.person.lastName()}` : null,
           notes: chance(0.1) ? 'Animaux de compagnie presents.' : null,
+          status: pick(hostFamilyStatuses),
         }),
       );
     }
@@ -570,6 +694,7 @@ async function run(): Promise<void> {
           arrivalDate: '2027-07-19',
           departureDate: '2027-07-27',
           status,
+          type: participant.type,
           notes:
             status === AssignmentStatus.CANCELLED
               ? 'Affectation annulee suite desistement famille.'
@@ -587,6 +712,7 @@ async function run(): Promise<void> {
             arrivalDate: '2027-07-19',
             departureDate: '2027-07-21',
             status: AssignmentStatus.CANCELLED,
+            type: participant.type,
             notes: 'Historique: reaffecte apres ajustement transport.',
           }),
         );

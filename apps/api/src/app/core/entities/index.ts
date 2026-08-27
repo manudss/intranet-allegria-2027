@@ -13,6 +13,10 @@ export { TeamParticipantRole } from './team-participant-role.enum';
 export { TeamParticipant } from './team-participant.entity';
 export { Team } from './team.entity';
 export { VolunteerTeamMembership } from './volunteer-team-membership.entity';
+export { VolunteerMissionStatus } from './volunteer-mission-status.enum';
+export { VolunteerMission } from './volunteer-mission.entity';
+export { VolunteerShiftStatus } from './volunteer-shift-status.enum';
+export { VolunteerShift } from './volunteer-shift.entity';
 export { VolunteerTeam } from './volunteer-team.entity';
 export { VolunteerSkillType } from './volunteer-skill-type.enum';
 export { VolunteerSkill } from './volunteer-skill.entity';
@@ -20,3 +24,4 @@ export { VolunteerTag } from './volunteer-tag.entity';
 export { UserRole } from './user-role.entity';
 export { User } from './user.entity';
 export { Volunteer } from './volunteer.entity';
+

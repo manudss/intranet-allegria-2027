@@ -4,6 +4,7 @@ import { User } from './user.entity';
 import { VolunteerSkill } from './volunteer-skill.entity';
 import { VolunteerTag } from './volunteer-tag.entity';
 import { VolunteerTeamMembership } from './volunteer-team-membership.entity';
+import { VolunteerMission } from './volunteer-mission.entity';
 
 @Entity({ name: 'volunteers' })
 export class Volunteer {
@@ -49,4 +50,8 @@ export class Volunteer {
 
   @OneToMany(() => VolunteerTag, (tag) => tag.volunteer)
   tags!: VolunteerTag[];
+
+  @OneToMany(() => VolunteerMission, (mission) => mission.responsibleVolunteer)
+  responsibleMissions!: VolunteerMission[];
 }
+

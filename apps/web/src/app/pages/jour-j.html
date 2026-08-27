@@ -1,4 +1,42 @@
 <section class="page">
-  <h1>Tableau de bord Jour J</h1>
-  <p>Suivi operationnel en temps reel (a implementer).</p>
+  <header class="page-header">
+    <h1>Tableau de bord Jour J</h1>
+    <label>
+      <span>Date</span>
+      <input type="date" [value]="selectedDate()" (input)="setDate($any($event.target).value)" />
+    </label>
+  </header>
+
+  @if (loading()) {
+    <p>Chargement des shifts...</p>
+  } @else if (shifts().length === 0) {
+    <p>Aucun shift planifie pour cette date.</p>
+  } @else {
+    <ul class="cards">
+      @for (shift of shifts(); track shift.id) {
+        <li class="card">
+          <div class="card-head">
+            <h2>{{ shift.mission?.title || 'Mission' }}</h2>
+            <span class="badge" [class]="'badge ' + statusClass(shift.status)">{{ statusLabel(shift.status) }}</span>
+          </div>
+          <p class="meta">{{ shift.startAt | date: 'shortTime' }} - {{ shift.endAt | date: 'shortTime' }}</p>
+          <p class="meta">{{ shift.location || shift.mission?.location || 'Sans lieu' }}</p>
+          <p class="meta">Capacite: {{ shift.capacity || '—' }} · Optionnel: {{ shift.isOptional ? 'Oui' : 'Non' }}</p>
+          @if (shift.notes) {
+            <p class="notes">{{ shift.notes }}</p>
+          }
+          @if (canWrite()) {
+            <label>
+              <span>Statut</span>
+              <select [value]="shift.status" (change)="changeShiftStatus(shift, $any($event.target).value)">
+                @for (status of shiftStatuses; track status) {
+                  <option [value]="status">{{ statusLabel(status) }}</option>
+                }
+              </select>
+            </label>
+          }
+        </li>
+      }
+    </ul>
+  }
 </section>

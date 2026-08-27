@@ -72,6 +72,7 @@ export class Layout {
       items: [
         { label: 'Equipes & missions', path: '/equipes-missions', icon: '@tui.briefcase' },
         { label: 'Équipes opérationnelles', path: '/equipes-operationnelles', icon: '@tui.users' },
+        { label: 'Missions bénévoles', path: '/missions-benevoles', icon: '@tui.clipboard-list' },
         { label: 'Transports', path: '/transports', icon: '@tui.bus' },
         { label: 'Hebergement', path: '/hebergement', icon: '@tui.building' },
       ],

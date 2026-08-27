@@ -62,6 +62,14 @@ export const appRoutes: Route[] = [
           import('./features/volunteer-teams/volunteer-teams').then((m) => m.VolunteerTeamsPage),
       },
       {
+        path: 'missions-benevoles',
+        title: 'Missions bénévoles',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'VOLUNTEERS', 'LOGISTICS', 'VIEWER'] },
+        loadComponent: () =>
+          import('./features/volunteer-missions/volunteer-missions').then((m) => m.VolunteerMissionsPage),
+      },
+      {
         path: 'hebergement/carte',
         title: 'Hebergement - Carte',
         loadComponent: () =>

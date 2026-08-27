@@ -18,6 +18,6 @@ export class VolunteerSkill {
   @Column({ type: 'enum', enum: VolunteerSkillType })
   skill!: VolunteerSkillType;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 }

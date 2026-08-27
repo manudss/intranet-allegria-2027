@@ -24,9 +24,15 @@ import {
   TeamPayload,
   User,
   Volunteer,
+  VolunteerMission,
+  VolunteerMissionPayload,
+  VolunteerMissionStatus,
   VolunteerSkill,
   VolunteerSkillPayload,
   VolunteerSkillType,
+  VolunteerShift,
+  VolunteerShiftPayload,
+  VolunteerShiftStatus,
   VolunteerTag,
   VolunteerTagPayload,
   VolunteerTeam,
@@ -163,6 +169,55 @@ export class VolunteerTeamMembershipsApiService {
     return this.http.delete<DeleteResponse>(`/api/volunteers/${volunteerId}/team-memberships/${membershipId}`);
   }
 }
+
+@Injectable({ providedIn: 'root' })
+export class VolunteerMissionsApiService extends CrudApi<VolunteerMission, VolunteerMissionPayload> {
+  protected readonly path = '/api/volunteer-missions';
+
+  listFiltered(filters?: {
+    volunteerTeamId?: number | null;
+    location?: string;
+    date?: string;
+    status?: VolunteerMissionStatus;
+  }): Observable<VolunteerMission[]> {
+    let params = new HttpParams();
+    if (filters?.volunteerTeamId) params = params.set('volunteerTeamId', filters.volunteerTeamId);
+    if (filters?.location) params = params.set('location', filters.location);
+    if (filters?.date) params = params.set('date', filters.date);
+    if (filters?.status) params = params.set('status', filters.status);
+    return this.http.get<VolunteerMission[]>(this.path, { params });
+  }
+
+  changeStatus(id: number, status: VolunteerMissionStatus) {
+    return this.http.patch<VolunteerMission>(`${this.path}/${id}/status`, { status });
+  }
+
+  listShifts(missionId: number) {
+    return this.http.get<VolunteerShift[]>(`${this.path}/${missionId}/shifts`);
+  }
+
+  createShift(missionId: number, payload: VolunteerShiftPayload) {
+    return this.http.post<VolunteerShift>(`${this.path}/${missionId}/shifts`, payload);
+  }
+
+  updateShift(missionId: number, shiftId: number, payload: Partial<VolunteerShiftPayload>) {
+    return this.http.patch<VolunteerShift>(`${this.path}/${missionId}/shifts/${shiftId}`, payload);
+  }
+
+  changeShiftStatus(missionId: number, shiftId: number, status: VolunteerShiftStatus) {
+    return this.http.patch<VolunteerShift>(`${this.path}/${missionId}/shifts/${shiftId}/status`, { status });
+  }
+
+  deleteShift(missionId: number, shiftId: number) {
+    return this.http.delete<DeleteResponse>(`${this.path}/${missionId}/shifts/${shiftId}`);
+  }
+
+  getDayView(date: string) {
+    const params = new HttpParams().set('date', date);
+    return this.http.get<VolunteerShift[]>(`${this.path}/day-view`, { params });
+  }
+}
+
 @Injectable({ providedIn: 'root' })
 export class TeamsApiService extends CrudApi<Team, TeamPayload> {
   protected readonly path = '/api/teams';

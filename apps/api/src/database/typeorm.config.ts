@@ -31,3 +31,4 @@ const migrationOptions: DataSourceOptions = {
 };
 
 export default new DataSource(migrationOptions);
+

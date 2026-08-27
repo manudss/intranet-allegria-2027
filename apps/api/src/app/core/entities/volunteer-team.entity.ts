@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, Unique, UpdateDateColumn } from 'typeorm';
+import { VolunteerMission } from './volunteer-mission.entity';
 import { VolunteerTeamMembership } from './volunteer-team-membership.entity';
 
 @Unique('uq_volunteer_teams_code', ['code'])
@@ -27,4 +28,7 @@ export class VolunteerTeam {
 
   @OneToMany(() => VolunteerTeamMembership, (membership) => membership.volunteerTeam)
   memberships!: VolunteerTeamMembership[];
+
+  @OneToMany(() => VolunteerMission, (mission) => mission.volunteerTeam)
+  missions!: VolunteerMission[];
 }

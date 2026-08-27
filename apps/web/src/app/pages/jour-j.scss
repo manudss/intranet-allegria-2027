@@ -1,0 +1,71 @@
+.page {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: end;
+  justify-content: space-between;
+}
+
+label {
+  display: grid;
+  gap: 0.25rem;
+}
+
+input,
+select {
+  min-block-size: 2.75rem;
+  border: 1px solid var(--tui-border-normal);
+  border-radius: 0.5rem;
+  padding-inline: 0.625rem;
+}
+
+.cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.card {
+  border: 1px solid var(--tui-border-normal);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.card-head h2 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.meta,
+.notes {
+  margin: 0;
+}
+
+.badge {
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+.badge.todo { background: var(--tui-background-neutral-1); }
+.badge.assigned { background: #dbeafe; }
+.badge.progress { background: #fef3c7; }
+.badge.done { background: #dcfce7; }
+.badge.cancel { background: #fee2e2; }
+

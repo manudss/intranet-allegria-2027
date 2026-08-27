@@ -16,6 +16,6 @@ export class VolunteerTag {
   @Column({ type: 'text' })
   value!: string;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 }

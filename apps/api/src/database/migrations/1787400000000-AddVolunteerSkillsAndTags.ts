@@ -24,7 +24,7 @@ export class AddVolunteerSkillsAndTags1787400000000 implements MigrationInterfac
       "id" SERIAL NOT NULL,
       "volunteer_id" integer NOT NULL,
       "skill" "public"."volunteer_skills_skill_enum" NOT NULL,
-      "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+      "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
       CONSTRAINT "PK_volunteer_skills_id" PRIMARY KEY ("id"),
       CONSTRAINT "uq_volunteer_skills_volunteer_skill" UNIQUE ("volunteer_id", "skill")
     )`);
@@ -40,7 +40,7 @@ export class AddVolunteerSkillsAndTags1787400000000 implements MigrationInterfac
       "id" SERIAL NOT NULL,
       "volunteer_id" integer NOT NULL,
       "value" text NOT NULL,
-      "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+      "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
       CONSTRAINT "PK_volunteer_tags_id" PRIMARY KEY ("id")
     )`);
 

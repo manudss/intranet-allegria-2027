@@ -36,6 +36,24 @@ export enum VolunteerSkillType {
   OTHER = 'OTHER',
 }
 
+export enum VolunteerMissionStatus {
+  DRAFT = 'DRAFT',
+  TODO = 'TODO',
+  IN_PROGRESS = 'IN_PROGRESS',
+  DONE = 'DONE',
+  CANCELLED = 'CANCELLED',
+  NOT_DONE = 'NOT_DONE',
+}
+
+export enum VolunteerShiftStatus {
+  TODO = 'TODO',
+  ASSIGNED = 'ASSIGNED',
+  IN_PROGRESS = 'IN_PROGRESS',
+  DONE = 'DONE',
+  CANCELLED = 'CANCELLED',
+  NOT_DONE = 'NOT_DONE',
+}
+
 export interface Group {
   id: number;
   name: string;
@@ -112,6 +130,35 @@ export interface VolunteerSkill {
   volunteerId: number;
   skill: VolunteerSkillType;
   createdAt: string;
+}
+export interface VolunteerMission {
+  id: number;
+  title: string;
+  description: string | null;
+  volunteerTeamId: number | null;
+  volunteerTeam: VolunteerTeam | null;
+  location: string | null;
+  responsibleVolunteerId: number | null;
+  responsibleVolunteer: Volunteer | null;
+  status: VolunteerMissionStatus;
+  isOptional: boolean;
+  createdAt: string;
+  updatedAt: string;
+  shifts?: VolunteerShift[];
+}
+export interface VolunteerShift {
+  id: number;
+  missionId: number;
+  mission?: VolunteerMission;
+  startAt: string;
+  endAt: string;
+  location: string | null;
+  capacity: number | null;
+  status: VolunteerShiftStatus;
+  isOptional: boolean;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 export interface VolunteerTag {
   id: number;
@@ -197,6 +244,24 @@ export type VolunteerTeamMembershipPayload = {
 };
 export type VolunteerSkillPayload = { skill: VolunteerSkillType };
 export type VolunteerTagPayload = { value: string };
+export type VolunteerMissionPayload = {
+  title: string;
+  description: string;
+  volunteerTeamId: number | null;
+  location: string;
+  responsibleVolunteerId: number | null;
+  status: VolunteerMissionStatus;
+  isOptional: boolean;
+};
+export type VolunteerShiftPayload = {
+  startAt: string;
+  endAt: string;
+  location: string | null;
+  capacity: number | null;
+  status: VolunteerShiftStatus;
+  isOptional: boolean;
+  notes: string | null;
+};
 export type TeamPayload = Pick<Team, 'name' | 'maxSize'> & {
   notes: string;
   groupId: number | null;

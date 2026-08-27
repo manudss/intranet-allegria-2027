@@ -1,0 +1,64 @@
+Ajoute au projet existant un module de rattachement des bénévoles aux équipes opérationnelles.
+
+Réutilise impérativement :
+- l’entité Volunteer existante ;
+- l’entité User existante ;
+- l’authentification existante ;
+- les rôles existants ;
+- les conventions de migrations existantes.
+
+Ne crée pas de table profiles.
+Ne crée pas de table users.
+Ne remplace pas la table teams existante.
+
+Crée les entités :
+
+1. VolunteerTeam
+- id integer ;
+- name varchar(150) non nul ;
+- code varchar(80) unique ;
+- description text nullable ;
+- isActive boolean par défaut true ;
+- createdAt ;
+- updatedAt.
+
+2. VolunteerTeamMembership
+- id integer ;
+- volunteerId, clé étrangère vers volunteers.id ;
+- volunteerTeamId, clé étrangère vers volunteer_teams.id ;
+- startAt nullable ;
+- endAt nullable ;
+- role nullable ;
+- createdAt ;
+- updatedAt.
+
+Contraintes :
+- empêcher les doublons exacts volunteer_id + volunteer_team_id + start_at ;
+- vérifier que end_at est postérieur à start_at ;
+- autoriser un bénévole sans équipe ;
+- autoriser plusieurs équipes par bénévole ;
+- ne pas utiliser volunteers.team comme source de vérité pour ces rattachements.
+
+Crée :
+- migrations ;
+- entités TypeORM ;
+- DTOs ;
+- validation ;
+- module NestJS ;
+- service ;
+- controller ;
+- endpoints CRUD ;
+- relations Volunteer ↔ VolunteerTeamMembership ;
+- écrans Angular de liste, création et modification des équipes ;
+- écran Angular de rattachement d’un bénévole à plusieurs équipes ;
+- affichage des périodes de rattachement.
+
+Permissions :
+- ADMIN et COORDINATOR : création, modification et suppression ;
+- HEALTH, ANIMATOR et LOGISTICS : lecture des données autorisées ;
+- VIEWER : lecture seule ;
+- aucun rôle ne doit contourner les guards existants.
+
+Utilise les conventions du dépôt existant.
+Ajoute les tests backend et frontend nécessaires.
+Ne réécris pas les modules existants.

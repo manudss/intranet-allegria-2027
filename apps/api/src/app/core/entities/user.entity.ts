@@ -2,6 +2,7 @@ import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, Up
 import { ParticipantHealth } from './participant-health.entity';
 import { UserRole } from './user-role.entity';
 import { Volunteer } from './volunteer.entity';
+import { VolunteerShiftAssignment } from './volunteer-shift-assignment.entity';
 
 @Entity({ name: 'users' })
 export class User {
@@ -31,5 +32,9 @@ export class User {
 
   @OneToMany(() => ParticipantHealth, (health) => health.lastUpdatedBy)
   healthUpdates!: ParticipantHealth[];
+
+  @OneToMany(() => VolunteerShiftAssignment, (assignment) => assignment.assignedByUser)
+  shiftAssignmentsCreated!: VolunteerShiftAssignment[];
 }
+
 

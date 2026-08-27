@@ -4,10 +4,12 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { VolunteerMission } from './volunteer-mission.entity';
+import { VolunteerShiftAssignment } from './volunteer-shift-assignment.entity';
 import { VolunteerShiftStatus } from './volunteer-shift-status.enum';
 
 @Entity({ name: 'volunteer_shifts' })
@@ -53,7 +55,11 @@ export class VolunteerShift {
 
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt!: Date;
+
+  @OneToMany(() => VolunteerShiftAssignment, (assignment) => assignment.shift)
+  assignments!: VolunteerShiftAssignment[];
 }
+
 
 
 

@@ -5,6 +5,7 @@ import { VolunteerSkill } from './volunteer-skill.entity';
 import { VolunteerTag } from './volunteer-tag.entity';
 import { VolunteerTeamMembership } from './volunteer-team-membership.entity';
 import { VolunteerMission } from './volunteer-mission.entity';
+import { VolunteerShiftAssignment } from './volunteer-shift-assignment.entity';
 
 @Entity({ name: 'volunteers' })
 export class Volunteer {
@@ -53,5 +54,9 @@ export class Volunteer {
 
   @OneToMany(() => VolunteerMission, (mission) => mission.responsibleVolunteer)
   responsibleMissions!: VolunteerMission[];
+
+  @OneToMany(() => VolunteerShiftAssignment, (assignment) => assignment.volunteer)
+  shiftAssignments!: VolunteerShiftAssignment[];
 }
+
 

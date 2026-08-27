@@ -54,6 +54,12 @@ export enum VolunteerShiftStatus {
   NOT_DONE = 'NOT_DONE',
 }
 
+export enum VolunteerShiftAssignmentStatus {
+  PROVISIONAL = 'PROVISIONAL',
+  CONFIRMED = 'CONFIRMED',
+  CANCELLED = 'CANCELLED',
+}
+
 export interface Group {
   id: number;
   name: string;
@@ -156,6 +162,22 @@ export interface VolunteerShift {
   capacity: number | null;
   status: VolunteerShiftStatus;
   isOptional: boolean;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  assignments?: VolunteerShiftAssignment[];
+  activeAssignmentsCount?: number;
+  confirmedAssignmentsCount?: number;
+}
+export interface VolunteerShiftAssignment {
+  id: number;
+  volunteerId: number;
+  volunteer: Volunteer;
+  shiftId: number;
+  shift?: VolunteerShift;
+  status: VolunteerShiftAssignmentStatus;
+  assignedByUserId: number;
+  assignedByUser: User;
   notes: string | null;
   createdAt: string;
   updatedAt: string;
@@ -262,6 +284,31 @@ export type VolunteerShiftPayload = {
   isOptional: boolean;
   notes: string | null;
 };
+export type VolunteerShiftAssignmentPayload = {
+  volunteerId: number;
+  status: VolunteerShiftAssignmentStatus;
+  notes: string | null;
+  force?: boolean;
+};
+export type VolunteerShiftAssignmentStatusPayload = {
+  status: VolunteerShiftAssignmentStatus;
+  notes?: string | null;
+  force?: boolean;
+};
+export type VolunteerShiftAssignmentSearchParams = {
+  shiftId?: number;
+  q?: string;
+  skill?: VolunteerSkillType | null;
+  tag?: string;
+  volunteerTeamId?: number | null;
+  availableOnly?: boolean;
+  startAt?: string;
+  endAt?: string;
+};
+export interface VolunteerShiftAssignmentVolunteerSearchResult {
+  volunteer: Volunteer;
+  hasOverlap: boolean;
+}
 export type TeamPayload = Pick<Team, 'name' | 'maxSize'> & {
   notes: string;
   groupId: number | null;

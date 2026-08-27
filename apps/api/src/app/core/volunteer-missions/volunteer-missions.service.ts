@@ -6,6 +6,7 @@ import {
   VolunteerMission,
   VolunteerMissionStatus,
   VolunteerShift,
+  VolunteerShiftAssignmentStatus,
   VolunteerShiftStatus,
   VolunteerTeam,
   VolunteerTeamMembership,
@@ -234,10 +235,13 @@ export class VolunteerMissionsService {
 
   async listShifts(actingUser: SessionUser, missionId: number): Promise<VolunteerShift[]> {
     await this.findOne(actingUser, missionId);
-    return this.shiftsRepository.find({
+    const shifts = await this.shiftsRepository.find({
       where: { missionId },
+      relations: { assignments: { volunteer: true, assignedByUser: true } },
       order: { startAt: 'ASC' },
     });
+
+    return shifts.map((shift) => this.withAssignmentCounters(shift));
   }
 
   async createShift(
@@ -361,14 +365,32 @@ export class VolunteerMissionsService {
   private async findShift(missionId: number, shiftId: number): Promise<VolunteerShift> {
     const shift = await this.shiftsRepository.findOne({
       where: { id: shiftId, missionId },
-      relations: { mission: { volunteerTeam: true, responsibleVolunteer: true } },
+      relations: {
+        mission: { volunteerTeam: true, responsibleVolunteer: true },
+        assignments: { volunteer: true, assignedByUser: true },
+      },
     });
 
     if (!shift) {
       throw new NotFoundException(`Shift ${shiftId} introuvable pour la mission ${missionId}`);
     }
 
-    return shift;
+    return this.withAssignmentCounters(shift);
+  }
+
+  private withAssignmentCounters(shift: VolunteerShift): VolunteerShift {
+    const assignments = shift.assignments ?? [];
+    const activeAssignmentsCount = assignments.filter(
+      (assignment) => assignment.status !== VolunteerShiftAssignmentStatus.CANCELLED,
+    ).length;
+    const confirmedAssignmentsCount = assignments.filter(
+      (assignment) => assignment.status === VolunteerShiftAssignmentStatus.CONFIRMED,
+    ).length;
+
+    return Object.assign(shift, {
+      activeAssignmentsCount,
+      confirmedAssignmentsCount,
+    });
   }
 
   private validateShiftPeriod(startAt: Date, endAt: Date): void {
@@ -561,5 +583,7 @@ export class VolunteerMissionsService {
     return teamCode.includes('LOG');
   }
 }
+
+
 
 

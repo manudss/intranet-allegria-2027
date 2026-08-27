@@ -12,6 +12,7 @@ import {
 } from '../../models/models';
 import {
   VolunteerSkillsApiService,
+  VolunteerShiftAssignmentsApiService,
   VolunteerTagsApiService,
   VolunteerTeamMembershipsApiService,
   VolunteerTeamsApiService,
@@ -100,6 +101,7 @@ const makeProviders = (overrides: {
     { provide: VolunteerTeamMembershipsApiService, useValue: membershipsApi },
     { provide: VolunteerSkillsApiService, useValue: skillsApi },
     { provide: VolunteerTagsApiService, useValue: tagsApi },
+    { provide: VolunteerShiftAssignmentsApiService, useValue: { listVolunteerPlanning: vi.fn(() => of([])) } },
     { provide: AuthService, useValue: { hasAnyRole: () => true } },
   ];
 };

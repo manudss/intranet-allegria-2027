@@ -31,6 +31,12 @@ import {
   VolunteerSkillPayload,
   VolunteerSkillType,
   VolunteerShift,
+  VolunteerShiftAssignment,
+  VolunteerShiftAssignmentPayload,
+  VolunteerShiftAssignmentSearchParams,
+  VolunteerShiftAssignmentStatus,
+  VolunteerShiftAssignmentStatusPayload,
+  VolunteerShiftAssignmentVolunteerSearchResult,
   VolunteerShiftPayload,
   VolunteerShiftStatus,
   VolunteerTag,
@@ -215,6 +221,58 @@ export class VolunteerMissionsApiService extends CrudApi<VolunteerMission, Volun
   getDayView(date: string) {
     const params = new HttpParams().set('date', date);
     return this.http.get<VolunteerShift[]>(`${this.path}/day-view`, { params });
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class VolunteerShiftAssignmentsApiService {
+  private readonly http = inject(HttpClient);
+
+  searchVolunteers(params: VolunteerShiftAssignmentSearchParams) {
+    let query = new HttpParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        query = query.set(key, String(value));
+      }
+    });
+    return this.http.get<VolunteerShiftAssignmentVolunteerSearchResult[]>('/api/volunteer-shift-assignments/volunteer-search', {
+      params: query,
+    });
+  }
+
+  listForShift(missionId: number, shiftId: number, status?: VolunteerShiftAssignmentStatus) {
+    const params = status ? new HttpParams().set('status', status) : undefined;
+    return this.http.get<VolunteerShiftAssignment[]>(`/api/volunteer-missions/${missionId}/shifts/${shiftId}/assignments`, {
+      params,
+    });
+  }
+
+  create(missionId: number, shiftId: number, payload: VolunteerShiftAssignmentPayload) {
+    return this.http.post<VolunteerShiftAssignment>(`/api/volunteer-missions/${missionId}/shifts/${shiftId}/assignments`, payload);
+  }
+
+  changeStatus(
+    missionId: number,
+    shiftId: number,
+    assignmentId: number,
+    payload: VolunteerShiftAssignmentStatusPayload,
+  ) {
+    return this.http.patch<VolunteerShiftAssignment>(
+      `/api/volunteer-missions/${missionId}/shifts/${shiftId}/assignments/${assignmentId}/status`,
+      payload,
+    );
+  }
+
+  cancel(missionId: number, shiftId: number, assignmentId: number, notes?: string | null) {
+    return this.http.post<VolunteerShiftAssignment>(
+      `/api/volunteer-missions/${missionId}/shifts/${shiftId}/assignments/${assignmentId}/cancel`,
+      { notes: notes ?? null },
+    );
+  }
+
+  listVolunteerPlanning(volunteerId: number, status?: VolunteerShiftAssignmentStatus) {
+    const params = status ? new HttpParams().set('status', status) : undefined;
+    return this.http.get<VolunteerShiftAssignment[]>(`/api/volunteers/${volunteerId}/shift-assignments`, { params });
   }
 }
 

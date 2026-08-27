@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { form, required, submit } from '@angular/forms/signals';
 import { finalize } from 'rxjs';
@@ -6,17 +7,27 @@ import {
   VolunteerMission,
   VolunteerMissionPayload,
   VolunteerMissionStatus,
+  Volunteer,
   VolunteerShift,
+  VolunteerShiftAssignment,
+  VolunteerShiftAssignmentPayload,
+  VolunteerShiftAssignmentStatus,
   VolunteerShiftPayload,
   VolunteerShiftStatus,
+  VolunteerSkillType,
   VolunteerTeam,
 } from '../../models/models';
-import { VolunteerMissionsApiService, VolunteerTeamsApiService } from '../../services/api.services';
+import {
+  VolunteerMissionsApiService,
+  VolunteerShiftAssignmentsApiService,
+  VolunteerTeamsApiService,
+} from '../../services/api.services';
 import { DataTableColumn } from '../../shared/data-table';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 
 const MISSION_STATUSES = Object.values(VolunteerMissionStatus);
 const SHIFT_STATUSES = Object.values(VolunteerShiftStatus);
+const ASSIGNMENT_STATUSES = Object.values(VolunteerShiftAssignmentStatus);
 
 const missionDraft = (): VolunteerMissionPayload => ({
   title: '',
@@ -35,6 +46,12 @@ const shiftDraft = (): VolunteerShiftPayload => ({
   capacity: null,
   status: VolunteerShiftStatus.TODO,
   isOptional: false,
+  notes: '',
+});
+
+const assignmentDraft = (): VolunteerShiftAssignmentPayload => ({
+  volunteerId: 0,
+  status: VolunteerShiftAssignmentStatus.PROVISIONAL,
   notes: '',
 });
 
@@ -126,7 +143,91 @@ const shiftDraft = (): VolunteerShiftPayload => ({
                       <span size="s" tuiBadge [appearance]="statusAppearance(shift.status)">{{ shiftStatusLabel(shift.status) }}</span>
                     </div>
                     <p>{{ shift.location || selectedMission()?.location || 'Sans lieu' }} · Capacité {{ shift.capacity || '—' }}</p>
+                    <p>
+                      Affectés actifs : {{ shift.activeAssignmentsCount ?? 0 }} · Confirmés : {{ shift.confirmedAssignmentsCount ?? 0 }}
+                    </p>
                     <small>{{ shift.notes || 'Aucune note' }}</small>
+                    <div class="shift-assignments">
+                      <label>
+                        <span>Filtrer affectations</span>
+                        <select
+                          [value]="assignmentStatusFilters()[shift.id] || ''"
+                          (change)="setAssignmentStatusFilter(shift.id, $any($event.target).value)"
+                        >
+                          <option value="">Toutes</option>
+                          @for (status of assignmentStatuses; track status) {
+                            <option [value]="status">{{ assignmentStatusLabel(status) }}</option>
+                          }
+                        </select>
+                      </label>
+                      @if (filteredAssignmentsForShift(shift).length === 0) {
+                        <p>Aucune affectation.</p>
+                      } @else {
+                        <ul>
+                          @for (assignment of filteredAssignmentsForShift(shift); track assignment.id) {
+                            <li>
+                              <strong>{{ assignment.volunteer.lastName }} {{ assignment.volunteer.firstName }}</strong>
+                              <span size="s" tuiBadge [appearance]="statusAppearance(assignment.status)">{{ assignmentStatusLabel(assignment.status) }}</span>
+                              <small> · par {{ assignment.assignedByUser.email }}</small>
+                              @if (canWrite()) {
+                                <select [value]="assignment.status" (change)="changeAssignmentStatus(shift, assignment, $any($event.target).value)">
+                                  @for (status of assignmentStatuses; track status) {
+                                    <option [value]="status">{{ assignmentStatusLabel(status) }}</option>
+                                  }
+                                </select>
+                                <button tuiButton size="s" appearance="secondary-destructive" type="button" (click)="cancelAssignment(shift, assignment)">
+                                  Annuler
+                                </button>
+                              }
+                            </li>
+                          }
+                        </ul>
+                      }
+
+                      @if (canWrite()) {
+                        <div class="assign-search">
+                          <input
+                            placeholder="Recherche bénévole"
+                            [value]="assignmentSearchQuery()"
+                            (input)="assignmentSearchQuery.set($any($event.target).value)"
+                          />
+                          <select [value]="assignmentSearchSkill() || ''" (change)="assignmentSearchSkill.set($any($event.target).value || null)">
+                            <option value="">Compétence</option>
+                            @for (skill of allSkills; track skill) {
+                              <option [value]="skill">{{ skill }}</option>
+                            }
+                          </select>
+                          <input
+                            placeholder="Tag"
+                            [value]="assignmentSearchTag()"
+                            (input)="assignmentSearchTag.set($any($event.target).value)"
+                          />
+                          <label class="check">
+                            <input type="checkbox" [checked]="assignmentSearchAvailableOnly()" (change)="assignmentSearchAvailableOnly.set($any($event.target).checked)" />
+                            Disponibles
+                          </label>
+                          <button tuiButton size="s" type="button" (click)="searchVolunteersForShift(shift)">Rechercher</button>
+                        </div>
+                        @if (assignmentSearchResults()[shift.id]?.length) {
+                          <ul>
+                            @for (entry of assignmentSearchResults()[shift.id]; track entry.volunteer.id) {
+                              <li>
+                                {{ entry.volunteer.lastName }} {{ entry.volunteer.firstName }}
+                                @if (entry.hasOverlap) {
+                                  <small class="warning">Chevauchement détecté</small>
+                                }
+                                <button tuiButton size="s" type="button" (click)="assignVolunteer(shift, entry.volunteer.id, VolunteerShiftAssignmentStatus.PROVISIONAL)">
+                                  Provisoire
+                                </button>
+                                <button tuiButton size="s" type="button" (click)="assignVolunteer(shift, entry.volunteer.id, VolunteerShiftAssignmentStatus.CONFIRMED)">
+                                  Confirmée
+                                </button>
+                              </li>
+                            }
+                          </ul>
+                        }
+                      }
+                    </div>
                     @if (canWrite()) {
                       <div class="shift-actions">
                         <button tuiButton size="s" appearance="secondary" type="button" (click)="startEditShift(shift)">Modifier</button>
@@ -220,15 +321,24 @@ const shiftDraft = (): VolunteerShiftPayload => ({
     .shift-list li { border: 1px solid var(--tui-border-normal); border-radius: .75rem; padding: .75rem; }
     .shift-head { display: flex; justify-content: space-between; gap: .5rem; align-items: center; }
     .shift-actions select { min-block-size: 2.75rem; }
+    .shift-assignments { margin-top: .75rem; display: grid; gap: .5rem; }
+    .shift-assignments ul { margin: 0; padding-left: 1rem; display: grid; gap: .35rem; }
+    .shift-assignments select, .assign-search input { min-block-size: 2.5rem; border-radius: .5rem; border: 1px solid var(--tui-border-normal); padding-inline: .5rem; }
+    .assign-search { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .5rem; align-items: end; }
+    .warning { color: #b85c00; margin-left: .35rem; }
   `],
   styleUrl: '../../shared/crud.scss',
 })
 export class VolunteerMissionsPage implements OnInit {
   readonly VolunteerMissionStatus = VolunteerMissionStatus;
+  readonly VolunteerShiftAssignmentStatus = VolunteerShiftAssignmentStatus;
   readonly missionStatuses = MISSION_STATUSES;
   readonly shiftStatuses = SHIFT_STATUSES;
+  readonly assignmentStatuses = ASSIGNMENT_STATUSES;
+  readonly allSkills = Object.values(VolunteerSkillType);
 
   private readonly missionsApi = inject(VolunteerMissionsApiService);
+  private readonly assignmentsApi = inject(VolunteerShiftAssignmentsApiService);
   private readonly teamsApi = inject(VolunteerTeamsApiService);
   private readonly auth = inject(AuthService);
 
@@ -277,6 +387,13 @@ export class VolunteerMissionsPage implements OnInit {
   editingShiftId = signal<number | null>(null);
   missionModel = signal<VolunteerMissionPayload>(missionDraft());
   shiftModel = signal<VolunteerShiftPayload>(shiftDraft());
+  assignmentModel = signal<VolunteerShiftAssignmentPayload>(assignmentDraft());
+  assignmentStatusFilters = signal<Record<number, VolunteerShiftAssignmentStatus | ''>>({});
+  assignmentSearchResults = signal<Record<number, { volunteer: Volunteer; hasOverlap: boolean }[]>>({});
+  assignmentSearchQuery = signal('');
+  assignmentSearchSkill = signal<VolunteerSkillType | null>(null);
+  assignmentSearchTag = signal('');
+  assignmentSearchAvailableOnly = signal(true);
   filters = signal<{ volunteerTeamId: number | null; location: string; date: string; status: VolunteerMissionStatus | '' }>({
     volunteerTeamId: null,
     location: '',
@@ -478,10 +595,98 @@ export class VolunteerMissionsPage implements OnInit {
     }[status];
   }
 
-  statusAppearance(status: VolunteerMissionStatus | VolunteerShiftStatus): string {
+  assignmentStatusLabel(status: VolunteerShiftAssignmentStatus): string {
+    return {
+      [VolunteerShiftAssignmentStatus.PROVISIONAL]: 'Provisoire',
+      [VolunteerShiftAssignmentStatus.CONFIRMED]: 'Confirmée',
+      [VolunteerShiftAssignmentStatus.CANCELLED]: 'Annulée',
+    }[status];
+  }
+
+  filteredAssignmentsForShift(shift: VolunteerShift): VolunteerShiftAssignment[] {
+    const filter = this.assignmentStatusFilters()[shift.id];
+    const list = shift.assignments ?? [];
+    return filter ? list.filter((assignment) => assignment.status === filter) : list;
+  }
+
+  setAssignmentStatusFilter(shiftId: number, status: string): void {
+    this.assignmentStatusFilters.update((filters) => ({
+      ...filters,
+      [shiftId]: (status as VolunteerShiftAssignmentStatus) || '',
+    }));
+  }
+
+  searchVolunteersForShift(shift: VolunteerShift): void {
+    this.assignmentsApi
+      .searchVolunteers({
+        shiftId: shift.id,
+        q: this.assignmentSearchQuery() || undefined,
+        skill: this.assignmentSearchSkill(),
+        tag: this.assignmentSearchTag() || undefined,
+        availableOnly: this.assignmentSearchAvailableOnly(),
+      })
+      .subscribe((results) => {
+        this.assignmentSearchResults.update((state) => ({ ...state, [shift.id]: results }));
+      });
+  }
+
+  assignVolunteer(shift: VolunteerShift, volunteerId: number, status: VolunteerShiftAssignmentStatus, force = false): void {
+    const mission = this.requireMission();
+    this.assignmentsApi
+      .create(mission.id, shift.id, {
+        volunteerId,
+        status,
+        notes: this.assignmentModel().notes,
+        force,
+      })
+      .subscribe({
+        next: () => this.loadShifts(mission.id),
+        error: (error: HttpErrorResponse) => {
+          if (error.status === 409 && error.error?.canForce) {
+            if (confirm('Chevauchement détecté. Forcer l\'affectation ?')) {
+              this.assignVolunteer(shift, volunteerId, status, true);
+            }
+          }
+        },
+      });
+  }
+
+  changeAssignmentStatus(
+    shift: VolunteerShift,
+    assignment: VolunteerShiftAssignment,
+    status: string,
+    force = false,
+  ): void {
+    const mission = this.requireMission();
+    this.assignmentsApi
+      .changeStatus(mission.id, shift.id, assignment.id, {
+        status: status as VolunteerShiftAssignmentStatus,
+        force,
+      })
+      .subscribe({
+        next: () => this.loadShifts(mission.id),
+        error: (error: HttpErrorResponse) => {
+          if (error.status === 409 && error.error?.canForce) {
+            if (confirm('Chevauchement détecté. Forcer ce changement de statut ?')) {
+              this.changeAssignmentStatus(shift, assignment, status, true);
+            }
+          }
+        },
+      });
+  }
+
+  cancelAssignment(shift: VolunteerShift, assignment: VolunteerShiftAssignment): void {
+    const mission = this.requireMission();
+    this.assignmentsApi.cancel(mission.id, shift.id, assignment.id).subscribe(() => this.loadShifts(mission.id));
+  }
+
+  statusAppearance(status: VolunteerMissionStatus | VolunteerShiftStatus | VolunteerShiftAssignmentStatus): string {
     if (status === VolunteerMissionStatus.DONE || status === VolunteerShiftStatus.DONE) return 'positive';
+    if (status === VolunteerShiftAssignmentStatus.CONFIRMED) return 'positive';
+    if (status === VolunteerShiftAssignmentStatus.PROVISIONAL) return 'warning';
     if (status === VolunteerMissionStatus.IN_PROGRESS || status === VolunteerShiftStatus.IN_PROGRESS) return 'warning';
     if (status === VolunteerMissionStatus.CANCELLED || status === VolunteerShiftStatus.CANCELLED) return 'negative';
+    if (status === VolunteerShiftAssignmentStatus.CANCELLED) return 'negative';
     if (status === VolunteerMissionStatus.NOT_DONE || status === VolunteerShiftStatus.NOT_DONE) return 'negative';
     if (status === VolunteerShiftStatus.ASSIGNED) return 'info';
     return 'neutral';
@@ -538,5 +743,12 @@ export class VolunteerMissionsPage implements OnInit {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   }
 }
+
+
+
+
+
+
+
 
 

@@ -13,9 +13,12 @@ import {
   VolunteerTeam,
   VolunteerTeamMembership,
   VolunteerTeamMembershipPayload,
+  VolunteerShiftAssignment,
+  VolunteerShiftAssignmentStatus,
 } from '../../models/models';
 import {
   VolunteerSkillsApiService,
+  VolunteerShiftAssignmentsApiService,
   VolunteerTagsApiService,
   VolunteerTeamsApiService,
   VolunteerTeamMembershipsApiService,
@@ -184,6 +187,34 @@ const blankMembership = () => ({
                 </datalist>
                 <button tuiButton size="s" type="button" [disabled]="!newTag().trim()" (click)="addTag()">Ajouter</button>
               </div>
+            }
+          </section>
+
+          <section class="planning-section">
+            <h3>Planning des affectations</h3>
+            <label class="filter-label">
+              <span>Statut</span>
+              <select class="filter-select" [value]="planningStatusFilter()" (change)="setPlanningStatusFilter($any($event.target).value)">
+                <option value="">Tous</option>
+                <option value="PROVISIONAL">Provisoire</option>
+                <option value="CONFIRMED">Confirmée</option>
+                <option value="CANCELLED">Annulée</option>
+              </select>
+            </label>
+            @if (volunteerPlanning().length === 0) {
+              <p>Aucune affectation de shift.</p>
+            } @else {
+              <ul class="membership-list">
+                @for (assignment of volunteerPlanning(); track assignment.id) {
+                  <li class="membership-item">
+                    <div>
+                      <strong>{{ assignment.shift?.mission?.title || 'Mission' }}</strong>
+                      <div>{{ assignment.shift?.startAt | date: 'short' }} → {{ assignment.shift?.endAt | date: 'short' }}</div>
+                      <small>{{ assignment.status }}</small>
+                    </div>
+                  </li>
+                }
+              </ul>
             }
           </section>
 
@@ -356,6 +387,7 @@ export class VolunteersPage implements OnInit {
   private readonly membershipsApi = inject(VolunteerTeamMembershipsApiService);
   private readonly skillsApi = inject(VolunteerSkillsApiService);
   private readonly tagsApi = inject(VolunteerTagsApiService);
+  private readonly shiftAssignmentsApi = inject(VolunteerShiftAssignmentsApiService);
   private readonly auth = inject(AuthService);
 
   items = signal<Volunteer[]>([]);
@@ -363,6 +395,8 @@ export class VolunteersPage implements OnInit {
   teamMemberships = signal<VolunteerTeamMembership[]>([]);
   skills = signal<VolunteerSkill[]>([]);
   tags = signal<VolunteerTag[]>([]);
+  volunteerPlanning = signal<VolunteerShiftAssignment[]>([]);
+  planningStatusFilter = signal<VolunteerShiftAssignmentStatus | ''>('');
   skillCounts = signal<SkillCount[]>([]);
   filterTagSuggestions = signal<string[]>([]);
   drawerTagSuggestions = signal<string[]>([]);
@@ -462,6 +496,15 @@ export class VolunteersPage implements OnInit {
     this.membershipsApi.list(x.id).subscribe((memberships) => this.teamMemberships.set(memberships));
     this.skillsApi.list(x.id).subscribe((s) => this.skills.set(s));
     this.tagsApi.list(x.id).subscribe((t) => this.tags.set(t));
+    this.loadVolunteerPlanning(x.id);
+  }
+
+  setPlanningStatusFilter(value: string) {
+    this.planningStatusFilter.set((value as VolunteerShiftAssignmentStatus) || '');
+    const volunteer = this.selected();
+    if (volunteer) {
+      this.loadVolunteerPlanning(volunteer.id);
+    }
   }
 
   create() {
@@ -629,6 +672,12 @@ export class VolunteersPage implements OnInit {
       throw new Error('No volunteer selected');
     }
     return volunteer;
+  }
+
+  private loadVolunteerPlanning(volunteerId: number): void {
+    this.shiftAssignmentsApi
+      .listVolunteerPlanning(volunteerId, this.planningStatusFilter() || undefined)
+      .subscribe((planning) => this.volunteerPlanning.set(planning));
   }
 
   protected formatPeriod(startAt: string | null, endAt: string | null): string {

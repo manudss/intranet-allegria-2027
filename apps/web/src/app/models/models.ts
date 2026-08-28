@@ -60,6 +60,14 @@ export enum VolunteerShiftAssignmentStatus {
   CANCELLED = 'CANCELLED',
 }
 
+export enum VolunteerAuditAction {
+  CREATE = 'CREATE',
+  UPDATE = 'UPDATE',
+  DELETE = 'DELETE',
+  STATUS_CHANGED = 'STATUS_CHANGED',
+  ASSIGNMENT_CHANGED = 'ASSIGNMENT_CHANGED',
+}
+
 export interface Group {
   id: number;
   name: string;
@@ -186,6 +194,17 @@ export interface VolunteerTag {
   id: number;
   volunteerId: number;
   value: string;
+  createdAt: string;
+}
+export interface VolunteerAuditLog {
+  id: number;
+  userId: number;
+  user: User;
+  action: VolunteerAuditAction;
+  entityType: string;
+  entityId: number;
+  beforeData: Record<string, unknown> | null;
+  afterData: Record<string, unknown> | null;
   createdAt: string;
 }
 export interface SkillCount {
@@ -335,6 +354,21 @@ export interface StatusCounters {
   missions: Record<VolunteerMissionStatus, number>;
   shifts: Record<VolunteerShiftStatus, number>;
 }
+export interface VolunteerAuditLogSearchResult {
+  items: VolunteerAuditLog[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+export type VolunteerAuditLogSearchParams = {
+  limit?: number;
+  offset?: number;
+  userId?: number | null;
+  action?: VolunteerAuditAction | null;
+  entityType?: string;
+  from?: string;
+  to?: string;
+};
 export type VolunteerMissionStatusPayload = {
   status: VolunteerMissionStatus;
   reason?: string | null;

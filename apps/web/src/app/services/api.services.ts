@@ -24,6 +24,9 @@ import {
   TeamParticipantRole,
   TeamPayload,
   User,
+  VolunteerAuditAction,
+  VolunteerAuditLogSearchParams,
+  VolunteerAuditLogSearchResult,
   Volunteer,
   VolunteerMission,
   VolunteerMissionPayload,
@@ -292,6 +295,26 @@ export class VolunteerShiftAssignmentsApiService {
   listVolunteerPlanning(volunteerId: number, status?: VolunteerShiftAssignmentStatus) {
     const params = status ? new HttpParams().set('status', status) : undefined;
     return this.http.get<VolunteerShiftAssignment[]>(`/api/volunteers/${volunteerId}/shift-assignments`, { params });
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class VolunteerAuditLogsApiService {
+  private readonly http = inject(HttpClient);
+
+  list(params: VolunteerAuditLogSearchParams): Observable<VolunteerAuditLogSearchResult> {
+    let query = new HttpParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        query = query.set(key, String(value));
+      }
+    });
+
+    return this.http.get<VolunteerAuditLogSearchResult>('/api/volunteer-audit-logs', { params: query });
+  }
+
+  getActionOptions(): readonly VolunteerAuditAction[] {
+    return Object.values(VolunteerAuditAction);
   }
 }
 

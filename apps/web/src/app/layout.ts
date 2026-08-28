@@ -89,6 +89,7 @@ export class Layout {
       label: 'Administration',
       items: [
         { label: 'Paramètres & rôles', path: '/parametres-roles', icon: '@tui.settings' },
+        { label: 'Journal bénévoles', path: '/journal-benevoles', icon: '@tui.file-text' },
         { label: 'Données & exports', path: '/donnees-exports', icon: '@tui.database' },
       ],
     },

@@ -1,0 +1,8 @@
+export enum VolunteerAuditAction {
+  CREATE = 'CREATE',
+  UPDATE = 'UPDATE',
+  DELETE = 'DELETE',
+  STATUS_CHANGED = 'STATUS_CHANGED',
+  ASSIGNMENT_CHANGED = 'ASSIGNMENT_CHANGED',
+}
+

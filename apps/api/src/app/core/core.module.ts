@@ -12,6 +12,7 @@ import { TeamsModule } from './teams/teams.module';
 import { VolunteersModule } from './volunteers/volunteers.module';
 import { VolunteerMissionsModule } from './volunteer-missions/volunteer-missions.module';
 import { VolunteerShiftAssignmentsModule } from './volunteer-shift-assignments/volunteer-shift-assignments.module';
+import { VolunteerAuditLogsModule } from './volunteer-audit-logs/volunteer-audit-logs.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { VolunteerShiftAssignmentsModule } from './volunteer-shift-assignments/v
     VolunteerTeamsModule,
     VolunteerMissionsModule,
     VolunteerShiftAssignmentsModule,
+    VolunteerAuditLogsModule,
     VolunteerSkillsModule,
     HostFamiliesModule,
     AssignmentsModule,

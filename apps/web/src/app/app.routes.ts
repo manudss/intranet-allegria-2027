@@ -70,6 +70,14 @@ export const appRoutes: Route[] = [
           import('./features/volunteer-missions/volunteer-missions').then((m) => m.VolunteerMissionsPage),
       },
       {
+        path: 'journal-benevoles',
+        title: 'Journal bénévoles',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'COORDINATOR'] },
+        loadComponent: () =>
+          import('./features/volunteer-audit-logs/volunteer-audit-logs').then((m) => m.VolunteerAuditLogsPage),
+      },
+      {
         path: 'hebergement/carte',
         title: 'Hebergement - Carte',
         loadComponent: () =>

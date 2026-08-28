@@ -10,6 +10,8 @@ import {
   VolunteerShiftStatus,
   VolunteerTeam,
   VolunteerTeamMembership,
+  MissionStatusLog,
+  ShiftStatusLog,
 } from '../entities';
 import {
   ChangeVolunteerMissionStatusDto,
@@ -69,7 +71,7 @@ const SHIFT_TRANSITIONS: Readonly<Record<VolunteerShiftStatus, readonly Voluntee
     VolunteerShiftStatus.NOT_DONE,
     VolunteerShiftStatus.CANCELLED,
   ],
-  [VolunteerShiftStatus.DONE]: [],
+  [VolunteerShiftStatus.DONE]: [VolunteerShiftStatus.NOT_DONE],
   [VolunteerShiftStatus.CANCELLED]: [],
   [VolunteerShiftStatus.NOT_DONE]: [],
 };
@@ -87,6 +89,10 @@ export class VolunteerMissionsService {
     private readonly volunteersRepository: Repository<Volunteer>,
     @InjectRepository(VolunteerTeamMembership)
     private readonly membershipsRepository: Repository<VolunteerTeamMembership>,
+    @InjectRepository(MissionStatusLog)
+    private readonly missionStatusLogsRepository: Repository<MissionStatusLog>,
+    @InjectRepository(ShiftStatusLog)
+    private readonly shiftStatusLogsRepository: Repository<ShiftStatusLog>,
   ) {}
 
   async create(actingUser: SessionUser, dto: CreateVolunteerMissionDto): Promise<VolunteerMission> {
@@ -228,8 +234,21 @@ export class VolunteerMissionsService {
     this.assertWriteScope(scope);
     this.assertMissionInScope(scope, mission, false);
     this.assertTransition(mission.status, dto.status, MISSION_TRANSITIONS, 'mission');
+
+    const oldStatus = mission.status;
     mission.status = dto.status;
     await this.missionsRepository.save(mission);
+
+    // Log the status change
+    await this.missionStatusLogsRepository.save({
+      missionId: mission.id,
+      fromStatus: oldStatus,
+      toStatus: dto.status,
+      changedByUserId: actingUser.id,
+      reason: dto.reason ?? null,
+      isForced: dto.force ?? false,
+    });
+
     return this.findOne(actingUser, mission.id);
   }
 
@@ -340,9 +359,33 @@ export class VolunteerMissionsService {
     this.assertMissionInScope(scope, mission, false);
 
     const shift = await this.findShift(missionId, shiftId);
+
+    // Check for restricted transitions
+    if (shift.status === VolunteerShiftStatus.DONE && dto.status === VolunteerShiftStatus.NOT_DONE) {
+      // Only ADMIN and COORDINATOR can transition from DONE to NOT_DONE
+      if (!scope.fullAccess) {
+        throw new ForbiddenException('Seuls les ADMIN et COORDINATORS peuvent passer un shift de Terminé à Non réalisé');
+      }
+    }
+
     this.assertTransition(shift.status, dto.status, SHIFT_TRANSITIONS, 'shift');
+
+    const oldStatus = shift.status;
     shift.status = dto.status;
     await this.shiftsRepository.save(shift);
+
+    // Log the status change
+    await this.shiftStatusLogsRepository.save({
+      shiftId: shift.id,
+      fromStatus: oldStatus,
+      toStatus: dto.status,
+      changedByUserId: actingUser.id,
+      reason: dto.reason ?? null,
+    });
+
+    // After updating shift status, recalculate mission status if appropriate
+    await this.updateMissionStatusFromShifts(mission.id, actingUser);
+
     return this.findShift(missionId, shift.id);
   }
 
@@ -360,6 +403,142 @@ export class VolunteerMissionsService {
       const endDay = shift.endAt.toISOString().slice(0, 10);
       return startDay <= day && endDay >= day && this.canAccessMission(scope, shift.mission);
     });
+  }
+
+  async getStatusCounters(actingUser: SessionUser): Promise<{
+    missions: Record<VolunteerMissionStatus, number>;
+    shifts: Record<VolunteerShiftStatus, number>;
+  }> {
+    const scope = await this.resolveScope(actingUser);
+
+    const missions = await this.missionsRepository.find({
+      relations: { volunteerTeam: true, responsibleVolunteer: true },
+    });
+
+    const shifts = await this.shiftsRepository.find({
+      relations: { mission: { volunteerTeam: true, responsibleVolunteer: true } },
+    });
+
+    const filteredMissions = missions.filter((m) => this.canAccessMission(scope, m));
+    const filteredShifts = shifts.filter((s) => this.canAccessMission(scope, s.mission));
+
+    const missionCounters = Object.values(VolunteerMissionStatus).reduce(
+      (acc, status) => {
+        acc[status] = filteredMissions.filter((m) => m.status === status).length;
+        return acc;
+      },
+      {} as Record<VolunteerMissionStatus, number>,
+    );
+
+    const shiftCounters = Object.values(VolunteerShiftStatus).reduce(
+      (acc, status) => {
+        acc[status] = filteredShifts.filter((s) => s.status === status).length;
+        return acc;
+      },
+      {} as Record<VolunteerShiftStatus, number>,
+    );
+
+    return {
+      missions: missionCounters,
+      shifts: shiftCounters,
+    };
+  }
+
+  async listShiftsByStatus(
+    actingUser: SessionUser,
+    status: VolunteerShiftStatus,
+    mandatory?: boolean,
+  ): Promise<VolunteerShift[]> {
+    const scope = await this.resolveScope(actingUser);
+
+    const shifts = await this.shiftsRepository.find({
+      where: { status },
+      relations: {
+        mission: { volunteerTeam: true, responsibleVolunteer: true },
+        assignments: { volunteer: true, assignedByUser: true },
+      },
+      order: { startAt: 'ASC' },
+    });
+
+    return shifts
+      .filter((shift) => this.canAccessMission(scope, shift.mission))
+      .filter((shift) => (mandatory !== undefined ? shift.isOptional === !mandatory : true))
+      .map((shift) => this.withAssignmentCounters(shift));
+  }
+
+  async listMissionsByStatus(
+    actingUser: SessionUser,
+    status: VolunteerMissionStatus,
+    mandatory?: boolean,
+  ): Promise<VolunteerMission[]> {
+    const scope = await this.resolveScope(actingUser);
+
+    const missions = await this.missionsRepository.find({
+      where: { status },
+      relations: { volunteerTeam: true, responsibleVolunteer: true, shifts: true },
+      order: { updatedAt: 'DESC' },
+    });
+
+    return missions
+      .filter((mission) => this.canAccessMission(scope, mission))
+      .filter((mission) => (mandatory !== undefined ? mission.isOptional === !mandatory : true));
+  }
+
+  private async updateMissionStatusFromShifts(missionId: number, actingUser: SessionUser): Promise<void> {
+    const mission = await this.missionsRepository.findOne({
+      where: { id: missionId },
+      relations: { shifts: true },
+    });
+
+    if (!mission || mission.shifts.length === 0) {
+      return;
+    }
+
+    // Auto-calculate mission status from shifts if mission is in certain states
+    if (
+      mission.status === VolunteerMissionStatus.TODO ||
+      mission.status === VolunteerMissionStatus.IN_PROGRESS
+    ) {
+      const shiftStatuses = mission.shifts.map((s) => s.status);
+
+      // If all shifts are done, mark mission as done
+      if (shiftStatuses.every((s) => s === VolunteerShiftStatus.DONE)) {
+        mission.status = VolunteerMissionStatus.DONE;
+        await this.missionsRepository.save(mission);
+        await this.missionStatusLogsRepository.save({
+          missionId: mission.id,
+          fromStatus: VolunteerMissionStatus.TODO,
+          toStatus: VolunteerMissionStatus.DONE,
+          changedByUserId: actingUser.id,
+          reason: 'Auto-calculé : tous les shifts sont terminés',
+          isForced: false,
+        });
+      }
+      // If all shifts are not_done or cancelled, mark mission as not_done
+      else if (
+        shiftStatuses.every(
+          (s) => s === VolunteerShiftStatus.NOT_DONE || s === VolunteerShiftStatus.CANCELLED,
+        )
+      ) {
+        mission.status = VolunteerMissionStatus.NOT_DONE;
+        await this.missionsRepository.save(mission);
+        await this.missionStatusLogsRepository.save({
+          missionId: mission.id,
+          fromStatus: VolunteerMissionStatus.TODO,
+          toStatus: VolunteerMissionStatus.NOT_DONE,
+          changedByUserId: actingUser.id,
+          reason: 'Auto-calculé : tous les shifts ne sont pas réalisés',
+          isForced: false,
+        });
+      }
+      // If at least one shift is in progress, mark mission as in_progress
+      else if (shiftStatuses.some((s) => s === VolunteerShiftStatus.IN_PROGRESS)) {
+        if (mission.status !== VolunteerMissionStatus.IN_PROGRESS) {
+          mission.status = VolunteerMissionStatus.IN_PROGRESS;
+          await this.missionsRepository.save(mission);
+        }
+      }
+    }
   }
 
   private async findShift(missionId: number, shiftId: number): Promise<VolunteerShift> {

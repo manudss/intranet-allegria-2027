@@ -48,6 +48,12 @@ export class UpdateVolunteerMissionDto extends PartialType(CreateVolunteerMissio
 export class ChangeVolunteerMissionStatusDto {
   @ApiProperty({ enum: VolunteerMissionStatus })
   status!: VolunteerMissionStatus;
+
+  @ApiPropertyOptional({ nullable: true })
+  reason?: string | null;
+
+  @ApiPropertyOptional({ default: false })
+  force?: boolean;
 }
 
 export class CreateVolunteerShiftDto {
@@ -78,5 +84,13 @@ export class UpdateVolunteerShiftDto extends PartialType(CreateVolunteerShiftDto
 export class ChangeVolunteerShiftStatusDto {
   @ApiProperty({ enum: VolunteerShiftStatus })
   status!: VolunteerShiftStatus;
+
+  @ApiPropertyOptional({ nullable: true })
+  reason?: string | null;
+
+  @ApiPropertyOptional({ default: false })
+  force?: boolean;
 }
+
+
 

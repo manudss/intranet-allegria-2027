@@ -513,7 +513,7 @@ export class VolunteerMissionsPage implements OnInit {
 
   changeMissionStatus(status: VolunteerMissionStatus): void {
     const mission = this.requireMission();
-    this.missionsApi.changeStatus(mission.id, status).subscribe((updated) => {
+    this.missionsApi.changeStatus(mission.id, { status }).subscribe((updated) => {
       this.selectedMission.set(updated);
       this.loadMissions();
     });
@@ -563,7 +563,7 @@ export class VolunteerMissionsPage implements OnInit {
 
   changeShiftStatus(shiftId: number, status: string): void {
     const mission = this.requireMission();
-    this.missionsApi.changeShiftStatus(mission.id, shiftId, status as VolunteerShiftStatus).subscribe(() => {
+    this.missionsApi.changeShiftStatus(mission.id, shiftId, { status: status as VolunteerShiftStatus }).subscribe(() => {
       this.loadShifts(mission.id);
     });
   }

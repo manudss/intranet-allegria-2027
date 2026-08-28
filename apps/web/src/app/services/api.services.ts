@@ -18,6 +18,7 @@ import {
   ParticipantSearchResult,
   PersonType,
   SkillCount,
+  StatusCounters,
   Team,
   TeamParticipant,
   TeamParticipantRole,
@@ -27,6 +28,7 @@ import {
   VolunteerMission,
   VolunteerMissionPayload,
   VolunteerMissionStatus,
+  VolunteerMissionStatusPayload,
   VolunteerSkill,
   VolunteerSkillPayload,
   VolunteerSkillType,
@@ -39,6 +41,7 @@ import {
   VolunteerShiftAssignmentVolunteerSearchResult,
   VolunteerShiftPayload,
   VolunteerShiftStatus,
+  VolunteerShiftStatusPayload,
   VolunteerTag,
   VolunteerTagPayload,
   VolunteerTeam,
@@ -194,8 +197,24 @@ export class VolunteerMissionsApiService extends CrudApi<VolunteerMission, Volun
     return this.http.get<VolunteerMission[]>(this.path, { params });
   }
 
-  changeStatus(id: number, status: VolunteerMissionStatus) {
-    return this.http.patch<VolunteerMission>(`${this.path}/${id}/status`, { status });
+  changeStatus(id: number, payload: VolunteerMissionStatusPayload) {
+    return this.http.patch<VolunteerMission>(`${this.path}/${id}/status`, payload);
+  }
+
+  getStatusCounters(): Observable<StatusCounters> {
+    return this.http.get<StatusCounters>(`${this.path}/summary/counters`);
+  }
+
+  listShiftsByStatus(status: VolunteerShiftStatus, mandatory?: boolean): Observable<VolunteerShift[]> {
+    let params = new HttpParams();
+    if (mandatory !== undefined) params = params.set('mandatory', String(mandatory));
+    return this.http.get<VolunteerShift[]>(`${this.path}/shifts/by-status/${status}`, { params });
+  }
+
+  listMissionsByStatus(status: VolunteerMissionStatus, mandatory?: boolean): Observable<VolunteerMission[]> {
+    let params = new HttpParams();
+    if (mandatory !== undefined) params = params.set('mandatory', String(mandatory));
+    return this.http.get<VolunteerMission[]>(`${this.path}/missions/by-status/${status}`, { params });
   }
 
   listShifts(missionId: number) {
@@ -210,8 +229,8 @@ export class VolunteerMissionsApiService extends CrudApi<VolunteerMission, Volun
     return this.http.patch<VolunteerShift>(`${this.path}/${missionId}/shifts/${shiftId}`, payload);
   }
 
-  changeShiftStatus(missionId: number, shiftId: number, status: VolunteerShiftStatus) {
-    return this.http.patch<VolunteerShift>(`${this.path}/${missionId}/shifts/${shiftId}/status`, { status });
+  changeShiftStatus(missionId: number, shiftId: number, payload: VolunteerShiftStatusPayload) {
+    return this.http.patch<VolunteerShift>(`${this.path}/${missionId}/shifts/${shiftId}/status`, payload);
   }
 
   deleteShift(missionId: number, shiftId: number) {

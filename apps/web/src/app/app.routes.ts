@@ -49,8 +49,8 @@ export const appRoutes: Route[] = [
           import('./features/host-families/host-families').then((m) => m.HostFamiliesPage),
       },
       {
-        path: 'equipes-missions',
-        title: 'Equipes & missions',
+        path: 'equipes',
+        title: 'Equipes de rassemblement',
         loadComponent: () => import('./features/teams/teams').then((m) => m.TeamsPage),
       },
       {
@@ -88,16 +88,24 @@ export const appRoutes: Route[] = [
         title: 'Transports',
         loadComponent: () => import('./pages/transports').then((m) => m.Transports),
       },
-      {
-        path: 'jour-j',
-        title: 'Tableau de bord Jour J',
-        loadComponent: () => import('./pages/jour-j').then((m) => m.JourJ),
-      },
-      {
-        path: 'incidents',
-        title: 'Incidents & demandes',
-        loadComponent: () => import('./pages/incidents').then((m) => m.Incidents),
-      },
+       {
+         path: 'jour-j',
+         title: 'Tableau de bord Jour J',
+         loadComponent: () => import('./pages/jour-j').then((m) => m.JourJ),
+       },
+       {
+         path: 'suivi-operationnel',
+         title: 'Suivi opérationnel',
+         canActivate: [roleGuard],
+         data: { roles: ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'VOLUNTEERS', 'LOGISTICS', 'VIEWER'] },
+         loadComponent: () =>
+           import('./features/volunteer-missions/shifts-summary').then((m) => m.ShiftsSummaryPage),
+       },
+       {
+         path: 'incidents',
+         title: 'Incidents & demandes',
+         loadComponent: () => import('./pages/incidents').then((m) => m.Incidents),
+       },
       {
         path: 'consignes-docs',
         title: 'Consignes & documents',

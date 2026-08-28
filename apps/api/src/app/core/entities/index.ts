@@ -26,5 +26,7 @@ export { VolunteerTag } from './volunteer-tag.entity';
 export { UserRole } from './user-role.entity';
 export { User } from './user.entity';
 export { Volunteer } from './volunteer.entity';
+export { MissionStatusLog } from './mission-status-log.entity';
+export { ShiftStatusLog } from './shift-status-log.entity';
 
 

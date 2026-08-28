@@ -63,18 +63,18 @@ export class Layout {
       label: 'Inscriptions & personnes',
       items: [
         { label: 'Participants', path: '/participants', icon: '@tui.users' },
-        { label: 'Benevoles', path: '/benevoles', icon: '@tui.user-check' },
+        { label: 'Équipes participants', path: '/equipes', icon: '@tui.users-round' },
         { label: "Familles d'accueil", path: '/familles', icon: '@tui.home' },
+        { label: 'Bénévoles', path: '/benevoles', icon: '@tui.user-check' },
       ],
     },
     {
       label: 'Organisation & logistique',
       items: [
-        { label: 'Equipes & missions', path: '/equipes-missions', icon: '@tui.briefcase' },
         { label: 'Équipes opérationnelles', path: '/equipes-operationnelles', icon: '@tui.users' },
         { label: 'Missions bénévoles', path: '/missions-benevoles', icon: '@tui.clipboard-list' },
         { label: 'Transports', path: '/transports', icon: '@tui.bus' },
-        { label: 'Hebergement', path: '/hebergement', icon: '@tui.building' },
+        { label: 'Hébergement', path: '/hebergement', icon: '@tui.building' },
       ],
     },
     {
@@ -88,8 +88,8 @@ export class Layout {
     {
       label: 'Administration',
       items: [
-        { label: 'Parametres & roles', path: '/parametres-roles', icon: '@tui.settings' },
-        { label: 'Donnees & exports', path: '/donnees-exports', icon: '@tui.database' },
+        { label: 'Paramètres & rôles', path: '/parametres-roles', icon: '@tui.settings' },
+        { label: 'Données & exports', path: '/donnees-exports', icon: '@tui.database' },
       ],
     },
   ];

@@ -36,7 +36,7 @@ export class JourJ implements OnInit {
 
   changeShiftStatus(shift: VolunteerShift, status: string): void {
     this.missionsApi
-      .changeShiftStatus(shift.missionId, shift.id, status as VolunteerShiftStatus)
+      .changeShiftStatus(shift.missionId, shift.id, { status: status as VolunteerShiftStatus })
       .subscribe(() => this.refresh());
   }
 

@@ -26,6 +26,7 @@ import {
   UpdateVolunteerShiftDto,
 } from './volunteer-missions.types';
 import { VolunteerMissionsService } from './volunteer-missions.service';
+import { VolunteerShiftStatus, VolunteerMissionStatus } from '../entities';
 
 const READ_ROLES = ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'LOGISTICS', 'VOLUNTEERS', 'VIEWER'];
 const WRITE_ROLES = ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'LOGISTICS', 'VOLUNTEERS'];
@@ -146,5 +147,38 @@ export class VolunteerMissionsController {
     await this.volunteerMissionsService.removeShift(req.user, missionId, shiftId);
     return { deleted: true };
   }
+
+  @ApiOperation({ summary: 'Obtenir les compteurs de statuts des missions et shifts' })
+  @Roles(...READ_ROLES)
+  @Get('summary/counters')
+  getStatusCounters(@Req() req: UserRequest) {
+    return this.volunteerMissionsService.getStatusCounters(req.user);
+  }
+
+  @ApiOperation({ summary: 'Lister les shifts par statut' })
+  @Roles(...READ_ROLES)
+  @Get('shifts/by-status/:status')
+  listShiftsByStatus(
+    @Req() req: UserRequest,
+    @Param('status') status: VolunteerShiftStatus,
+    @Query('mandatory') mandatory?: string,
+  ) {
+    const isMandatory = mandatory === 'true' ? true : mandatory === 'false' ? false : undefined;
+    return this.volunteerMissionsService.listShiftsByStatus(req.user, status, isMandatory);
+  }
+
+  @ApiOperation({ summary: 'Lister les missions par statut' })
+  @Roles(...READ_ROLES)
+  @Get('missions/by-status/:status')
+  listMissionsByStatus(
+    @Req() req: UserRequest,
+    @Param('status') status: VolunteerMissionStatus,
+    @Query('mandatory') mandatory?: string,
+  ) {
+    const isMandatory = mandatory === 'true' ? true : mandatory === 'false' ? false : undefined;
+    return this.volunteerMissionsService.listMissionsByStatus(req.user, status, isMandatory);
+  }
 }
+
+
 

@@ -331,3 +331,17 @@ export interface LoginResponse {
 export interface DeleteResponse {
   deleted: true;
 }
+export interface StatusCounters {
+  missions: Record<VolunteerMissionStatus, number>;
+  shifts: Record<VolunteerShiftStatus, number>;
+}
+export type VolunteerMissionStatusPayload = {
+  status: VolunteerMissionStatus;
+  reason?: string | null;
+  force?: boolean;
+};
+export type VolunteerShiftStatusPayload = {
+  status: VolunteerShiftStatus;
+  reason?: string | null;
+  force?: boolean;
+};

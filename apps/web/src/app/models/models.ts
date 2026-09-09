@@ -379,3 +379,98 @@ export type VolunteerShiftStatusPayload = {
   reason?: string | null;
   force?: boolean;
 };
+
+// ─── Tableau de bord opérationnel Jour J ─────────────────────────────────────
+
+export interface DashboardShiftsByStatus {
+  TODO: number;
+  ASSIGNED: number;
+  IN_PROGRESS: number;
+  DONE: number;
+  CANCELLED: number;
+  NOT_DONE: number;
+}
+
+export interface DashboardGlobalSummary {
+  date: string;
+  missionCount: number;
+  shiftCount: number;
+  shiftsByStatus: DashboardShiftsByStatus;
+  shiftsWithoutConfirmedAssignment: number;
+  understaffedShifts: number;
+  assignedVolunteers: number;
+  provisionalVolunteers: number;
+}
+
+export interface DashboardTeamSummary {
+  teamId: number;
+  teamName: string;
+  teamCode: string;
+  missionCount: number;
+  shiftsByStatus: DashboardShiftsByStatus;
+  totalCapacity: number;
+  confirmedVolunteers: number;
+  provisionalVolunteers: number;
+  alerts: string[];
+}
+
+export interface DashboardLocationRow {
+  location: string;
+  shiftsInProgress: number;
+  shiftsUpcoming: number;
+  assignedVolunteers: number;
+  alerts: string[];
+}
+
+export interface DashboardWhoDoesWhatShift {
+  shiftId: number;
+  missionTitle: string;
+  missionId: number;
+  startAt: string;
+  endAt: string;
+  location: string | null;
+  teamName: string | null;
+  assignmentStatus: string;
+  shiftStatus: VolunteerShiftStatus;
+}
+
+export interface DashboardWhoDoesWhatItem {
+  volunteerId: number;
+  firstName: string;
+  lastName: string;
+  shifts: DashboardWhoDoesWhatShift[];
+}
+
+export interface DashboardWhoDoesWhatResult {
+  items: DashboardWhoDoesWhatItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface DashboardTodoMission {
+  missionId: number;
+  title: string;
+  teamName: string | null;
+  location: string | null;
+  shiftCount: number;
+}
+
+export interface DashboardTodoShift {
+  shiftId: number;
+  missionTitle: string;
+  missionId: number;
+  startAt: string;
+  endAt: string;
+  location: string | null;
+  capacity: number | null;
+  activeCount: number;
+  confirmedCount: number;
+}
+
+export interface DashboardTodoList {
+  mandatoryIncomplete: DashboardTodoMission[];
+  unstarted: DashboardTodoShift[];
+  withoutConfirmedStaff: DashboardTodoShift[];
+  optionalIncomplete: DashboardTodoMission[];
+}

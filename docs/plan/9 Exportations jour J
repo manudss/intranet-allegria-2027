@@ -1,0 +1,41 @@
+Ajoute les exports opérationnels du module bénévoles.
+
+Crée des endpoints protégés pour exporter :
+- planning global ;
+- planning par équipe opérationnelle ;
+- planning par bénévole ;
+- planning par lieu ;
+- affectations confirmées ;
+- affectations provisoires ;
+- shifts non pourvus ;
+- missions non terminées.
+
+Formats :
+- format xlsx
+- format imprimable
+- Format PDF
+
+Paramètres :
+- date ou intervalle de dates ;
+- équipe ;
+- lieu ;
+- statut de mission ;
+- statut de shift ;
+- statut d’affectation.
+
+Permissions :
+- ADMIN : tous les exports ;
+- COORDINATOR : tous les exports métier ;
+- responsables opérationnels : exports de leur périmètre ;
+- VOLUNTER : Exporter son planning ;
+- VIEWER : export uniquement si cette permission existe déjà ;
+- ne jamais exporter les mots de passe, tokens ou données de santé des participants.
+
+Frontend :
+- bouton d’export sur le tableau de bord ;
+- export depuis les listes filtrées ;
+- nom de fichier explicite avec date et filtre ;
+- message d’erreur compréhensible ;
+- ne pas charger tout le planning en mémoire côté navigateur si l’export peut être généré côté serveur.
+
+Ajoute les tests.

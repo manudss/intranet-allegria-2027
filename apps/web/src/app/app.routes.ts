@@ -99,6 +99,8 @@ export const appRoutes: Route[] = [
        {
          path: 'jour-j',
          title: 'Tableau de bord Jour J',
+         canActivate: [roleGuard],
+         data: { roles: ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'LOGISTICS', 'VIEWER'] },
          loadComponent: () => import('./pages/jour-j').then((m) => m.JourJ),
        },
        {

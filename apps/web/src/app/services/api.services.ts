@@ -3,6 +3,11 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   AssignmentPayload,
+  DashboardGlobalSummary,
+  DashboardLocationRow,
+  DashboardTeamSummary,
+  DashboardTodoList,
+  DashboardWhoDoesWhatResult,
   DeleteResponse,
   Group,
   GroupPayload,
@@ -378,3 +383,87 @@ export class AuthApiService {
     return this.http.get<User>('/api/users/me');
   }
 }
+
+// ─── Tableau de bord opérationnel Jour J ─────────────────────────────────────
+
+@Injectable({ providedIn: 'root' })
+export class OperationalDashboardApiService {
+  private readonly http = inject(HttpClient);
+  private readonly base = '/api/operational-dashboard';
+
+  private params(filters?: Record<string, string | number | undefined | null>): HttpParams {
+    let p = new HttpParams();
+    if (filters) {
+      Object.entries(filters).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') p = p.set(k, String(v));
+      });
+    }
+    return p;
+  }
+
+  getGlobalSummary(date?: string, volunteerTeamId?: number | null): Observable<DashboardGlobalSummary> {
+    return this.http.get<DashboardGlobalSummary>(`${this.base}/global`, {
+      params: this.params({ date, volunteerTeamId }),
+    });
+  }
+
+  getTeamsSummary(date?: string, volunteerTeamId?: number | null): Observable<DashboardTeamSummary[]> {
+    return this.http.get<DashboardTeamSummary[]>(`${this.base}/teams`, {
+      params: this.params({ date, volunteerTeamId }),
+    });
+  }
+
+  getLocationsSummary(date?: string, volunteerTeamId?: number | null): Observable<DashboardLocationRow[]> {
+    return this.http.get<DashboardLocationRow[]>(`${this.base}/locations`, {
+      params: this.params({ date, volunteerTeamId }),
+    });
+  }
+
+  getWhoDoesWhat(options: {
+    date?: string;
+    volunteerTeamId?: number | null;
+    q?: string;
+    page?: number;
+    limit?: number;
+  }): Observable<DashboardWhoDoesWhatResult> {
+    return this.http.get<DashboardWhoDoesWhatResult>(`${this.base}/who-does-what`, {
+      params: this.params({ ...options }),
+    });
+  }
+
+  getTodoList(date?: string, volunteerTeamId?: number | null): Observable<DashboardTodoList> {
+    return this.http.get<DashboardTodoList>(`${this.base}/todo`, {
+      params: this.params({ date, volunteerTeamId }),
+    });
+  }
+
+  exportOperationalData(
+    kind:
+      | 'global-planning'
+      | 'team-planning'
+      | 'volunteer-planning'
+      | 'location-planning'
+      | 'confirmed-assignments'
+      | 'provisional-assignments'
+      | 'unfilled-shifts'
+      | 'unfinished-missions',
+    options: {
+      format: 'xlsx' | 'print' | 'pdf';
+      date?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      volunteerTeamId?: number | null;
+      volunteerId?: number | null;
+      location?: string | null;
+      missionStatus?: string | null;
+      shiftStatus?: string | null;
+      assignmentStatus?: string | null;
+    },
+  ): Observable<Blob> {
+    return this.http.get(`${this.base}/exports/${kind}`, {
+      params: this.params({ ...options }),
+      responseType: 'blob',
+    });
+  }
+}
+

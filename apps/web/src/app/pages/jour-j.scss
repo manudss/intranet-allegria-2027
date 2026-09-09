@@ -1,71 +1,491 @@
-.page {
-  display: grid;
-  gap: 0.75rem;
-}
+// ─── Variables communes ───────────────────────────────────────────────────────
 
-.page-header {
+$border: var(--tui-border-normal);
+$radius: 0.75rem;
+$radius-sm: 0.375rem;
+
+// ─── Filtres ──────────────────────────────────────────────────────────────────
+
+.filters {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
-  align-items: end;
-  justify-content: space-between;
+  align-items: flex-end;
+  margin-block-end: 1rem;
 }
 
-label {
-  display: grid;
+.filter-item {
+  display: flex;
+  flex-direction: column;
   gap: 0.25rem;
+  min-width: 10rem;
 }
 
-input,
-select {
-  min-block-size: 2.75rem;
-  border: 1px solid var(--tui-border-normal);
-  border-radius: 0.5rem;
+.filter-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tui-text-secondary);
+}
+
+.filter-input {
+  min-block-size: 2.5rem;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
   padding-inline: 0.625rem;
+  background: var(--tui-background-base);
+  font-size: 0.875rem;
 }
 
-.cards {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
+  align-items: center;
 }
 
-.card {
-  border: 1px solid var(--tui-border-normal);
-  border-radius: 0.75rem;
-  padding: 0.75rem;
-  display: grid;
-  gap: 0.5rem;
-}
-
-.card-head {
+.inline-label {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--tui-text-secondary);
+
+  select {
+    min-block-size: 2rem;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    padding-inline: 0.5rem;
+    background: var(--tui-background-base);
+    font-size: 0.8rem;
+  }
+}
+
+// ─── Cartes de synthèse ───────────────────────────────────────────────────────
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+  gap: 0.625rem;
+  margin-block-end: 1.25rem;
+}
+
+.summary-card {
+  border: 2px solid $border;
+  border-radius: $radius;
+  padding: 0.75rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--tui-background-base);
+  transition: border-color 0.15s;
+
+  &.card-positive { border-color: var(--tui-positive); }
+  &.card-warning  { border-color: var(--tui-warning, #f59e0b); }
+  &.card-danger   { border-color: var(--tui-negative); }
+}
+
+.card-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--tui-text-primary);
+}
+
+.card-label {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tui-text-secondary);
+}
+
+.inline-loader {
+  display: block;
+  block-size: 2rem;
+  margin-block-end: 1rem;
+}
+
+// ─── Barre d'onglets ──────────────────────────────────────────────────────────
+
+.tab-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  border-block-end: 2px solid $border;
+  margin-block-end: 1.25rem;
+}
+
+.tab-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-block-end: 3px solid transparent;
+  margin-block-end: -2px;
+  background: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--tui-text-secondary);
+  cursor: pointer;
+  border-radius: $radius-sm $radius-sm 0 0;
+  transition: color 0.15s, border-color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+
+  &:hover { color: var(--tui-text-primary); }
+
+  &.active {
+    color: var(--tui-primary);
+    border-block-end-color: var(--tui-primary);
+    font-weight: 600;
+  }
+
+  &--alerts { position: relative; }
+}
+
+.alert-badge { margin-inline-start: 0.25rem; }
+
+// ─── Panneau d'onglet ─────────────────────────────────────────────────────────
+
+.tab-panel { animation: fadeIn 0.15s ease; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
+
+// ─── Titres de section ────────────────────────────────────────────────────────
+
+.section-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tui-text-secondary);
+  margin-block: 1rem 0.5rem;
+}
+
+// ─── Listes d'items ───────────────────────────────────────────────────────────
+
+.item-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  display: grid;
   gap: 0.5rem;
 }
 
-.card-head h2 {
+.item-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: $radius-sm;
+  background: var(--tui-background-secondary);
+  border-left: 4px solid $border;
+
+  &--warning { border-left-color: var(--tui-warning, #f59e0b); }
+  &--danger   { border-left-color: var(--tui-negative); }
+  &--optional { border-left-color: var(--tui-border-normal); opacity: 0.8; }
+}
+
+.item-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.375rem;
+  flex: 1;
+}
+
+.meta {
+  font-size: 0.8125rem;
+  color: var(--tui-text-secondary);
+}
+
+.badge-count {
+  font-size: 0.8125rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: $radius-sm;
+  background: var(--tui-background-accent-1);
+  color: var(--tui-text-primary);
+  white-space: nowrap;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--tui-text-secondary);
+  font-style: italic;
+}
+
+.optional-section {
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  padding: 0.75rem;
+  margin-block-end: 1rem;
+
+  summary { cursor: pointer; }
+}
+
+// ─── Onglet Équipes ───────────────────────────────────────────────────────────
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+  gap: 1rem;
+}
+
+.team-card {
+  border: 1px solid $border;
+  border-radius: $radius;
+  padding: 1rem;
+  background: var(--tui-background-base);
+
+  &.has-alerts { border-color: var(--tui-warning, #f59e0b); }
+}
+
+.team-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-block-end: 0.75rem;
+  gap: 0.5rem;
+}
+
+.team-name {
   font-size: 1rem;
+  font-weight: 600;
   margin: 0;
 }
 
-.meta,
-.notes {
-  margin: 0;
+.team-code {
+  font-size: 0.75rem;
+  padding: 0.125rem 0.5rem;
+  background: var(--tui-background-neutral-1);
+  border-radius: $radius-sm;
+  color: var(--tui-text-secondary);
 }
 
-.badge {
+.team-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block-end: 0.625rem;
+  font-size: 0.8125rem;
+}
+
+.stat {
+  color: var(--tui-text-secondary);
+  &.stat-warning { color: var(--tui-warning, #b45309); font-weight: 600; }
+}
+
+.shift-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-block-end: 0.5rem;
+}
+
+.alert-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+}
+
+.alert-item {
+  font-size: 0.8125rem;
+  color: var(--tui-warning, #b45309);
+  padding: 0.25rem 0;
+}
+
+// ─── Onglet Lieux ─────────────────────────────────────────────────────────────
+
+.location-table-wrapper {
+  overflow-x: auto;
+  border-radius: $radius-sm;
+  border: 1px solid $border;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+
+  th, td {
+    padding: 0.625rem 0.875rem;
+    text-align: left;
+    border-block-end: 1px solid $border;
+  }
+
+  th {
+    background: var(--tui-background-secondary);
+    font-weight: 600;
+    color: var(--tui-text-secondary);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+  }
+
+  tbody tr:last-child td { border-block-end: none; }
+
+  .row-alert { background: color-mix(in srgb, var(--tui-warning, #f59e0b) 8%, transparent); }
+}
+
+.text-right { text-align: right !important; }
+.font-medium { font-weight: 500; }
+
+.inline-alert {
+  font-size: 0.75rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: $radius-sm;
+  background: color-mix(in srgb, var(--tui-negative) 15%, transparent);
+  color: var(--tui-negative);
+  display: inline-block;
+}
+
+// ─── Onglet Qui fait quoi ─────────────────────────────────────────────────────
+
+.who-filters { margin-block-end: 1rem; }
+
+.pagination-info {
+  font-size: 0.8125rem;
+  color: var(--tui-text-secondary);
+  margin-block-end: 0.75rem;
+}
+
+.who-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+  gap: 1rem;
+  margin-block-end: 1rem;
+}
+
+.who-card {
+  border: 1px solid $border;
+  border-radius: $radius;
+  padding: 0.875rem;
+  background: var(--tui-background-base);
+}
+
+.who-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-block-end: 0.625rem;
+  gap: 0.5rem;
+}
+
+.who-shifts {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.375rem;
+}
+
+.who-shift-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.375rem 0;
+  border-block-start: 1px solid $border;
+  font-size: 0.8125rem;
+}
+
+.who-shift-main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  flex: 1;
+}
+
+.who-mission { font-weight: 500; }
+
+.who-badges {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding-block: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--tui-text-secondary);
+}
+
+// ─── Onglet Alertes ───────────────────────────────────────────────────────────
+
+.alert-full-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.alert-full-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: $radius-sm;
+  font-size: 0.875rem;
+
+  &.alert-warning {
+    background: color-mix(in srgb, var(--tui-warning, #f59e0b) 12%, transparent);
+    color: var(--tui-text-primary);
+    border-left: 4px solid var(--tui-warning, #f59e0b);
+  }
+  &.alert-danger {
+    background: color-mix(in srgb, var(--tui-negative) 12%, transparent);
+    color: var(--tui-text-primary);
+    border-left: 4px solid var(--tui-negative);
+  }
+}
+
+.alert-icon { flex-shrink: 0; }
+
+// ─── Badges de statut ─────────────────────────────────────────────────────────
+
+.mini-badge {
+  font-size: 0.6875rem;
+  padding: 0.125rem 0.5rem;
   border-radius: 999px;
-  padding: 0.2rem 0.6rem;
-  font-size: 0.8rem;
+  white-space: nowrap;
 }
 
-.badge.todo { background: var(--tui-background-neutral-1); }
-.badge.assigned { background: #dbeafe; }
-.badge.progress { background: #fef3c7; }
-.badge.done { background: #dcfce7; }
-.badge.cancel { background: #fee2e2; }
+.status-todo        { background: var(--tui-background-neutral-1); color: var(--tui-text-secondary); }
+.status-assigned    { background: #dbeafe; color: #1d4ed8; }
+.status-in-progress { background: #fef3c7; color: #92400e; }
+.status-done        { background: #dcfce7; color: #166534; }
+.status-negative    { background: #fee2e2; color: #991b1b; }
+.status-warning     { background: #fef3c7; color: #92400e; }
 
+// ─── Utilitaires ─────────────────────────────────────────────────────────────
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+// ─── Responsive mobile ────────────────────────────────────────────────────────
+
+@media (max-width: 640px) {
+  .summary-cards { grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr)); }
+  .team-grid, .who-grid { grid-template-columns: 1fr; }
+  .tab-btn { font-size: 0.8125rem; padding-inline: 0.625rem; }
+  .card-value { font-size: 1.375rem; }
+  .data-table th, .data-table td { padding: 0.5rem; }
+}

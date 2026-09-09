@@ -13,6 +13,7 @@ import { VolunteersModule } from './volunteers/volunteers.module';
 import { VolunteerMissionsModule } from './volunteer-missions/volunteer-missions.module';
 import { VolunteerShiftAssignmentsModule } from './volunteer-shift-assignments/volunteer-shift-assignments.module';
 import { VolunteerAuditLogsModule } from './volunteer-audit-logs/volunteer-audit-logs.module';
+import { OperationalDashboardModule } from './operational-dashboard/operational-dashboard.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { VolunteerAuditLogsModule } from './volunteer-audit-logs/volunteer-audit
     HostFamiliesModule,
     AssignmentsModule,
     ParticipantHealthModule,
+    OperationalDashboardModule,
   ],
 })
 export class CoreModule {}

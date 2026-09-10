@@ -6,6 +6,7 @@ import {
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideTaiga } from '@taiga-ui/core';
+import { apiBaseUrlInterceptor } from './core/api-base-url.interceptor';
 import { authInterceptor } from './core/auth.interceptor';
 import { httpErrorInterceptor } from './core/http-error.interceptor';
 import { appRoutes } from './app.routes';
@@ -15,7 +16,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZonelessChangeDetection(),
     provideRouter(appRoutes),
-    provideHttpClient(withInterceptors([authInterceptor, httpErrorInterceptor])),
+    provideHttpClient(withInterceptors([apiBaseUrlInterceptor, authInterceptor, httpErrorInterceptor])),
     provideTaiga(),
   ],
 };

@@ -1,41 +1,67 @@
-/**
- * This is not a production server yet!
- * This is only a minimal backend to get started.
- */
-
-import { Logger } from '@nestjs/common';
+import { Logger, RequestMethod } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app/app.module';
+import { parseCorsOrigins } from './app/config/environment';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  const globalPrefix = 'api';
-  app.setGlobalPrefix(globalPrefix);
+  const logger = new Logger('Bootstrap');
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('MEJ Allegria 2027 API')
-    .setDescription('API REST Intranet Allegria 2027 - participants, equipes, hebergement, sante et RBAC')
-    .setVersion('1.0.0')
-    .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'token',
-        description: 'Token retourne par POST /api/auth/login',
-      },
-      'bearer',
-    )
-    .build();
-  const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup(`${globalPrefix}/docs`, app, swaggerDocument, {
-    swaggerOptions: { persistAuthorization: true },
-  });
+  try {
+    app.enableShutdownHooks();
 
-  const port = process.env.PORT || 3000;
-  await app.listen(port);
-  Logger.log(`🚀 Application is running on: http://localhost:${port}/${globalPrefix}`);
-  Logger.log(`📘 Swagger is available on: http://localhost:${port}/${globalPrefix}/docs`);
+    const configService = app.get(ConfigService);
+    const globalPrefix = 'api';
+    const corsOrigin = configService.get<string>('CORS_ORIGIN', 'http://localhost:4200');
+    const port = configService.get<number>('PORT', 3000);
+
+    app.enableCors({
+      origin: parseCorsOrigins(corsOrigin),
+      credentials: false,
+    });
+    app.setGlobalPrefix(globalPrefix, {
+      exclude: [{ path: 'health', method: RequestMethod.GET }],
+    });
+
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('MEJ Allegria 2027 API')
+      .setDescription('API REST Intranet Allegria 2027 - participants, equipes, hebergement, sante et RBAC')
+      .setVersion('1.0.0')
+      .addBearerAuth(
+        {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'token',
+          description: 'Token retourne par POST /api/auth/login',
+        },
+        'bearer',
+      )
+      .build();
+    const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup(`${globalPrefix}/docs`, app, swaggerDocument, {
+      swaggerOptions: { persistAuthorization: true },
+    });
+
+    await app.listen(port, '0.0.0.0');
+    logger.log(`Application is running on ${await app.getUrl()}/${globalPrefix}`);
+    logger.log(`Swagger is available on ${await app.getUrl()}/${globalPrefix}/docs`);
+  } catch (error) {
+    logger.error(
+      'Application startup failed.',
+      error instanceof Error ? error.stack : String(error),
+    );
+    await app.close();
+    throw error;
+  }
 }
 
-bootstrap();
+void bootstrap().catch((error) => {
+  const logger = new Logger('Bootstrap');
+  logger.error(
+    'Fatal startup error.',
+    error instanceof Error ? error.stack : String(error),
+  );
+  process.exit(1);
+});

@@ -50,3 +50,14 @@ __screenshots__/
 
 vitest.config.*.timestamp*
 /.env
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.dump
+*.sql.gz
+*credentials*.json
+*token*.txt

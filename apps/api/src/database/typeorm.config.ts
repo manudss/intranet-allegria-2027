@@ -50,7 +50,9 @@ const migrationOptions: DataSourceOptions = {
   entities: ['apps/api/src/**/*.entity.ts'],
   migrations: ['apps/api/src/database/migrations/*.ts'],
   synchronize: false,
-  ...createConnectionOptions(process.env.DATABASE_URL ?? process.env.NEON_DATABASE_URL),
+  ...createConnectionOptions(
+    process.env.DATABASE_URL_DIRECT ?? process.env.DATABASE_URL ?? process.env.NEON_DATABASE_URL,
+  ),
 };
 
 export default new DataSource(migrationOptions);

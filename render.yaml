@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: intranet-allegria-api-demo
+    runtime: node
+    branch: main
+    plan: starter
+    rootDir: .
+    autoDeploy: true
+    buildCommand: npm ci && npm run db:migrate && npm run build:api
+    startCommand: npm run start:prod
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_URL_DIRECT
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: DB_SSL
+        value: 'true'
+

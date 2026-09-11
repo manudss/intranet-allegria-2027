@@ -1,0 +1,141 @@
+name: Neon Database
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - closed
+
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: Run seed after migrations
+        type: boolean
+        required: false
+        default: false
+      profile:
+        description: Seed profile
+        type: choice
+        required: false
+        default: medium
+        options:
+          - small
+          - medium
+          - large
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    outputs:
+      branch: ${{ steps.branch_name.outputs.current_branch }}
+      should_seed: ${{ steps.flags.outputs.should_seed }}
+      seed_profile: ${{ steps.flags.outputs.seed_profile }}
+    steps:
+      - name: Get branch name
+        id: branch_name
+        uses: tj-actions/branch-names@v8
+
+      - name: Compute run flags
+        id: flags
+        shell: bash
+        run: |
+          SHOULD_SEED=false
+          SEED_PROFILE=medium
+
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            SHOULD_SEED=true
+            SEED_PROFILE=medium
+          fi
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.seed }}" = "true" ]; then
+            SHOULD_SEED=true
+            SEED_PROFILE="${{ inputs.profile }}"
+          fi
+
+          echo "should_seed=$SHOULD_SEED" >> "$GITHUB_OUTPUT"
+          echo "seed_profile=$SEED_PROFILE" >> "$GITHUB_OUTPUT"
+
+  create_neon_branch:
+    name: Create Neon Branch
+    needs: setup
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+        (github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'synchronize'))
+    runs-on: ubuntu-latest
+    outputs:
+      db_url: ${{ steps.create_neon_branch.outputs.db_url }}
+      db_url_with_pooler: ${{ steps.create_neon_branch.outputs.db_url_with_pooler }}
+    steps:
+      - name: Get branch expiration date
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: echo "EXPIRES_AT=$(date -u --date '+14 days' +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
+
+      - name: Create Neon Branch
+        id: create_neon_branch
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          branch_name: ${{ github.event_name == 'pull_request' && format('preview/pr-{0}-{1}', github.event.number, needs.setup.outputs.branch) || 'preview/main' }}
+          expires_at: ${{ github.event_name == 'pull_request' && env.EXPIRES_AT || '' }}
+
+  migrate_and_seed:
+    name: Migrate and Seed
+    needs: [setup, create_neon_branch]
+    if: needs.create_neon_branch.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run migrations
+        run: npm run migration:run
+        env:
+          DATABASE_URL_DIRECT: ${{ needs.create_neon_branch.outputs.db_url }}
+
+      - name: Run seed
+        if: needs.setup.outputs.should_seed == 'true'
+        run: npx tsx apps/api/src/database/seeds/seed.ts --profile=${{ needs.setup.outputs.seed_profile }}
+        env:
+          DATABASE_URL_DIRECT: ${{ needs.create_neon_branch.outputs.db_url }}
+
+  delete_neon_branch:
+    name: Delete Neon Branch
+    needs: setup
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete Neon Branch
+        uses: neondatabase/delete-branch-action@v3
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          branch: preview/pr-${{ github.event.number }}-${{ needs.setup.outputs.branch }}

@@ -70,7 +70,7 @@ jobs:
           echo "seed_profile=$SEED_PROFILE" >> "$GITHUB_OUTPUT"
 
   create_neon_branch:
-    name: Create Neon Branch
+    name: Create Neon Branch, Migrate and Seed
     needs: setup
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
@@ -78,10 +78,6 @@ jobs:
       (github.event_name == 'pull_request' &&
         (github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'synchronize'))
     runs-on: ubuntu-latest
-    outputs:
-      db_url: ${{ steps.create_neon_branch.outputs.db_url }}
-      db_url_pooled: ${{ steps.create_neon_branch.outputs.db_url_pooled }}
-      branch_id: ${{ steps.create_neon_branch.outputs.branch_id }}
     steps:
       - name: Get branch expiration date
         if: github.event_name == 'pull_request'
@@ -105,12 +101,7 @@ jobs:
             echo "Neon db_url output is empty"
             exit 1
           fi
-  migrate_and_seed:
-    name: Migrate and Seed
-    needs: [setup, create_neon_branch]
-    if: needs.create_neon_branch.result == 'success'
-    runs-on: ubuntu-latest
-    steps:
+
       - name: Check out repository
         uses: actions/checkout@v5
         with:
@@ -128,16 +119,18 @@ jobs:
       - name: Run migrations
         run: npm run migration:run
         env:
-          DATABASE_URL: ${{ needs.create_neon_branch.outputs.db_url_pooled }}
-          DATABASE_URL_DIRECT: ${{ needs.create_neon_branch.outputs.db_url }}
+          DATABASE_URL: ${{ steps.create_neon_branch.outputs.db_url_pooled }}
+          DATABASE_URL_DIRECT: ${{ steps.create_neon_branch.outputs.db_url }}
           DB_SSL: 'true'
+
       - name: Run seed
         if: needs.setup.outputs.should_seed == 'true'
         run: npx tsx apps/api/src/database/seeds/seed.ts --profile=${{ needs.setup.outputs.seed_profile }}
         env:
-          DATABASE_URL: ${{ needs.create_neon_branch.outputs.db_url_pooled }}
-          DATABASE_URL_DIRECT: ${{ needs.create_neon_branch.outputs.db_url }}
+          DATABASE_URL: ${{ steps.create_neon_branch.outputs.db_url_pooled }}
+          DATABASE_URL_DIRECT: ${{ steps.create_neon_branch.outputs.db_url }}
           DB_SSL: 'true'
+
   delete_neon_branch:
     name: Delete Neon Branch
     needs: setup

@@ -48,12 +48,10 @@ const blankHealth = (): ParticipantHealthPayload => ({
       ><button actions tuiButton (click)="create()">Nouveau participant</button>
       <div class="filters">
         <tui-textfield iconStart="@tui.search">
-          <label tuiLabel>Rechercher un participant</label>
-          <input tuiInput placeholder="Nom, diocèse ou ville…" [value]="query()" (input)="query.set($any($event.target).value)" />
+          <label for="rechercher-un-participant" tuiLabel>Rechercher un participant</label><input tuiInput placeholder="Nom, diocèse ou ville…" [value]="query()" (input)="query.set($any($event.target).value)" id="rechercher-un-participant" />
         </tui-textfield>
         <tui-textfield iconStart="@tui.filter" tuiChevron [stringify]="stringifyGroup">
-          <label tuiLabel>Groupe</label>
-          <select tuiSelect placeholder="Tous les groupes" [items]="groupIds()" [formField]="groupFilterForm"></select>
+          <label for="groupe-2" tuiLabel>Groupe</label><select tuiSelect placeholder="Tous les groupes" [items]="groupIds()" [formField]="groupFilterForm" id="groupe-2"></select>
         </tui-textfield>
       </div>
       @if (loading()) {
@@ -94,28 +92,22 @@ const blankHealth = (): ParticipantHealthPayload => ({
          } @else if (mode() === 'health') {
            <form class="drawer-form">
              <tui-textfield iconStart="@tui.heart-pulse" class="wide">
-               <label tuiLabel>Pathologies</label>
-               <textarea tuiTextarea [formField]="$any(healthForm.medicalConditions)"></textarea>
+               <label for="pathologies-2" tuiLabel>Pathologies</label><textarea tuiTextarea [formField]="$any(healthForm.medicalConditions)" id="pathologies-2"></textarea>
              </tui-textfield>
              <tui-textfield iconStart="@tui.triangle-alert" class="wide">
-               <label tuiLabel>Allergies</label>
-               <textarea tuiTextarea [formField]="$any(healthForm.allergies)"></textarea>
+               <label for="allergies-2" tuiLabel>Allergies</label><textarea tuiTextarea [formField]="$any(healthForm.allergies)" id="allergies-2"></textarea>
              </tui-textfield>
              <tui-textfield iconStart="@tui.pill" class="wide">
-               <label tuiLabel>Médicaments</label>
-               <textarea tuiTextarea [formField]="$any(healthForm.medications)"></textarea>
+               <label for="medicaments-2" tuiLabel>Médicaments</label><textarea tuiTextarea [formField]="$any(healthForm.medications)" id="medicaments-2"></textarea>
              </tui-textfield>
              <tui-textfield iconStart="@tui.star" class="wide">
-               <label tuiLabel>Besoins spécifiques</label>
-               <textarea tuiTextarea [formField]="$any(healthForm.specialNeeds)"></textarea>
+               <label for="besoins-specifiques" tuiLabel>Besoins spécifiques</label><textarea tuiTextarea [formField]="$any(healthForm.specialNeeds)" id="besoins-specifiques"></textarea>
              </tui-textfield>
              <tui-textfield iconStart="@tui.utensils" class="wide">
-               <label tuiLabel>Alimentation</label>
-               <textarea tuiTextarea [formField]="$any(healthForm.dietaryNotes)"></textarea>
+               <label for="alimentation-2" tuiLabel>Alimentation</label><textarea tuiTextarea [formField]="$any(healthForm.dietaryNotes)" id="alimentation-2"></textarea>
              </tui-textfield>
              <tui-textfield iconStart="@tui.shield-alert" class="wide">
-               <label tuiLabel>Consignes d'urgence</label>
-               <textarea tuiTextarea [formField]="$any(healthForm.emergencyInstructions)"></textarea>
+               <label for="consignes-d-urgence" tuiLabel>Consignes d'urgence</label><textarea tuiTextarea [formField]="$any(healthForm.emergencyInstructions)" id="consignes-d-urgence"></textarea>
              </tui-textfield>
            </form>
            @if (health()) {
@@ -127,44 +119,34 @@ const blankHealth = (): ParticipantHealthPayload => ({
          } @else {
            <form class="drawer-form">
              <tui-textfield iconStart="@tui.user">
-               <label tuiLabel>Prénom</label>
-               <input tuiInput [formField]="participantForm.firstName" />
+               <label for="prenom-2" tuiLabel>Prénom</label><input tuiInput [formField]="participantForm.firstName" id="prenom-2" />
              </tui-textfield>
              <tui-textfield iconStart="@tui.user">
-               <label tuiLabel>Nom</label>
-               <input tuiInput [formField]="participantForm.lastName" />
+               <label for="nom-2" tuiLabel>Nom</label><input tuiInput [formField]="participantForm.lastName" id="nom-2" />
              </tui-textfield>
              <tui-textfield iconStart="@tui.calendar">
-               <label tuiLabel>Date de naissance</label>
-               <input tuiInput type="date" [formField]="participantForm.dateOfBirth" />
+               <label for="date-de-naissance" tuiLabel>Date de naissance</label><input tuiInput type="date" [formField]="participantForm.dateOfBirth" id="date-de-naissance" />
              </tui-textfield>
              <tui-textfield iconStart="@tui.user-round" tuiChevron>
-               <label tuiLabel>Sexe</label>
-               <select tuiSelect [items]="sexes" [formField]="participantForm.sex"></select>
+               <label for="sexe-2" tuiLabel>Sexe</label><select tuiSelect [items]="sexes" [formField]="participantForm.sex" id="sexe-2"></select>
              </tui-textfield>
              <tui-textfield iconStart="@tui.users" tuiChevron>
-               <label tuiLabel>Tranche d'âge MEJ</label>
-               <select tuiSelect [items]="mejAgeGroups" [formField]="participantForm.mejAgeGroup"></select>
+               <label for="tranche-d-age-mej" tuiLabel>Tranche d'âge MEJ</label><select tuiSelect [items]="mejAgeGroups" [formField]="participantForm.mejAgeGroup" id="tranche-d-age-mej"></select>
              </tui-textfield>
              <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyGroup">
-               <label tuiLabel>Groupe</label>
-               <select tuiSelect placeholder="Sans groupe" [items]="groupIds()" [formField]="participantForm.groupId"></select>
+               <label for="groupe-3" tuiLabel>Groupe</label><select tuiSelect placeholder="Sans groupe" [items]="groupIds()" [formField]="participantForm.groupId" id="groupe-3"></select>
              </tui-textfield>
              <tui-textfield iconStart="@tui.map-pin">
-               <label tuiLabel>Diocèse</label>
-               <input tuiInput [formField]="participantForm.diocese" />
+               <label for="diocese-2" tuiLabel>Diocèse</label><input tuiInput [formField]="participantForm.diocese" id="diocese-2" />
              </tui-textfield>
              <tui-textfield iconStart="@tui.map-pin">
-               <label tuiLabel>Ville</label>
-               <input tuiInput [formField]="participantForm.city" />
+               <label for="ville-2" tuiLabel>Ville</label><input tuiInput [formField]="participantForm.city" id="ville-2" />
              </tui-textfield>
              <tui-textfield iconStart="@tui.shield-alert">
-               <label tuiLabel>Contact urgence</label>
-               <input tuiInput [formField]="participantForm.emergencyContactName" />
+               <label for="contact-urgence" tuiLabel>Contact urgence</label><input tuiInput [formField]="participantForm.emergencyContactName" id="contact-urgence" />
              </tui-textfield>
              <tui-textfield iconStart="@tui.phone">
-               <label tuiLabel>Téléphone urgence</label>
-               <input tuiInput [formField]="participantForm.emergencyContactPhone" />
+               <label for="telephone-urgence" tuiLabel>Téléphone urgence</label><input tuiInput [formField]="participantForm.emergencyContactPhone" id="telephone-urgence" />
              </tui-textfield>
            </form>
          }

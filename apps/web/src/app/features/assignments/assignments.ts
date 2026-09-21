@@ -1,8 +1,8 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, input, output, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { TuiButton, TuiCheckbox, TuiInput, TuiLabel } from '@taiga-ui/core';
-import { TuiChip, TuiDataListWrapper, TuiDrawer, TuiSelect, TuiTabs } from '@taiga-ui/kit';
+import { TuiButton, TuiCheckbox, TuiInput } from '@taiga-ui/core';
+import { TuiChevron, TuiChip, TuiDataListWrapper, TuiDrawer, TuiSelect, TuiTabs } from '@taiga-ui/kit';
 import { debounceTime, distinctUntilChanged, finalize, forkJoin, startWith, switchMap } from 'rxjs';
 import {
   AssignmentPayload,
@@ -36,13 +36,13 @@ export class HostFamilyCardsComponent {
 
 @Component({
   selector: 'app-host-family-assignments-selector',
-  imports: [ReactiveFormsModule, TuiButton, TuiCheckbox, TuiDataListWrapper, TuiInput, TuiLabel, TuiSelect],
+  imports: [ReactiveFormsModule, TuiButton, TuiCheckbox, TuiDataListWrapper, TuiInput, TuiSelect, TuiChevron],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<section class="selector"><h3>Ajouter des personnes</h3>
     <form [formGroup]="filters"><label><input tuiCheckbox type="checkbox" formControlName="unassignedOnly" /> Non affectés uniquement</label>
-      <tui-textfield tuiChevron><label tuiLabel>Type</label><input tuiSelect formControlName="type" /><tui-data-list-wrapper *tuiDropdown [items]="types" /></tui-textfield>
-      <tui-textfield><label tuiLabel>Équipe</label><input tuiInput type="number" formControlName="teamId" /></tui-textfield>
-      <tui-textfield><label tuiLabel>Recherche</label><input tuiInput formControlName="q" /></tui-textfield>
+      <tui-textfield tuiChevron><label for="type-2" tuiLabel>Type</label><input tuiSelect formControlName="type" id="type-2" /><tui-data-list-wrapper *tuiDropdown [items]="types" /></tui-textfield>
+      <tui-textfield><label for="equipe-2" tuiLabel>Équipe</label><input tuiInput type="number" formControlName="teamId" id="equipe-2" /></tui-textfield>
+      <tui-textfield><label for="recherche-2" tuiLabel>Recherche</label><input tuiInput formControlName="q" id="recherche-2" /></tui-textfield>
     </form>
     <div class="results">@for (participant of participants(); track participant.id) {
       <label><input tuiCheckbox type="checkbox" [checked]="isSelected(participant.id)" (change)="toggle(participant.id)" />
@@ -99,7 +99,7 @@ export class HostFamilyAssignmentsSelectorComponent {
     } @else { <div class="assignments">@for (assignment of assignments() || []; track assignment.id) { <article><span><strong>{{ assignment.participant.lastName }} {{ assignment.participant.firstName }}</strong><small>{{ assignment.type }} · {{ assignment.groupId || 'sans groupe' }}</small></span><span>{{ assignment.arrivalDate }} → {{ assignment.departureDate }} · {{ assignment.status }}</span><button tuiButton size="s" appearance="secondary-destructive" type="button" (click)="remove(assignment.id)">Retirer</button></article> }
       <app-host-family-assignments-selector [family]="current" [currentAssignments]="assignments() || []" (changed)="changed.emit()" />
     </div> }
-    <footer><button tuiButton appearance="flat" type="button" (click)="close.emit()">Fermer</button></footer>
+    <footer><button tuiButton appearance="flat" type="button" (click)="drawerClosed.emit()">Fermer</button></footer>
   </tui-drawer> }`,
   styles: `:host tui-drawer{inline-size:min(42rem,100vw)}header,footer{position:sticky;z-index:1;background:var(--tui-background-base)}.chips{display:flex;flex-wrap:wrap;gap:.4rem}.assignments{display:grid;gap:1rem}.assignments article{display:flex;align-items:center;justify-content:space-between;gap:1rem;border-block-end:1px solid var(--tui-border-normal);padding-block:.75rem}.assignments article span:first-child{display:grid}.assignments small{color:var(--tui-text-secondary)}`,
 })
@@ -107,7 +107,7 @@ export class HostFamilyDetailDrawerComponent {
   private readonly assignmentsApi = inject(AssignmentsApiService);
   readonly family = input<HostFamily | null>(null);
   readonly assignments = input<ParticipantHostFamilyAssignment[] | null>(null);
-  readonly close = output<void>();
+  readonly drawerClosed = output<void>();
   readonly changed = output<void>();
   tab = 0;
   remove(id: number): void { this.assignmentsApi.delete(id).subscribe(() => this.changed.emit()); }
@@ -121,7 +121,7 @@ export class HostFamilyDetailDrawerComponent {
     <tui-tabs [(activeItemIndex)]="view"><button tuiTab type="button">Table</button><button tuiTab type="button">Cards</button><boutton tuiTab routerLink="/hebergement/carte">🗺 Carte</boutton></tui-tabs>
     @if (loading()) { <tui-loader /> } @else if (view === 0) { <app-data-table [rows]="families()" [columns]="tableColumns" (rowSelected)="select($event)" /> } @else { <app-host-family-cards [families]="families()" (selectFamily)="select($event)" /> }
   </app-page-layout>
-  @if (selectedFamily()) { <app-host-family-detail-drawer [family]="selectedFamily()" [assignments]="selectedFamilyAssignments()" (close)="closeDrawer()" (changed)="reloadAssignments()" /> }`,
+  @if (selectedFamily()) { <app-host-family-detail-drawer [family]="selectedFamily()" [assignments]="selectedFamilyAssignments()" (drawerClosed)="closeDrawer()" (changed)="reloadAssignments()" /> }`,
 })
 export class AssignmentsPage implements OnInit {
   private readonly api = inject(HostFamiliesApiService);

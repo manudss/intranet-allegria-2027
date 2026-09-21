@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, OnInit, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TuiComparator, TuiReorder, TuiTable } from '@taiga-ui/addon-table';
@@ -109,7 +109,7 @@ interface ColumnFilterState {
             @for (column of enabledColumns(); track column.key) {
               <th *tuiHead="column.key" tuiTh [sorter]="column.sorter || defaultSorter(column)" [resizable]="true" [sticky]="true" [minWidth]="140">
                 <span>{{ column.label }}</span>
-                <div class="column-filter" (click)="$event.stopPropagation()">
+                <div class="column-filter" tabindex="-1" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()" (keydown.space)="$event.stopPropagation(); $event.preventDefault()">
                   @switch (column.type || 'text') {
                     @case ('list') {
                       <tui-textfield multi tuiChevron>
@@ -222,7 +222,7 @@ interface ColumnFilterState {
     tr[tabindex]:hover td, tr[tabindex]:focus-visible td { background: var(--tui-background-neutral-1-hover); }
   `,
 })
-export class DataTableComponent<T extends { readonly id: number }> {
+export class DataTableComponent<T extends { readonly id: number }> implements OnInit {
   readonly rows = input.required<readonly T[]>();
   readonly columns = input.required<readonly DataTableColumn<T>[]>();
   readonly lineActions = input<readonly DataTableAction<T>[]>([]);

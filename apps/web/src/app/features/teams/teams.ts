@@ -27,12 +27,10 @@ const blank = (): TeamPayload => ({
       ><button actions tuiButton (click)="create()">Nouvelle équipe</button>
       <div class="filters">
         <tui-textfield iconStart="@tui.search">
-          <label tuiLabel>Rechercher une équipe</label>
-          <input tuiInput placeholder="Nom d'équipe…" [value]="query()" (input)="query.set($any($event.target).value)" />
+          <label for="rechercher-une-equipe" tuiLabel>Rechercher une équipe</label><input tuiInput placeholder="Nom d'équipe…" [value]="query()" (input)="query.set($any($event.target).value)" id="rechercher-une-equipe" />
         </tui-textfield>
         <tui-textfield iconStart="@tui.filter" tuiChevron [stringify]="stringifyGroup">
-          <label tuiLabel>Groupe</label>
-          <select tuiSelect placeholder="Tous les groupes" [items]="groupIds()" [formField]="groupFilterForm"></select>
+          <label for="groupe-2" tuiLabel>Groupe</label><select tuiSelect placeholder="Tous les groupes" [items]="groupIds()" [formField]="groupFilterForm" id="groupe-2"></select>
         </tui-textfield>
       </div>
       @if (loading()) {
@@ -68,8 +66,7 @@ const blank = (): TeamPayload => ({
            <h3>Membres</h3>
            <div class="member-add">
              <tui-textfield iconStart="@tui.user-plus" tuiChevron [stringify]="stringifyParticipant">
-               <label tuiLabel>Ajouter un participant</label>
-               <select tuiSelect placeholder="Sélectionner…" [items]="availableParticipantIds()" [formField]="candidateForm"></select>
+               <label for="ajouter-un-participant" tuiLabel>Ajouter un participant</label><select tuiSelect placeholder="Sélectionner…" [items]="availableParticipantIds()" [formField]="candidateForm" id="ajouter-un-participant"></select>
              </tui-textfield>
              <button tuiButton size="s" [disabled]="!candidateId()" (click)="addMember()">Ajouter</button>
            </div>
@@ -84,28 +81,22 @@ const blank = (): TeamPayload => ({
          } @else {
            <form class="drawer-form">
              <tui-textfield iconStart="@tui.briefcase">
-               <label tuiLabel>Nom de l'équipe</label>
-               <input tuiInput [formField]="teamForm.name" />
+               <label for="nom-de-l-equipe" tuiLabel>Nom de l'équipe</label><input tuiInput [formField]="teamForm.name" id="nom-de-l-equipe" />
              </tui-textfield>
              <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyGroup">
-               <label tuiLabel>Groupe</label>
-               <select tuiSelect placeholder="Sans groupe" [items]="groupIds()" [formField]="teamForm.groupId"></select>
+               <label for="groupe-3" tuiLabel>Groupe</label><select tuiSelect placeholder="Sans groupe" [items]="groupIds()" [formField]="teamForm.groupId" id="groupe-3"></select>
              </tui-textfield>
              <tui-textfield iconStart="@tui.user-check" tuiChevron [stringify]="stringifyVolunteer">
-               <label tuiLabel>Animateur</label>
-               <select tuiSelect placeholder="Aucun" [items]="volunteerIds()" [formField]="teamForm.primaryAnimatorId"></select>
+               <label for="animateur-2" tuiLabel>Animateur</label><select tuiSelect placeholder="Aucun" [items]="volunteerIds()" [formField]="teamForm.primaryAnimatorId" id="animateur-2"></select>
              </tui-textfield>
              <tui-textfield iconStart="@tui.user" tuiChevron [stringify]="stringifyVolunteer">
-               <label tuiLabel>Co-animateur</label>
-               <select tuiSelect placeholder="Aucun" [items]="volunteerIds()" [formField]="teamForm.secondaryAnimatorId"></select>
+               <label for="co-animateur" tuiLabel>Co-animateur</label><select tuiSelect placeholder="Aucun" [items]="volunteerIds()" [formField]="teamForm.secondaryAnimatorId" id="co-animateur"></select>
              </tui-textfield>
              <tui-textfield iconStart="@tui.hash">
-               <label tuiLabel>Taille maximale</label>
-               <input tuiInput type="number" [formField]="teamForm.maxSize" />
+               <label for="taille-maximale" tuiLabel>Taille maximale</label><input tuiInput type="number" [formField]="teamForm.maxSize" id="taille-maximale" />
              </tui-textfield>
              <tui-textfield iconStart="@tui.file-text" class="wide">
-               <label tuiLabel>Notes</label>
-               <textarea tuiTextarea [formField]="$any(teamForm.notes)"></textarea>
+               <label for="notes-2" tuiLabel>Notes</label><textarea tuiTextarea [formField]="$any(teamForm.notes)" id="notes-2"></textarea>
              </tui-textfield>
            </form>
          }

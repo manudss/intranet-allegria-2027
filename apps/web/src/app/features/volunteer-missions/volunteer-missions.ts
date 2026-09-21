@@ -248,25 +248,20 @@ const assignmentDraft = (): VolunteerShiftAssignmentPayload => ({
               <h4>{{ editingShiftId() ? 'Modifier un shift' : 'Ajouter un shift' }}</h4>
               <form class="drawer-form">
                 <tui-textfield iconStart="@tui.clock">
-                  <label tuiLabel>Début</label>
-                  <input tuiInput type="datetime-local" [formField]="shiftForm.startAt" />
+                  <label for="debut-2" tuiLabel>Début</label><input tuiInput type="datetime-local" [formField]="shiftForm.startAt" id="debut-2" />
                 </tui-textfield>
                 <tui-textfield iconStart="@tui.clock">
-                  <label tuiLabel>Fin</label>
-                  <input tuiInput type="datetime-local" [formField]="shiftForm.endAt" />
+                  <label for="fin-2" tuiLabel>Fin</label><input tuiInput type="datetime-local" [formField]="shiftForm.endAt" id="fin-2" />
                 </tui-textfield>
                 <tui-textfield iconStart="@tui.map-pin">
-                  <label tuiLabel>Lieu</label>
-                  <input tuiInput [formField]="$any(shiftForm.location)" />
+                  <label for="lieu-2" tuiLabel>Lieu</label><input tuiInput [formField]="$any(shiftForm.location)" id="lieu-2" />
                 </tui-textfield>
                 <tui-textfield iconStart="@tui.users">
-                  <label tuiLabel>Capacité</label>
-                  <input tuiInput type="number" [formField]="shiftForm.capacity" />
+                  <label for="capacite-2" tuiLabel>Capacité</label><input tuiInput type="number" [formField]="shiftForm.capacity" id="capacite-2" />
                 </tui-textfield>
                 <label class="check"><input type="checkbox" [formField]="shiftForm.isOptional" /> Optionnel</label>
                 <tui-textfield iconStart="@tui.file-text" class="wide">
-                  <label tuiLabel>Notes</label>
-                  <textarea tuiTextarea [formField]="$any(shiftForm.notes)"></textarea>
+                  <label for="notes-2" tuiLabel>Notes</label><textarea tuiTextarea [formField]="$any(shiftForm.notes)" id="notes-2"></textarea>
                 </tui-textfield>
               </form>
               <div class="shift-form-actions">
@@ -278,25 +273,20 @@ const assignmentDraft = (): VolunteerShiftAssignmentPayload => ({
         } @else {
           <form class="drawer-form">
             <tui-textfield iconStart="@tui.briefcase">
-              <label tuiLabel>Titre</label>
-              <input tuiInput [formField]="missionForm.title" />
+              <label for="titre-2" tuiLabel>Titre</label><input tuiInput [formField]="missionForm.title" id="titre-2" />
             </tui-textfield>
             <tui-textfield iconStart="@tui.map-pin">
-              <label tuiLabel>Lieu</label>
-              <input tuiInput [formField]="missionForm.location" />
+              <label for="lieu-3" tuiLabel>Lieu</label><input tuiInput [formField]="missionForm.location" id="lieu-3" />
             </tui-textfield>
             <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyTeam">
-              <label tuiLabel>Équipe opérationnelle</label>
-              <select tuiSelect [items]="teamIds()" [formField]="missionForm.volunteerTeamId"></select>
+              <label for="equipe-operationnelle" tuiLabel>Équipe opérationnelle</label><select tuiSelect [items]="teamIds()" [formField]="missionForm.volunteerTeamId" id="equipe-operationnelle"></select>
             </tui-textfield>
             <tui-textfield iconStart="@tui.activity" tuiChevron [stringify]="stringifyMissionStatus">
-              <label tuiLabel>Statut</label>
-              <select tuiSelect [items]="missionStatuses" [formField]="missionForm.status"></select>
+              <label for="statut-2" tuiLabel>Statut</label><select tuiSelect [items]="missionStatuses" [formField]="missionForm.status" id="statut-2"></select>
             </tui-textfield>
             <label class="check"><input type="checkbox" [formField]="missionForm.isOptional" /> Optionnelle</label>
             <tui-textfield iconStart="@tui.file-text" class="wide">
-              <label tuiLabel>Description</label>
-              <textarea tuiTextarea [formField]="$any(missionForm.description)"></textarea>
+              <label for="description-2" tuiLabel>Description</label><textarea tuiTextarea [formField]="$any(missionForm.description)" id="description-2"></textarea>
             </tui-textfield>
           </form>
         }
@@ -743,7 +733,6 @@ export class VolunteerMissionsPage implements OnInit {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   }
 }
-
 
 
 

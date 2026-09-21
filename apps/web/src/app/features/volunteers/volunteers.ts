@@ -68,8 +68,7 @@ const blankMembership = () => ({
   template: `<app-page-layout title="Bénévoles" description="Annuaire et responsabilités">
       <button actions tuiButton (click)="create()">Nouveau bénévole</button>
       <tui-textfield iconStart="@tui.search">
-        <label tuiLabel>Rechercher un bénévole</label>
-        <input tuiInput placeholder="Nom, équipe…" [value]="query()" (input)="query.set($any($event.target).value)" />
+        <label for="rechercher-un-benevole" tuiLabel>Rechercher un bénévole</label><input tuiInput placeholder="Nom, équipe…" [value]="query()" (input)="query.set($any($event.target).value)" id="rechercher-un-benevole" />
       </tui-textfield>
       <div class="filter-row">
         <label class="filter-label">
@@ -252,20 +251,16 @@ const blankMembership = () => ({
                  <h4>Modifier un rattachement</h4>
                  <form class="drawer-form membership-form">
                    <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyVolunteerTeam">
-                     <label tuiLabel>Équipe opérationnelle</label>
-                     <select tuiSelect placeholder="Choisir…" [items]="activeTeamIds()" [formField]="membershipForm.volunteerTeamId"></select>
+                     <label for="equipe-operationnelle" tuiLabel>Équipe opérationnelle</label><select tuiSelect placeholder="Choisir…" [items]="activeTeamIds()" [formField]="membershipForm.volunteerTeamId" id="equipe-operationnelle"></select>
                    </tui-textfield>
                    <tui-textfield iconStart="@tui.calendar">
-                     <label tuiLabel>Début</label>
-                     <input tuiInput type="date" [formField]="membershipForm.startAt" />
+                     <label for="debut-2" tuiLabel>Début</label><input tuiInput type="date" [formField]="membershipForm.startAt" id="debut-2" />
                    </tui-textfield>
                    <tui-textfield iconStart="@tui.calendar">
-                     <label tuiLabel>Fin</label>
-                     <input tuiInput type="date" [formField]="membershipForm.endAt" />
+                     <label for="fin-2" tuiLabel>Fin</label><input tuiInput type="date" [formField]="membershipForm.endAt" id="fin-2" />
                    </tui-textfield>
                    <tui-textfield iconStart="@tui.file-text" class="wide">
-                     <label tuiLabel>Rôle</label>
-                     <input tuiInput [formField]="membershipForm.role" />
+                     <label for="role-2" tuiLabel>Rôle</label><input tuiInput [formField]="membershipForm.role" id="role-2" />
                    </tui-textfield>
                  </form>
                  <div class="membership-form-actions">
@@ -276,20 +271,16 @@ const blankMembership = () => ({
                  <h4>Ajouter un rattachement</h4>
                  <form class="drawer-form membership-form">
                    <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyVolunteerTeam">
-                     <label tuiLabel>Équipe opérationnelle</label>
-                     <select tuiSelect placeholder="Choisir…" [items]="activeTeamIds()" [formField]="membershipForm.volunteerTeamId"></select>
+                     <label for="equipe-operationnelle-1" tuiLabel>Équipe opérationnelle</label><select tuiSelect placeholder="Choisir…" [items]="activeTeamIds()" [formField]="membershipForm.volunteerTeamId" id="equipe-operationnelle-1"></select>
                    </tui-textfield>
                    <tui-textfield iconStart="@tui.calendar">
-                     <label tuiLabel>Début</label>
-                     <input tuiInput type="date" [formField]="membershipForm.startAt" />
+                     <label for="debut-3" tuiLabel>Début</label><input tuiInput type="date" [formField]="membershipForm.startAt" id="debut-3" />
                    </tui-textfield>
                    <tui-textfield iconStart="@tui.calendar">
-                     <label tuiLabel>Fin</label>
-                     <input tuiInput type="date" [formField]="membershipForm.endAt" />
+                     <label for="fin-3" tuiLabel>Fin</label><input tuiInput type="date" [formField]="membershipForm.endAt" id="fin-3" />
                    </tui-textfield>
                    <tui-textfield iconStart="@tui.file-text" class="wide">
-                     <label tuiLabel>Rôle</label>
-                     <input tuiInput [formField]="membershipForm.role" />
+                     <label for="role-3" tuiLabel>Rôle</label><input tuiInput [formField]="membershipForm.role" id="role-3" />
                    </tui-textfield>
                  </form>
                  <div class="membership-form-actions">
@@ -305,31 +296,25 @@ const blankMembership = () => ({
          } @else {
            <form class="drawer-form">
              <tui-textfield iconStart="@tui.user">
-               <label tuiLabel>Prénom</label>
-               <input tuiInput [formField]="volunteerForm.firstName" />
+               <label for="prenom-2" tuiLabel>Prénom</label><input tuiInput [formField]="volunteerForm.firstName" id="prenom-2" />
              </tui-textfield>
              <tui-textfield iconStart="@tui.user">
-               <label tuiLabel>Nom</label>
-               <input tuiInput [formField]="volunteerForm.lastName" />
+               <label for="nom-2" tuiLabel>Nom</label><input tuiInput [formField]="volunteerForm.lastName" id="nom-2" />
              </tui-textfield>
              <tui-textfield iconStart="@tui.mail">
-               <label tuiLabel>Email</label>
-               <input tuiInput type="email" [formField]="volunteerForm.email" />
+               <label for="email-2" tuiLabel>Email</label><input tuiInput type="email" [formField]="volunteerForm.email" id="email-2" />
              </tui-textfield>
              <tui-textfield iconStart="@tui.phone">
-               <label tuiLabel>Téléphone</label>
-               <input tuiInput [formField]="volunteerForm.phone" />
+               <label for="telephone-2" tuiLabel>Téléphone</label><input tuiInput [formField]="volunteerForm.phone" id="telephone-2" />
              </tui-textfield>
              <tui-textfield iconStart="@tui.users">
-               <label tuiLabel>Équipe</label>
-               <input tuiInput [formField]="volunteerForm.team" />
+               <label for="equipe-3" tuiLabel>Équipe</label><input tuiInput [formField]="volunteerForm.team" id="equipe-3" />
              </tui-textfield>
              <label class="check">
                <input type="checkbox" [formField]="volunteerForm.isGroupLeader" /> Responsable de groupe
              </label>
              <tui-textfield iconStart="@tui.file-text" class="wide">
-               <label tuiLabel>Notes</label>
-               <textarea tuiTextarea [formField]="$any(volunteerForm.notes)"></textarea>
+               <label for="notes-2" tuiLabel>Notes</label><textarea tuiTextarea [formField]="$any(volunteerForm.notes)" id="notes-2"></textarea>
              </tui-textfield>
            </form>
          }

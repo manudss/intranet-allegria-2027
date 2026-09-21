@@ -23,8 +23,7 @@ const blank = (): VolunteerTeamPayload => ({
         <button actions tuiButton (click)="create()">Nouvelle équipe</button>
       }
       <tui-textfield iconStart="@tui.search">
-        <label tuiLabel>Rechercher une équipe</label>
-        <input tuiInput placeholder="Nom ou code…" [value]="query()" (input)="query.set($any($event.target).value)" />
+        <label for="rechercher-une-equipe" tuiLabel>Rechercher une équipe</label><input tuiInput placeholder="Nom ou code…" [value]="query()" (input)="query.set($any($event.target).value)" id="rechercher-une-equipe" />
       </tui-textfield>
       @if (loading()) {
         <tui-loader />
@@ -53,19 +52,16 @@ const blank = (): VolunteerTeamPayload => ({
         } @else {
           <form class="drawer-form">
             <tui-textfield iconStart="@tui.briefcase">
-              <label tuiLabel>Nom</label>
-              <input tuiInput [formField]="teamForm.name" />
+              <label for="nom-2" tuiLabel>Nom</label><input tuiInput [formField]="teamForm.name" id="nom-2" />
             </tui-textfield>
             <tui-textfield iconStart="@tui.hash">
-              <label tuiLabel>Code</label>
-              <input tuiInput [formField]="teamForm.code" />
+              <label for="code-2" tuiLabel>Code</label><input tuiInput [formField]="teamForm.code" id="code-2" />
             </tui-textfield>
             <label class="check">
               <input type="checkbox" [formField]="teamForm.isActive" /> Active
             </label>
             <tui-textfield iconStart="@tui.file-text" class="wide">
-              <label tuiLabel>Description</label>
-              <textarea tuiTextarea [formField]="$any(teamForm.description)"></textarea>
+              <label for="description-2" tuiLabel>Description</label><textarea tuiTextarea [formField]="$any(teamForm.description)" id="description-2"></textarea>
             </tui-textfield>
           </form>
         }

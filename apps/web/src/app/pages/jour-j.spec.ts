@@ -52,11 +52,11 @@ const team: VolunteerTeam = { id: 1, name: 'Logistique', code: 'LOG', descriptio
 
 function makeDashApiMock(overrides?: object) {
   return {
-    getGlobalSummary: vi.fn((_date: string, _teamId: number | null) => of(globalSummary)),
-    getTeamsSummary: vi.fn(() => of([])),
-    getLocationsSummary: vi.fn(() => of([])),
+    getGlobalSummary: vi.fn((date?: string, volunteerTeamId?: number | null) => of(globalSummary)),
+    getTeamsSummary: vi.fn((date?: string, volunteerTeamId?: number | null) => of([])),
+    getLocationsSummary: vi.fn((date?: string, volunteerTeamId?: number | null) => of([])),
     getWhoDoesWhat: vi.fn(() => of(emptyWho)),
-    getTodoList: vi.fn(() => of(emptyTodo)),
+    getTodoList: vi.fn((date?: string, volunteerTeamId?: number | null) => of(emptyTodo)),
     ...overrides,
   };
 }

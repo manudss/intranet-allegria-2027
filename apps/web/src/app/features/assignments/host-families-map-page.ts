@@ -100,39 +100,32 @@ import {
 
           <div class="filter-grid">
             <tui-textfield tuiChevron>
-              <label tuiLabel>Statut</label>
-              <input tuiSelect formControlName="statusLabel" aria-label="Statut" />
+              <label for="statut-2" tuiLabel>Statut</label><input tuiSelect formControlName="statusLabel" aria-label="Statut" id="statut-2" />
               <tui-data-list-wrapper *tuiDropdown [items]="statusLabelOptions" />
             </tui-textfield>
             <tui-textfield tuiChevron>
-              <label tuiLabel>Capacite</label>
-              <input tuiSelect formControlName="capacityLabel" aria-label="Etat de capacite" />
+              <label for="capacite-2" tuiLabel>Capacite</label><input tuiSelect formControlName="capacityLabel" aria-label="Etat de capacite" id="capacite-2" />
               <tui-data-list-wrapper *tuiDropdown [items]="capacityLabelOptions" />
             </tui-textfield>
             <tui-textfield tuiChevron>
-              <label tuiLabel>Animateurs</label>
-              <input tuiSelect formControlName="animatorLabel" aria-label="Presence animateurs" />
+              <label for="animateurs-2" tuiLabel>Animateurs</label><input tuiSelect formControlName="animatorLabel" aria-label="Presence animateurs" id="animateurs-2" />
               <tui-data-list-wrapper *tuiDropdown [items]="animatorLabelOptions" />
             </tui-textfield>
             <tui-textfield iconStart="@tui.map-pin">
-              <label tuiLabel>Distance max (km)</label>
-              <input
+              <label for="distance-max-km" tuiLabel>Distance max (km)</label><input
                 tuiInput
                 type="number"
                 min="0"
                 formControlName="maxDistanceKm"
                 placeholder="Illimite"
-                aria-label="Distance max en kilometres"
-              />
+                aria-label="Distance max en kilometres" id="distance-max-km" />
             </tui-textfield>
             <tui-textfield iconStart="@tui.search" class="search-field">
-              <label tuiLabel>Recherche</label>
-              <input
+              <label for="recherche-2" tuiLabel>Recherche</label><input
                 tuiInput
                 formControlName="search"
                 placeholder="Famille, ville, paroisse..."
-                aria-label="Recherche libre"
-              />
+                aria-label="Recherche libre" id="recherche-2" />
             </tui-textfield>
           </div>
 
@@ -508,12 +501,21 @@ export class HostFamiliesMapPageComponent implements OnInit {
   private fitToMarkers(markers: readonly L.Marker[] = this.lastMarkers): void {
     const map = this.map;
     if (!map || this.boundsFitted || !markers.length) return;
-    this.boundsFitted = true;
-    map.fitBounds(L.latLngBounds(markers.map((marker) => marker.getLatLng())), {
-      padding: [32, 32],
-      maxZoom: 12,
-      animate: false,
-    });
+
+    const container = map.getContainer?.();
+    const size = map.getSize?.();
+    if (!container || !size || size.x <= 0 || size.y <= 0) return;
+
+    try {
+      this.boundsFitted = true;
+      map.fitBounds(L.latLngBounds(markers.map((marker) => marker.getLatLng())), {
+        padding: [32, 32],
+        maxZoom: 12,
+        animate: false,
+      });
+    } catch {
+      this.boundsFitted = false;
+    }
   }
 
   private panToFamily(familyId: number, openPopup: boolean): void {

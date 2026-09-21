@@ -80,7 +80,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       db_url: ${{ steps.create_neon_branch.outputs.db_url }}
-      db_url_with_pooler: ${{ steps.create_neon_branch.outputs.db_url_with_pooler }}
+      db_url_pooled: ${{ steps.create_neon_branch.outputs.db_url_pooled }}
+      branch_id: ${{ steps.create_neon_branch.outputs.branch_id }}
     steps:
       - name: Get branch expiration date
         if: github.event_name == 'pull_request'
@@ -95,7 +96,15 @@ jobs:
           api_key: ${{ secrets.NEON_API_KEY }}
           branch_name: ${{ github.event_name == 'pull_request' && format('preview/pr-{0}-{1}', github.event.number, needs.setup.outputs.branch) || 'preview/main' }}
           expires_at: ${{ github.event_name == 'pull_request' && env.EXPIRES_AT || '' }}
-
+      - name: Check Neon outputs
+        shell: bash
+        run: |
+          echo "branch_id=${{ steps.create_neon_branch.outputs.branch_id }}"
+          echo "created=${{ steps.create_neon_branch.outputs.created }}"
+          if [ -z "${{ steps.create_neon_branch.outputs.db_url }}" ]; then
+            echo "Neon db_url output is empty"
+            exit 1
+          fi
   migrate_and_seed:
     name: Migrate and Seed
     needs: [setup, create_neon_branch]
@@ -119,14 +128,16 @@ jobs:
       - name: Run migrations
         run: npm run migration:run
         env:
+          DATABASE_URL: ${{ needs.create_neon_branch.outputs.db_url_pooled }}
           DATABASE_URL_DIRECT: ${{ needs.create_neon_branch.outputs.db_url }}
-
+          DB_SSL: 'true'
       - name: Run seed
         if: needs.setup.outputs.should_seed == 'true'
         run: npx tsx apps/api/src/database/seeds/seed.ts --profile=${{ needs.setup.outputs.seed_profile }}
         env:
+          DATABASE_URL: ${{ needs.create_neon_branch.outputs.db_url_pooled }}
           DATABASE_URL_DIRECT: ${{ needs.create_neon_branch.outputs.db_url }}
-
+          DB_SSL: 'true'
   delete_neon_branch:
     name: Delete Neon Branch
     needs: setup

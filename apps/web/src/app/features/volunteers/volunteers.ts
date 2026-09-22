@@ -24,6 +24,7 @@ import {
   VolunteerTeamMembershipsApiService,
   VolunteersApiService,
 } from '../../services/api.services';
+import { ALLEGRIA_2027_EVENT_DATES } from '../../shared/event-date-selector/event-date.config';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { DataTableColumn } from '../../shared/data-table';
 
@@ -68,7 +69,14 @@ const blankMembership = () => ({
   template: `<app-page-layout title="Bénévoles" description="Annuaire et responsabilités">
       <button actions tuiButton (click)="create()">Nouveau bénévole</button>
       <tui-textfield iconStart="@tui.search">
-        <label for="rechercher-un-benevole" tuiLabel>Rechercher un bénévole</label><input tuiInput placeholder="Nom, équipe…" [value]="query()" (input)="query.set($any($event.target).value)" id="rechercher-un-benevole" />
+        <label for="rechercher-un-benevole" tuiLabel>Rechercher un bénévole</label
+        ><input
+          tuiInput
+          placeholder="Nom, équipe…"
+          [value]="query()"
+          (input)="query.set($any($event.target).value)"
+          id="rechercher-un-benevole"
+        />
       </tui-textfield>
       <div class="filter-row">
         <label class="filter-label">
@@ -76,14 +84,21 @@ const blankMembership = () => ({
           <select class="filter-select" (change)="onSkillFilterChange($any($event.target).value)">
             <option value="">Toutes</option>
             @for (s of allSkillTypes; track s) {
-              <option [value]="s">{{ skillLabel(s) }}@if (skillCountFor(s); as c) { ({{ c }})}
+              <option [value]="s">
+                {{ skillLabel(s) }}
+                @if (skillCountFor(s); as c) {
+                  ({{ c }})
+                }
               </option>
             }
           </select>
         </label>
         <label class="filter-label">
           <span>Tag</span>
-          <input class="filter-input" list="tag-suggestions-list" placeholder="Filtrer par tag…"
+          <input
+            class="filter-input"
+            list="tag-suggestions-list"
+            placeholder="Filtrer par tag…"
             [value]="tagFilter()"
             (input)="tagFilter.set($any($event.target).value)"
           />
@@ -133,7 +148,14 @@ const blankMembership = () => ({
                 <span class="skill-chip">
                   {{ skillLabel(s.skill) }}
                   @if (canEditSkills()) {
-                    <button type="button" class="chip-remove" (click)="removeSkill(s.id)" aria-label="Retirer">×</button>
+                    <button
+                      type="button"
+                      class="chip-remove"
+                      (click)="removeSkill(s.id)"
+                      aria-label="Retirer"
+                    >
+                      ×
+                    </button>
                   }
                 </span>
               }
@@ -143,13 +165,25 @@ const blankMembership = () => ({
             </div>
             @if (canEditSkills()) {
               <div class="chip-add-row">
-                <select class="skill-select" [value]="newSkill()" (change)="newSkill.set($any($event.target).value || null)">
+                <select
+                  class="skill-select"
+                  [value]="newSkill()"
+                  (change)="newSkill.set($any($event.target).value || null)"
+                >
                   <option value="">Choisir une compétence…</option>
                   @for (s of availableSkills(); track s) {
                     <option [value]="s">{{ skillLabel(s) }}</option>
                   }
                 </select>
-                <button tuiButton size="s" type="button" [disabled]="!newSkill()" (click)="addSkill()">Ajouter</button>
+                <button
+                  tuiButton
+                  size="s"
+                  type="button"
+                  [disabled]="!newSkill()"
+                  (click)="addSkill()"
+                >
+                  Ajouter
+                </button>
               </div>
             }
           </section>
@@ -162,7 +196,14 @@ const blankMembership = () => ({
                 <span class="tag-chip">
                   {{ t.value }}
                   @if (canEditSkills()) {
-                    <button type="button" class="chip-remove" (click)="removeTag(t.id)" aria-label="Retirer">×</button>
+                    <button
+                      type="button"
+                      class="chip-remove"
+                      (click)="removeTag(t.id)"
+                      aria-label="Retirer"
+                    >
+                      ×
+                    </button>
                   }
                 </span>
               }
@@ -184,7 +225,15 @@ const blankMembership = () => ({
                     <option [value]="s"></option>
                   }
                 </datalist>
-                <button tuiButton size="s" type="button" [disabled]="!newTag().trim()" (click)="addTag()">Ajouter</button>
+                <button
+                  tuiButton
+                  size="s"
+                  type="button"
+                  [disabled]="!newTag().trim()"
+                  (click)="addTag()"
+                >
+                  Ajouter
+                </button>
               </div>
             }
           </section>
@@ -193,7 +242,11 @@ const blankMembership = () => ({
             <h3>Planning des affectations</h3>
             <label class="filter-label">
               <span>Statut</span>
-              <select class="filter-select" [value]="planningStatusFilter()" (change)="setPlanningStatusFilter($any($event.target).value)">
+              <select
+                class="filter-select"
+                [value]="planningStatusFilter()"
+                (change)="setPlanningStatusFilter($any($event.target).value)"
+              >
                 <option value="">Tous</option>
                 <option value="PROVISIONAL">Provisoire</option>
                 <option value="CONFIRMED">Confirmée</option>
@@ -208,7 +261,10 @@ const blankMembership = () => ({
                   <li class="membership-item">
                     <div>
                       <strong>{{ assignment.shift?.mission?.title || 'Mission' }}</strong>
-                      <div>{{ assignment.shift?.startAt | date: 'short' }} → {{ assignment.shift?.endAt | date: 'short' }}</div>
+                      <div>
+                        {{ assignment.shift?.startAt | date: 'short' }} →
+                        {{ assignment.shift?.endAt | date: 'short' }}
+                      </div>
                       <small>{{ assignment.status }}</small>
                     </div>
                   </li>
@@ -218,106 +274,187 @@ const blankMembership = () => ({
           </section>
 
           @if (canSeeMemberships()) {
-           <section class="membership-section">
-             <h3>Rattachements opérationnels</h3>
-             @if (teamMemberships().length === 0) {
-               <p>Aucun rattachement enregistré.</p>
-             } @else {
-               <ul class="membership-list">
-                 @for (membership of teamMemberships(); track membership.id) {
-                   <li class="membership-item">
-                     <div>
-                       <strong>{{ membership.volunteerTeam.name }}</strong>
-                       <div>{{ formatPeriod(membership.startAt, membership.endAt) }}</div>
-                       <small>{{ membership.role || 'Sans role' }}</small>
-                     </div>
-                     @if (canEditMemberships()) {
-                       <div class="membership-actions-inline">
-                         <button tuiButton size="s" appearance="secondary" type="button" (click)="editMembership(membership)">
-                           Modifier
-                         </button>
-                         <button tuiButton size="s" appearance="secondary-destructive" type="button" (click)="removeMembership(membership.id)">
-                           Retirer
-                         </button>
-                       </div>
-                     }
-                   </li>
-                 }
-               </ul>
-             }
+            <section class="membership-section">
+              <h3>Rattachements opérationnels</h3>
+              @if (teamMemberships().length === 0) {
+                <p>Aucun rattachement enregistré.</p>
+              } @else {
+                <ul class="membership-list">
+                  @for (membership of teamMemberships(); track membership.id) {
+                    <li class="membership-item">
+                      <div>
+                        <strong>{{ membership.volunteerTeam.name }}</strong>
+                        <div>{{ formatPeriod(membership.startAt, membership.endAt) }}</div>
+                        <small>{{ membership.role || 'Sans role' }}</small>
+                      </div>
+                      @if (canEditMemberships()) {
+                        <div class="membership-actions-inline">
+                          <button
+                            tuiButton
+                            size="s"
+                            appearance="secondary"
+                            type="button"
+                            (click)="editMembership(membership)"
+                          >
+                            Modifier
+                          </button>
+                          <button
+                            tuiButton
+                            size="s"
+                            appearance="secondary-destructive"
+                            type="button"
+                            (click)="removeMembership(membership.id)"
+                          >
+                            Retirer
+                          </button>
+                        </div>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
 
-             @if (canEditMemberships()) {
-               @if (membershipMode() === 'edit') {
-                 <h4>Modifier un rattachement</h4>
-                 <form class="drawer-form membership-form">
-                   <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyVolunteerTeam">
-                     <label for="equipe-operationnelle" tuiLabel>Équipe opérationnelle</label><select tuiSelect placeholder="Choisir…" [items]="activeTeamIds()" [formField]="membershipForm.volunteerTeamId" id="equipe-operationnelle"></select>
-                   </tui-textfield>
-                   <tui-textfield iconStart="@tui.calendar">
-                     <label for="debut-2" tuiLabel>Début</label><input tuiInput type="date" [formField]="membershipForm.startAt" id="debut-2" />
-                   </tui-textfield>
-                   <tui-textfield iconStart="@tui.calendar">
-                     <label for="fin-2" tuiLabel>Fin</label><input tuiInput type="date" [formField]="membershipForm.endAt" id="fin-2" />
-                   </tui-textfield>
-                   <tui-textfield iconStart="@tui.file-text" class="wide">
-                     <label for="role-2" tuiLabel>Rôle</label><input tuiInput [formField]="membershipForm.role" id="role-2" />
-                   </tui-textfield>
-                 </form>
-                 <div class="membership-form-actions">
-                   <button tuiButton appearance="flat" type="button" (click)="cancelMembershipEdit()">Annuler</button>
-                   <button tuiButton type="button" (click)="saveMembership()">Mettre à jour</button>
-                 </div>
-               } @else if (membershipMode() === 'create') {
-                 <h4>Ajouter un rattachement</h4>
-                 <form class="drawer-form membership-form">
-                   <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyVolunteerTeam">
-                     <label for="equipe-operationnelle-1" tuiLabel>Équipe opérationnelle</label><select tuiSelect placeholder="Choisir…" [items]="activeTeamIds()" [formField]="membershipForm.volunteerTeamId" id="equipe-operationnelle-1"></select>
-                   </tui-textfield>
-                   <tui-textfield iconStart="@tui.calendar">
-                     <label for="debut-3" tuiLabel>Début</label><input tuiInput type="date" [formField]="membershipForm.startAt" id="debut-3" />
-                   </tui-textfield>
-                   <tui-textfield iconStart="@tui.calendar">
-                     <label for="fin-3" tuiLabel>Fin</label><input tuiInput type="date" [formField]="membershipForm.endAt" id="fin-3" />
-                   </tui-textfield>
-                   <tui-textfield iconStart="@tui.file-text" class="wide">
-                     <label for="role-3" tuiLabel>Rôle</label><input tuiInput [formField]="membershipForm.role" id="role-3" />
-                   </tui-textfield>
-                 </form>
-                 <div class="membership-form-actions">
-                   <button tuiButton appearance="flat" type="button" (click)="cancelMembershipEdit()">Annuler</button>
-                   <button tuiButton type="button" (click)="saveMembership()">Ajouter</button>
-                 </div>
-               } @else {
-                 <button tuiButton type="button" (click)="createMembership()">Ajouter un rattachement</button>
-               }
-             }
-           </section>
+              @if (canEditMemberships()) {
+                @if (membershipMode() === 'edit') {
+                  <h4>Modifier un rattachement</h4>
+                  <form class="drawer-form membership-form">
+                    <tui-textfield
+                      iconStart="@tui.users"
+                      tuiChevron
+                      [stringify]="stringifyVolunteerTeam"
+                    >
+                      <label for="equipe-operationnelle" tuiLabel>Équipe opérationnelle</label
+                      ><select
+                        tuiSelect
+                        placeholder="Choisir…"
+                        [items]="activeTeamIds()"
+                        [formField]="membershipForm.volunteerTeamId"
+                        id="equipe-operationnelle"
+                      ></select>
+                    </tui-textfield>
+                    <app-event-date-selector
+                      label="Début"
+                      hint="Date de debut du rattachement."
+                      [config]="eventDateConfig"
+                      [formField]="membershipForm.startAt"
+                      id="debut-2"
+                    />
+                    <app-event-date-selector
+                      label="Fin"
+                      hint="Date de fin du rattachement."
+                      [config]="eventDateConfig"
+                      [formField]="membershipForm.endAt"
+                      id="fin-2"
+                    />
+                    <tui-textfield iconStart="@tui.file-text" class="wide">
+                      <label for="role-2" tuiLabel>Rôle</label
+                      ><input tuiInput [formField]="membershipForm.role" id="role-2" />
+                    </tui-textfield>
+                  </form>
+                  <div class="membership-form-actions">
+                    <button
+                      tuiButton
+                      appearance="flat"
+                      type="button"
+                      (click)="cancelMembershipEdit()"
+                    >
+                      Annuler
+                    </button>
+                    <button tuiButton type="button" (click)="saveMembership()">
+                      Mettre à jour
+                    </button>
+                  </div>
+                } @else if (membershipMode() === 'create') {
+                  <h4>Ajouter un rattachement</h4>
+                  <form class="drawer-form membership-form">
+                    <tui-textfield
+                      iconStart="@tui.users"
+                      tuiChevron
+                      [stringify]="stringifyVolunteerTeam"
+                    >
+                      <label for="equipe-operationnelle-1" tuiLabel>Équipe opérationnelle</label
+                      ><select
+                        tuiSelect
+                        placeholder="Choisir…"
+                        [items]="activeTeamIds()"
+                        [formField]="membershipForm.volunteerTeamId"
+                        id="equipe-operationnelle-1"
+                      ></select>
+                    </tui-textfield>
+                    <app-event-date-selector
+                      label="Début"
+                      hint="Date de debut du rattachement."
+                      [config]="eventDateConfig"
+                      [formField]="membershipForm.startAt"
+                      id="debut-3"
+                    />
+                    <app-event-date-selector
+                      label="Fin"
+                      hint="Date de fin du rattachement."
+                      [config]="eventDateConfig"
+                      [formField]="membershipForm.endAt"
+                      id="fin-3"
+                    />
+                    <tui-textfield iconStart="@tui.file-text" class="wide">
+                      <label for="role-3" tuiLabel>Rôle</label
+                      ><input tuiInput [formField]="membershipForm.role" id="role-3" />
+                    </tui-textfield>
+                  </form>
+                  <div class="membership-form-actions">
+                    <button
+                      tuiButton
+                      appearance="flat"
+                      type="button"
+                      (click)="cancelMembershipEdit()"
+                    >
+                      Annuler
+                    </button>
+                    <button tuiButton type="button" (click)="saveMembership()">Ajouter</button>
+                  </div>
+                } @else {
+                  <button tuiButton type="button" (click)="createMembership()">
+                    Ajouter un rattachement
+                  </button>
+                }
+              }
+            </section>
           }
-         } @else {
-           <form class="drawer-form">
-             <tui-textfield iconStart="@tui.user">
-               <label for="prenom-2" tuiLabel>Prénom</label><input tuiInput [formField]="volunteerForm.firstName" id="prenom-2" />
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.user">
-               <label for="nom-2" tuiLabel>Nom</label><input tuiInput [formField]="volunteerForm.lastName" id="nom-2" />
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.mail">
-               <label for="email-2" tuiLabel>Email</label><input tuiInput type="email" [formField]="volunteerForm.email" id="email-2" />
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.phone">
-               <label for="telephone-2" tuiLabel>Téléphone</label><input tuiInput [formField]="volunteerForm.phone" id="telephone-2" />
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.users">
-               <label for="equipe-3" tuiLabel>Équipe</label><input tuiInput [formField]="volunteerForm.team" id="equipe-3" />
-             </tui-textfield>
-             <label class="check">
-               <input type="checkbox" [formField]="volunteerForm.isGroupLeader" /> Responsable de groupe
-             </label>
-             <tui-textfield iconStart="@tui.file-text" class="wide">
-               <label for="notes-2" tuiLabel>Notes</label><textarea tuiTextarea [formField]="$any(volunteerForm.notes)" id="notes-2"></textarea>
-             </tui-textfield>
-           </form>
-         }
+        } @else {
+          <form class="drawer-form">
+            <tui-textfield iconStart="@tui.user">
+              <label for="prenom-2" tuiLabel>Prénom</label
+              ><input tuiInput [formField]="volunteerForm.firstName" id="prenom-2" />
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.user">
+              <label for="nom-2" tuiLabel>Nom</label
+              ><input tuiInput [formField]="volunteerForm.lastName" id="nom-2" />
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.mail">
+              <label for="email-2" tuiLabel>Email</label
+              ><input tuiInput type="email" [formField]="volunteerForm.email" id="email-2" />
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.phone">
+              <label for="telephone-2" tuiLabel>Téléphone</label
+              ><input tuiInput [formField]="volunteerForm.phone" id="telephone-2" />
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.users">
+              <label for="equipe-3" tuiLabel>Équipe</label
+              ><input tuiInput [formField]="volunteerForm.team" id="equipe-3" />
+            </tui-textfield>
+            <label class="check">
+              <input type="checkbox" [formField]="volunteerForm.isGroupLeader" /> Responsable de
+              groupe
+            </label>
+            <tui-textfield iconStart="@tui.file-text" class="wide">
+              <label for="notes-2" tuiLabel>Notes</label
+              ><textarea
+                tuiTextarea
+                [formField]="$any(volunteerForm.notes)"
+                id="notes-2"
+              ></textarea>
+            </tui-textfield>
+          </form>
+        }
         <footer>
           <button tuiButton appearance="flat" (click)="opened.set(false)">Fermer</button>
           @if (mode() === 'detail') {
@@ -331,38 +468,122 @@ const blankMembership = () => ({
         </footer></tui-drawer
       >
     }`,
-  styles: [`
-    .filter-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem; align-items: flex-end; }
-    .filter-label { display: flex; flex-direction: column; gap: 0.25rem; flex: 1; min-width: 160px; font-size: 0.85rem; color: var(--tui-text-secondary, #666); }
-    .filter-select, .filter-input {
-      padding: 0.4rem 0.5rem; border: 1px solid var(--tui-border-normal, #ccc);
-      border-radius: 4px; font-size: 0.9rem; background: var(--tui-background-base, #fff);
-    }
-    .filter-row tui-textfield { flex: 1; min-width: 160px; }
-    .chip-list { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.5rem 0; }
-    .skill-chip, .tag-chip {
-      display: inline-flex; align-items: center; gap: 0.25rem;
-      padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.8rem;
-    }
-    .skill-chip { background: var(--tui-status-info-pale, #e3f0ff); color: var(--tui-text-primary, #333); }
-    .tag-chip { background: var(--tui-status-neutral-pale, #f0f0f0); color: var(--tui-text-primary, #333); }
-    .chip-remove { background: none; border: none; cursor: pointer; padding: 0; line-height: 1; font-size: 1rem; opacity: 0.6; }
-    .chip-remove:hover { opacity: 1; }
-    .chip-add-row { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem; }
-    .skill-select, .tag-input {
-      flex: 1; padding: 0.35rem 0.5rem; border: 1px solid var(--tui-border-normal, #ccc);
-      border-radius: 4px; font-size: 0.9rem; background: var(--tui-background-base, #fff);
-    }
-    .empty-hint { font-size: 0.8rem; color: var(--tui-text-tertiary, #999); }
-    .skill-section, .tag-section { margin-top: 1.25rem; }
-  `],
+  styles: [
+    `
+      .filter-row {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.5rem;
+        align-items: flex-end;
+      }
+      .filter-label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        flex: 1;
+        min-width: 160px;
+        font-size: 0.85rem;
+        color: var(--tui-text-secondary, #666);
+      }
+      .filter-select,
+      .filter-input {
+        padding: 0.4rem 0.5rem;
+        border: 1px solid var(--tui-border-normal, #ccc);
+        border-radius: 4px;
+        font-size: 0.9rem;
+        background: var(--tui-background-base, #fff);
+      }
+      .filter-row tui-textfield {
+        flex: 1;
+        min-width: 160px;
+      }
+      .chip-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin: 0.5rem 0;
+      }
+      .skill-chip,
+      .tag-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.2rem 0.6rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+      }
+      .skill-chip {
+        background: var(--tui-status-info-pale, #e3f0ff);
+        color: var(--tui-text-primary, #333);
+      }
+      .tag-chip {
+        background: var(--tui-status-neutral-pale, #f0f0f0);
+        color: var(--tui-text-primary, #333);
+      }
+      .chip-remove {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+        font-size: 1rem;
+        opacity: 0.6;
+      }
+      .chip-remove:hover {
+        opacity: 1;
+      }
+      .chip-add-row {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        margin-top: 0.5rem;
+      }
+      .skill-select,
+      .tag-input {
+        flex: 1;
+        padding: 0.35rem 0.5rem;
+        border: 1px solid var(--tui-border-normal, #ccc);
+        border-radius: 4px;
+        font-size: 0.9rem;
+        background: var(--tui-background-base, #fff);
+      }
+      .empty-hint {
+        font-size: 0.8rem;
+        color: var(--tui-text-tertiary, #999);
+      }
+      .skill-section,
+      .tag-section {
+        margin-top: 1.25rem;
+      }
+    `,
+  ],
   styleUrl: '../../shared/crud.scss',
 })
 export class VolunteersPage implements OnInit {
+  protected readonly eventDateConfig = ALLEGRIA_2027_EVENT_DATES;
   protected readonly tableColumns: readonly DataTableColumn<Volunteer>[] = [
-    { key: 'name', label: 'Nom', type: 'text', value: (x) => `${x.lastName} ${x.firstName}`, presentation: { type: 'person', subtitle: (x) => x.email || x.phone } },
-    { key: 'team', label: 'Équipe', type: 'list', value: (x) => x.team || '—', presentation: { type: 'chip', autoColor: true, icon: () => '@tui.users' } },
-    { key: 'contact', label: 'Contact', type: 'text', value: (x) => x.email || x.phone || '—', presentation: { type: 'icon', icon: (x) => x.email ? '@tui.mail' : '@tui.phone' } },
+    {
+      key: 'name',
+      label: 'Nom',
+      type: 'text',
+      value: (x) => `${x.lastName} ${x.firstName}`,
+      presentation: { type: 'person', subtitle: (x) => x.email || x.phone },
+    },
+    {
+      key: 'team',
+      label: 'Équipe',
+      type: 'list',
+      value: (x) => x.team || '—',
+      presentation: { type: 'chip', autoColor: true, icon: () => '@tui.users' },
+    },
+    {
+      key: 'contact',
+      label: 'Contact',
+      type: 'text',
+      value: (x) => x.email || x.phone || '—',
+      presentation: { type: 'icon', icon: (x) => (x.email ? '@tui.mail' : '@tui.phone') },
+    },
   ];
 
   readonly allSkillTypes = ALL_SKILL_TYPES;
@@ -411,8 +632,14 @@ export class VolunteersPage implements OnInit {
     this.auth.hasAnyRole(['ADMIN', 'COORDINATOR', 'HEALTH', 'VOLUNTEERS', 'LOGISTICS', 'VIEWER']),
   );
   readonly canEditMemberships = computed(() => this.auth.hasAnyRole(['ADMIN', 'COORDINATOR']));
-  readonly canEditSkills = computed(() => this.auth.hasAnyRole(['ADMIN', 'COORDINATOR', 'HEALTH', 'VOLUNTEERS', 'LOGISTICS']));
-  readonly activeTeamIds = computed(() => this.teams().filter((team) => team.isActive).map(({ id }) => id));
+  readonly canEditSkills = computed(() =>
+    this.auth.hasAnyRole(['ADMIN', 'COORDINATOR', 'HEALTH', 'VOLUNTEERS', 'LOGISTICS']),
+  );
+  readonly activeTeamIds = computed(() =>
+    this.teams()
+      .filter((team) => team.isActive)
+      .map(({ id }) => id),
+  );
   readonly availableSkills = computed(() => {
     const used = new Set(this.skills().map((s) => s.skill));
     return ALL_SKILL_TYPES.filter((s) => !used.has(s));
@@ -478,7 +705,9 @@ export class VolunteersPage implements OnInit {
     this.newSkill.set(null);
     this.newTag.set('');
     this.drawerTagSuggestions.set([]);
-    this.membershipsApi.list(x.id).subscribe((memberships) => this.teamMemberships.set(memberships));
+    this.membershipsApi
+      .list(x.id)
+      .subscribe((memberships) => this.teamMemberships.set(memberships));
     this.skillsApi.list(x.id).subscribe((s) => this.skills.set(s));
     this.tagsApi.list(x.id).subscribe((t) => this.tags.set(t));
     this.loadVolunteerPlanning(x.id);
@@ -619,7 +848,9 @@ export class VolunteersPage implements OnInit {
     const volunteer = this.requireSelectedVolunteer();
     if (confirm('Retirer ce rattachement ?')) {
       this.membershipsApi.delete(volunteer.id, membershipId).subscribe(() => {
-        this.teamMemberships.update((memberships) => memberships.filter((item) => item.id !== membershipId));
+        this.teamMemberships.update((memberships) =>
+          memberships.filter((item) => item.id !== membershipId),
+        );
         if (this.selectedMembership()?.id === membershipId) {
           this.cancelMembershipEdit();
         }

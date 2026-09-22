@@ -83,9 +83,15 @@ $radius-sm: 0.375rem;
   background: var(--tui-background-base);
   transition: border-color 0.15s;
 
-  &.card-positive { border-color: var(--tui-positive); }
-  &.card-warning  { border-color: var(--tui-warning, #f59e0b); }
-  &.card-danger   { border-color: var(--tui-negative); }
+  &.card-positive {
+    border-color: var(--tui-positive);
+  }
+  &.card-warning {
+    border-color: var(--tui-warning, #f59e0b);
+  }
+  &.card-danger {
+    border-color: var(--tui-negative);
+  }
 }
 
 .card-value {
@@ -129,12 +135,16 @@ $radius-sm: 0.375rem;
   color: var(--tui-text-secondary);
   cursor: pointer;
   border-radius: $radius-sm $radius-sm 0 0;
-  transition: color 0.15s, border-color 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
   display: flex;
   align-items: center;
   gap: 0.375rem;
 
-  &:hover { color: var(--tui-text-primary); }
+  &:hover {
+    color: var(--tui-text-primary);
+  }
 
   &.active {
     color: var(--tui-primary);
@@ -142,16 +152,30 @@ $radius-sm: 0.375rem;
     font-weight: 600;
   }
 
-  &--alerts { position: relative; }
+  &--alerts {
+    position: relative;
+  }
 }
 
-.alert-badge { margin-inline-start: 0.25rem; }
+.alert-badge {
+  margin-inline-start: 0.25rem;
+}
 
 // ─── Panneau d'onglet ─────────────────────────────────────────────────────────
 
-.tab-panel { animation: fadeIn 0.15s ease; }
+.tab-panel {
+  animation: fadeIn 0.15s ease;
+}
 
-@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+  }
+}
 
 // ─── Titres de section ────────────────────────────────────────────────────────
 
@@ -184,9 +208,16 @@ $radius-sm: 0.375rem;
   background: var(--tui-background-secondary);
   border-left: 4px solid $border;
 
-  &--warning { border-left-color: var(--tui-warning, #f59e0b); }
-  &--danger   { border-left-color: var(--tui-negative); }
-  &--optional { border-left-color: var(--tui-border-normal); opacity: 0.8; }
+  &--warning {
+    border-left-color: var(--tui-warning, #f59e0b);
+  }
+  &--danger {
+    border-left-color: var(--tui-negative);
+  }
+  &--optional {
+    border-left-color: var(--tui-border-normal);
+    opacity: 0.8;
+  }
 }
 
 .item-main {
@@ -224,7 +255,9 @@ $radius-sm: 0.375rem;
   padding: 0.75rem;
   margin-block-end: 1rem;
 
-  summary { cursor: pointer; }
+  summary {
+    cursor: pointer;
+  }
 }
 
 // ─── Onglet Équipes ───────────────────────────────────────────────────────────
@@ -241,7 +274,9 @@ $radius-sm: 0.375rem;
   padding: 1rem;
   background: var(--tui-background-base);
 
-  &.has-alerts { border-color: var(--tui-warning, #f59e0b); }
+  &.has-alerts {
+    border-color: var(--tui-warning, #f59e0b);
+  }
 }
 
 .team-card-header {
@@ -276,7 +311,10 @@ $radius-sm: 0.375rem;
 
 .stat {
   color: var(--tui-text-secondary);
-  &.stat-warning { color: var(--tui-warning, #b45309); font-weight: 600; }
+  &.stat-warning {
+    color: var(--tui-warning, #b45309);
+    font-weight: 600;
+  }
 }
 
 .shift-status-row {
@@ -311,7 +349,8 @@ $radius-sm: 0.375rem;
   border-collapse: collapse;
   font-size: 0.875rem;
 
-  th, td {
+  th,
+  td {
     padding: 0.625rem 0.875rem;
     text-align: left;
     border-block-end: 1px solid $border;
@@ -325,13 +364,21 @@ $radius-sm: 0.375rem;
     text-transform: uppercase;
   }
 
-  tbody tr:last-child td { border-block-end: none; }
+  tbody tr:last-child td {
+    border-block-end: none;
+  }
 
-  .row-alert { background: color-mix(in srgb, var(--tui-warning, #f59e0b) 8%, transparent); }
+  .row-alert {
+    background: color-mix(in srgb, var(--tui-warning, #f59e0b) 8%, transparent);
+  }
 }
 
-.text-right { text-align: right !important; }
-.font-medium { font-weight: 500; }
+.text-right {
+  text-align: right !important;
+}
+.font-medium {
+  font-weight: 500;
+}
 
 .inline-alert {
   font-size: 0.75rem;
@@ -344,7 +391,9 @@ $radius-sm: 0.375rem;
 
 // ─── Onglet Qui fait quoi ─────────────────────────────────────────────────────
 
-.who-filters { margin-block-end: 1rem; }
+.who-filters {
+  margin-block-end: 1rem;
+}
 
 .pagination-info {
   font-size: 0.8125rem;
@@ -399,7 +448,9 @@ $radius-sm: 0.375rem;
   flex: 1;
 }
 
-.who-mission { font-weight: 500; }
+.who-mission {
+  font-weight: 500;
+}
 
 .who-badges {
   display: flex;
@@ -448,7 +499,9 @@ $radius-sm: 0.375rem;
   }
 }
 
-.alert-icon { flex-shrink: 0; }
+.alert-icon {
+  flex-shrink: 0;
+}
 
 // ─── Badges de statut ─────────────────────────────────────────────────────────
 
@@ -459,12 +512,30 @@ $radius-sm: 0.375rem;
   white-space: nowrap;
 }
 
-.status-todo        { background: var(--tui-background-neutral-1); color: var(--tui-text-secondary); }
-.status-assigned    { background: #dbeafe; color: #1d4ed8; }
-.status-in-progress { background: #fef3c7; color: #92400e; }
-.status-done        { background: #dcfce7; color: #166534; }
-.status-negative    { background: #fee2e2; color: #991b1b; }
-.status-warning     { background: #fef3c7; color: #92400e; }
+.status-todo {
+  background: var(--tui-background-neutral-1);
+  color: var(--tui-text-secondary);
+}
+.status-assigned {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.status-in-progress {
+  background: #fef3c7;
+  color: #92400e;
+}
+.status-done {
+  background: #dcfce7;
+  color: #166534;
+}
+.status-negative {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.status-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
 
 // ─── Utilitaires ─────────────────────────────────────────────────────────────
 
@@ -483,9 +554,22 @@ $radius-sm: 0.375rem;
 // ─── Responsive mobile ────────────────────────────────────────────────────────
 
 @media (max-width: 640px) {
-  .summary-cards { grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr)); }
-  .team-grid, .who-grid { grid-template-columns: 1fr; }
-  .tab-btn { font-size: 0.8125rem; padding-inline: 0.625rem; }
-  .card-value { font-size: 1.375rem; }
-  .data-table th, .data-table td { padding: 0.5rem; }
+  .summary-cards {
+    grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+  }
+  .team-grid,
+  .who-grid {
+    grid-template-columns: 1fr;
+  }
+  .tab-btn {
+    font-size: 0.8125rem;
+    padding-inline: 0.625rem;
+  }
+  .card-value {
+    font-size: 1.375rem;
+  }
+  .data-table th,
+  .data-table td {
+    padding: 0.5rem;
+  }
 }

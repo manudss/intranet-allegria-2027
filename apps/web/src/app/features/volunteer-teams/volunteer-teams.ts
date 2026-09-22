@@ -18,12 +18,22 @@ const blank = (): VolunteerTeamPayload => ({
   selector: 'app-volunteer-teams',
   standalone: true,
   imports: [...SHARED_IMPORTS],
-  template: `<app-page-layout title="Équipes opérationnelles" description="Équipes bénévoles et rattachements">
+  template: `<app-page-layout
+      title="Équipes opérationnelles"
+      description="Équipes bénévoles et rattachements"
+    >
       @if (canWrite()) {
         <button actions tuiButton (click)="create()">Nouvelle équipe</button>
       }
       <tui-textfield iconStart="@tui.search">
-        <label for="rechercher-une-equipe" tuiLabel>Rechercher une équipe</label><input tuiInput placeholder="Nom ou code…" [value]="query()" (input)="query.set($any($event.target).value)" id="rechercher-une-equipe" />
+        <label for="rechercher-une-equipe" tuiLabel>Rechercher une équipe</label
+        ><input
+          tuiInput
+          placeholder="Nom ou code…"
+          [value]="query()"
+          (input)="query.set($any($event.target).value)"
+          id="rechercher-une-equipe"
+        />
       </tui-textfield>
       @if (loading()) {
         <tui-loader />
@@ -52,16 +62,23 @@ const blank = (): VolunteerTeamPayload => ({
         } @else {
           <form class="drawer-form">
             <tui-textfield iconStart="@tui.briefcase">
-              <label for="nom-2" tuiLabel>Nom</label><input tuiInput [formField]="teamForm.name" id="nom-2" />
+              <label for="nom-2" tuiLabel>Nom</label
+              ><input tuiInput [formField]="teamForm.name" id="nom-2" />
             </tui-textfield>
             <tui-textfield iconStart="@tui.hash">
-              <label for="code-2" tuiLabel>Code</label><input tuiInput [formField]="teamForm.code" id="code-2" />
+              <label for="code-2" tuiLabel>Code</label
+              ><input tuiInput [formField]="teamForm.code" id="code-2" />
             </tui-textfield>
             <label class="check">
               <input type="checkbox" [formField]="teamForm.isActive" /> Active
             </label>
             <tui-textfield iconStart="@tui.file-text" class="wide">
-              <label for="description-2" tuiLabel>Description</label><textarea tuiTextarea [formField]="$any(teamForm.description)" id="description-2"></textarea>
+              <label for="description-2" tuiLabel>Description</label
+              ><textarea
+                tuiTextarea
+                [formField]="$any(teamForm.description)"
+                id="description-2"
+              ></textarea>
             </tui-textfield>
           </form>
         }
@@ -70,7 +87,9 @@ const blank = (): VolunteerTeamPayload => ({
           @if (mode() === 'detail') {
             @if (canWrite()) {
               <button tuiButton (click)="edit()">Modifier</button>
-              <button tuiButton appearance="secondary-destructive" (click)="remove()">Supprimer</button>
+              <button tuiButton appearance="secondary-destructive" (click)="remove()">
+                Supprimer
+              </button>
             }
           } @else {
             <button tuiButton (click)="save()">Enregistrer</button>
@@ -130,7 +149,9 @@ export class VolunteerTeamsPage implements OnInit {
 
   filtered = computed(() => {
     const q = this.query().toLowerCase();
-    return this.items().filter((team) => `${team.name} ${team.code} ${team.description ?? ''}`.toLowerCase().includes(q));
+    return this.items().filter((team) =>
+      `${team.name} ${team.code} ${team.description ?? ''}`.toLowerCase().includes(q),
+    );
   });
 
   ngOnInit(): void {
@@ -173,7 +194,9 @@ export class VolunteerTeamsPage implements OnInit {
 
       request.subscribe((team) => {
         this.items.update((items) =>
-          this.mode() === 'create' ? [...items, team] : items.map((item) => (item.id === team.id ? team : item)),
+          this.mode() === 'create'
+            ? [...items, team]
+            : items.map((item) => (item.id === team.id ? team : item)),
         );
         this.open(team);
       });

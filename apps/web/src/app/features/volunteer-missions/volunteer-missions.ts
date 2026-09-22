@@ -23,6 +23,8 @@ import {
   VolunteerTeamsApiService,
 } from '../../services/api.services';
 import { DataTableColumn } from '../../shared/data-table';
+import { ALLEGRIA_2027_EVENT_DATES } from '../../shared/event-date-selector/event-date.config';
+import { EventDateSelectorComponent } from '../../shared/event-date-selector/event-date-selector.component';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 
 const MISSION_STATUSES = Object.values(VolunteerMissionStatus);
@@ -58,8 +60,11 @@ const assignmentDraft = (): VolunteerShiftAssignmentPayload => ({
 @Component({
   selector: 'app-volunteer-missions',
   standalone: true,
-  imports: [...SHARED_IMPORTS],
-  template: `<app-page-layout title="Missions opérationnelles" description="Pilotage des missions bénévoles et des shifts">
+  imports: [...SHARED_IMPORTS, EventDateSelectorComponent],
+  template: `<app-page-layout
+      title="Missions opérationnelles"
+      description="Pilotage des missions bénévoles et des shifts"
+    >
       @if (canWrite()) {
         <button actions tuiButton (click)="openCreateMission()">Nouvelle mission</button>
       }
@@ -67,7 +72,10 @@ const assignmentDraft = (): VolunteerShiftAssignmentPayload => ({
       <div class="filters">
         <label>
           <span>Équipe</span>
-          <select [value]="filters().volunteerTeamId ?? ''" (change)="setTeamFilter($any($event.target).value)">
+          <select
+            [value]="filters().volunteerTeamId ?? ''"
+            (change)="setTeamFilter($any($event.target).value)"
+          >
             <option value="">Toutes</option>
             @for (team of teams(); track team.id) {
               <option [value]="team.id">{{ team.code }} · {{ team.name }}</option>
@@ -76,12 +84,22 @@ const assignmentDraft = (): VolunteerShiftAssignmentPayload => ({
         </label>
         <label>
           <span>Lieu</span>
-          <input [value]="filters().location" placeholder="Gymnase, chapelle..." (input)="setLocationFilter($any($event.target).value)" />
+          <input
+            [value]="filters().location"
+            placeholder="Gymnase, chapelle..."
+            (input)="setLocationFilter($any($event.target).value)"
+          />
         </label>
-        <label>
+        <div class="date-filter">
           <span>Date</span>
-          <input type="date" [value]="filters().date" (input)="setDateFilter($any($event.target).value)" />
-        </label>
+          <app-event-date-selector
+            label="Date"
+            hint="Filtrer par date de preparation, de rassemblement ou de rangement."
+            [config]="eventDateConfig"
+            [value]="filters().date"
+            (valueChange)="setDateFilter($any($event))"
+          />
+        </div>
         <label>
           <span>Statut</span>
           <select [value]="filters().status" (change)="setStatusFilter($any($event.target).value)">
@@ -96,20 +114,43 @@ const assignmentDraft = (): VolunteerShiftAssignmentPayload => ({
       @if (loading()) {
         <tui-loader />
       } @else {
-        <app-data-table [rows]="missions()" [columns]="columns" (rowSelected)="openMission($event)" />
+        <app-data-table
+          [rows]="missions()"
+          [columns]="columns"
+          (rowSelected)="openMission($event)"
+        />
       }
     </app-page-layout>
 
     @if (opened()) {
       <tui-drawer direction="end">
         <header>
-          <h2>{{ drawerMode() === 'detail' ? selectedMission()?.title : drawerMode() === 'create' ? 'Nouvelle mission' : 'Modifier mission' }}</h2>
+          <h2>
+            {{
+              drawerMode() === 'detail'
+                ? selectedMission()?.title
+                : drawerMode() === 'create'
+                  ? 'Nouvelle mission'
+                  : 'Modifier mission'
+            }}
+          </h2>
         </header>
 
         @if (drawerMode() === 'detail') {
           <dl>
             <dt>Statut</dt>
-            <dd><span size="m" tuiBadge [appearance]="statusAppearance(selectedMission()?.status || VolunteerMissionStatus.DRAFT)">{{ missionStatusLabel(selectedMission()?.status || VolunteerMissionStatus.DRAFT) }}</span></dd>
+            <dd>
+              <span
+                size="m"
+                tuiBadge
+                [appearance]="
+                  statusAppearance(selectedMission()?.status || VolunteerMissionStatus.DRAFT)
+                "
+                >{{
+                  missionStatusLabel(selectedMission()?.status || VolunteerMissionStatus.DRAFT)
+                }}</span
+              >
+            </dd>
             <dt>Équipe</dt>
             <dd>{{ selectedMission()?.volunteerTeam?.name || 'Mission transversale' }}</dd>
             <dt>Lieu</dt>
@@ -123,7 +164,16 @@ const assignmentDraft = (): VolunteerShiftAssignmentPayload => ({
           @if (canWrite()) {
             <div class="status-actions">
               @for (status of missionStatuses; track status) {
-                <button tuiButton size="s" type="button" [appearance]="status === selectedMission()?.status ? 'primary' : 'secondary'" [disabled]="status === selectedMission()?.status" (click)="changeMissionStatus(status)">{{ missionStatusLabel(status) }}</button>
+                <button
+                  tuiButton
+                  size="s"
+                  type="button"
+                  [appearance]="status === selectedMission()?.status ? 'primary' : 'secondary'"
+                  [disabled]="status === selectedMission()?.status"
+                  (click)="changeMissionStatus(status)"
+                >
+                  {{ missionStatusLabel(status) }}
+                </button>
               }
             </div>
           }
@@ -139,12 +189,21 @@ const assignmentDraft = (): VolunteerShiftAssignmentPayload => ({
                 @for (shift of shifts(); track shift.id) {
                   <li>
                     <div class="shift-head">
-                      <strong>{{ shift.startAt | date: 'shortTime' }} - {{ shift.endAt | date: 'shortTime' }}</strong>
-                      <span size="s" tuiBadge [appearance]="statusAppearance(shift.status)">{{ shiftStatusLabel(shift.status) }}</span>
+                      <strong
+                        >{{ shift.startAt | date: 'shortTime' }} -
+                        {{ shift.endAt | date: 'shortTime' }}</strong
+                      >
+                      <span size="s" tuiBadge [appearance]="statusAppearance(shift.status)">{{
+                        shiftStatusLabel(shift.status)
+                      }}</span>
                     </div>
-                    <p>{{ shift.location || selectedMission()?.location || 'Sans lieu' }} · Capacité {{ shift.capacity || '—' }}</p>
                     <p>
-                      Affectés actifs : {{ shift.activeAssignmentsCount ?? 0 }} · Confirmés : {{ shift.confirmedAssignmentsCount ?? 0 }}
+                      {{ shift.location || selectedMission()?.location || 'Sans lieu' }} · Capacité
+                      {{ shift.capacity || '—' }}
+                    </p>
+                    <p>
+                      Affectés actifs : {{ shift.activeAssignmentsCount ?? 0 }} · Confirmés :
+                      {{ shift.confirmedAssignmentsCount ?? 0 }}
                     </p>
                     <small>{{ shift.notes || 'Aucune note' }}</small>
                     <div class="shift-assignments">
@@ -164,18 +223,46 @@ const assignmentDraft = (): VolunteerShiftAssignmentPayload => ({
                         <p>Aucune affectation.</p>
                       } @else {
                         <ul>
-                          @for (assignment of filteredAssignmentsForShift(shift); track assignment.id) {
+                          @for (
+                            assignment of filteredAssignmentsForShift(shift);
+                            track assignment.id
+                          ) {
                             <li>
-                              <strong>{{ assignment.volunteer.lastName }} {{ assignment.volunteer.firstName }}</strong>
-                              <span size="s" tuiBadge [appearance]="statusAppearance(assignment.status)">{{ assignmentStatusLabel(assignment.status) }}</span>
+                              <strong
+                                >{{ assignment.volunteer.lastName }}
+                                {{ assignment.volunteer.firstName }}</strong
+                              >
+                              <span
+                                size="s"
+                                tuiBadge
+                                [appearance]="statusAppearance(assignment.status)"
+                                >{{ assignmentStatusLabel(assignment.status) }}</span
+                              >
                               <small> · par {{ assignment.assignedByUser.email }}</small>
                               @if (canWrite()) {
-                                <select [value]="assignment.status" (change)="changeAssignmentStatus(shift, assignment, $any($event.target).value)">
+                                <select
+                                  [value]="assignment.status"
+                                  (change)="
+                                    changeAssignmentStatus(
+                                      shift,
+                                      assignment,
+                                      $any($event.target).value
+                                    )
+                                  "
+                                >
                                   @for (status of assignmentStatuses; track status) {
-                                    <option [value]="status">{{ assignmentStatusLabel(status) }}</option>
+                                    <option [value]="status">
+                                      {{ assignmentStatusLabel(status) }}
+                                    </option>
                                   }
                                 </select>
-                                <button tuiButton size="s" appearance="secondary-destructive" type="button" (click)="cancelAssignment(shift, assignment)">
+                                <button
+                                  tuiButton
+                                  size="s"
+                                  appearance="secondary-destructive"
+                                  type="button"
+                                  (click)="cancelAssignment(shift, assignment)"
+                                >
                                   Annuler
                                 </button>
                               }
@@ -191,7 +278,10 @@ const assignmentDraft = (): VolunteerShiftAssignmentPayload => ({
                             [value]="assignmentSearchQuery()"
                             (input)="assignmentSearchQuery.set($any($event.target).value)"
                           />
-                          <select [value]="assignmentSearchSkill() || ''" (change)="assignmentSearchSkill.set($any($event.target).value || null)">
+                          <select
+                            [value]="assignmentSearchSkill() || ''"
+                            (change)="assignmentSearchSkill.set($any($event.target).value || null)"
+                          >
                             <option value="">Compétence</option>
                             @for (skill of allSkills; track skill) {
                               <option [value]="skill">{{ skill }}</option>
@@ -203,23 +293,61 @@ const assignmentDraft = (): VolunteerShiftAssignmentPayload => ({
                             (input)="assignmentSearchTag.set($any($event.target).value)"
                           />
                           <label class="check">
-                            <input type="checkbox" [checked]="assignmentSearchAvailableOnly()" (change)="assignmentSearchAvailableOnly.set($any($event.target).checked)" />
+                            <input
+                              type="checkbox"
+                              [checked]="assignmentSearchAvailableOnly()"
+                              (change)="
+                                assignmentSearchAvailableOnly.set($any($event.target).checked)
+                              "
+                            />
                             Disponibles
                           </label>
-                          <button tuiButton size="s" type="button" (click)="searchVolunteersForShift(shift)">Rechercher</button>
+                          <button
+                            tuiButton
+                            size="s"
+                            type="button"
+                            (click)="searchVolunteersForShift(shift)"
+                          >
+                            Rechercher
+                          </button>
                         </div>
                         @if (assignmentSearchResults()[shift.id]?.length) {
                           <ul>
-                            @for (entry of assignmentSearchResults()[shift.id]; track entry.volunteer.id) {
+                            @for (
+                              entry of assignmentSearchResults()[shift.id];
+                              track entry.volunteer.id
+                            ) {
                               <li>
                                 {{ entry.volunteer.lastName }} {{ entry.volunteer.firstName }}
                                 @if (entry.hasOverlap) {
                                   <small class="warning">Chevauchement détecté</small>
                                 }
-                                <button tuiButton size="s" type="button" (click)="assignVolunteer(shift, entry.volunteer.id, VolunteerShiftAssignmentStatus.PROVISIONAL)">
+                                <button
+                                  tuiButton
+                                  size="s"
+                                  type="button"
+                                  (click)="
+                                    assignVolunteer(
+                                      shift,
+                                      entry.volunteer.id,
+                                      VolunteerShiftAssignmentStatus.PROVISIONAL
+                                    )
+                                  "
+                                >
                                   Provisoire
                                 </button>
-                                <button tuiButton size="s" type="button" (click)="assignVolunteer(shift, entry.volunteer.id, VolunteerShiftAssignmentStatus.CONFIRMED)">
+                                <button
+                                  tuiButton
+                                  size="s"
+                                  type="button"
+                                  (click)="
+                                    assignVolunteer(
+                                      shift,
+                                      entry.volunteer.id,
+                                      VolunteerShiftAssignmentStatus.CONFIRMED
+                                    )
+                                  "
+                                >
                                   Confirmée
                                 </button>
                               </li>
@@ -230,9 +358,28 @@ const assignmentDraft = (): VolunteerShiftAssignmentPayload => ({
                     </div>
                     @if (canWrite()) {
                       <div class="shift-actions">
-                        <button tuiButton size="s" appearance="secondary" type="button" (click)="startEditShift(shift)">Modifier</button>
-                        <button tuiButton size="s" appearance="secondary-destructive" type="button" (click)="removeShift(shift.id)">Supprimer</button>
-                        <select [value]="shift.status" (change)="changeShiftStatus(shift.id, $any($event.target).value)">
+                        <button
+                          tuiButton
+                          size="s"
+                          appearance="secondary"
+                          type="button"
+                          (click)="startEditShift(shift)"
+                        >
+                          Modifier
+                        </button>
+                        <button
+                          tuiButton
+                          size="s"
+                          appearance="secondary-destructive"
+                          type="button"
+                          (click)="removeShift(shift.id)"
+                        >
+                          Supprimer
+                        </button>
+                        <select
+                          [value]="shift.status"
+                          (change)="changeShiftStatus(shift.id, $any($event.target).value)"
+                        >
                           @for (status of shiftStatuses; track status) {
                             <option [value]="status">{{ shiftStatusLabel(status) }}</option>
                           }
@@ -247,79 +394,201 @@ const assignmentDraft = (): VolunteerShiftAssignmentPayload => ({
             @if (canWrite()) {
               <h4>{{ editingShiftId() ? 'Modifier un shift' : 'Ajouter un shift' }}</h4>
               <form class="drawer-form">
-                <tui-textfield iconStart="@tui.clock">
-                  <label for="debut-2" tuiLabel>Début</label><input tuiInput type="datetime-local" [formField]="shiftForm.startAt" id="debut-2" />
-                </tui-textfield>
-                <tui-textfield iconStart="@tui.clock">
-                  <label for="fin-2" tuiLabel>Fin</label><input tuiInput type="datetime-local" [formField]="shiftForm.endAt" id="fin-2" />
-                </tui-textfield>
+                <app-event-date-selector
+                  label="Début"
+                  hint="Date et heure de debut du shift."
+                  [config]="eventDateConfig"
+                  mode="datetime-local"
+                  [formField]="shiftForm.startAt"
+                  id="debut-2"
+                />
+                <app-event-date-selector
+                  label="Fin"
+                  hint="Date et heure de fin du shift."
+                  [config]="eventDateConfig"
+                  mode="datetime-local"
+                  [formField]="shiftForm.endAt"
+                  id="fin-2"
+                />
                 <tui-textfield iconStart="@tui.map-pin">
-                  <label for="lieu-2" tuiLabel>Lieu</label><input tuiInput [formField]="$any(shiftForm.location)" id="lieu-2" />
+                  <label for="lieu-2" tuiLabel>Lieu</label
+                  ><input tuiInput [formField]="$any(shiftForm.location)" id="lieu-2" />
                 </tui-textfield>
                 <tui-textfield iconStart="@tui.users">
-                  <label for="capacite-2" tuiLabel>Capacité</label><input tuiInput type="number" [formField]="shiftForm.capacity" id="capacite-2" />
+                  <label for="capacite-2" tuiLabel>Capacité</label
+                  ><input tuiInput type="number" [formField]="shiftForm.capacity" id="capacite-2" />
                 </tui-textfield>
-                <label class="check"><input type="checkbox" [formField]="shiftForm.isOptional" /> Optionnel</label>
+                <label class="check"
+                  ><input type="checkbox" [formField]="shiftForm.isOptional" /> Optionnel</label
+                >
                 <tui-textfield iconStart="@tui.file-text" class="wide">
-                  <label for="notes-2" tuiLabel>Notes</label><textarea tuiTextarea [formField]="$any(shiftForm.notes)" id="notes-2"></textarea>
+                  <label for="notes-2" tuiLabel>Notes</label
+                  ><textarea
+                    tuiTextarea
+                    [formField]="$any(shiftForm.notes)"
+                    id="notes-2"
+                  ></textarea>
                 </tui-textfield>
               </form>
               <div class="shift-form-actions">
-                <button tuiButton appearance="flat" type="button" (click)="resetShiftForm()">Réinitialiser</button>
-                <button tuiButton type="button" (click)="saveShift()">{{ editingShiftId() ? 'Mettre à jour' : 'Ajouter' }}</button>
+                <button tuiButton appearance="flat" type="button" (click)="resetShiftForm()">
+                  Réinitialiser
+                </button>
+                <button tuiButton type="button" (click)="saveShift()">
+                  {{ editingShiftId() ? 'Mettre à jour' : 'Ajouter' }}
+                </button>
               </div>
             }
           </section>
         } @else {
           <form class="drawer-form">
             <tui-textfield iconStart="@tui.briefcase">
-              <label for="titre-2" tuiLabel>Titre</label><input tuiInput [formField]="missionForm.title" id="titre-2" />
+              <label for="titre-2" tuiLabel>Titre</label
+              ><input tuiInput [formField]="missionForm.title" id="titre-2" />
             </tui-textfield>
             <tui-textfield iconStart="@tui.map-pin">
-              <label for="lieu-3" tuiLabel>Lieu</label><input tuiInput [formField]="missionForm.location" id="lieu-3" />
+              <label for="lieu-3" tuiLabel>Lieu</label
+              ><input tuiInput [formField]="missionForm.location" id="lieu-3" />
             </tui-textfield>
             <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyTeam">
-              <label for="equipe-operationnelle" tuiLabel>Équipe opérationnelle</label><select tuiSelect [items]="teamIds()" [formField]="missionForm.volunteerTeamId" id="equipe-operationnelle"></select>
+              <label for="equipe-operationnelle" tuiLabel>Équipe opérationnelle</label
+              ><select
+                tuiSelect
+                [items]="teamIds()"
+                [formField]="missionForm.volunteerTeamId"
+                id="equipe-operationnelle"
+              ></select>
             </tui-textfield>
-            <tui-textfield iconStart="@tui.activity" tuiChevron [stringify]="stringifyMissionStatus">
-              <label for="statut-2" tuiLabel>Statut</label><select tuiSelect [items]="missionStatuses" [formField]="missionForm.status" id="statut-2"></select>
+            <tui-textfield
+              iconStart="@tui.activity"
+              tuiChevron
+              [stringify]="stringifyMissionStatus"
+            >
+              <label for="statut-2" tuiLabel>Statut</label
+              ><select
+                tuiSelect
+                [items]="missionStatuses"
+                [formField]="missionForm.status"
+                id="statut-2"
+              ></select>
             </tui-textfield>
-            <label class="check"><input type="checkbox" [formField]="missionForm.isOptional" /> Optionnelle</label>
+            <label class="check"
+              ><input type="checkbox" [formField]="missionForm.isOptional" /> Optionnelle</label
+            >
             <tui-textfield iconStart="@tui.file-text" class="wide">
-              <label for="description-2" tuiLabel>Description</label><textarea tuiTextarea [formField]="$any(missionForm.description)" id="description-2"></textarea>
+              <label for="description-2" tuiLabel>Description</label
+              ><textarea
+                tuiTextarea
+                [formField]="$any(missionForm.description)"
+                id="description-2"
+              ></textarea>
             </tui-textfield>
           </form>
         }
 
         <footer>
-          <button tuiButton appearance="flat" type="button" (click)="opened.set(false)">Fermer</button>
+          <button tuiButton appearance="flat" type="button" (click)="opened.set(false)">
+            Fermer
+          </button>
           @if (drawerMode() === 'detail' && canWrite()) {
             <button tuiButton type="button" (click)="openEditMission()">Modifier</button>
-            <button tuiButton appearance="secondary-destructive" type="button" (click)="removeMission()">Supprimer</button>
+            <button
+              tuiButton
+              appearance="secondary-destructive"
+              type="button"
+              (click)="removeMission()"
+            >
+              Supprimer
+            </button>
           } @else if (drawerMode() !== 'detail') {
             <button tuiButton type="button" (click)="saveMission()">Enregistrer</button>
           }
         </footer>
       </tui-drawer>
     }`,
-  styles: [`
-    .filters { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); margin-block-end: .75rem; }
-    .filters label { display: grid; gap: .25rem; }
-    .filters select, .filters input { min-block-size: 2.75rem; border-radius: .5rem; border: 1px solid var(--tui-border-normal); padding-inline: .625rem; }
-    .status-actions, .shift-actions, .shift-form-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: .75rem; }
-    .shift-list { display: grid; gap: .75rem; list-style: none; margin: 0; padding: 0; }
-    .shift-list li { border: 1px solid var(--tui-border-normal); border-radius: .75rem; padding: .75rem; }
-    .shift-head { display: flex; justify-content: space-between; gap: .5rem; align-items: center; }
-    .shift-actions select { min-block-size: 2.75rem; }
-    .shift-assignments { margin-top: .75rem; display: grid; gap: .5rem; }
-    .shift-assignments ul { margin: 0; padding-left: 1rem; display: grid; gap: .35rem; }
-    .shift-assignments select, .assign-search input { min-block-size: 2.5rem; border-radius: .5rem; border: 1px solid var(--tui-border-normal); padding-inline: .5rem; }
-    .assign-search { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .5rem; align-items: end; }
-    .warning { color: #b85c00; margin-left: .35rem; }
-  `],
+  styles: [
+    `
+      .filters {
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+        margin-block-end: 0.75rem;
+      }
+      .filters label,
+      .date-filter {
+        display: grid;
+        gap: 0.25rem;
+      }
+      .filters select,
+      .filters input {
+        min-block-size: 2.75rem;
+        border-radius: 0.5rem;
+        border: 1px solid var(--tui-border-normal);
+        padding-inline: 0.625rem;
+      }
+      .status-actions,
+      .shift-actions,
+      .shift-form-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-block: 0.75rem;
+      }
+      .shift-list {
+        display: grid;
+        gap: 0.75rem;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .shift-list li {
+        border: 1px solid var(--tui-border-normal);
+        border-radius: 0.75rem;
+        padding: 0.75rem;
+      }
+      .shift-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.5rem;
+        align-items: center;
+      }
+      .shift-actions select {
+        min-block-size: 2.75rem;
+      }
+      .shift-assignments {
+        margin-top: 0.75rem;
+        display: grid;
+        gap: 0.5rem;
+      }
+      .shift-assignments ul {
+        margin: 0;
+        padding-left: 1rem;
+        display: grid;
+        gap: 0.35rem;
+      }
+      .shift-assignments select,
+      .assign-search input {
+        min-block-size: 2.5rem;
+        border-radius: 0.5rem;
+        border: 1px solid var(--tui-border-normal);
+        padding-inline: 0.5rem;
+      }
+      .assign-search {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+        gap: 0.5rem;
+        align-items: end;
+      }
+      .warning {
+        color: #b85c00;
+        margin-left: 0.35rem;
+      }
+    `,
+  ],
   styleUrl: '../../shared/crud.scss',
 })
 export class VolunteerMissionsPage implements OnInit {
+  protected readonly eventDateConfig = ALLEGRIA_2027_EVENT_DATES;
   readonly VolunteerMissionStatus = VolunteerMissionStatus;
   readonly VolunteerShiftAssignmentStatus = VolunteerShiftAssignmentStatus;
   readonly missionStatuses = MISSION_STATUSES;
@@ -379,12 +648,19 @@ export class VolunteerMissionsPage implements OnInit {
   shiftModel = signal<VolunteerShiftPayload>(shiftDraft());
   assignmentModel = signal<VolunteerShiftAssignmentPayload>(assignmentDraft());
   assignmentStatusFilters = signal<Record<number, VolunteerShiftAssignmentStatus | ''>>({});
-  assignmentSearchResults = signal<Record<number, { volunteer: Volunteer; hasOverlap: boolean }[]>>({});
+  assignmentSearchResults = signal<Record<number, { volunteer: Volunteer; hasOverlap: boolean }[]>>(
+    {},
+  );
   assignmentSearchQuery = signal('');
   assignmentSearchSkill = signal<VolunteerSkillType | null>(null);
   assignmentSearchTag = signal('');
   assignmentSearchAvailableOnly = signal(true);
-  filters = signal<{ volunteerTeamId: number | null; location: string; date: string; status: VolunteerMissionStatus | '' }>({
+  filters = signal<{
+    volunteerTeamId: number | null;
+    location: string;
+    date: string;
+    status: VolunteerMissionStatus | '';
+  }>({
     volunteerTeamId: null,
     location: '',
     date: '',
@@ -412,7 +688,8 @@ export class VolunteerMissionsPage implements OnInit {
     return team ? `${team.code} · ${team.name}` : 'Mission transversale';
   };
 
-  stringifyMissionStatus = (status: VolunteerMissionStatus): string => this.missionStatusLabel(status);
+  stringifyMissionStatus = (status: VolunteerMissionStatus): string =>
+    this.missionStatusLabel(status);
 
   ngOnInit(): void {
     this.teamsApi.list().subscribe((teams) => this.teams.set(teams));
@@ -553,9 +830,11 @@ export class VolunteerMissionsPage implements OnInit {
 
   changeShiftStatus(shiftId: number, status: string): void {
     const mission = this.requireMission();
-    this.missionsApi.changeShiftStatus(mission.id, shiftId, { status: status as VolunteerShiftStatus }).subscribe(() => {
-      this.loadShifts(mission.id);
-    });
+    this.missionsApi
+      .changeShiftStatus(mission.id, shiftId, { status: status as VolunteerShiftStatus })
+      .subscribe(() => {
+        this.loadShifts(mission.id);
+      });
   }
 
   resetShiftForm(): void {
@@ -620,7 +899,12 @@ export class VolunteerMissionsPage implements OnInit {
       });
   }
 
-  assignVolunteer(shift: VolunteerShift, volunteerId: number, status: VolunteerShiftAssignmentStatus, force = false): void {
+  assignVolunteer(
+    shift: VolunteerShift,
+    volunteerId: number,
+    status: VolunteerShiftAssignmentStatus,
+    force = false,
+  ): void {
     const mission = this.requireMission();
     this.assignmentsApi
       .create(mission.id, shift.id, {
@@ -633,7 +917,7 @@ export class VolunteerMissionsPage implements OnInit {
         next: () => this.loadShifts(mission.id),
         error: (error: HttpErrorResponse) => {
           if (error.status === 409 && error.error?.canForce) {
-            if (confirm('Chevauchement détecté. Forcer l\'affectation ?')) {
+            if (confirm("Chevauchement détecté. Forcer l'affectation ?")) {
               this.assignVolunteer(shift, volunteerId, status, true);
             }
           }
@@ -667,17 +951,28 @@ export class VolunteerMissionsPage implements OnInit {
 
   cancelAssignment(shift: VolunteerShift, assignment: VolunteerShiftAssignment): void {
     const mission = this.requireMission();
-    this.assignmentsApi.cancel(mission.id, shift.id, assignment.id).subscribe(() => this.loadShifts(mission.id));
+    this.assignmentsApi
+      .cancel(mission.id, shift.id, assignment.id)
+      .subscribe(() => this.loadShifts(mission.id));
   }
 
-  statusAppearance(status: VolunteerMissionStatus | VolunteerShiftStatus | VolunteerShiftAssignmentStatus): string {
-    if (status === VolunteerMissionStatus.DONE || status === VolunteerShiftStatus.DONE) return 'positive';
+  statusAppearance(
+    status: VolunteerMissionStatus | VolunteerShiftStatus | VolunteerShiftAssignmentStatus,
+  ): string {
+    if (status === VolunteerMissionStatus.DONE || status === VolunteerShiftStatus.DONE)
+      return 'positive';
     if (status === VolunteerShiftAssignmentStatus.CONFIRMED) return 'positive';
     if (status === VolunteerShiftAssignmentStatus.PROVISIONAL) return 'warning';
-    if (status === VolunteerMissionStatus.IN_PROGRESS || status === VolunteerShiftStatus.IN_PROGRESS) return 'warning';
-    if (status === VolunteerMissionStatus.CANCELLED || status === VolunteerShiftStatus.CANCELLED) return 'negative';
+    if (
+      status === VolunteerMissionStatus.IN_PROGRESS ||
+      status === VolunteerShiftStatus.IN_PROGRESS
+    )
+      return 'warning';
+    if (status === VolunteerMissionStatus.CANCELLED || status === VolunteerShiftStatus.CANCELLED)
+      return 'negative';
     if (status === VolunteerShiftAssignmentStatus.CANCELLED) return 'negative';
-    if (status === VolunteerMissionStatus.NOT_DONE || status === VolunteerShiftStatus.NOT_DONE) return 'negative';
+    if (status === VolunteerMissionStatus.NOT_DONE || status === VolunteerShiftStatus.NOT_DONE)
+      return 'negative';
     if (status === VolunteerShiftStatus.ASSIGNED) return 'info';
     return 'neutral';
   }
@@ -719,7 +1014,10 @@ export class VolunteerMissionsPage implements OnInit {
       endAt: new Date(payload.endAt).toISOString(),
       location: payload.location?.trim() || null,
       notes: payload.notes?.trim() || null,
-      capacity: payload.capacity == null || payload.capacity === ('' as never) ? null : Number(payload.capacity),
+      capacity:
+        payload.capacity == null || payload.capacity === ('' as never)
+          ? null
+          : Number(payload.capacity),
     };
   }
 
@@ -733,11 +1031,3 @@ export class VolunteerMissionsPage implements OnInit {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   }
 }
-
-
-
-
-
-
-
-

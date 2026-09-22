@@ -13,9 +13,20 @@ import { SHARED_IMPORTS } from '../../shared/shared-imports';
 
 /** Transitions autorisées côté client (miroir du backend) */
 const SHIFT_NEXT_STATUSES: Partial<Record<VolunteerShiftStatus, VolunteerShiftStatus[]>> = {
-  [VolunteerShiftStatus.TODO]: [VolunteerShiftStatus.ASSIGNED, VolunteerShiftStatus.IN_PROGRESS, VolunteerShiftStatus.CANCELLED],
-  [VolunteerShiftStatus.ASSIGNED]: [VolunteerShiftStatus.IN_PROGRESS, VolunteerShiftStatus.CANCELLED],
-  [VolunteerShiftStatus.IN_PROGRESS]: [VolunteerShiftStatus.DONE, VolunteerShiftStatus.NOT_DONE, VolunteerShiftStatus.CANCELLED],
+  [VolunteerShiftStatus.TODO]: [
+    VolunteerShiftStatus.ASSIGNED,
+    VolunteerShiftStatus.IN_PROGRESS,
+    VolunteerShiftStatus.CANCELLED,
+  ],
+  [VolunteerShiftStatus.ASSIGNED]: [
+    VolunteerShiftStatus.IN_PROGRESS,
+    VolunteerShiftStatus.CANCELLED,
+  ],
+  [VolunteerShiftStatus.IN_PROGRESS]: [
+    VolunteerShiftStatus.DONE,
+    VolunteerShiftStatus.NOT_DONE,
+    VolunteerShiftStatus.CANCELLED,
+  ],
   // DONE → NOT_DONE affiché seulement pour ADMIN/COORDINATOR (géré dans le template)
   [VolunteerShiftStatus.DONE]: [VolunteerShiftStatus.NOT_DONE],
 };
@@ -24,8 +35,10 @@ const SHIFT_NEXT_STATUSES: Partial<Record<VolunteerShiftStatus, VolunteerShiftSt
   selector: 'app-shifts-summary',
   standalone: true,
   imports: [...SHARED_IMPORTS],
-  template: `<app-page-layout title="Suivi opérationnel" description="Synthèse des missions et shifts par statut">
-
+  template: `<app-page-layout
+    title="Suivi opérationnel"
+    description="Synthèse des missions et shifts par statut"
+  >
     @if (countersLoading()) {
       <tui-loader />
     } @else {
@@ -41,7 +54,11 @@ const SHIFT_NEXT_STATUSES: Partial<Record<VolunteerShiftStatus, VolunteerShiftSt
               (click)="viewMissionsByStatus(entry.status)"
             >
               <span class="card-label">{{ entry.label }}</span>
-              <span class="count" [class.positive]="entry.positive" [class.negative]="entry.negative">
+              <span
+                class="count"
+                [class.positive]="entry.positive"
+                [class.negative]="entry.negative"
+              >
                 {{ counters()?.missions?.[entry.status] ?? 0 }}
               </span>
             </button>
@@ -61,7 +78,11 @@ const SHIFT_NEXT_STATUSES: Partial<Record<VolunteerShiftStatus, VolunteerShiftSt
               (click)="viewShiftsByStatus(entry.status)"
             >
               <span class="card-label">{{ entry.label }}</span>
-              <span class="count" [class.positive]="entry.positive" [class.negative]="entry.negative">
+              <span
+                class="count"
+                [class.positive]="entry.positive"
+                [class.negative]="entry.negative"
+              >
                 {{ counters()?.shifts?.[entry.status] ?? 0 }}
               </span>
             </button>
@@ -76,15 +97,33 @@ const SHIFT_NEXT_STATUSES: Partial<Record<VolunteerShiftStatus, VolunteerShiftSt
         <div class="details-header">
           <h2>Missions — {{ statusLabel(currentStatus()) }}</h2>
           <div class="filter-tabs">
-            <button type="button" tuiButton size="xs"
+            <button
+              type="button"
+              tuiButton
+              size="xs"
               [appearance]="mandatoryFilter() === null ? 'primary' : 'flat'"
-              (click)="mandatoryFilter.set(null)">Toutes</button>
-            <button type="button" tuiButton size="xs"
+              (click)="mandatoryFilter.set(null)"
+            >
+              Toutes
+            </button>
+            <button
+              type="button"
+              tuiButton
+              size="xs"
               [appearance]="mandatoryFilter() === true ? 'primary' : 'flat'"
-              (click)="mandatoryFilter.set(true)">Obligatoires</button>
-            <button type="button" tuiButton size="xs"
+              (click)="mandatoryFilter.set(true)"
+            >
+              Obligatoires
+            </button>
+            <button
+              type="button"
+              tuiButton
+              size="xs"
               [appearance]="mandatoryFilter() === false ? 'primary' : 'flat'"
-              (click)="mandatoryFilter.set(false)">Facultatives</button>
+              (click)="mandatoryFilter.set(false)"
+            >
+              Facultatives
+            </button>
           </div>
         </div>
 
@@ -102,7 +141,9 @@ const SHIFT_NEXT_STATUSES: Partial<Record<VolunteerShiftStatus, VolunteerShiftSt
                     <span class="badge-optional">Facultatif</span>
                   }
                 </div>
-                <p class="item-meta">Équipe : {{ mission.volunteerTeam?.name || 'Transversale' }}</p>
+                <p class="item-meta">
+                  Équipe : {{ mission.volunteerTeam?.name || 'Transversale' }}
+                </p>
                 <p class="item-meta">Shifts : {{ mission.shifts?.length ?? 0 }}</p>
               </li>
             }
@@ -117,15 +158,33 @@ const SHIFT_NEXT_STATUSES: Partial<Record<VolunteerShiftStatus, VolunteerShiftSt
         <div class="details-header">
           <h2>Shifts — {{ statusLabel(currentStatus()) }}</h2>
           <div class="filter-tabs">
-            <button type="button" tuiButton size="xs"
+            <button
+              type="button"
+              tuiButton
+              size="xs"
               [appearance]="mandatoryFilter() === null ? 'primary' : 'flat'"
-              (click)="mandatoryFilter.set(null)">Tous</button>
-            <button type="button" tuiButton size="xs"
+              (click)="mandatoryFilter.set(null)"
+            >
+              Tous
+            </button>
+            <button
+              type="button"
+              tuiButton
+              size="xs"
               [appearance]="mandatoryFilter() === true ? 'primary' : 'flat'"
-              (click)="mandatoryFilter.set(true)">Obligatoires</button>
-            <button type="button" tuiButton size="xs"
+              (click)="mandatoryFilter.set(true)"
+            >
+              Obligatoires
+            </button>
+            <button
+              type="button"
+              tuiButton
+              size="xs"
               [appearance]="mandatoryFilter() === false ? 'primary' : 'flat'"
-              (click)="mandatoryFilter.set(false)">Facultatifs</button>
+              (click)="mandatoryFilter.set(false)"
+            >
+              Facultatifs
+            </button>
           </div>
         </div>
 
@@ -138,24 +197,31 @@ const SHIFT_NEXT_STATUSES: Partial<Record<VolunteerShiftStatus, VolunteerShiftSt
             @for (shift of filteredShifts(); track shift.id) {
               <li class="detail-item" [class.optional]="shift.isOptional">
                 <div class="item-head">
-                  <strong>{{ shift.startAt | date: 'dd/MM HH:mm' }} – {{ shift.endAt | date: 'HH:mm' }}</strong>
+                  <strong
+                    >{{ shift.startAt | date: 'dd/MM HH:mm' }} –
+                    {{ shift.endAt | date: 'HH:mm' }}</strong
+                  >
                   @if (shift.isOptional) {
                     <span class="badge-optional">Facultatif</span>
                   }
                 </div>
                 <p class="item-meta">
-                  Mission : {{ shift.mission?.title || '—' }} ·
-                  Équipe : {{ shift.mission?.volunteerTeam?.name || 'Transversale' }}
+                  Mission : {{ shift.mission?.title || '—' }} · Équipe :
+                  {{ shift.mission?.volunteerTeam?.name || 'Transversale' }}
                 </p>
                 <p class="item-meta">
-                  Lieu : {{ shift.location || 'Non spécifié' }} ·
-                  Affectés : {{ shift.activeAssignmentsCount ?? 0 }}/{{ shift.capacity ?? '?' }}
+                  Lieu : {{ shift.location || 'Non spécifié' }} · Affectés :
+                  {{ shift.activeAssignmentsCount ?? 0 }}/{{ shift.capacity ?? '?' }}
                 </p>
                 @if (canWrite() && nextStatuses(shift).length > 0) {
                   <div class="quick-actions">
                     @for (nextStatus of nextStatuses(shift); track nextStatus) {
                       <!-- DONE→NOT_DONE réservé ADMIN/COORDINATOR -->
-                      @if (nextStatus !== shiftStatusEnum.NOT_DONE || shift.status !== shiftStatusEnum.DONE || canForce()) {
+                      @if (
+                        nextStatus !== shiftStatusEnum.NOT_DONE ||
+                        shift.status !== shiftStatusEnum.DONE ||
+                        canForce()
+                      ) {
                         <button
                           type="button"
                           tuiButton
@@ -177,84 +243,146 @@ const SHIFT_NEXT_STATUSES: Partial<Record<VolunteerShiftStatus, VolunteerShiftSt
       </section>
     }
   </app-page-layout>`,
-  styles: [`
-    .section { margin-block: 1.5rem; }
-    .section-title {
-      font-size: 1rem;
-      font-weight: 600;
-      margin-block-end: 0.75rem;
-      color: var(--tui-text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
-      gap: 0.75rem;
-    }
-    .counter-card {
-      border: 2px solid var(--tui-border-normal);
-      border-radius: 0.75rem;
-      padding: 0.875rem 0.75rem;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.375rem;
-      background: var(--tui-background-base);
-      cursor: pointer;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .counter-card:hover { border-color: var(--tui-border-hover); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
-    .counter-card.active { border-color: var(--tui-primary); background: var(--tui-background-accent-1); }
-    .card-label { font-size: 0.75rem; text-transform: uppercase; color: var(--tui-text-secondary); }
-    .count { font-size: 1.75rem; font-weight: 700; color: var(--tui-text-primary); }
-    .count.positive { color: var(--tui-positive); }
-    .count.negative { color: var(--tui-negative); }
+  styles: [
+    `
+      .section {
+        margin-block: 1.5rem;
+      }
+      .section-title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-block-end: 0.75rem;
+        color: var(--tui-text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+        gap: 0.75rem;
+      }
+      .counter-card {
+        border: 2px solid var(--tui-border-normal);
+        border-radius: 0.75rem;
+        padding: 0.875rem 0.75rem;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.375rem;
+        background: var(--tui-background-base);
+        cursor: pointer;
+        transition:
+          border-color 0.15s,
+          box-shadow 0.15s;
+      }
+      .counter-card:hover {
+        border-color: var(--tui-border-hover);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+      .counter-card.active {
+        border-color: var(--tui-primary);
+        background: var(--tui-background-accent-1);
+      }
+      .card-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: var(--tui-text-secondary);
+      }
+      .count {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--tui-text-primary);
+      }
+      .count.positive {
+        color: var(--tui-positive);
+      }
+      .count.negative {
+        color: var(--tui-negative);
+      }
 
-    .details-section {
-      margin-block-start: 2rem;
-      padding: 1rem;
-      border: 1px solid var(--tui-border-normal);
-      border-radius: 0.75rem;
-    }
-    .details-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      margin-block-end: 1rem;
-    }
-    .details-header h2 { margin: 0; font-size: 1.125rem; }
-    .filter-tabs { display: flex; gap: 0.375rem; flex-wrap: wrap; }
-    .empty { color: var(--tui-text-secondary); font-style: italic; }
+      .details-section {
+        margin-block-start: 2rem;
+        padding: 1rem;
+        border: 1px solid var(--tui-border-normal);
+        border-radius: 0.75rem;
+      }
+      .details-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-block-end: 1rem;
+      }
+      .details-header h2 {
+        margin: 0;
+        font-size: 1.125rem;
+      }
+      .filter-tabs {
+        display: flex;
+        gap: 0.375rem;
+        flex-wrap: wrap;
+      }
+      .empty {
+        color: var(--tui-text-secondary);
+        font-style: italic;
+      }
 
-    .detail-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.625rem; }
-    .detail-item {
-      padding: 0.75rem;
-      border-left: 4px solid var(--tui-border-normal);
-      background: var(--tui-background-secondary);
-      border-radius: 0.25rem;
-    }
-    .detail-item.optional { border-left-color: var(--tui-chart-categorical-04, #aaa); }
-    .item-head { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-block-end: 0.25rem; }
-    .item-meta { margin: 0.125rem 0; font-size: 0.8125rem; color: var(--tui-text-secondary); }
-    .badge-optional {
-      font-size: 0.6875rem;
-      padding: 0.125rem 0.375rem;
-      border-radius: 0.25rem;
-      background: var(--tui-background-accent-2, #f0f0f0);
-      color: var(--tui-text-secondary);
-      border: 1px solid var(--tui-border-normal);
-    }
-    .quick-actions { display: flex; gap: 0.375rem; flex-wrap: wrap; margin-block-start: 0.5rem; }
+      .detail-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        gap: 0.625rem;
+      }
+      .detail-item {
+        padding: 0.75rem;
+        border-left: 4px solid var(--tui-border-normal);
+        background: var(--tui-background-secondary);
+        border-radius: 0.25rem;
+      }
+      .detail-item.optional {
+        border-left-color: var(--tui-chart-categorical-04, #aaa);
+      }
+      .item-head {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-block-end: 0.25rem;
+      }
+      .item-meta {
+        margin: 0.125rem 0;
+        font-size: 0.8125rem;
+        color: var(--tui-text-secondary);
+      }
+      .badge-optional {
+        font-size: 0.6875rem;
+        padding: 0.125rem 0.375rem;
+        border-radius: 0.25rem;
+        background: var(--tui-background-accent-2, #f0f0f0);
+        color: var(--tui-text-secondary);
+        border: 1px solid var(--tui-border-normal);
+      }
+      .quick-actions {
+        display: flex;
+        gap: 0.375rem;
+        flex-wrap: wrap;
+        margin-block-start: 0.5rem;
+      }
 
-    @media (max-width: 480px) {
-      .summary-grid { grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr)); }
-      .details-header { flex-direction: column; align-items: flex-start; }
-    }
-  `],
+      @media (max-width: 480px) {
+        .summary-grid {
+          grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+        }
+        .details-header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    `,
+  ],
 })
 export class ShiftsSummaryPage implements OnInit {
   readonly missionStatusEnum = VolunteerMissionStatus;
@@ -294,18 +422,43 @@ export class ShiftsSummaryPage implements OnInit {
 
   readonly missionCards = [
     { status: VolunteerMissionStatus.TODO, label: 'À faire', positive: false, negative: false },
-    { status: VolunteerMissionStatus.IN_PROGRESS, label: 'En cours', positive: false, negative: false },
+    {
+      status: VolunteerMissionStatus.IN_PROGRESS,
+      label: 'En cours',
+      positive: false,
+      negative: false,
+    },
     { status: VolunteerMissionStatus.DONE, label: 'Terminées', positive: true, negative: false },
-    { status: VolunteerMissionStatus.NOT_DONE, label: 'Non réalisées', positive: false, negative: true },
-    { status: VolunteerMissionStatus.CANCELLED, label: 'Annulées', positive: false, negative: false },
+    {
+      status: VolunteerMissionStatus.NOT_DONE,
+      label: 'Non réalisées',
+      positive: false,
+      negative: true,
+    },
+    {
+      status: VolunteerMissionStatus.CANCELLED,
+      label: 'Annulées',
+      positive: false,
+      negative: false,
+    },
   ];
 
   readonly shiftCards = [
     { status: VolunteerShiftStatus.TODO, label: 'À faire', positive: false, negative: false },
     { status: VolunteerShiftStatus.ASSIGNED, label: 'Assignés', positive: false, negative: false },
-    { status: VolunteerShiftStatus.IN_PROGRESS, label: 'En cours', positive: false, negative: false },
+    {
+      status: VolunteerShiftStatus.IN_PROGRESS,
+      label: 'En cours',
+      positive: false,
+      negative: false,
+    },
     { status: VolunteerShiftStatus.DONE, label: 'Terminés', positive: true, negative: false },
-    { status: VolunteerShiftStatus.NOT_DONE, label: 'Non réalisés', positive: false, negative: true },
+    {
+      status: VolunteerShiftStatus.NOT_DONE,
+      label: 'Non réalisés',
+      positive: false,
+      negative: true,
+    },
     { status: VolunteerShiftStatus.CANCELLED, label: 'Annulés', positive: false, negative: false },
   ];
 
@@ -361,7 +514,8 @@ export class ShiftsSummaryPage implements OnInit {
 
   actionAppearance(status: VolunteerShiftStatus): string {
     if (status === VolunteerShiftStatus.DONE) return 'positive';
-    if (status === VolunteerShiftStatus.CANCELLED || status === VolunteerShiftStatus.NOT_DONE) return 'secondary-destructive';
+    if (status === VolunteerShiftStatus.CANCELLED || status === VolunteerShiftStatus.NOT_DONE)
+      return 'secondary-destructive';
     if (status === VolunteerShiftStatus.IN_PROGRESS) return 'warning';
     return 'secondary';
   }
@@ -402,4 +556,3 @@ export class ShiftsSummaryPage implements OnInit {
       .subscribe((counters) => this.counters.set(counters));
   }
 }
-

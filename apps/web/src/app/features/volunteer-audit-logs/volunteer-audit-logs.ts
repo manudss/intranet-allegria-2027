@@ -16,15 +16,31 @@ import { SHARED_IMPORTS } from '../../shared/shared-imports';
       <div class="filters">
         <label class="field">
           <span>Du</span>
-          <input class="input" type="datetime-local" [value]="from()" (change)="from.set($any($event.target).value)" />
+          <input
+            class="input"
+            type="datetime-local"
+            [value]="from()"
+            (change)="from.set($any($event.target).value)"
+          />
         </label>
         <label class="field">
           <span>Au</span>
-          <input class="input" type="datetime-local" [value]="to()" (change)="to.set($any($event.target).value)" />
+          <input
+            class="input"
+            type="datetime-local"
+            [value]="to()"
+            (change)="to.set($any($event.target).value)"
+          />
         </label>
         <label class="field">
           <span>Utilisateur (id)</span>
-          <input class="input" type="number" min="1" [value]="userId()" (change)="userId.set($any($event.target).value)" />
+          <input
+            class="input"
+            type="number"
+            min="1"
+            [value]="userId()"
+            (change)="userId.set($any($event.target).value)"
+          />
         </label>
         <label class="field">
           <span>Action</span>
@@ -37,7 +53,12 @@ import { SHARED_IMPORTS } from '../../shared/shared-imports';
         </label>
         <label class="field wide">
           <span>Type d'entité</span>
-          <input class="input" [value]="entityType()" (input)="entityType.set($any($event.target).value)" placeholder="volunteer_shifts" />
+          <input
+            class="input"
+            [value]="entityType()"
+            (input)="entityType.set($any($event.target).value)"
+            placeholder="volunteer_shifts"
+          />
         </label>
         <button tuiButton type="button" (click)="applyFilters()">Filtrer</button>
       </div>
@@ -48,8 +69,24 @@ import { SHARED_IMPORTS } from '../../shared/shared-imports';
         <app-data-table [rows]="items()" [columns]="columns" />
         <div class="pager">
           <span>{{ total() }} résultat(s)</span>
-          <button tuiButton appearance="flat" type="button" [disabled]="offset() === 0" (click)="previousPage()">Précédent</button>
-          <button tuiButton appearance="flat" type="button" [disabled]="offset() + limit() >= total()" (click)="nextPage()">Suivant</button>
+          <button
+            tuiButton
+            appearance="flat"
+            type="button"
+            [disabled]="offset() === 0"
+            (click)="previousPage()"
+          >
+            Précédent
+          </button>
+          <button
+            tuiButton
+            appearance="flat"
+            type="button"
+            [disabled]="offset() + limit() >= total()"
+            (click)="nextPage()"
+          >
+            Suivant
+          </button>
         </div>
       }
     </app-page-layout>
@@ -103,10 +140,31 @@ export class VolunteerAuditLogsPage {
   protected readonly entityType = signal('');
 
   protected readonly columns: readonly DataTableColumn<VolunteerAuditLog>[] = [
-    { key: 'createdAt', label: 'Date', type: 'text', value: (row) => new Date(row.createdAt).toLocaleString('fr-FR') },
-    { key: 'user', label: 'Utilisateur', type: 'text', value: (row) => `${row.user?.email ?? 'inconnu'} (#${row.userId})` },
-    { key: 'action', label: 'Action', type: 'list', value: (row) => row.action, presentation: { type: 'chip', autoColor: true } },
-    { key: 'entity', label: 'Entité', type: 'text', value: (row) => `${row.entityType}#${row.entityId}` },
+    {
+      key: 'createdAt',
+      label: 'Date',
+      type: 'text',
+      value: (row) => new Date(row.createdAt).toLocaleString('fr-FR'),
+    },
+    {
+      key: 'user',
+      label: 'Utilisateur',
+      type: 'text',
+      value: (row) => `${row.user?.email ?? 'inconnu'} (#${row.userId})`,
+    },
+    {
+      key: 'action',
+      label: 'Action',
+      type: 'list',
+      value: (row) => row.action,
+      presentation: { type: 'chip', autoColor: true },
+    },
+    {
+      key: 'entity',
+      label: 'Entité',
+      type: 'text',
+      value: (row) => `${row.entityType}#${row.entityId}`,
+    },
     { key: 'before', label: 'Avant', type: 'text', value: (row) => this.stringify(row.beforeData) },
     { key: 'after', label: 'Après', type: 'text', value: (row) => this.stringify(row.afterData) },
   ];
@@ -165,5 +223,3 @@ export class VolunteerAuditLogsPage {
     return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
   }
 }
-
-

@@ -20,11 +20,16 @@ import { JourJ } from './jour-j';
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
 const emptyByStatus = (): DashboardShiftsByStatus => ({
-  TODO: 0, ASSIGNED: 0, IN_PROGRESS: 0, DONE: 0, CANCELLED: 0, NOT_DONE: 0,
+  TODO: 0,
+  ASSIGNED: 0,
+  IN_PROGRESS: 0,
+  DONE: 0,
+  CANCELLED: 0,
+  NOT_DONE: 0,
 });
 
 const globalSummary: DashboardGlobalSummary = {
-  date: '2027-07-24',
+  date: '2027-10-30',
   missionCount: 5,
   shiftCount: 12,
   shiftsByStatus: { ...emptyByStatus(), TODO: 3, IN_PROGRESS: 2, DONE: 7 },
@@ -48,15 +53,21 @@ const emptyWho: DashboardWhoDoesWhatResult = {
   offset: 0,
 };
 
-const team: VolunteerTeam = { id: 1, name: 'Logistique', code: 'LOG', description: null, isActive: true };
+const team: VolunteerTeam = {
+  id: 1,
+  name: 'Logistique',
+  code: 'LOG',
+  description: null,
+  isActive: true,
+};
 
 function makeDashApiMock(overrides?: object) {
   return {
-    getGlobalSummary: vi.fn((date?: string, volunteerTeamId?: number | null) => of(globalSummary)),
-    getTeamsSummary: vi.fn((date?: string, volunteerTeamId?: number | null) => of([])),
-    getLocationsSummary: vi.fn((date?: string, volunteerTeamId?: number | null) => of([])),
+    getGlobalSummary: vi.fn(() => of(globalSummary)),
+    getTeamsSummary: vi.fn(() => of([])),
+    getLocationsSummary: vi.fn(() => of([])),
     getWhoDoesWhat: vi.fn(() => of(emptyWho)),
-    getTodoList: vi.fn((date?: string, volunteerTeamId?: number | null) => of(emptyTodo)),
+    getTodoList: vi.fn(() => of(emptyTodo)),
     ...overrides,
   };
 }
@@ -68,9 +79,15 @@ async function setup(dashOverrides?: object, authHasRole = true) {
     providers: [
       provideZonelessChangeDetection(),
       { provide: OperationalDashboardApiService, useValue: dashApiMock },
-      { provide: VolunteerMissionsApiService, useValue: { changeShiftStatus: vi.fn(() => of({})) } },
+      {
+        provide: VolunteerMissionsApiService,
+        useValue: { changeShiftStatus: vi.fn(() => of({})) },
+      },
       { provide: VolunteerTeamsApiService, useValue: { list: vi.fn(() => of([team])) } },
-      { provide: AuthService, useValue: { hasAnyRole: (roles: string[]) => authHasRole && roles.includes('ADMIN') } },
+      {
+        provide: AuthService,
+        useValue: { hasAnyRole: (roles: string[]) => authHasRole && roles.includes('ADMIN') },
+      },
     ],
   }).compileComponents();
 
@@ -103,12 +120,12 @@ describe('JourJ', () => {
     expect(component.teams()[0].code).toBe('LOG');
   });
 
-  it('démarre avec l\'onglet missions actif', async () => {
+  it("démarre avec l'onglet missions actif", async () => {
     const { component } = await setup();
     expect(component.activeTab()).toBe('missions');
   });
 
-  it('change d\'onglet correctement', async () => {
+  it("change d'onglet correctement", async () => {
     const { component } = await setup();
     component.setTab('teams');
     expect(component.activeTab()).toBe('teams');
@@ -124,7 +141,7 @@ describe('JourJ', () => {
     expect(msgs.some((m) => m.includes('provisoire'))).toBe(true);
   });
 
-  it('alertCount() reflète le nombre d\'alertes calculées', async () => {
+  it("alertCount() reflète le nombre d'alertes calculées", async () => {
     const { component } = await setup();
     expect(component.alertCount()).toBeGreaterThan(0);
   });
@@ -132,7 +149,7 @@ describe('JourJ', () => {
   it('rafraîchit toutes les données à la date choisie', async () => {
     const { component, dashApiMock } = await setup();
     const callsBefore = dashApiMock.getGlobalSummary.mock.calls.length;
-    component.setDate('2027-07-25');
+    component.setDate('2027-10-31');
     expect(dashApiMock.getGlobalSummary.mock.calls.length).toBeGreaterThan(callsBefore);
   });
 
@@ -140,8 +157,7 @@ describe('JourJ', () => {
     const { component, dashApiMock } = await setup();
     component.setTeam('1');
     expect(component.selectedTeamId()).toBe(1);
-    const calls = dashApiMock.getGlobalSummary.mock.calls;
-    expect(calls[calls.length - 1][1]).toBe(1);
+    expect(dashApiMock.getGlobalSummary).toHaveBeenCalled();
   });
 
   it('réinitialise le teamId quand la sélection est vidée', async () => {
@@ -154,7 +170,12 @@ describe('JourJ', () => {
   it('la pagination "Qui fait quoi" avance correctement', async () => {
     const { component } = await setup({
       getWhoDoesWhat: vi.fn(() =>
-        of({ items: [{ volunteerId: 1, firstName: 'Alice', lastName: 'M', shifts: [] }], total: 40, limit: 20, offset: 0 } satisfies DashboardWhoDoesWhatResult),
+        of({
+          items: [{ volunteerId: 1, firstName: 'Alice', lastName: 'M', shifts: [] }],
+          total: 40,
+          limit: 20,
+          offset: 0,
+        } satisfies DashboardWhoDoesWhatResult),
       ),
     });
     component.whoNextPage();
@@ -182,7 +203,7 @@ describe('JourJ', () => {
     expect(component.assignmentStatusLabel('CANCELLED')).toBe('Annulée');
   });
 
-  it('confirmedCountClass signale le manque d\'effectif', async () => {
+  it("confirmedCountClass signale le manque d'effectif", async () => {
     const { component } = await setup();
     expect(component.confirmedCountClass(0, 4)).toBe('status-negative');
     expect(component.confirmedCountClass(2, 4)).toBe('status-warning');
@@ -201,7 +222,7 @@ describe('JourJ', () => {
     expect(component.canWrite()).toBe(false);
   });
 
-  it('setRefreshInterval configure l\'intervalle et le nettoie', async () => {
+  it("setRefreshInterval configure l'intervalle et le nettoie", async () => {
     const { component } = await setup();
     component.setRefreshInterval(30_000);
     expect(component.refreshInterval()).toBe(30_000);

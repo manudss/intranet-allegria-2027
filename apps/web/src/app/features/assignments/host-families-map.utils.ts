@@ -83,24 +83,31 @@ export function buildHostFamilyMapItems(
   assignments: readonly ParticipantHostFamilyAssignment[],
   referencePoint: L.LatLngExpression,
 ): HostFamilyMapItem[] {
-  const byFamily = assignments.reduce<Map<number, ParticipantHostFamilyAssignment[]>>((acc, assignment) => {
-    const familyId = assignment.hostFamily.id;
-    const existing = acc.get(familyId);
-    if (existing) {
-      existing.push(assignment);
-    } else {
-      acc.set(familyId, [assignment]);
-    }
-    return acc;
-  }, new Map<number, ParticipantHostFamilyAssignment[]>());
+  const byFamily = assignments.reduce<Map<number, ParticipantHostFamilyAssignment[]>>(
+    (acc, assignment) => {
+      const familyId = assignment.hostFamily.id;
+      const existing = acc.get(familyId);
+      if (existing) {
+        existing.push(assignment);
+      } else {
+        acc.set(familyId, [assignment]);
+      }
+      return acc;
+    },
+    new Map<number, ParticipantHostFamilyAssignment[]>(),
+  );
 
   return families.map((family) => {
     const relatedAssignments = (byFamily.get(family.id) || []).filter(
       (assignment) => assignment.status !== 'CANCELLED',
     );
     const assignmentsCount = relatedAssignments.length;
-    const under18Count = relatedAssignments.filter((assignment) => assignment.type === 'JEUNE').length;
-    const animatorsCount = relatedAssignments.filter((assignment) => assignment.type === 'ANIMATEUR').length;
+    const under18Count = relatedAssignments.filter(
+      (assignment) => assignment.type === 'JEUNE',
+    ).length;
+    const animatorsCount = relatedAssignments.filter(
+      (assignment) => assignment.type === 'ANIMATEUR',
+    ).length;
     const capacityRatio = family.maxCapacity > 0 ? assignmentsCount / family.maxCapacity : 1;
     return {
       family,
@@ -135,7 +142,8 @@ export function filterHostFamilyMapItems(
     if (filters.maxDistanceKm != null) {
       if (item.distanceKm == null || item.distanceKm > filters.maxDistanceKm) return false;
     }
-    if (filters.hasAnimators != null && (item.animatorsCount > 0) !== filters.hasAnimators) return false;
+    if (filters.hasAnimators != null && item.animatorsCount > 0 !== filters.hasAnimators)
+      return false;
     if (!search) return true;
     const haystack = [
       item.family.familyName,

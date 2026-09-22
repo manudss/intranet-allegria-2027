@@ -48,8 +48,8 @@ const membership: VolunteerTeamMembership = {
   volunteerTeamId: 2,
   volunteer,
   volunteerTeam: team,
-  startAt: '2027-07-19',
-  endAt: '2027-07-27',
+  startAt: '2027-10-30',
+  endAt: '2027-11-02',
   role: 'Coordination',
   createdAt: '2027-07-01T00:00:00.000Z',
   updatedAt: '2027-07-01T00:00:00.000Z',
@@ -69,11 +69,13 @@ const tag: VolunteerTag = {
   createdAt: '2027-07-01T00:00:00.000Z',
 };
 
-const makeProviders = (overrides: {
-  volunteersApi?: object;
-  skillsApi?: object;
-  tagsApi?: object;
-} = {}) => {
+const makeProviders = (
+  overrides: {
+    volunteersApi?: object;
+    skillsApi?: object;
+    tagsApi?: object;
+  } = {},
+) => {
   const volunteersApi = overrides.volunteersApi ?? {
     list: vi.fn(() => of([volunteer])),
     listFiltered: vi.fn(() => of([volunteer])),
@@ -81,8 +83,18 @@ const makeProviders = (overrides: {
     update: vi.fn(),
     delete: vi.fn(),
   };
-  const teamsApi = { list: vi.fn(() => of([team])), create: vi.fn(), update: vi.fn(), delete: vi.fn() };
-  const membershipsApi = { list: vi.fn(() => of([membership])), create: vi.fn(), update: vi.fn(), delete: vi.fn() };
+  const teamsApi = {
+    list: vi.fn(() => of([team])),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  };
+  const membershipsApi = {
+    list: vi.fn(() => of([membership])),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  };
   const skillsApi = overrides.skillsApi ?? {
     list: vi.fn(() => of([skill])),
     add: vi.fn(),
@@ -101,13 +113,16 @@ const makeProviders = (overrides: {
     { provide: VolunteerTeamMembershipsApiService, useValue: membershipsApi },
     { provide: VolunteerSkillsApiService, useValue: skillsApi },
     { provide: VolunteerTagsApiService, useValue: tagsApi },
-    { provide: VolunteerShiftAssignmentsApiService, useValue: { listVolunteerPlanning: vi.fn(() => of([])) } },
+    {
+      provide: VolunteerShiftAssignmentsApiService,
+      useValue: { listVolunteerPlanning: vi.fn(() => of([])) },
+    },
     { provide: AuthService, useValue: { hasAnyRole: () => true } },
   ];
 };
 
 describe('VolunteersPage', () => {
-  it('charge les bénévoles et les équipes à l\'init', async () => {
+  it("charge les bénévoles et les équipes à l'init", async () => {
     await TestBed.configureTestingModule({
       imports: [VolunteersPage],
       providers: makeProviders(),
@@ -120,7 +135,7 @@ describe('VolunteersPage', () => {
     expect(fixture.componentInstance.teams()).toEqual([team]);
   });
 
-  it('charge les compétences et tags à l\'ouverture d\'une fiche', async () => {
+  it("charge les compétences et tags à l'ouverture d'une fiche", async () => {
     await TestBed.configureTestingModule({
       imports: [VolunteersPage],
       providers: makeProviders(),
@@ -139,7 +154,12 @@ describe('VolunteersPage', () => {
   });
 
   it('ajoute une compétence et rafraîchit la liste', async () => {
-    const newSkill: VolunteerSkill = { id: 11, volunteerId: 1, skill: VolunteerSkillType.HEALTH, createdAt: '2027-07-01T00:00:00.000Z' };
+    const newSkill: VolunteerSkill = {
+      id: 11,
+      volunteerId: 1,
+      skill: VolunteerSkillType.HEALTH,
+      createdAt: '2027-07-01T00:00:00.000Z',
+    };
     const addFn = vi.fn(() => of(newSkill));
     const skillsApi = {
       list: vi.fn(() => of([skill])),
@@ -168,7 +188,12 @@ describe('VolunteersPage', () => {
   });
 
   it('ajoute un tag et réinitialise la saisie', async () => {
-    const newTag: VolunteerTag = { id: 21, volunteerId: 1, value: 'sport', createdAt: '2027-07-01T00:00:00.000Z' };
+    const newTag: VolunteerTag = {
+      id: 21,
+      volunteerId: 1,
+      value: 'sport',
+      createdAt: '2027-07-01T00:00:00.000Z',
+    };
     const addFn = vi.fn(() => of(newTag));
     const tagsApi = {
       list: vi.fn(() => of([tag])),
@@ -197,7 +222,7 @@ describe('VolunteersPage', () => {
     expect(fixture.componentInstance.newTag()).toBe('');
   });
 
-  it('filtre les compétences disponibles à l\'ajout', async () => {
+  it("filtre les compétences disponibles à l'ajout", async () => {
     await TestBed.configureTestingModule({
       imports: [VolunteersPage],
       providers: makeProviders(),
@@ -214,4 +239,3 @@ describe('VolunteersPage', () => {
     expect(available).toContain(VolunteerSkillType.HEALTH);
   });
 });
-

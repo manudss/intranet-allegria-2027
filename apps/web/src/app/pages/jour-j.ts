@@ -12,7 +12,16 @@ import {
   VolunteerShiftStatus,
   VolunteerTeam,
 } from '../models/models';
-import { OperationalDashboardApiService, VolunteerMissionsApiService, VolunteerTeamsApiService } from '../services/api.services';
+import {
+  OperationalDashboardApiService,
+  VolunteerMissionsApiService,
+  VolunteerTeamsApiService,
+} from '../services/api.services';
+import { ALLEGRIA_2027_EVENT_DATES } from '../shared/event-date-selector/event-date.config';
+import {
+  EVENT_DATE_VALUE_PROVIDER,
+  EventDateSelectorComponent,
+} from '../shared/event-date-selector/event-date-selector.component';
 import { SHARED_IMPORTS } from '../shared/shared-imports';
 
 type Tab = 'missions' | 'teams' | 'locations' | 'who' | 'alerts';
@@ -47,7 +56,7 @@ const TEAM_SHIFT_STATUSES: ReadonlyArray<{
 @Component({
   selector: 'app-jour-j',
   standalone: true,
-  imports: [...SHARED_IMPORTS, DatePipe, NgClass],
+  imports: [...SHARED_IMPORTS, DatePipe, NgClass, EventDateSelectorComponent],
   templateUrl: './jour-j.html',
   styleUrl: './jour-j.scss',
 })
@@ -56,10 +65,12 @@ export class JourJ implements OnInit, OnDestroy {
   private readonly missionsApi = inject(VolunteerMissionsApiService);
   private readonly teamsApi = inject(VolunteerTeamsApiService);
   private readonly auth = inject(AuthService);
+  private readonly dateProvider = inject(EVENT_DATE_VALUE_PROVIDER);
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
 
   // ─── Filtres ──────────────────────────────────────────────────────────────
-  readonly selectedDate = signal(new Date().toISOString().slice(0, 10));
+  readonly eventDateConfig = ALLEGRIA_2027_EVENT_DATES;
+  readonly selectedDate = signal(this.dateProvider.todayIsoDate());
   readonly selectedTeamId = signal<number | null>(null);
   readonly refreshInterval = signal(0);
   readonly activeTab = signal<Tab>('missions');
@@ -101,10 +112,16 @@ export class JourJ implements OnInit, OnDestroy {
       list.push({ type: 'danger', message: `${g.understaffedShifts} shift(s) sous-doté(s)` });
     }
     if (g.shiftsWithoutConfirmedAssignment > 0) {
-      list.push({ type: 'warning', message: `${g.shiftsWithoutConfirmedAssignment} shift(s) sans effectif confirmé` });
+      list.push({
+        type: 'warning',
+        message: `${g.shiftsWithoutConfirmedAssignment} shift(s) sans effectif confirmé`,
+      });
     }
     if (g.provisionalVolunteers > 0) {
-      list.push({ type: 'warning', message: `${g.provisionalVolunteers} bénévole(s) en affectation provisoire` });
+      list.push({
+        type: 'warning',
+        message: `${g.provisionalVolunteers} bénévole(s) en affectation provisoire`,
+      });
     }
     const teamAlerts = this.teamsSummary().flatMap((t) =>
       t.alerts.map((msg) => ({ type: 'warning' as const, message: `[${t.teamCode}] ${msg}` })),
@@ -215,7 +232,10 @@ export class JourJ implements OnInit, OnDestroy {
       .subscribe({
         next: (blob) => this.downloadBlob(blob, format),
         error: (err) => {
-          this.exportError.set(err?.error?.message ?? 'Impossible de générer l’export. Réessayez dans quelques instants.');
+          this.exportError.set(
+            err?.error?.message ??
+              'Impossible de générer l’export. Réessayez dans quelques instants.',
+          );
         },
       });
   }

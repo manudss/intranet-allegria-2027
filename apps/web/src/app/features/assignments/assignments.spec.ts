@@ -7,9 +7,23 @@ import { HostFamiliesApiService } from '../../services/api.services';
 import { AssignmentsPage } from './assignments';
 
 const family: HostFamily = {
-  id: 1, familyName: 'Famille Bernard', address: '12 rue des Tilleuls', postalCode: '69003', city: 'Lyon',
-  phone: null, email: null, maxCapacity: 6, maxUnder18: 4, parish: 'Sainte Blandine', notes: null,
-  latitude: null, longitude: null, maxAnimators: 2, constraints: [], tags: ['jardin'], status: 'VALIDATED',
+  id: 1,
+  familyName: 'Famille Bernard',
+  address: '12 rue des Tilleuls',
+  postalCode: '69003',
+  city: 'Lyon',
+  phone: null,
+  email: null,
+  maxCapacity: 6,
+  maxUnder18: 4,
+  parish: 'Sainte Blandine',
+  notes: null,
+  latitude: null,
+  longitude: null,
+  maxAnimators: 2,
+  constraints: [],
+  tags: ['jardin'],
+  status: 'VALIDATED',
 };
 
 describe('AssignmentsPage', () => {

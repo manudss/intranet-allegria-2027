@@ -1,20 +1,40 @@
 <app-page-layout title="Tableau de bord Jour J" description="Pilotage opérationnel en temps réel">
-
   <!-- ── Actions header ─────────────────────────────────────────────────── -->
   <div actions class="header-actions">
     <button type="button" tuiButton size="s" appearance="secondary" (click)="refreshAll()">
       <tui-icon icon="@tui.refresh-cw" />
       Actualiser
     </button>
-    <button type="button" tuiButton size="s" appearance="primary" [disabled]="exporting()" (click)="exportCurrentPlanning('xlsx')">
+    <button
+      type="button"
+      tuiButton
+      size="s"
+      appearance="primary"
+      [disabled]="exporting()"
+      (click)="exportCurrentPlanning('xlsx')"
+    >
       <tui-icon icon="@tui.file-spreadsheet" />
       Export XLSX
     </button>
-    <button type="button" tuiButton size="s" appearance="secondary" [disabled]="exporting()" (click)="exportCurrentPlanning('print')">
+    <button
+      type="button"
+      tuiButton
+      size="s"
+      appearance="secondary"
+      [disabled]="exporting()"
+      (click)="exportCurrentPlanning('print')"
+    >
       <tui-icon icon="@tui.printer" />
       Export imprimable
     </button>
-    <button type="button" tuiButton size="s" appearance="secondary" [disabled]="exporting()" (click)="exportCurrentPlanning('pdf')">
+    <button
+      type="button"
+      tuiButton
+      size="s"
+      appearance="secondary"
+      [disabled]="exporting()"
+      (click)="exportCurrentPlanning('pdf')"
+    >
       <tui-icon icon="@tui.file-text" />
       Export PDF
     </button>
@@ -22,30 +42,40 @@
       <span>Rafraîchir auto</span>
       <select (change)="setRefreshInterval(+$any($event.target).value)">
         @for (opt of refreshOptions; track opt.value) {
-          <option [value]="opt.value" [selected]="refreshInterval() === opt.value">{{ opt.label }}</option>
+        <option [value]="opt.value" [selected]="refreshInterval() === opt.value">
+          {{ opt.label }}
+        </option>
         }
       </select>
     </label>
   </div>
 
   @if (exportError()) {
-    <p class="status-negative">{{ exportError() }}</p>
+  <p class="status-negative">{{ exportError() }}</p>
   }
 
   <!-- ── Filtres ────────────────────────────────────────────────────────── -->
   <div class="filters">
-    <label class="filter-item">
+    <div class="filter-item">
       <span class="filter-label">Date</span>
-      <input type="date" class="filter-input" [value]="selectedDate()" (input)="setDate($any($event.target).value)" />
-    </label>
+      <app-event-date-selector
+        class="filter-input"
+        label="Date"
+        hint="Choisissez une date de preparation, de rassemblement ou de rangement."
+        [config]="eventDateConfig"
+        [required]="true"
+        [value]="selectedDate()"
+        (valueChange)="setDate($any($event))"
+      />
+    </div>
     <label class="filter-item">
       <span class="filter-label">Équipe</span>
       <select class="filter-input" (change)="setTeam($any($event.target).value)">
         <option value="">Toutes</option>
         @for (team of teams(); track team.id) {
-          <option [value]="team.id" [selected]="selectedTeamId() === team.id">
-            {{ team.code }} · {{ team.name }}
-          </option>
+        <option [value]="team.id" [selected]="selectedTeamId() === team.id">
+          {{ team.code }} · {{ team.name }}
+        </option>
         }
       </select>
     </label>
@@ -53,71 +83,103 @@
 
   <!-- ── Cartes de synthèse ─────────────────────────────────────────────── -->
   @if (loadingGlobal()) {
-    <tui-loader class="inline-loader" />
+  <tui-loader class="inline-loader" />
   } @else if (global(); as g) {
-    <div class="summary-cards">
-      <div class="summary-card">
-        <span class="card-value">{{ g.missionCount }}</span>
-        <span class="card-label">Missions</span>
-      </div>
-      <div class="summary-card">
-        <span class="card-value">{{ g.shiftCount }}</span>
-        <span class="card-label">Shifts</span>
-      </div>
-      <div class="summary-card" [ngClass]="{ 'card-positive': g.shiftsByStatus.IN_PROGRESS > 0 }">
-        <span class="card-value">{{ g.shiftsByStatus.IN_PROGRESS }}</span>
-        <span class="card-label">En cours</span>
-      </div>
-      <div class="summary-card" [ngClass]="{ 'card-positive': g.shiftsByStatus.DONE > 0 }">
-        <span class="card-value">{{ g.shiftsByStatus.DONE }}</span>
-        <span class="card-label">Terminés</span>
-      </div>
-      <div class="summary-card" [ngClass]="{ 'card-warning': g.shiftsByStatus.TODO > 0 }">
-        <span class="card-value">{{ g.shiftsByStatus.TODO }}</span>
-        <span class="card-label">À faire</span>
-      </div>
-      <div class="summary-card" [ngClass]="{ 'card-danger': g.understaffedShifts > 0 }">
-        <span class="card-value">{{ g.understaffedShifts }}</span>
-        <span class="card-label">Sous-dotés</span>
-      </div>
-      <div class="summary-card" [ngClass]="{ 'card-warning': g.shiftsWithoutConfirmedAssignment > 0 }">
-        <span class="card-value">{{ g.shiftsWithoutConfirmedAssignment }}</span>
-        <span class="card-label">Sans confirmé</span>
-      </div>
-      <div class="summary-card">
-        <span class="card-value">{{ g.assignedVolunteers }}</span>
-        <span class="card-label">Bénévoles affectés</span>
-      </div>
-      <div class="summary-card" [ngClass]="{ 'card-warning': g.provisionalVolunteers > 0 }">
-        <span class="card-value">{{ g.provisionalVolunteers }}</span>
-        <span class="card-label">Provisoires</span>
-      </div>
+  <div class="summary-cards">
+    <div class="summary-card">
+      <span class="card-value">{{ g.missionCount }}</span>
+      <span class="card-label">Missions</span>
     </div>
+    <div class="summary-card">
+      <span class="card-value">{{ g.shiftCount }}</span>
+      <span class="card-label">Shifts</span>
+    </div>
+    <div class="summary-card" [ngClass]="{ 'card-positive': g.shiftsByStatus.IN_PROGRESS > 0 }">
+      <span class="card-value">{{ g.shiftsByStatus.IN_PROGRESS }}</span>
+      <span class="card-label">En cours</span>
+    </div>
+    <div class="summary-card" [ngClass]="{ 'card-positive': g.shiftsByStatus.DONE > 0 }">
+      <span class="card-value">{{ g.shiftsByStatus.DONE }}</span>
+      <span class="card-label">Terminés</span>
+    </div>
+    <div class="summary-card" [ngClass]="{ 'card-warning': g.shiftsByStatus.TODO > 0 }">
+      <span class="card-value">{{ g.shiftsByStatus.TODO }}</span>
+      <span class="card-label">À faire</span>
+    </div>
+    <div class="summary-card" [ngClass]="{ 'card-danger': g.understaffedShifts > 0 }">
+      <span class="card-value">{{ g.understaffedShifts }}</span>
+      <span class="card-label">Sous-dotés</span>
+    </div>
+    <div
+      class="summary-card"
+      [ngClass]="{ 'card-warning': g.shiftsWithoutConfirmedAssignment > 0 }"
+    >
+      <span class="card-value">{{ g.shiftsWithoutConfirmedAssignment }}</span>
+      <span class="card-label">Sans confirmé</span>
+    </div>
+    <div class="summary-card">
+      <span class="card-value">{{ g.assignedVolunteers }}</span>
+      <span class="card-label">Bénévoles affectés</span>
+    </div>
+    <div class="summary-card" [ngClass]="{ 'card-warning': g.provisionalVolunteers > 0 }">
+      <span class="card-value">{{ g.provisionalVolunteers }}</span>
+      <span class="card-label">Provisoires</span>
+    </div>
+  </div>
   }
 
   <!-- ── Navigation onglets ─────────────────────────────────────────────── -->
   <nav class="tab-bar" role="tablist" aria-label="Onglets du tableau de bord">
-    <button type="button" role="tab" class="tab-btn" [class.active]="activeTab() === 'missions'"
-      [attr.aria-selected]="activeTab() === 'missions'" (click)="setTab('missions')">
+    <button
+      type="button"
+      role="tab"
+      class="tab-btn"
+      [class.active]="activeTab() === 'missions'"
+      [attr.aria-selected]="activeTab() === 'missions'"
+      (click)="setTab('missions')"
+    >
       Missions &amp; shifts
     </button>
-    <button type="button" role="tab" class="tab-btn" [class.active]="activeTab() === 'teams'"
-      [attr.aria-selected]="activeTab() === 'teams'" (click)="setTab('teams')">
+    <button
+      type="button"
+      role="tab"
+      class="tab-btn"
+      [class.active]="activeTab() === 'teams'"
+      [attr.aria-selected]="activeTab() === 'teams'"
+      (click)="setTab('teams')"
+    >
       Équipes
     </button>
-    <button type="button" role="tab" class="tab-btn" [class.active]="activeTab() === 'locations'"
-      [attr.aria-selected]="activeTab() === 'locations'" (click)="setTab('locations')">
+    <button
+      type="button"
+      role="tab"
+      class="tab-btn"
+      [class.active]="activeTab() === 'locations'"
+      [attr.aria-selected]="activeTab() === 'locations'"
+      (click)="setTab('locations')"
+    >
       Lieux
     </button>
-    <button type="button" role="tab" class="tab-btn" [class.active]="activeTab() === 'who'"
-      [attr.aria-selected]="activeTab() === 'who'" (click)="setTab('who')">
+    <button
+      type="button"
+      role="tab"
+      class="tab-btn"
+      [class.active]="activeTab() === 'who'"
+      [attr.aria-selected]="activeTab() === 'who'"
+      (click)="setTab('who')"
+    >
       Qui fait quoi
     </button>
-    <button type="button" role="tab" class="tab-btn tab-btn--alerts" [class.active]="activeTab() === 'alerts'"
-      [attr.aria-selected]="activeTab() === 'alerts'" (click)="setTab('alerts')">
-      Alertes
-      @if (alertCount() > 0) {
-        <span tuiBadge class="alert-badge" size="s" appearance="negative">{{ alertCount() }}</span>
+    <button
+      type="button"
+      role="tab"
+      class="tab-btn tab-btn--alerts"
+      [class.active]="activeTab() === 'alerts'"
+      [attr.aria-selected]="activeTab() === 'alerts'"
+      (click)="setTab('alerts')"
+    >
+      Alertes @if (alertCount() > 0) {
+      <span tuiBadge class="alert-badge" size="s" appearance="negative">{{ alertCount() }}</span>
       }
     </button>
   </nav>
@@ -126,296 +188,317 @@
   <!-- Onglet Missions & shifts                                              -->
   <!-- ══════════════════════════════════════════════════════════════════════ -->
   @if (activeTab() === 'missions') {
-    <section class="tab-panel" aria-labelledby="tab-missions">
-      @if (loadingTodo()) {
-        <tui-loader />
-      } @else if (todoList(); as todo) {
-        <!-- Missions obligatoires non terminées -->
-        @if (todo.mandatoryIncomplete.length > 0) {
-          <h2 class="section-title">Missions obligatoires — en cours / à faire</h2>
-          <ul class="item-list">
-            @for (m of todo.mandatoryIncomplete; track m.missionId) {
-              <li class="item-row item-row--warning">
-                <div class="item-main">
-                  <strong>{{ m.title }}</strong>
-                  @if (m.teamName) {
-                    <span class="meta">· {{ m.teamName }}</span>
-                  }
-                  @if (m.location) {
-                    <span class="meta">· {{ m.location }}</span>
-                  }
-                </div>
-                <span class="badge-count">{{ m.shiftCount }} shift(s)</span>
-              </li>
-            }
-          </ul>
-        }
-
-        <!-- Shifts sans effectif confirmé -->
-        @if (todo.withoutConfirmedStaff.length > 0) {
-          <h2 class="section-title">Shifts sans effectif confirmé</h2>
-          <ul class="item-list">
-            @for (s of todo.withoutConfirmedStaff; track s.shiftId) {
-              <li class="item-row item-row--danger">
-                <div class="item-main">
-                  <strong>{{ s.missionTitle }}</strong>
-                  <span class="meta">
-                    {{ s.startAt | date: 'dd/MM HH:mm' }}–{{ s.endAt | date: 'HH:mm' }}
-                  </span>
-                  @if (s.location) { <span class="meta">· {{ s.location }}</span> }
-                  <span class="meta">Affectés : {{ s.activeCount }}/{{ s.capacity ?? '?' }}</span>
-                </div>
-                @if (canWrite()) {
-                  <button type="button" tuiButton size="xs" appearance="primary"
-                    (click)="changeShiftStatus(s.missionId, s.shiftId, shiftStatus.IN_PROGRESS)">
-                    Démarrer
-                  </button>
-                }
-              </li>
-            }
-          </ul>
-        }
-
-        <!-- Shifts non commencés -->
-        @if (todo.unstarted.length > 0) {
-          <h2 class="section-title">Shifts non commencés (TODO)</h2>
-          <ul class="item-list">
-            @for (s of todo.unstarted; track s.shiftId) {
-              <li class="item-row">
-                <div class="item-main">
-                  <strong>{{ s.missionTitle }}</strong>
-                  <span class="meta">
-                    {{ s.startAt | date: 'dd/MM HH:mm' }}–{{ s.endAt | date: 'HH:mm' }}
-                  </span>
-                  @if (s.location) { <span class="meta">· {{ s.location }}</span> }
-                  <span class="meta">
-                    <span [class]="confirmedCountClass(s.confirmedCount, s.capacity)">
-                      ✓ {{ s.confirmedCount }}
-                    </span>
-                    / actifs {{ s.activeCount }}
-                    @if (s.capacity) { / capa {{ s.capacity }} }
-                  </span>
-                </div>
-                @if (canWrite()) {
-                  <button type="button" tuiButton size="xs" appearance="secondary"
-                    (click)="changeShiftStatus(s.missionId, s.shiftId, shiftStatus.IN_PROGRESS)">
-                    Démarrer
-                  </button>
-                }
-              </li>
-            }
-          </ul>
-        }
-
-        <!-- Missions facultatives -->
-        @if (todo.optionalIncomplete.length > 0) {
-          <details class="optional-section">
-            <summary class="section-title">
-              Missions facultatives ({{ todo.optionalIncomplete.length }})
-            </summary>
-            <ul class="item-list">
-              @for (m of todo.optionalIncomplete; track m.missionId) {
-                <li class="item-row item-row--optional">
-                  <strong>{{ m.title }}</strong>
-                  @if (m.teamName) { <span class="meta">· {{ m.teamName }}</span> }
-                </li>
-              }
-            </ul>
-          </details>
-        }
-
-        @if (todo.mandatoryIncomplete.length === 0 && todo.withoutConfirmedStaff.length === 0 && todo.unstarted.length === 0) {
-          <p class="empty-state">✅ Aucun élément à traiter pour cette date.</p>
-        }
+  <section class="tab-panel" aria-labelledby="tab-missions">
+    @if (loadingTodo()) {
+    <tui-loader />
+    } @else if (todoList(); as todo) {
+    <!-- Missions obligatoires non terminées -->
+    @if (todo.mandatoryIncomplete.length > 0) {
+    <h2 class="section-title">Missions obligatoires — en cours / à faire</h2>
+    <ul class="item-list">
+      @for (m of todo.mandatoryIncomplete; track m.missionId) {
+      <li class="item-row item-row--warning">
+        <div class="item-main">
+          <strong>{{ m.title }}</strong>
+          @if (m.teamName) {
+          <span class="meta">· {{ m.teamName }}</span>
+          } @if (m.location) {
+          <span class="meta">· {{ m.location }}</span>
+          }
+        </div>
+        <span class="badge-count">{{ m.shiftCount }} shift(s)</span>
+      </li>
       }
-    </section>
+    </ul>
+    }
+
+    <!-- Shifts sans effectif confirmé -->
+    @if (todo.withoutConfirmedStaff.length > 0) {
+    <h2 class="section-title">Shifts sans effectif confirmé</h2>
+    <ul class="item-list">
+      @for (s of todo.withoutConfirmedStaff; track s.shiftId) {
+      <li class="item-row item-row--danger">
+        <div class="item-main">
+          <strong>{{ s.missionTitle }}</strong>
+          <span class="meta">
+            {{ s.startAt | date: 'dd/MM HH:mm' }}–{{ s.endAt | date: 'HH:mm' }}
+          </span>
+          @if (s.location) { <span class="meta">· {{ s.location }}</span> }
+          <span class="meta">Affectés : {{ s.activeCount }}/{{ s.capacity ?? '?' }}</span>
+        </div>
+        @if (canWrite()) {
+        <button
+          type="button"
+          tuiButton
+          size="xs"
+          appearance="primary"
+          (click)="changeShiftStatus(s.missionId, s.shiftId, shiftStatus.IN_PROGRESS)"
+        >
+          Démarrer
+        </button>
+        }
+      </li>
+      }
+    </ul>
+    }
+
+    <!-- Shifts non commencés -->
+    @if (todo.unstarted.length > 0) {
+    <h2 class="section-title">Shifts non commencés (TODO)</h2>
+    <ul class="item-list">
+      @for (s of todo.unstarted; track s.shiftId) {
+      <li class="item-row">
+        <div class="item-main">
+          <strong>{{ s.missionTitle }}</strong>
+          <span class="meta">
+            {{ s.startAt | date: 'dd/MM HH:mm' }}–{{ s.endAt | date: 'HH:mm' }}
+          </span>
+          @if (s.location) { <span class="meta">· {{ s.location }}</span> }
+          <span class="meta">
+            <span [class]="confirmedCountClass(s.confirmedCount, s.capacity)">
+              ✓ {{ s.confirmedCount }}
+            </span>
+            / actifs {{ s.activeCount }} @if (s.capacity) { / capa {{ s.capacity }} }
+          </span>
+        </div>
+        @if (canWrite()) {
+        <button
+          type="button"
+          tuiButton
+          size="xs"
+          appearance="secondary"
+          (click)="changeShiftStatus(s.missionId, s.shiftId, shiftStatus.IN_PROGRESS)"
+        >
+          Démarrer
+        </button>
+        }
+      </li>
+      }
+    </ul>
+    }
+
+    <!-- Missions facultatives -->
+    @if (todo.optionalIncomplete.length > 0) {
+    <details class="optional-section">
+      <summary class="section-title">
+        Missions facultatives ({{ todo.optionalIncomplete.length }})
+      </summary>
+      <ul class="item-list">
+        @for (m of todo.optionalIncomplete; track m.missionId) {
+        <li class="item-row item-row--optional">
+          <strong>{{ m.title }}</strong>
+          @if (m.teamName) { <span class="meta">· {{ m.teamName }}</span> }
+        </li>
+        }
+      </ul>
+    </details>
+    } @if (todo.mandatoryIncomplete.length === 0 && todo.withoutConfirmedStaff.length === 0 &&
+    todo.unstarted.length === 0) {
+    <p class="empty-state">✅ Aucun élément à traiter pour cette date.</p>
+    } }
+  </section>
   }
 
   <!-- ══════════════════════════════════════════════════════════════════════ -->
   <!-- Onglet Équipes                                                        -->
   <!-- ══════════════════════════════════════════════════════════════════════ -->
   @if (activeTab() === 'teams') {
-    <section class="tab-panel" aria-labelledby="tab-teams">
-      @if (loadingTeams()) {
-        <tui-loader />
-      } @else if (teamsSummary().length === 0) {
-        <p class="empty-state">Aucune équipe opérationnelle ce jour.</p>
-      } @else {
-        <div class="team-grid">
-          @for (team of teamsSummary(); track team.teamId) {
-            <article class="team-card" [class.has-alerts]="team.alerts.length > 0">
-              <header class="team-card-header">
-                <h3 class="team-name">{{ team.teamName }}</h3>
-                <span class="team-code">{{ team.teamCode }}</span>
-              </header>
-              <div class="team-stats">
-                <span class="stat"><strong>{{ team.missionCount }}</strong> missions</span>
-                <span class="stat"><strong>{{ team.confirmedVolunteers }}</strong> confirmés</span>
-                <span class="stat" [class.stat-warning]="team.provisionalVolunteers > 0">
-                  <strong>{{ team.provisionalVolunteers }}</strong> provisoires
-                </span>
-                <span class="stat">Capa : {{ team.totalCapacity }}</span>
-              </div>
-              <div class="shift-status-row">
-                @for (entry of teamShiftStatuses; track entry.key) {
-                  <span class="mini-badge" [ngClass]="shiftStatusClass(entry.key)">
-                    {{ team.shiftsByStatus[entry.key] }} {{ entry.label }}
-                  </span>
-                }
-              </div>
-              @if (team.alerts.length > 0) {
-                <ul class="alert-list">
-                  @for (alert of team.alerts; track $index) {
-                    <li class="alert-item">⚠ {{ alert }}</li>
-                  }
-                </ul>
-              }
-            </article>
+  <section class="tab-panel" aria-labelledby="tab-teams">
+    @if (loadingTeams()) {
+    <tui-loader />
+    } @else if (teamsSummary().length === 0) {
+    <p class="empty-state">Aucune équipe opérationnelle ce jour.</p>
+    } @else {
+    <div class="team-grid">
+      @for (team of teamsSummary(); track team.teamId) {
+      <article class="team-card" [class.has-alerts]="team.alerts.length > 0">
+        <header class="team-card-header">
+          <h3 class="team-name">{{ team.teamName }}</h3>
+          <span class="team-code">{{ team.teamCode }}</span>
+        </header>
+        <div class="team-stats">
+          <span class="stat"><strong>{{ team.missionCount }}</strong> missions</span>
+          <span class="stat"><strong>{{ team.confirmedVolunteers }}</strong> confirmés</span>
+          <span class="stat" [class.stat-warning]="team.provisionalVolunteers > 0">
+            <strong>{{ team.provisionalVolunteers }}</strong> provisoires
+          </span>
+          <span class="stat">Capa : {{ team.totalCapacity }}</span>
+        </div>
+        <div class="shift-status-row">
+          @for (entry of teamShiftStatuses; track entry.key) {
+          <span class="mini-badge" [ngClass]="shiftStatusClass(entry.key)">
+            {{ team.shiftsByStatus[entry.key] }} {{ entry.label }}
+          </span>
           }
         </div>
+        @if (team.alerts.length > 0) {
+        <ul class="alert-list">
+          @for (alert of team.alerts; track $index) {
+          <li class="alert-item">⚠ {{ alert }}</li>
+          }
+        </ul>
+        }
+      </article>
       }
-    </section>
+    </div>
+    }
+  </section>
   }
 
   <!-- ══════════════════════════════════════════════════════════════════════ -->
   <!-- Onglet Lieux                                                          -->
   <!-- ══════════════════════════════════════════════════════════════════════ -->
   @if (activeTab() === 'locations') {
-    <section class="tab-panel" aria-labelledby="tab-locations">
-      @if (loadingLocations()) {
-        <tui-loader />
-      } @else if (locations().length === 0) {
-        <p class="empty-state">Aucun lieu avec des shifts ce jour.</p>
-      } @else {
-        <div class="location-table-wrapper">
-          <table class="data-table">
-            <caption class="sr-only">Synthèse des lieux opérationnels du jour</caption>
-            <thead>
-              <tr>
-                <th scope="col">Lieu</th>
-                <th scope="col" class="text-right">En cours</th>
-                <th scope="col" class="text-right">À venir</th>
-                <th scope="col" class="text-right">Bénévoles affectés</th>
-                <th scope="col">Alertes</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (loc of locations(); track loc.location) {
-                <tr [class.row-alert]="loc.alerts.length > 0">
-                  <td class="font-medium">{{ loc.location }}</td>
-                  <td class="text-right">
-                    <span [ngClass]="loc.shiftsInProgress > 0 ? 'status-in-progress' : ''">
-                      {{ loc.shiftsInProgress }}
-                    </span>
-                  </td>
-                  <td class="text-right">{{ loc.shiftsUpcoming }}</td>
-                  <td class="text-right">{{ loc.assignedVolunteers }}</td>
-                  <td>
-                    @for (a of loc.alerts; track $index) {
-                      <span class="inline-alert">{{ a }}</span>
-                    }
-                  </td>
-                </tr>
+  <section class="tab-panel" aria-labelledby="tab-locations">
+    @if (loadingLocations()) {
+    <tui-loader />
+    } @else if (locations().length === 0) {
+    <p class="empty-state">Aucun lieu avec des shifts ce jour.</p>
+    } @else {
+    <div class="location-table-wrapper">
+      <table class="data-table">
+        <caption class="sr-only">
+          Synthèse des lieux opérationnels du jour
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Lieu</th>
+            <th scope="col" class="text-right">En cours</th>
+            <th scope="col" class="text-right">À venir</th>
+            <th scope="col" class="text-right">Bénévoles affectés</th>
+            <th scope="col">Alertes</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (loc of locations(); track loc.location) {
+          <tr [class.row-alert]="loc.alerts.length > 0">
+            <td class="font-medium">{{ loc.location }}</td>
+            <td class="text-right">
+              <span [ngClass]="loc.shiftsInProgress > 0 ? 'status-in-progress' : ''">
+                {{ loc.shiftsInProgress }}
+              </span>
+            </td>
+            <td class="text-right">{{ loc.shiftsUpcoming }}</td>
+            <td class="text-right">{{ loc.assignedVolunteers }}</td>
+            <td>
+              @for (a of loc.alerts; track $index) {
+              <span class="inline-alert">{{ a }}</span>
               }
-            </tbody>
-          </table>
-        </div>
-      }
-    </section>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    }
+  </section>
   }
 
   <!-- ══════════════════════════════════════════════════════════════════════ -->
   <!-- Onglet Qui fait quoi                                                  -->
   <!-- ══════════════════════════════════════════════════════════════════════ -->
   @if (activeTab() === 'who') {
-    <section class="tab-panel" aria-labelledby="tab-who">
-      <div class="who-filters">
-        <label class="filter-item">
-          <span class="filter-label">Recherche bénévole</span>
-          <input type="search" class="filter-input" placeholder="Nom, prénom..."
-            [value]="whoSearch()" (input)="onWhoSearch($any($event.target).value)" />
-        </label>
-      </div>
+  <section class="tab-panel" aria-labelledby="tab-who">
+    <div class="who-filters">
+      <label class="filter-item">
+        <span class="filter-label">Recherche bénévole</span>
+        <input
+          type="search"
+          class="filter-input"
+          placeholder="Nom, prénom..."
+          [value]="whoSearch()"
+          (input)="onWhoSearch($any($event.target).value)"
+        />
+      </label>
+    </div>
 
-      @if (loadingWho()) {
-        <tui-loader />
-      } @else if (whoResult(); as result) {
-        @if (result.items.length === 0) {
-          <p class="empty-state">Aucun bénévole affecté pour ces critères.</p>
-        } @else {
-          <p class="pagination-info">
-            {{ result.total }} bénévole(s) · Page {{ whoPage() }} / {{ whoTotalPages() }}
-          </p>
-          <div class="who-grid">
-            @for (item of result.items; track item.volunteerId) {
-              <article class="who-card">
-                <header class="who-card-header">
-                  <strong>{{ item.lastName }} {{ item.firstName }}</strong>
-                  <span class="meta">{{ item.shifts.length }} shift(s)</span>
-                </header>
-                <ul class="who-shifts">
-                  @for (s of item.shifts; track s.shiftId) {
-                    <li class="who-shift-row">
-                      <div class="who-shift-main">
-                        <span class="who-mission">{{ s.missionTitle }}</span>
-                        @if (s.teamName) { <span class="meta">· {{ s.teamName }}</span> }
-                        <span class="meta">
-                          {{ s.startAt | date: 'HH:mm' }}–{{ s.endAt | date: 'HH:mm' }}
-                        </span>
-                        @if (s.location) { <span class="meta">{{ s.location }}</span> }
-                      </div>
-                      <div class="who-badges">
-                        <span class="mini-badge" [ngClass]="shiftStatusClass(s.shiftStatus)">
-                          {{ shiftLabel(s.shiftStatus) }}
-                        </span>
-                        <span class="mini-badge" [ngClass]="assignmentStatusClass(s.assignmentStatus)">
-                          {{ assignmentStatusLabel(s.assignmentStatus) }}
-                        </span>
-                      </div>
-                    </li>
-                  }
-                </ul>
-              </article>
-            }
-          </div>
-
-          <div class="pagination-bar">
-            <button type="button" tuiButton size="xs" appearance="secondary"
-              [disabled]="whoPage() <= 1" (click)="whoPrevPage()">
-              ← Préc.
-            </button>
-            <span>{{ whoPage() }} / {{ whoTotalPages() }}</span>
-            <button type="button" tuiButton size="xs" appearance="secondary"
-              [disabled]="whoPage() >= whoTotalPages()" (click)="whoNextPage()">
-              Suiv. →
-            </button>
-          </div>
-        }
+    @if (loadingWho()) {
+    <tui-loader />
+    } @else if (whoResult(); as result) { @if (result.items.length === 0) {
+    <p class="empty-state">Aucun bénévole affecté pour ces critères.</p>
+    } @else {
+    <p class="pagination-info">
+      {{ result.total }} bénévole(s) · Page {{ whoPage() }} / {{ whoTotalPages() }}
+    </p>
+    <div class="who-grid">
+      @for (item of result.items; track item.volunteerId) {
+      <article class="who-card">
+        <header class="who-card-header">
+          <strong>{{ item.lastName }} {{ item.firstName }}</strong>
+          <span class="meta">{{ item.shifts.length }} shift(s)</span>
+        </header>
+        <ul class="who-shifts">
+          @for (s of item.shifts; track s.shiftId) {
+          <li class="who-shift-row">
+            <div class="who-shift-main">
+              <span class="who-mission">{{ s.missionTitle }}</span>
+              @if (s.teamName) { <span class="meta">· {{ s.teamName }}</span> }
+              <span class="meta">
+                {{ s.startAt | date: 'HH:mm' }}–{{ s.endAt | date: 'HH:mm' }}
+              </span>
+              @if (s.location) { <span class="meta">{{ s.location }}</span> }
+            </div>
+            <div class="who-badges">
+              <span class="mini-badge" [ngClass]="shiftStatusClass(s.shiftStatus)">
+                {{ shiftLabel(s.shiftStatus) }}
+              </span>
+              <span class="mini-badge" [ngClass]="assignmentStatusClass(s.assignmentStatus)">
+                {{ assignmentStatusLabel(s.assignmentStatus) }}
+              </span>
+            </div>
+          </li>
+          }
+        </ul>
+      </article>
       }
-    </section>
+    </div>
+
+    <div class="pagination-bar">
+      <button
+        type="button"
+        tuiButton
+        size="xs"
+        appearance="secondary"
+        [disabled]="whoPage() <= 1"
+        (click)="whoPrevPage()"
+      >
+        ← Préc.
+      </button>
+      <span>{{ whoPage() }} / {{ whoTotalPages() }}</span>
+      <button
+        type="button"
+        tuiButton
+        size="xs"
+        appearance="secondary"
+        [disabled]="whoPage() >= whoTotalPages()"
+        (click)="whoNextPage()"
+      >
+        Suiv. →
+      </button>
+    </div>
+    } }
+  </section>
   }
 
   <!-- ══════════════════════════════════════════════════════════════════════ -->
   <!-- Onglet Alertes                                                        -->
   <!-- ══════════════════════════════════════════════════════════════════════ -->
   @if (activeTab() === 'alerts') {
-    <section class="tab-panel" aria-labelledby="tab-alerts">
-      @if (loadingGlobal() || loadingTeams() || loadingLocations()) {
-        <tui-loader />
-      } @else if (alerts().length === 0) {
-        <p class="empty-state">✅ Aucune alerte active pour cette date.</p>
-      } @else {
-        <ul class="alert-full-list">
-          @for (alert of alerts(); track $index) {
-            <li class="alert-full-item" [ngClass]="'alert-' + alert.type">
-              @if (alert.type === 'danger') { <tui-icon icon="@tui.alert-triangle" class="alert-icon" /> }
-              @else { <tui-icon icon="@tui.info" class="alert-icon" /> }
-              {{ alert.message }}
-            </li>
-          }
-        </ul>
+  <section class="tab-panel" aria-labelledby="tab-alerts">
+    @if (loadingGlobal() || loadingTeams() || loadingLocations()) {
+    <tui-loader />
+    } @else if (alerts().length === 0) {
+    <p class="empty-state">✅ Aucune alerte active pour cette date.</p>
+    } @else {
+    <ul class="alert-full-list">
+      @for (alert of alerts(); track $index) {
+      <li class="alert-full-item" [ngClass]="'alert-' + alert.type">
+        @if (alert.type === 'danger') { <tui-icon icon="@tui.alert-triangle" class="alert-icon" /> }
+        @else { <tui-icon icon="@tui.info" class="alert-icon" /> } {{ alert.message }}
+      </li>
       }
-    </section>
+    </ul>
+    }
+  </section>
   }
-
 </app-page-layout>

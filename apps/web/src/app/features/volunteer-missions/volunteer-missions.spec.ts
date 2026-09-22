@@ -106,4 +106,3 @@ describe('VolunteerMissionsPage', () => {
     ).toBe('Confirmée');
   });
 });
-

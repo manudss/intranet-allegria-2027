@@ -101,10 +101,18 @@ export class ParticipantsApiService extends CrudApi<Participant, ParticipantPayl
   deleteParticipant(id: number) {
     return this.delete(id);
   }
-  search(filters: { unassignedOnly?: boolean; type?: PersonType | null; teamId?: number | null; q?: string; limit?: number; offset?: number }) {
+  search(filters: {
+    unassignedOnly?: boolean;
+    type?: PersonType | null;
+    teamId?: number | null;
+    q?: string;
+    limit?: number;
+    offset?: number;
+  }) {
     let params = new HttpParams();
     Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') params = params.set(key, String(value));
+      if (value !== undefined && value !== null && value !== '')
+        params = params.set(key, String(value));
     });
     return this.http.get<ParticipantSearchResult>(`${this.path}/search`, { params });
   }
@@ -122,7 +130,10 @@ export class GroupsApiService extends CrudApi<Group, GroupPayload> {
 @Injectable({ providedIn: 'root' })
 export class VolunteersApiService extends CrudApi<Volunteer, VolunteerPayload> {
   protected readonly path = '/api/volunteers';
-  listFiltered(filters?: { skill?: VolunteerSkillType | null; tag?: string }): Observable<Volunteer[]> {
+  listFiltered(filters?: {
+    skill?: VolunteerSkillType | null;
+    tag?: string;
+  }): Observable<Volunteer[]> {
     let params = new HttpParams();
     if (filters?.skill) params = params.set('skill', filters.skill);
     if (filters?.tag) params = params.set('tag', filters.tag);
@@ -171,24 +182,38 @@ export class VolunteerTeamsApiService extends CrudApi<VolunteerTeam, VolunteerTe
 export class VolunteerTeamMembershipsApiService {
   private readonly http = inject(HttpClient);
   list(volunteerId: number) {
-    return this.http.get<VolunteerTeamMembership[]>(`/api/volunteers/${volunteerId}/team-memberships`);
+    return this.http.get<VolunteerTeamMembership[]>(
+      `/api/volunteers/${volunteerId}/team-memberships`,
+    );
   }
   create(volunteerId: number, payload: VolunteerTeamMembershipPayload) {
-    return this.http.post<VolunteerTeamMembership>(`/api/volunteers/${volunteerId}/team-memberships`, payload);
+    return this.http.post<VolunteerTeamMembership>(
+      `/api/volunteers/${volunteerId}/team-memberships`,
+      payload,
+    );
   }
-  update(volunteerId: number, membershipId: number, payload: Partial<VolunteerTeamMembershipPayload>) {
+  update(
+    volunteerId: number,
+    membershipId: number,
+    payload: Partial<VolunteerTeamMembershipPayload>,
+  ) {
     return this.http.patch<VolunteerTeamMembership>(
       `/api/volunteers/${volunteerId}/team-memberships/${membershipId}`,
       payload,
     );
   }
   delete(volunteerId: number, membershipId: number) {
-    return this.http.delete<DeleteResponse>(`/api/volunteers/${volunteerId}/team-memberships/${membershipId}`);
+    return this.http.delete<DeleteResponse>(
+      `/api/volunteers/${volunteerId}/team-memberships/${membershipId}`,
+    );
   }
 }
 
 @Injectable({ providedIn: 'root' })
-export class VolunteerMissionsApiService extends CrudApi<VolunteerMission, VolunteerMissionPayload> {
+export class VolunteerMissionsApiService extends CrudApi<
+  VolunteerMission,
+  VolunteerMissionPayload
+> {
   protected readonly path = '/api/volunteer-missions';
 
   listFiltered(filters?: {
@@ -213,16 +238,24 @@ export class VolunteerMissionsApiService extends CrudApi<VolunteerMission, Volun
     return this.http.get<StatusCounters>(`${this.path}/summary/counters`);
   }
 
-  listShiftsByStatus(status: VolunteerShiftStatus, mandatory?: boolean): Observable<VolunteerShift[]> {
+  listShiftsByStatus(
+    status: VolunteerShiftStatus,
+    mandatory?: boolean,
+  ): Observable<VolunteerShift[]> {
     let params = new HttpParams();
     if (mandatory !== undefined) params = params.set('mandatory', String(mandatory));
     return this.http.get<VolunteerShift[]>(`${this.path}/shifts/by-status/${status}`, { params });
   }
 
-  listMissionsByStatus(status: VolunteerMissionStatus, mandatory?: boolean): Observable<VolunteerMission[]> {
+  listMissionsByStatus(
+    status: VolunteerMissionStatus,
+    mandatory?: boolean,
+  ): Observable<VolunteerMission[]> {
     let params = new HttpParams();
     if (mandatory !== undefined) params = params.set('mandatory', String(mandatory));
-    return this.http.get<VolunteerMission[]>(`${this.path}/missions/by-status/${status}`, { params });
+    return this.http.get<VolunteerMission[]>(`${this.path}/missions/by-status/${status}`, {
+      params,
+    });
   }
 
   listShifts(missionId: number) {
@@ -238,7 +271,10 @@ export class VolunteerMissionsApiService extends CrudApi<VolunteerMission, Volun
   }
 
   changeShiftStatus(missionId: number, shiftId: number, payload: VolunteerShiftStatusPayload) {
-    return this.http.patch<VolunteerShift>(`${this.path}/${missionId}/shifts/${shiftId}/status`, payload);
+    return this.http.patch<VolunteerShift>(
+      `${this.path}/${missionId}/shifts/${shiftId}/status`,
+      payload,
+    );
   }
 
   deleteShift(missionId: number, shiftId: number) {
@@ -262,20 +298,29 @@ export class VolunteerShiftAssignmentsApiService {
         query = query.set(key, String(value));
       }
     });
-    return this.http.get<VolunteerShiftAssignmentVolunteerSearchResult[]>('/api/volunteer-shift-assignments/volunteer-search', {
-      params: query,
-    });
+    return this.http.get<VolunteerShiftAssignmentVolunteerSearchResult[]>(
+      '/api/volunteer-shift-assignments/volunteer-search',
+      {
+        params: query,
+      },
+    );
   }
 
   listForShift(missionId: number, shiftId: number, status?: VolunteerShiftAssignmentStatus) {
     const params = status ? new HttpParams().set('status', status) : undefined;
-    return this.http.get<VolunteerShiftAssignment[]>(`/api/volunteer-missions/${missionId}/shifts/${shiftId}/assignments`, {
-      params,
-    });
+    return this.http.get<VolunteerShiftAssignment[]>(
+      `/api/volunteer-missions/${missionId}/shifts/${shiftId}/assignments`,
+      {
+        params,
+      },
+    );
   }
 
   create(missionId: number, shiftId: number, payload: VolunteerShiftAssignmentPayload) {
-    return this.http.post<VolunteerShiftAssignment>(`/api/volunteer-missions/${missionId}/shifts/${shiftId}/assignments`, payload);
+    return this.http.post<VolunteerShiftAssignment>(
+      `/api/volunteer-missions/${missionId}/shifts/${shiftId}/assignments`,
+      payload,
+    );
   }
 
   changeStatus(
@@ -299,7 +344,10 @@ export class VolunteerShiftAssignmentsApiService {
 
   listVolunteerPlanning(volunteerId: number, status?: VolunteerShiftAssignmentStatus) {
     const params = status ? new HttpParams().set('status', status) : undefined;
-    return this.http.get<VolunteerShiftAssignment[]>(`/api/volunteers/${volunteerId}/shift-assignments`, { params });
+    return this.http.get<VolunteerShiftAssignment[]>(
+      `/api/volunteers/${volunteerId}/shift-assignments`,
+      { params },
+    );
   }
 }
 
@@ -315,7 +363,9 @@ export class VolunteerAuditLogsApiService {
       }
     });
 
-    return this.http.get<VolunteerAuditLogSearchResult>('/api/volunteer-audit-logs', { params: query });
+    return this.http.get<VolunteerAuditLogSearchResult>('/api/volunteer-audit-logs', {
+      params: query,
+    });
   }
 
   getActionOptions(): readonly VolunteerAuditAction[] {
@@ -401,19 +451,28 @@ export class OperationalDashboardApiService {
     return p;
   }
 
-  getGlobalSummary(date?: string, volunteerTeamId?: number | null): Observable<DashboardGlobalSummary> {
+  getGlobalSummary(
+    date?: string,
+    volunteerTeamId?: number | null,
+  ): Observable<DashboardGlobalSummary> {
     return this.http.get<DashboardGlobalSummary>(`${this.base}/global`, {
       params: this.params({ date, volunteerTeamId }),
     });
   }
 
-  getTeamsSummary(date?: string, volunteerTeamId?: number | null): Observable<DashboardTeamSummary[]> {
+  getTeamsSummary(
+    date?: string,
+    volunteerTeamId?: number | null,
+  ): Observable<DashboardTeamSummary[]> {
     return this.http.get<DashboardTeamSummary[]>(`${this.base}/teams`, {
       params: this.params({ date, volunteerTeamId }),
     });
   }
 
-  getLocationsSummary(date?: string, volunteerTeamId?: number | null): Observable<DashboardLocationRow[]> {
+  getLocationsSummary(
+    date?: string,
+    volunteerTeamId?: number | null,
+  ): Observable<DashboardLocationRow[]> {
     return this.http.get<DashboardLocationRow[]>(`${this.base}/locations`, {
       params: this.params({ date, volunteerTeamId }),
     });
@@ -466,4 +525,3 @@ export class OperationalDashboardApiService {
     });
   }
 }
-

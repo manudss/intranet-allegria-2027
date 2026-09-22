@@ -75,7 +75,13 @@ import {
       <a actions tuiButton routerLink="/hebergement" appearance="secondary" type="button">
         ← Retour hébergement
       </a>
-      <button actions tuiButton type="button" class="mobile-list-button" (click)="mobileCardsOpened.set(true)">
+      <button
+        actions
+        tuiButton
+        type="button"
+        class="mobile-list-button"
+        (click)="mobileCardsOpened.set(true)"
+      >
         Liste des familles
       </button>
 
@@ -100,39 +106,59 @@ import {
 
           <div class="filter-grid">
             <tui-textfield tuiChevron>
-              <label for="statut-2" tuiLabel>Statut</label><input tuiSelect formControlName="statusLabel" aria-label="Statut" id="statut-2" />
+              <label for="statut-2" tuiLabel>Statut</label
+              ><input tuiSelect formControlName="statusLabel" aria-label="Statut" id="statut-2" />
               <tui-data-list-wrapper *tuiDropdown [items]="statusLabelOptions" />
             </tui-textfield>
             <tui-textfield tuiChevron>
-              <label for="capacite-2" tuiLabel>Capacite</label><input tuiSelect formControlName="capacityLabel" aria-label="Etat de capacite" id="capacite-2" />
+              <label for="capacite-2" tuiLabel>Capacite</label
+              ><input
+                tuiSelect
+                formControlName="capacityLabel"
+                aria-label="Etat de capacite"
+                id="capacite-2"
+              />
               <tui-data-list-wrapper *tuiDropdown [items]="capacityLabelOptions" />
             </tui-textfield>
             <tui-textfield tuiChevron>
-              <label for="animateurs-2" tuiLabel>Animateurs</label><input tuiSelect formControlName="animatorLabel" aria-label="Presence animateurs" id="animateurs-2" />
+              <label for="animateurs-2" tuiLabel>Animateurs</label
+              ><input
+                tuiSelect
+                formControlName="animatorLabel"
+                aria-label="Presence animateurs"
+                id="animateurs-2"
+              />
               <tui-data-list-wrapper *tuiDropdown [items]="animatorLabelOptions" />
             </tui-textfield>
             <tui-textfield iconStart="@tui.map-pin">
-              <label for="distance-max-km" tuiLabel>Distance max (km)</label><input
+              <label for="distance-max-km" tuiLabel>Distance max (km)</label
+              ><input
                 tuiInput
                 type="number"
                 min="0"
                 formControlName="maxDistanceKm"
                 placeholder="Illimite"
-                aria-label="Distance max en kilometres" id="distance-max-km" />
+                aria-label="Distance max en kilometres"
+                id="distance-max-km"
+              />
             </tui-textfield>
             <tui-textfield iconStart="@tui.search" class="search-field">
-              <label for="recherche-2" tuiLabel>Recherche</label><input
+              <label for="recherche-2" tuiLabel>Recherche</label
+              ><input
                 tuiInput
                 formControlName="search"
                 placeholder="Famille, ville, paroisse..."
-                aria-label="Recherche libre" id="recherche-2" />
+                aria-label="Recherche libre"
+                id="recherche-2"
+              />
             </tui-textfield>
           </div>
 
           <div class="sector-summary">
             @for (summary of sectorSummary(); track summary.sector) {
               <span size="s" tuiChip>
-                {{ summary.sector }} ({{ summary.families }} familles, {{ summary.available }} places)
+                {{ summary.sector }} ({{ summary.families }} familles,
+                {{ summary.available }} places)
               </span>
             }
           </div>
@@ -183,25 +209,25 @@ import {
     }
     .filters {
       display: grid;
-      gap: .85rem;
-      padding: .9rem;
-      border-radius: .8rem;
+      gap: 0.85rem;
+      padding: 0.9rem;
+      border-radius: 0.8rem;
       border: 1px solid var(--tui-border-normal);
       background: var(--tui-background-elevation-1);
     }
     .filter-block {
       display: grid;
-      gap: .45rem;
+      gap: 0.45rem;
     }
     .chip-group {
       display: flex;
       flex-wrap: wrap;
-      gap: .4rem;
+      gap: 0.4rem;
     }
     .filter-grid {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: .65rem;
+      gap: 0.65rem;
     }
     .search-field {
       grid-column: span 2;
@@ -209,7 +235,7 @@ import {
     .sector-summary {
       display: flex;
       flex-wrap: wrap;
-      gap: .45rem;
+      gap: 0.45rem;
     }
     .map-and-cards {
       display: grid;
@@ -219,18 +245,18 @@ import {
     }
     .map-surface {
       border: 1px solid var(--tui-border-normal);
-      border-radius: .8rem;
+      border-radius: 0.8rem;
       background: var(--tui-background-base);
       position: relative;
     }
     .map-canvas {
       height: 600px;
-      border-radius: .8rem;
+      border-radius: 0.8rem;
     }
     .cards-pane {
       border: 1px solid var(--tui-border-normal);
-      border-radius: .8rem;
-      padding: .75rem;
+      border-radius: 0.8rem;
+      padding: 0.75rem;
       background: var(--tui-background-base);
       max-height: 600px;
       overflow: auto;
@@ -242,8 +268,8 @@ import {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: .75rem;
-      margin-bottom: .8rem;
+      gap: 0.75rem;
+      margin-bottom: 0.8rem;
     }
     .host-family-marker {
       background: transparent;
@@ -255,14 +281,16 @@ import {
       border-radius: 999px;
       display: grid;
       place-items: center;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, .25);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
       color: #fff;
       border: 2px solid #fff;
-      font-size: .95rem;
+      font-size: 0.95rem;
     }
     .host-family-marker__dot--selected {
       transform: scale(1.15);
-      box-shadow: 0 0 0 3px color-mix(in srgb, #2563eb 40%, transparent), 0 2px 10px rgba(0, 0, 0, .25);
+      box-shadow:
+        0 0 0 3px color-mix(in srgb, #2563eb 40%, transparent),
+        0 2px 10px rgba(0, 0, 0, 0.25);
     }
     .host-family-cluster {
       background: transparent;
@@ -276,7 +304,7 @@ import {
       place-items: center;
       color: #fff;
       border: 2px solid #fff;
-      box-shadow: 0 3px 12px rgba(0, 0, 0, .22);
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.22);
     }
     @media (max-width: 62rem) {
       .filter-grid {
@@ -320,14 +348,37 @@ export class HostFamiliesMapPageComponent implements OnInit {
 
   // String labels are used directly as select values so Taiga UI displays them without a stringify function
   readonly statusLabelOptions = ['Tous les statuts', 'Brouillon', 'Validee', 'Inactive'] as const;
-  readonly capacityLabelOptions = ['Toutes capacites', 'Disponible', 'Sous-utilisee', 'Pleine'] as const;
-  readonly animatorLabelOptions = ['Avec ou sans animateurs', 'Avec animateurs', 'Sans animateurs'] as const;
+  readonly capacityLabelOptions = [
+    'Toutes capacites',
+    'Disponible',
+    'Sous-utilisee',
+    'Pleine',
+  ] as const;
+  readonly animatorLabelOptions = [
+    'Avec ou sans animateurs',
+    'Avec animateurs',
+    'Sans animateurs',
+  ] as const;
 
   private labelToStatus(label: string): HostFamilyStatus | null {
-    return ({ Brouillon: 'DRAFT', Validee: 'VALIDATED', Inactive: 'INACTIVE' } as Record<string, HostFamilyStatus>)[label] ?? null;
+    return (
+      (
+        { Brouillon: 'DRAFT', Validee: 'VALIDATED', Inactive: 'INACTIVE' } as Record<
+          string,
+          HostFamilyStatus
+        >
+      )[label] ?? null
+    );
   }
   private labelToCapacity(label: string): CapacityState | null {
-    return ({ Disponible: 'AVAILABLE', 'Sous-utilisee': 'UNDER_USED', Pleine: 'FULL' } as Record<string, CapacityState>)[label] ?? null;
+    return (
+      (
+        { Disponible: 'AVAILABLE', 'Sous-utilisee': 'UNDER_USED', Pleine: 'FULL' } as Record<
+          string,
+          CapacityState
+        >
+      )[label] ?? null
+    );
   }
   private labelToAnimator(label: string): boolean | null {
     if (label === 'Avec animateurs') return true;
@@ -442,7 +493,9 @@ export class HostFamiliesMapPageComponent implements OnInit {
   toggleSector(sector: Sector): void {
     const selected = this.filters.controls.sectors.value;
     this.filters.controls.sectors.setValue(
-      selected.includes(sector) ? selected.filter((value) => value !== sector) : [...selected, sector],
+      selected.includes(sector)
+        ? selected.filter((value) => value !== sector)
+        : [...selected, sector],
     );
   }
 
@@ -468,7 +521,10 @@ export class HostFamiliesMapPageComponent implements OnInit {
     this.scrollCardIntoView(familyId);
   }
 
-  private rebuildMarkers(items: readonly HostFamilyMapItem[], selectedFamilyId: number | null): void {
+  private rebuildMarkers(
+    items: readonly HostFamilyMapItem[],
+    selectedFamilyId: number | null,
+  ): void {
     this.markerByFamilyId.clear();
     const markers = items
       .filter((item) => item.family.latitude != null && item.family.longitude != null)

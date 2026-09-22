@@ -27,9 +27,8 @@ import { HostFamilyMapItem } from './host-families-map.utils';
             {{ item.family.city }} · {{ item.family.parish || 'Sans paroisse' }} · {{ item.sector }}
           </p>
           <p class="meta">
-            {{ item.assignmentsCount }}/{{ item.family.maxCapacity }} places · {{ item.under18Count }}/{{
-              item.family.maxUnder18
-            }}
+            {{ item.assignmentsCount }}/{{ item.family.maxCapacity }} places ·
+            {{ item.under18Count }}/{{ item.family.maxUnder18 }}
             mineurs
           </p>
           @if (item.distanceKm !== null) {
@@ -52,19 +51,22 @@ import { HostFamilyMapItem } from './host-families-map.utils';
   styles: `
     .cards {
       display: grid;
-      gap: .75rem;
+      gap: 0.75rem;
       align-content: start;
     }
     .family-card {
       display: grid;
-      gap: .35rem;
+      gap: 0.35rem;
       text-align: start;
       border: 1px solid var(--tui-border-normal);
       background: var(--tui-background-base);
-      border-radius: .9rem;
-      padding: .8rem .9rem;
+      border-radius: 0.9rem;
+      padding: 0.8rem 0.9rem;
       cursor: pointer;
-      transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+      transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease;
     }
     .family-card:hover {
       box-shadow: var(--tui-shadow-small);
@@ -78,21 +80,21 @@ import { HostFamilyMapItem } from './host-families-map.utils';
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: .75rem;
+      gap: 0.75rem;
     }
     .meta {
       margin: 0;
       color: var(--tui-text-secondary);
-      font-size: .875rem;
+      font-size: 0.875rem;
     }
     .chips {
       display: flex;
       flex-wrap: wrap;
-      gap: .3rem;
-      margin-top: .3rem;
+      gap: 0.3rem;
+      margin-top: 0.3rem;
     }
     .empty {
-      margin: .2rem 0;
+      margin: 0.2rem 0;
       color: var(--tui-text-secondary);
     }
   `,

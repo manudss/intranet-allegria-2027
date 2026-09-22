@@ -44,4 +44,3 @@ describe('VolunteerAuditLogsPage', () => {
     expect(fixture.componentInstance.total()).toBe(1);
   });
 });
-

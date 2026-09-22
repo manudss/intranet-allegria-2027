@@ -18,6 +18,17 @@ import {
   User,
   UserRole,
   Volunteer,
+  VolunteerMission,
+  VolunteerMissionStatus,
+  VolunteerShift,
+  VolunteerShiftAssignment,
+  VolunteerShiftAssignmentStatus,
+  VolunteerShiftStatus,
+  VolunteerSkill,
+  VolunteerSkillType,
+  VolunteerTag,
+  VolunteerTeam,
+  VolunteerTeamMembership,
 } from '../../app/core/entities';
 import dataSource from '../typeorm.config';
 
@@ -30,6 +41,9 @@ type SeedProfile = {
   hostFamilies: number;
   participantAssignmentRate: number;
   participantHealthRate: number;
+  volunteerTeams: number;
+  volunteerMissions: number;
+  volunteerShiftsPerMission: number;
 };
 
 const PROFILES: Record<SeedProfileName, SeedProfile> = {
@@ -40,6 +54,9 @@ const PROFILES: Record<SeedProfileName, SeedProfile> = {
     hostFamilies: 120,
     participantAssignmentRate: 0.84,
     participantHealthRate: 0.58,
+    volunteerTeams: 12,
+    volunteerMissions: 18,
+    volunteerShiftsPerMission: 2,
   },
   medium: {
     groups: 20,
@@ -48,6 +65,9 @@ const PROFILES: Record<SeedProfileName, SeedProfile> = {
     hostFamilies: 950,
     participantAssignmentRate: 0.87,
     participantHealthRate: 0.64,
+    volunteerTeams: 28,
+    volunteerMissions: 64,
+    volunteerShiftsPerMission: 3,
   },
   large: {
     groups: 36,
@@ -56,6 +76,9 @@ const PROFILES: Record<SeedProfileName, SeedProfile> = {
     hostFamilies: 6200,
     participantAssignmentRate: 0.9,
     participantHealthRate: 0.68,
+    volunteerTeams: 52,
+    volunteerMissions: 160,
+    volunteerShiftsPerMission: 4,
   },
 };
 
@@ -84,6 +107,10 @@ const dioceses = [
 
 /** Point de rassemblement du rassemblement 2027 : Saint-Etienne (45deg 26' 05" N, 4deg 23' 25" E). */
 const GATHERING_POINT = { latitude: 45.439695, longitude: 4.387178 } as const;
+
+const PROJECT_START = new Date('2027-10-30T08:00:00.000Z');
+const PROJECT_END = new Date('2027-11-02T23:30:00.000Z');
+
 
 /** Rayon maximal (km) autour du point de rassemblement pour les familles d'accueil. */
 const HOST_FAMILY_RADIUS_KM = 100;
@@ -258,6 +285,100 @@ const roleLabels: Record<string, string> = {
   VIEWER: 'Lecture seule',
 };
 
+const operationalTeamCatalog = [
+  { kind: 'Accueil', zone: 'Hall principal', shortCode: 'ACC' },
+  { kind: 'Accueil', zone: 'Accueil familles', shortCode: 'FAM' },
+  { kind: 'Sécurité', zone: 'Contrôle d\'accès', shortCode: 'SEC' },
+  { kind: 'Sécurité', zone: 'Surveillance entrée', shortCode: 'ENT' },
+  { kind: 'Cuisine', zone: 'Préparation repas', shortCode: 'CUS' },
+  { kind: 'Cuisine', zone: 'Service restauration', shortCode: 'RES' },
+  { kind: 'Animation', zone: 'Atelier jeunesse', shortCode: 'ANI' },
+  { kind: 'Animation', zone: 'Maraude culturelle', shortCode: 'MAR' },
+  { kind: 'Logistique', zone: 'Rangement atelier', shortCode: 'LOG' },
+  { kind: 'Logistique', zone: 'Transport matériel', shortCode: 'MAT' },
+  { kind: 'Santé', zone: 'Poste infirmier', shortCode: 'SAN' },
+  { kind: 'Santé', zone: 'Observation médicale', shortCode: 'OBS' },
+] as const;
+
+const missionTemplatesByTeamKind: Record<string, { title: string; description: string; shiftNotes: string[] }> = {
+  Accueil: {
+    title: 'Accueil et orientation des familles',
+    description: 'Accueil des participants et des familles, orientation vers les postes et suivi des arrivées.',
+    shiftNotes: [
+      'Accueillir les arrivées et remettre les badges d\'identification.',
+      'Orienter les familles vers le point d\'information et la zone de repos.',
+      'Gérer les attentes et préparer les dossiers de visite rapide.',
+      'Contrôler la file d\'accueil et expliquer les consignes du site.',
+    ],
+  },
+  Sécurité: {
+    title: 'Surveillance du périmètre et contrôle d\'accès',
+    description: 'Vérification des badges, vigilance aux accès et sécurisation des zones de circulation.',
+    shiftNotes: [
+      'Surveiller les badges à l\'entrée et contrôler les accès au site.',
+      'Repérer les flux de circulation et sécuriser les points d\'arrêt.',
+      'Faire le point sur la présence et les besoins d\'assistance en poste.',
+      'Signer le registre de contrôle et remonter les anomalies de sécurité.',
+    ],
+  },
+  Cuisine: {
+    title: 'Préparation et service des repas',
+    description: 'Préparation des repas, service et mise en place des espaces de restauration.',
+    shiftNotes: [
+      'Préparer les pâtes carbonara pour le service du midi et vérifier les allergies.',
+      'Mettre en place la ligne de service et préparer les portions pour les équipes.',
+      'Contrôler la température des plats et organiser le recyclage des contenants.',
+      'Nettoyer les zones de préparation et remettre les ustensiles au point.',
+    ],
+  },
+  Animation: {
+    title: 'Animation et atelier du public',
+    description: 'Pilotage des ateliers, animation des temps collectifs et accompagnement des groupes.',
+    shiftNotes: [
+      'Présenter le prochain atelier et expliquer le déroulé aux participants.',
+      'Préparer le matériel d\'animation en amont et accueillir les groupes.',
+      'Suivre le rythme de l\'atelier et ajuster l\'ambiance selon les besoins.',
+      'Encadrer les temps de pause et rappeler les consignes de sécurité.',
+    ],
+  },
+  Logistique: {
+    title: 'Rangement et support de l\'atelier',
+    description: 'Gestion du matériel, rangement et appui aux équipes sur les espaces de travail.',
+    shiftNotes: [
+      'Ranger le matériel après l\'atelier peinture et remettre les tables en ordre.',
+      'Vérifier les stocks de papier, pinceaux et peintures avant la prochaine session.',
+      'Aider au transport des caisses vers les espaces de stockage du site.',
+      'Nettoyer les zones de travail et préparer le kit de la prochaine rotation.',
+    ],
+  },
+  Santé: {
+    title: 'Suivi médical et accompagnement des personnes',
+    description: 'Support médical, évaluation rapide et écoute des besoins sanitaires du groupe.',
+    shiftNotes: [
+      'Vérifier la tenue des équipements de premiers secours et préparer les kits.',
+      'Suivre les demandes de soins et confirmer les consignes de prise en charge.',
+      'Assurer les relances de suivi avec les personnes concernées et le responsable.',
+      'Renseigner le dossier santé et informer les équipes concernées.',
+    ],
+  },
+};
+
+const volunteerTagPool = [
+  'Accueil',
+  'Astreinte',
+  'Bricolage',
+  'Cuisine',
+  'Enfance',
+  'Jeunesse',
+  'Logistique',
+  'Maraude',
+  'Médecin',
+  'Restauration',
+  'Santé',
+  'Transport',
+  'Veille',
+] as const;
+
 const parseProfile = (): SeedProfileName => {
   const cliArg = process.argv.find((arg) => arg.startsWith('--profile='));
   const rawValue = cliArg ? cliArg.split('=')[1] : (process.env.SEED_PROFILE ?? 'medium');
@@ -271,10 +392,13 @@ const parseProfile = (): SeedProfileName => {
 
 const toDateString = (date: Date): string => date.toISOString().slice(0, 10);
 
+const dateBetween = (from: Date, to: Date): Date =>
+  faker.date.between({ from: from.toISOString(), to: to.toISOString() });
+
 const chance = (probabilityTrue: number): boolean =>
   faker.number.float({ min: 0, max: 1 }) < probabilityTrue;
 
-const pick = <T>(items: T[]): T => faker.helpers.arrayElement(items);
+const pick = <T>(items: readonly T[]): T => faker.helpers.arrayElement(items as T[]);
 
 const participantAgeDate = (): string => {
   const birthday = faker.date.birthdate({
@@ -373,6 +497,15 @@ async function run(): Promise<void> {
     try {
       await queryRunner.query(`
         TRUNCATE TABLE
+          "shift_status_logs",
+          "mission_status_logs",
+          "volunteer_shift_assignments",
+          "volunteer_shifts",
+          "volunteer_missions",
+          "volunteer_tags",
+          "volunteer_skills",
+          "volunteer_team_memberships",
+          "volunteer_teams",
           "user_roles",
           "participant_health",
           "participant_host_family_assignments",
@@ -403,6 +536,13 @@ async function run(): Promise<void> {
     const participantRepository = dataSource.getRepository(Participant);
     const teamRepository = dataSource.getRepository(Team);
     const teamParticipantRepository = dataSource.getRepository(TeamParticipant);
+    const volunteerTeamRepository = dataSource.getRepository(VolunteerTeam);
+    const volunteerTeamMembershipRepository = dataSource.getRepository(VolunteerTeamMembership);
+    const volunteerSkillRepository = dataSource.getRepository(VolunteerSkill);
+    const volunteerTagRepository = dataSource.getRepository(VolunteerTag);
+    const volunteerMissionRepository = dataSource.getRepository(VolunteerMission);
+    const volunteerShiftRepository = dataSource.getRepository(VolunteerShift);
+    const volunteerShiftAssignmentRepository = dataSource.getRepository(VolunteerShiftAssignment);
     const hostFamilyRepository = dataSource.getRepository(HostFamily);
     const assignmentRepository = dataSource.getRepository(ParticipantHostFamilyAssignment);
     const participantHealthRepository = dataSource.getRepository(ParticipantHealth);
@@ -561,6 +701,107 @@ async function run(): Promise<void> {
       volunteerSaveCursor += expectedCount;
     }
 
+    const teamCountsByGroup = new Map<number, number>();
+    const volunteerTeamsByGroup = new Map<number, VolunteerTeam[]>();
+    const volunteerTeamsToCreate: VolunteerTeam[] = [];
+    let globalVolunteerTeamIndex = 0;
+    for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
+      const group = groups[groupIndex];
+      const groupVolunteers = volunteersByGroupSaved.get(group.id) ?? [];
+      const localTeamCount = Math.max(
+        6,
+        Math.min(12, Math.max(6, Math.ceil(groupVolunteers.length / 10))),
+      );
+      teamCountsByGroup.set(group.id, localTeamCount);
+
+      const localTeams: VolunteerTeam[] = [];
+      for (let i = 0; i < localTeamCount; i += 1) {
+        const operationalTeam = operationalTeamCatalog[i % operationalTeamCatalog.length];
+        const teamCode = `${operationalTeam.shortCode}-${String(globalVolunteerTeamIndex + i + 1).padStart(3, '0')}`;
+        const team = volunteerTeamRepository.create({
+          name: `${operationalTeam.kind} · ${operationalTeam.zone}`,
+          code: teamCode,
+          description: `Equipe opérationnelle pour le périmètre ${operationalTeam.zone.toLowerCase()} sur le site du rassemblement.`,
+          isActive: true,
+        });
+        volunteerTeamsToCreate.push(team);
+        localTeams.push(team);
+      }
+
+      globalVolunteerTeamIndex += localTeamCount;
+      volunteerTeamsByGroup.set(group.id, localTeams);
+    }
+
+    const savedVolunteerTeams = await volunteerTeamRepository.save(volunteerTeamsToCreate, {
+      chunk: 500,
+    });
+    const savedVolunteerTeamsByGroup = new Map<number, VolunteerTeam[]>();
+    let volunteerTeamCursor = 0;
+    for (const group of groups) {
+      const count = teamCountsByGroup.get(group.id) ?? 0;
+      savedVolunteerTeamsByGroup.set(
+        group.id,
+        savedVolunteerTeams.slice(volunteerTeamCursor, volunteerTeamCursor + count),
+      );
+      volunteerTeamCursor += count;
+    }
+
+    const volunteerTeamMembershipsToCreate: VolunteerTeamMembership[] = [];
+    const volunteerSkillsToCreate: VolunteerSkill[] = [];
+    const volunteerTagsToCreate: VolunteerTag[] = [];
+    const volunteerSkillPool = Object.values(VolunteerSkillType);
+
+    for (const group of groups) {
+      const groupVolunteerTeams = savedVolunteerTeamsByGroup.get(group.id) ?? [];
+      const groupVolunteers = volunteersByGroupSaved.get(group.id) ?? [];
+      const groupMembers = faker.helpers.shuffle(groupVolunteers);
+
+      for (const volunteer of groupMembers) {
+        const selectedTeam = pick(groupVolunteerTeams);
+        volunteerTeamMembershipsToCreate.push(
+          volunteerTeamMembershipRepository.create({
+            volunteer,
+            volunteerTeam: selectedTeam,
+            volunteerId: volunteer.id,
+            volunteerTeamId: selectedTeam.id,
+            startAt: toDateString(new Date('2027-07-15T00:00:00.000Z')),
+            endAt: toDateString(new Date('2027-07-30T00:00:00.000Z')),
+            role: pick(['Coordination', 'Support', 'Animation', 'Restauration', 'Sante']),
+          }),
+        );
+
+        const skillCount = faker.number.int({ min: 2, max: 4 });
+        const uniqueSkills = new Set<string>();
+        while (uniqueSkills.size < skillCount) {
+          uniqueSkills.add(pick(volunteerSkillPool));
+        }
+
+        for (const skill of uniqueSkills) {
+          volunteerSkillsToCreate.push(
+            volunteerSkillRepository.create({
+              volunteer,
+              volunteerId: volunteer.id,
+              skill: skill as VolunteerSkillType,
+            }),
+          );
+        }
+
+        const tagCount = faker.number.int({ min: 1, max: 3 });
+        for (let tagIndex = 0; tagIndex < tagCount; tagIndex += 1) {
+          volunteerTagsToCreate.push(
+            volunteerTagRepository.create({
+              volunteerId: volunteer.id,
+              value: String(pick(volunteerTagPool)),
+            }),
+          );
+        }
+      }
+    }
+
+    await volunteerTeamMembershipRepository.save(volunteerTeamMembershipsToCreate, { chunk: 1000 });
+    await volunteerSkillRepository.save(volunteerSkillsToCreate, { chunk: 1000 });
+    await volunteerTagRepository.save(volunteerTagsToCreate, { chunk: 1000 });
+
     const participantsToCreate: Participant[] = [];
     const participantsByGroup = new Map<number, Participant[]>();
 
@@ -690,6 +931,140 @@ async function run(): Promise<void> {
     }
 
     await teamParticipantRepository.save(teamParticipantsToCreate, { chunk: 1000 });
+
+    const volunteerMissionsToCreate: VolunteerMission[] = [];
+    const volunteerShiftsToCreate: VolunteerShift[] = [];
+    const volunteerShiftAssignmentsToCreate: VolunteerShiftAssignment[] = [];
+    const missionBudgetPerGroup = splitEvenly(profile.volunteerMissions, groups.length);
+    const volunteerMissionKeys = groups.flatMap((group, groupIndex) => {
+      const teams = savedVolunteerTeamsByGroup.get(group.id) ?? [];
+      const missionCount = Math.max(1, missionBudgetPerGroup[groupIndex] ?? 1);
+      return Array.from({ length: missionCount }, (_, missionIndex) => ({
+        group,
+        teams,
+        missionIndex,
+      }));
+    });
+
+    const resolveTeamKind = (teamName: string): string => {
+      const match = teamName.match(/^([^·]+)\s*·\s*/);
+      return match ? match[1].trim() : 'Mission';
+    };
+
+    const buildMissionContext = (teamName: string) => {
+      const kind = resolveTeamKind(teamName);
+      const template = missionTemplatesByTeamKind[kind] ?? missionTemplatesByTeamKind['Accueil'];
+      const suffix = `-${String(faker.number.int({ min: 1, max: 99 })).padStart(2, '0')}`;
+      return {
+        title: `${template.title}${suffix}`,
+        description: template.description,
+        location: `${kind} · Zone ${faker.number.int({ min: 1, max: 4 })}`,
+        shiftNotes: template.shiftNotes,
+      };
+    };
+
+    for (const missionConfig of volunteerMissionKeys) {
+      const selectedTeam = pick(missionConfig.teams);
+      const responsibleVolunteerList = volunteersByGroupSaved.get(missionConfig.group.id) ?? [];
+      const responsibleVolunteer = pick(responsibleVolunteerList);
+      const missionContext = buildMissionContext(selectedTeam.name);
+      const mission = volunteerMissionRepository.create({
+        title: missionContext.title,
+        description: missionContext.description,
+        location: missionContext.location,
+        volunteerTeam: selectedTeam,
+        volunteerTeamId: selectedTeam.id,
+        responsibleVolunteer,
+        responsibleVolunteerId: responsibleVolunteer.id,
+        status: pick([
+          VolunteerMissionStatus.DRAFT,
+          VolunteerMissionStatus.TODO,
+          VolunteerMissionStatus.IN_PROGRESS,
+          VolunteerMissionStatus.DONE,
+        ]),
+        isOptional: chance(0.18),
+      });
+      volunteerMissionsToCreate.push(mission);
+    }
+
+    const savedVolunteerMissions = await volunteerMissionRepository.save(volunteerMissionsToCreate, {
+      chunk: 500,
+    });
+
+    for (const mission of savedVolunteerMissions) {
+      const shiftCount = Math.max(1, Math.min(profile.volunteerShiftsPerMission, 4));
+      const missionKind = resolveTeamKind(mission.volunteerTeam?.name ?? 'Mission · Zone 1');
+      const missionNotes = missionTemplatesByTeamKind[missionKind]?.shiftNotes ?? missionTemplatesByTeamKind['Accueil'].shiftNotes;
+
+      for (let shiftIndex = 0; shiftIndex < shiftCount; shiftIndex += 1) {
+        const asUtcDay = dateBetween(PROJECT_START, PROJECT_END);
+        const dayStart = new Date(asUtcDay);
+        dayStart.setUTCHours(8 + (shiftIndex % 3) * 3, 0, 0, 0);
+        const endAt = new Date(dayStart);
+        endAt.setUTCHours(dayStart.getUTCHours() + pick([2, 3, 4, 5]));
+
+        if (dayStart < PROJECT_START || endAt > PROJECT_END) {
+          continue;
+        }
+
+        const shift = volunteerShiftRepository.create({
+          mission,
+          missionId: mission.id,
+          startAt: dayStart,
+          endAt,
+          location: mission.location ?? 'Zone opérationnelle',
+          capacity: pick([4, 6, 8, 10]),
+          status: pick([
+            VolunteerShiftStatus.TODO,
+            VolunteerShiftStatus.ASSIGNED,
+            VolunteerShiftStatus.IN_PROGRESS,
+            VolunteerShiftStatus.DONE,
+          ]),
+          isOptional: chance(0.15),
+          notes: missionNotes[shiftIndex % missionNotes.length],
+        });
+        volunteerShiftsToCreate.push(shift);
+      }
+    }
+
+    const savedVolunteerShifts = await volunteerShiftRepository.save(volunteerShiftsToCreate, {
+      chunk: 500,
+    });
+
+    for (const shift of savedVolunteerShifts) {
+      const eligibleVolunteers = faker.helpers.shuffle(volunteers).filter((volunteer) => volunteer.id !== null);
+      const targetAssignments = Math.max(
+        1,
+        Math.min(shift.capacity ?? 6, faker.number.int({ min: 2, max: 6 })),
+      );
+      const selectedVolunteers = eligibleVolunteers.slice(0, targetAssignments);
+
+      for (const volunteer of selectedVolunteers) {
+        const assignmentStatus = pick([
+          VolunteerShiftAssignmentStatus.PROVISIONAL,
+          VolunteerShiftAssignmentStatus.CONFIRMED,
+          VolunteerShiftAssignmentStatus.CANCELLED,
+        ]);
+        volunteerShiftAssignmentsToCreate.push(
+          volunteerShiftAssignmentRepository.create({
+            volunteer,
+            volunteerId: volunteer.id,
+            shift,
+            shiftId: shift.id,
+            status: assignmentStatus,
+            assignedByUserId: pick(users).id,
+            notes:
+              assignmentStatus === VolunteerShiftAssignmentStatus.CANCELLED
+                ? 'Annulation planifiée par coordination.'
+                : chance(0.4)
+                  ? 'Affectation couverte par la tournée de terrain.'
+                  : null,
+          }),
+        );
+      }
+    }
+
+    await volunteerShiftAssignmentRepository.save(volunteerShiftAssignmentsToCreate, { chunk: 1000 });
 
     const hostFamiliesToCreate: HostFamily[] = [];
     for (let i = 0; i < profile.hostFamilies; i += 1) {

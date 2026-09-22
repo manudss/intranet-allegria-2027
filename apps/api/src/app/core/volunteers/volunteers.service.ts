@@ -48,7 +48,10 @@ export class VolunteersService {
   }
 
   async findOne(id: number): Promise<Volunteer> {
-    const volunteer = await this.volunteersRepository.findOne({ where: { id }, relations: { user: true } });
+    const volunteer = await this.volunteersRepository.findOne({
+      where: { id },
+      relations: { user: true },
+    });
 
     if (!volunteer) {
       throw new NotFoundException(`Benevole ${id} introuvable`);
@@ -77,5 +80,3 @@ export class VolunteersService {
     await this.volunteersRepository.remove(volunteer);
   }
 }
-
-

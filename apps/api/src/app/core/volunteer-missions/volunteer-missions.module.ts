@@ -31,6 +31,3 @@ import { VolunteerMissionsService } from './volunteer-missions.service';
   exports: [VolunteerMissionsService],
 })
 export class VolunteerMissionsModule {}
-
-
-

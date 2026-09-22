@@ -39,5 +39,3 @@ export class AssignRoleDto {
   @ApiProperty({ example: 2 })
   roleId!: number;
 }
-
-

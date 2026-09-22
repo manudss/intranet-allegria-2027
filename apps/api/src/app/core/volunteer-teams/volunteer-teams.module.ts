@@ -6,7 +6,10 @@ import { VolunteerTeamsController } from './volunteer-teams.controller';
 import { VolunteerTeamsService } from './volunteer-teams.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([VolunteerTeam, VolunteerTeamMembership, Volunteer]), AuthModule],
+  imports: [
+    TypeOrmModule.forFeature([VolunteerTeam, VolunteerTeamMembership, Volunteer]),
+    AuthModule,
+  ],
   controllers: [VolunteerTeamsController],
   providers: [VolunteerTeamsService],
   exports: [VolunteerTeamsService],

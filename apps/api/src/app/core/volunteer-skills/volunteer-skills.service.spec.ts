@@ -57,7 +57,7 @@ describe('VolunteerSkillsService — addSkill', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('lance NotFoundException si le bénévole n\'existe pas', async () => {
+  it("lance NotFoundException si le bénévole n'existe pas", async () => {
     const service = makeService({
       volunteersRepository: { findOneBy: vi.fn().mockResolvedValue(null) },
       skillsRepository: {},
@@ -116,7 +116,9 @@ describe('VolunteerSkillsService — addTag', () => {
       tagsRepository: {},
       membershipsRepository: {},
     });
-    await expect(service.addTag(adminUser, 5, { value: '   ' })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.addTag(adminUser, 5, { value: '   ' })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 });
 
@@ -169,14 +171,16 @@ describe('VolunteerSkillsService — assertCanWrite', () => {
     await expect(service.assertCanWrite(volunteerUser, 5)).resolves.toBeUndefined();
   });
 
-  it('refuse VOLUNTEERS pour le profil d\'un autre', async () => {
+  it("refuse VOLUNTEERS pour le profil d'un autre", async () => {
     const service = makeService({
       volunteersRepository: {
         findOne: vi.fn().mockResolvedValue({ id: 5, user: { id: 999 } }),
       },
       membershipsRepository: {},
     });
-    await expect(service.assertCanWrite(volunteerUser, 5)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.assertCanWrite(volunteerUser, 5)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
   });
 
   it('autorise HEALTH si le bénévole est dans une équipe HEALTH', async () => {
@@ -195,7 +199,7 @@ describe('VolunteerSkillsService — assertCanWrite', () => {
     await expect(service.assertCanWrite(healthUser, 5)).resolves.toBeUndefined();
   });
 
-  it('refuse HEALTH si le bénévole n\'est pas dans une équipe santé', async () => {
+  it("refuse HEALTH si le bénévole n'est pas dans une équipe santé", async () => {
     const qb = {
       innerJoin: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
@@ -226,7 +230,7 @@ describe('VolunteerSkillsService — assertCanWrite', () => {
     await expect(service.assertCanWrite(logisticsUser, 5)).resolves.toBeUndefined();
   });
 
-  it('refuse LOGISTICS si le bénévole n\'est pas dans le périmètre logistique', async () => {
+  it("refuse LOGISTICS si le bénévole n'est pas dans le périmètre logistique", async () => {
     const qb = {
       innerJoin: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
@@ -238,6 +242,8 @@ describe('VolunteerSkillsService — assertCanWrite', () => {
         createQueryBuilder: vi.fn().mockReturnValue(qb),
       },
     });
-    await expect(service.assertCanWrite(logisticsUser, 5)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.assertCanWrite(logisticsUser, 5)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
   });
 });

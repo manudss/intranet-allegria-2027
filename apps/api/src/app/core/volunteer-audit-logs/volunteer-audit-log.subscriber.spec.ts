@@ -44,7 +44,11 @@ describe('VolunteerAuditLogSubscriber', () => {
       entityId: 5,
       databaseEntity: { id: 5, notes: 'old', token: 'secret' },
       entity: { id: 5, notes: 'new', passwordHash: 'hash' },
-      updatedColumns: [{ propertyName: 'notes' }, { propertyName: 'token' }, { propertyName: 'passwordHash' }],
+      updatedColumns: [
+        { propertyName: 'notes' },
+        { propertyName: 'token' },
+        { propertyName: 'passwordHash' },
+      ],
     } as never);
 
     expect(createLog).toHaveBeenCalledWith(
@@ -67,4 +71,3 @@ describe('VolunteerAuditLogSubscriber', () => {
     expect(createLog).not.toHaveBeenCalled();
   });
 });
-

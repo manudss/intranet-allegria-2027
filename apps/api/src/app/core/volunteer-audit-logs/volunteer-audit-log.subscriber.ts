@@ -51,7 +51,14 @@ export class VolunteerAuditLogSubscriber implements EntitySubscriberInterface<Ob
   }
 
   async afterInsert(event: InsertEvent<ObjectLiteral>): Promise<void> {
-    await this.writeLog(event.metadata.tableName, this.resolveEntityId(event), VolunteerAuditAction.CREATE, null, event.entity, []);
+    await this.writeLog(
+      event.metadata.tableName,
+      this.resolveEntityId(event),
+      VolunteerAuditAction.CREATE,
+      null,
+      event.entity,
+      [],
+    );
   }
 
   async afterUpdate(event: UpdateEvent<ObjectLiteral>): Promise<void> {
@@ -69,7 +76,14 @@ export class VolunteerAuditLogSubscriber implements EntitySubscriberInterface<Ob
   }
 
   async afterRemove(event: RemoveEvent<ObjectLiteral>): Promise<void> {
-    await this.writeLog(event.metadata.tableName, this.resolveEntityId(event), VolunteerAuditAction.DELETE, event.databaseEntity, null, []);
+    await this.writeLog(
+      event.metadata.tableName,
+      this.resolveEntityId(event),
+      VolunteerAuditAction.DELETE,
+      event.databaseEntity,
+      null,
+      [],
+    );
   }
 
   private async writeLog(
@@ -163,7 +177,10 @@ export class VolunteerAuditLogSubscriber implements EntitySubscriberInterface<Ob
     return SENSITIVE_KEYS.has(key.toLowerCase());
   }
 
-  private resolveUpdateAction(tableName: string, changedColumns: readonly string[]): VolunteerAuditAction {
+  private resolveUpdateAction(
+    tableName: string,
+    changedColumns: readonly string[],
+  ): VolunteerAuditAction {
     if (changedColumns.includes('status')) {
       return VolunteerAuditAction.STATUS_CHANGED;
     }
@@ -198,8 +215,10 @@ export class VolunteerAuditLogSubscriber implements EntitySubscriberInterface<Ob
     return null;
   }
 
-  private areEqual(left: Record<string, unknown> | null, right: Record<string, unknown> | null): boolean {
+  private areEqual(
+    left: Record<string, unknown> | null,
+    right: Record<string, unknown> | null,
+  ): boolean {
     return JSON.stringify(left) === JSON.stringify(right);
   }
 }
-

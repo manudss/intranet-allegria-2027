@@ -25,5 +25,3 @@ import { VolunteerShiftAssignmentsService } from './volunteer-shift-assignments.
   exports: [VolunteerShiftAssignmentsService],
 })
 export class VolunteerShiftAssignmentsModule {}
-
-

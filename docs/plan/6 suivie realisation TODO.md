@@ -3,6 +3,7 @@ Ajoute le suivi opérationnel des missions et shifts.
 Les statuts existants sont :
 
 Mission :
+
 - DRAFT
 - TODO
 - IN_PROGRESS
@@ -11,6 +12,7 @@ Mission :
 - NOT_DONE
 
 Shift :
+
 - TODO
 - ASSIGNED
 - IN_PROGRESS
@@ -19,6 +21,7 @@ Shift :
 - NOT_DONE
 
 Implémente :
+
 - endpoint PATCH /volunteer-shifts/:id/status ;
 - endpoint PATCH /volunteer-missions/:id/status ;
 - validation des transitions côté backend ;
@@ -27,6 +30,7 @@ Implémente :
 - possibilité pour ADMIN et COORDINATOR de forcer un statut.
 
 Transitions recommandées pour un shift :
+
 - TODO → ASSIGNED ;
 - TODO → IN_PROGRESS ;
 - ASSIGNED → IN_PROGRESS ;
@@ -38,6 +42,7 @@ Transitions recommandées pour un shift :
 - toute transition doit être auditée.
 
 Ajoute les endpoints de synthèse :
+
 - compteurs par statut ;
 - missions à faire ;
 - shifts en cours ;
@@ -47,6 +52,7 @@ Ajoute les endpoints de synthèse :
 - missions facultatives séparées des missions obligatoires.
 
 Frontend Angular :
+
 - actions rapides sur les shifts ;
 - vue “À faire” ;
 - vue “En cours” ;

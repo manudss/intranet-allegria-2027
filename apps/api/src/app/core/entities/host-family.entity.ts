@@ -58,4 +58,3 @@ export class HostFamily {
   @OneToMany(() => ParticipantHostFamilyAssignment, (assignment) => assignment.hostFamily)
   assignments!: ParticipantHostFamilyAssignment[];
 }
-

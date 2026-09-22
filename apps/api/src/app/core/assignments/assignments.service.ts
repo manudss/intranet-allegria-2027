@@ -102,10 +102,16 @@ export class AssignmentsService {
       arrivalDate: dto.arrivalDate ?? assignment.arrivalDate,
       departureDate: dto.departureDate ?? assignment.departureDate,
       status: dto.status ?? assignment.status,
-      notes: Object.prototype.hasOwnProperty.call(dto, 'notes') ? dto.notes ?? null : assignment.notes,
+      notes: Object.prototype.hasOwnProperty.call(dto, 'notes')
+        ? (dto.notes ?? null)
+        : assignment.notes,
       type: dto.type ?? assignment.type,
-      groupId: Object.prototype.hasOwnProperty.call(dto, 'groupId') ? dto.groupId ?? null : assignment.groupId,
-      roomLabel: Object.prototype.hasOwnProperty.call(dto, 'roomLabel') ? dto.roomLabel ?? null : assignment.roomLabel,
+      groupId: Object.prototype.hasOwnProperty.call(dto, 'groupId')
+        ? (dto.groupId ?? null)
+        : assignment.groupId,
+      roomLabel: Object.prototype.hasOwnProperty.call(dto, 'roomLabel')
+        ? (dto.roomLabel ?? null)
+        : assignment.roomLabel,
     });
 
     return this.assignmentsRepository.save(assignment);
@@ -116,5 +122,3 @@ export class AssignmentsService {
     await this.assignmentsRepository.remove(assignment);
   }
 }
-
-

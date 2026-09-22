@@ -27,7 +27,9 @@ async function bootstrap() {
 
     const swaggerConfig = new DocumentBuilder()
       .setTitle('MEJ Allegria 2027 API')
-      .setDescription('API REST Intranet Allegria 2027 - participants, equipes, hebergement, sante et RBAC')
+      .setDescription(
+        'API REST Intranet Allegria 2027 - participants, equipes, hebergement, sante et RBAC',
+      )
       .setVersion('1.0.0')
       .addBearerAuth(
         {
@@ -59,9 +61,6 @@ async function bootstrap() {
 
 void bootstrap().catch((error) => {
   const logger = new Logger('Bootstrap');
-  logger.error(
-    'Fatal startup error.',
-    error instanceof Error ? error.stack : String(error),
-  );
+  logger.error('Fatal startup error.', error instanceof Error ? error.stack : String(error));
   process.exit(1);
 });

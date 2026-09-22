@@ -33,7 +33,11 @@ export class VolunteerSkillsService {
     });
   }
 
-  async addSkill(actingUser: SessionUser, volunteerId: number, dto: AddSkillDto): Promise<VolunteerSkill> {
+  async addSkill(
+    actingUser: SessionUser,
+    volunteerId: number,
+    dto: AddSkillDto,
+  ): Promise<VolunteerSkill> {
     await this.assertCanWrite(actingUser, volunteerId);
     await this.findVolunteer(volunteerId);
 
@@ -50,7 +54,9 @@ export class VolunteerSkillsService {
     await this.assertCanWrite(actingUser, volunteerId);
     const skill = await this.skillsRepository.findOneBy({ id: skillId, volunteerId });
     if (!skill) {
-      throw new NotFoundException(`Compétence ${skillId} introuvable pour le bénévole ${volunteerId}`);
+      throw new NotFoundException(
+        `Compétence ${skillId} introuvable pour le bénévole ${volunteerId}`,
+      );
     }
     await this.skillsRepository.remove(skill);
   }
@@ -63,7 +69,11 @@ export class VolunteerSkillsService {
     });
   }
 
-  async addTag(actingUser: SessionUser, volunteerId: number, dto: AddTagDto): Promise<VolunteerTag> {
+  async addTag(
+    actingUser: SessionUser,
+    volunteerId: number,
+    dto: AddTagDto,
+  ): Promise<VolunteerTag> {
     await this.assertCanWrite(actingUser, volunteerId);
     await this.findVolunteer(volunteerId);
 
@@ -122,7 +132,9 @@ export class VolunteerSkillsService {
       if (volunteer?.user?.id === actingUser.id) {
         return;
       }
-      throw new ForbiddenException('Accès refusé : vous ne pouvez modifier que vos propres compétences et tags');
+      throw new ForbiddenException(
+        'Accès refusé : vous ne pouvez modifier que vos propres compétences et tags',
+      );
     }
 
     if (roles.includes('HEALTH')) {
@@ -142,7 +154,9 @@ export class VolunteerSkillsService {
       }
 
       void membership;
-      throw new ForbiddenException('Accès refusé : le bénévole n\'est pas concerné par une mission santé');
+      throw new ForbiddenException(
+        "Accès refusé : le bénévole n'est pas concerné par une mission santé",
+      );
     }
 
     if (roles.includes('LOGISTICS')) {
@@ -157,7 +171,9 @@ export class VolunteerSkillsService {
         return;
       }
 
-      throw new ForbiddenException('Accès refusé : le bénévole n\'est pas dans le périmètre logistique');
+      throw new ForbiddenException(
+        "Accès refusé : le bénévole n'est pas dans le périmètre logistique",
+      );
     }
 
     throw new ForbiddenException('Accès refusé');

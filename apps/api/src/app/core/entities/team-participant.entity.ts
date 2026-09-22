@@ -13,7 +13,9 @@ export class TeamParticipant {
   @JoinColumn({ name: 'team_id' })
   team!: Team;
 
-  @ManyToOne(() => Participant, (participant) => participant.teamMemberships, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Participant, (participant) => participant.teamMemberships, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'participant_id' })
   participant!: Participant;
 
@@ -23,4 +25,3 @@ export class TeamParticipant {
   @Column({ type: 'text', nullable: true })
   notes!: string | null;
 }
-

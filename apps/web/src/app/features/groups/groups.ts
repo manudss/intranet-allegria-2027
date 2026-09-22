@@ -3,6 +3,7 @@ import { form, required, submit } from '@angular/forms/signals';
 import { finalize, forkJoin } from 'rxjs';
 import { Group, GroupPayload, Participant, Team } from '../../models/models';
 import { GroupsApiService } from '../../services/api.services';
+import { ALLEGRIA_2027_EVENT_DATES } from '../../shared/event-date-selector/event-date.config';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { DataTableColumn } from '../../shared/data-table';
 
@@ -22,7 +23,14 @@ const emptyGroup = (): GroupPayload => ({
       description="Groupes diocésains, arrivées et départs"
       ><button actions tuiButton appearance="primary" (click)="create()">Nouveau groupe</button>
       <tui-textfield iconStart="@tui.search">
-        <label for="rechercher-un-groupe" tuiLabel>Rechercher un groupe</label><input tuiInput placeholder="Nom ou diocèse…" [value]="query()" (input)="query.set($any($event.target).value)" id="rechercher-un-groupe" />
+        <label for="rechercher-un-groupe" tuiLabel>Rechercher un groupe</label
+        ><input
+          tuiInput
+          placeholder="Nom ou diocèse…"
+          [value]="query()"
+          (input)="query.set($any($event.target).value)"
+          id="rechercher-un-groupe"
+        />
       </tui-textfield>
       @if (loading()) {
         <tui-loader />
@@ -49,25 +57,42 @@ const emptyGroup = (): GroupPayload => ({
             <dt>Notes</dt>
             <dd>{{ selected()?.notes || '—' }}</dd>
           </dl>
-         } @else {
-           <form class="drawer-form" (submit)="save($event)">
-             <tui-textfield iconStart="@tui.users">
-               <label for="nom-du-groupe" tuiLabel>Nom du groupe</label><input tuiInput [formField]="groupForm.name" id="nom-du-groupe" />
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.map-pin">
-               <label for="diocese-2" tuiLabel>Diocèse</label><input tuiInput [formField]="groupForm.diocese" id="diocese-2" />
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.calendar">
-               <label for="arrivee-2" tuiLabel>Arrivée</label><input tuiInput type="datetime-local" [formField]="groupForm.arrivalDatetime" id="arrivee-2" />
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.calendar">
-               <label for="depart-2" tuiLabel>Départ</label><input tuiInput type="datetime-local" [formField]="groupForm.departureDatetime" id="depart-2" />
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.file-text" class="wide">
-               <label for="notes-2" tuiLabel>Notes</label><textarea tuiTextarea [formField]="$any(groupForm.notes)" id="notes-2"></textarea>
-             </tui-textfield>
-           </form>
-         }
+        } @else {
+          <form class="drawer-form" (submit)="save($event)">
+            <tui-textfield iconStart="@tui.users">
+              <label for="nom-du-groupe" tuiLabel>Nom du groupe</label
+              ><input tuiInput [formField]="groupForm.name" id="nom-du-groupe" />
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.map-pin">
+              <label for="diocese-2" tuiLabel>Diocèse</label
+              ><input tuiInput [formField]="groupForm.diocese" id="diocese-2" />
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.calendar">
+              <app-event-date-selector
+                label="Arrivée"
+                hint="Date et heure d'arrivee du groupe."
+                [config]="eventDateConfig"
+                mode="datetime-local"
+                [formField]="groupForm.arrivalDatetime"
+                id="arrivee-2"
+              />
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.calendar">
+              <app-event-date-selector
+                label="Départ"
+                hint="Date et heure de depart du groupe."
+                [config]="eventDateConfig"
+                mode="datetime-local"
+                [formField]="groupForm.departureDatetime"
+                id="depart-2"
+              />
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.file-text" class="wide">
+              <label for="notes-2" tuiLabel>Notes</label
+              ><textarea tuiTextarea [formField]="$any(groupForm.notes)" id="notes-2"></textarea>
+            </tui-textfield>
+          </form>
+        }
         <footer>
           <button tuiButton appearance="flat" (click)="close()">Fermer</button>
           @if (mode() === 'detail') {
@@ -86,10 +111,30 @@ const emptyGroup = (): GroupPayload => ({
   styleUrl: '../../shared/crud.scss',
 })
 export class GroupsPage implements OnInit {
+  protected readonly eventDateConfig = ALLEGRIA_2027_EVENT_DATES;
   protected readonly tableColumns: readonly DataTableColumn<Group>[] = [
-    { key: 'name', label: 'Nom', type: 'text', value: (x) => x.name, presentation: { type: 'icon', icon: () => '@tui.users' } },
-    { key: 'diocese', label: 'Diocèse', type: 'list', value: (x) => x.diocese || '—', presentation: { type: 'chip', autoColor: true, icon: () => '@tui.map-pin' } },
-    { key: 'arrival', label: 'Arrivée', type: 'date', value: (x) => x.arrivalDatetime ? new Date(x.arrivalDatetime).toLocaleString('fr-FR') : '—', filterValue: (x) => x.arrivalDatetime, presentation: { type: 'date' } },
+    {
+      key: 'name',
+      label: 'Nom',
+      type: 'text',
+      value: (x) => x.name,
+      presentation: { type: 'icon', icon: () => '@tui.users' },
+    },
+    {
+      key: 'diocese',
+      label: 'Diocèse',
+      type: 'list',
+      value: (x) => x.diocese || '—',
+      presentation: { type: 'chip', autoColor: true, icon: () => '@tui.map-pin' },
+    },
+    {
+      key: 'arrival',
+      label: 'Arrivée',
+      type: 'date',
+      value: (x) => (x.arrivalDatetime ? new Date(x.arrivalDatetime).toLocaleString('fr-FR') : '—'),
+      filterValue: (x) => x.arrivalDatetime,
+      presentation: { type: 'date' },
+    },
   ];
   private readonly api = inject(GroupsApiService);
   readonly items = signal<Group[]>([]);

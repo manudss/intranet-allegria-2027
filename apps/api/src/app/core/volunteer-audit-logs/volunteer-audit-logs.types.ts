@@ -23,4 +23,3 @@ export class SearchVolunteerAuditLogsQueryDto {
   @ApiPropertyOptional({ example: '2027-07-27T23:59:59.999Z' })
   to?: string;
 }
-

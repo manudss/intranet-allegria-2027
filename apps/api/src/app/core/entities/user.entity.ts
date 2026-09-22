@@ -1,4 +1,11 @@
-import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { ParticipantHealth } from './participant-health.entity';
 import { UserRole } from './user-role.entity';
 import { Volunteer } from './volunteer.entity';
@@ -36,5 +43,3 @@ export class User {
   @OneToMany(() => VolunteerShiftAssignment, (assignment) => assignment.assignedByUser)
   shiftAssignmentsCreated!: VolunteerShiftAssignment[];
 }
-
-

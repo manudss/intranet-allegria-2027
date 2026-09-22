@@ -43,11 +43,13 @@ export class UsersService {
       user.passwordHash = hashPassword(dto.password);
     }
 
-    if (Object.prototype.hasOwnProperty.call(dto, 'isActive') && typeof dto.isActive === 'boolean') {
+    if (
+      Object.prototype.hasOwnProperty.call(dto, 'isActive') &&
+      typeof dto.isActive === 'boolean'
+    ) {
       user.isActive = dto.isActive;
     }
 
     return this.usersRepository.save(user);
   }
 }
-

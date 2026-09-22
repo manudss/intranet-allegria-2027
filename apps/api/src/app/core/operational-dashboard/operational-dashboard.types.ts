@@ -1,10 +1,17 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { VolunteerMissionStatus, VolunteerShiftAssignmentStatus, VolunteerShiftStatus } from '../entities';
+import {
+  VolunteerMissionStatus,
+  VolunteerShiftAssignmentStatus,
+  VolunteerShiftStatus,
+} from '../entities';
 
 // ─── Query DTOs ───────────────────────────────────────────────────────────────
 
 export class DashboardQueryDto {
-  @ApiPropertyOptional({ example: '2027-07-24', description: 'Date YYYY-MM-DD (défaut : aujourd\'hui)' })
+  @ApiPropertyOptional({
+    example: '2027-07-24',
+    description: "Date YYYY-MM-DD (défaut : aujourd'hui)",
+  })
   date?: string;
 
   @ApiPropertyOptional({ example: 2, description: 'Filtrer par équipe opérationnelle' })
@@ -41,7 +48,10 @@ export type OperationalExportKind =
 export type OperationalExportFormat = 'xlsx' | 'print' | 'pdf';
 
 export class OperationalExportQueryDto {
-  @ApiPropertyOptional({ example: '2027-07-24', description: 'Date YYYY-MM-DD (si dateFrom/dateTo absents)' })
+  @ApiPropertyOptional({
+    example: '2027-07-24',
+    description: 'Date YYYY-MM-DD (si dateFrom/dateTo absents)',
+  })
   date?: string;
 
   @ApiPropertyOptional({ example: '2027-07-24', description: 'Début intervalle YYYY-MM-DD' })
@@ -168,4 +178,3 @@ export interface DashboardTodoList {
   withoutConfirmedStaff: DashboardTodoShift[];
   optionalIncomplete: DashboardTodoMission[];
 }
-

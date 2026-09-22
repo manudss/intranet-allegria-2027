@@ -46,7 +46,9 @@ export class CreateVolunteerAuditLogs1788600000000 implements MigrationInterface
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE "volunteer_audit_logs" DROP CONSTRAINT "FK_volunteer_audit_logs_user"`);
+    await queryRunner.query(
+      `ALTER TABLE "volunteer_audit_logs" DROP CONSTRAINT "FK_volunteer_audit_logs_user"`,
+    );
 
     await queryRunner.query(`DROP INDEX "public"."IDX_volunteer_audit_logs_entityId"`);
     await queryRunner.query(`DROP INDEX "public"."IDX_volunteer_audit_logs_entityType"`);
@@ -58,4 +60,3 @@ export class CreateVolunteerAuditLogs1788600000000 implements MigrationInterface
     await queryRunner.query(`DROP TYPE "public"."volunteer_audit_action_enum"`);
   }
 }
-

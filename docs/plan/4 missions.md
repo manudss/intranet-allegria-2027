@@ -1,6 +1,7 @@
 # Analyse du dépôt existant — préparation module planification de missions bénévoles
 
 ## Problème et approche
+
 Le besoin est de préparer l’ajout d’un module de planification de missions bénévoles en **réutilisant l’existant** (utilisateurs, bénévoles, auth, rôles, RBAC, UI) sans modifier le schéma DB à ce stade.
 
 Approche suivie : cartographier l’architecture web/api, les entités cœur (User, Role, Volunteer, Team, Participant), les mécanismes d’authentification et de récupération utilisateur courant, les conventions de migrations/tests/nommage, puis proposer une arborescence cible et les décisions techniques à trancher avant codage.
@@ -96,4 +97,3 @@ Approche suivie : cartographier l’architecture web/api, les entités cœur (Us
     - `services/api.services.ts` (ex: `MissionsApiService`)
     - `models/models.ts` (types `Mission`, payloads)
     - `app.routes.ts` (route lazy-load)
-

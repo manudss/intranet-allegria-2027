@@ -3,4 +3,3 @@ export enum AssignmentStatus {
   CONFIRMED = 'CONFIRMED',
   CANCELLED = 'CANCELLED',
 }
-

@@ -17,4 +17,3 @@ export class AuditContextService {
     return this.storage.getStore()?.userId ?? null;
   }
 }
-

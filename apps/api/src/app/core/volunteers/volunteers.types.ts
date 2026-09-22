@@ -27,5 +27,3 @@ export class CreateVolunteerDto {
 }
 
 export class UpdateVolunteerDto extends PartialType(CreateVolunteerDto) {}
-
-

@@ -43,8 +43,7 @@ export const validateEnvironment = (input: EnvironmentInput): EnvironmentInput =
   const nodeEnv = readNodeEnv(input.NODE_ENV);
   const port = readPort(input.PORT, DEFAULT_PORT);
   const corsOrigin = readString(input.CORS_ORIGIN) ?? DEFAULT_CORS_ORIGIN;
-  const databaseUrl =
-    readString(input.DATABASE_URL) ?? readString(input.NEON_DATABASE_URL);
+  const databaseUrl = readString(input.DATABASE_URL) ?? readString(input.NEON_DATABASE_URL);
   const databaseUrlDirect = readString(input.DATABASE_URL_DIRECT);
 
   const localDatabaseConfig = {
@@ -80,4 +79,3 @@ export const validateEnvironment = (input: EnvironmentInput): EnvironmentInput =
     DATABASE_URL_DIRECT: databaseUrlDirect,
   };
 };
-

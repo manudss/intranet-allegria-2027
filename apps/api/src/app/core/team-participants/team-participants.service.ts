@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Participant, Team, TeamParticipant, TeamParticipantRole } from '../entities';
@@ -37,7 +42,9 @@ export class TeamParticipantsService {
       throw new ConflictException('Le participant est deja dans cette equipe');
     }
 
-    const currentSize = await this.teamParticipantsRepository.count({ where: { team: { id: teamId } } });
+    const currentSize = await this.teamParticipantsRepository.count({
+      where: { team: { id: teamId } },
+    });
 
     if (currentSize >= team.maxSize) {
       throw new BadRequestException(`Equipe complete: taille max ${team.maxSize}`);
@@ -60,12 +67,11 @@ export class TeamParticipantsService {
     });
 
     if (!membership) {
-      throw new NotFoundException(`Affectation team=${teamId} participant=${participantId} introuvable`);
+      throw new NotFoundException(
+        `Affectation team=${teamId} participant=${participantId} introuvable`,
+      );
     }
 
     await this.teamParticipantsRepository.remove(membership);
   }
 }
-
-
-

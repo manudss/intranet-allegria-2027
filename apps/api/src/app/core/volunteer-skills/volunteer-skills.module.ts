@@ -7,7 +7,10 @@ import { VolunteerSkillsController } from './volunteer-skills.controller';
 import { VolunteerSkillsService } from './volunteer-skills.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([VolunteerSkill, VolunteerTag, Volunteer, VolunteerTeamMembership]), AuthModule],
+  imports: [
+    TypeOrmModule.forFeature([VolunteerSkill, VolunteerTag, Volunteer, VolunteerTeamMembership]),
+    AuthModule,
+  ],
   controllers: [VolunteerSkillsController],
   providers: [VolunteerSkillsService],
   exports: [VolunteerSkillsService],

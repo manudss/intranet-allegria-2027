@@ -49,4 +49,3 @@ export class HostFamiliesService {
     await this.hostFamiliesRepository.remove(hostFamily);
   }
 }
-

@@ -2,7 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Group, Participant } from '../entities';
-import { CreateParticipantDto, SearchParticipantsQuery, UpdateParticipantDto } from './participants.types';
+import {
+  CreateParticipantDto,
+  SearchParticipantsQuery,
+  UpdateParticipantDto,
+} from './participants.types';
 
 @Injectable()
 export class ParticipantsService {
@@ -61,15 +65,18 @@ export class ParticipantsService {
     }
     if (filters.unassignedOnly === true || filters.unassignedOnly === 'true') {
       // En l'absence de dates d'événement configurées, toute affectation non annulée est considérée active.
-      query.andWhere((builder) => {
-        const assigned = builder.subQuery()
-          .select('1')
-          .from('participant_host_family_assignments', 'assignment')
-          .where('assignment.participant_id = participant.id')
-          .andWhere('assignment.status != :cancelled')
-          .getQuery();
-        return `NOT EXISTS ${assigned}`;
-      }).setParameter('cancelled', 'CANCELLED');
+      query
+        .andWhere((builder) => {
+          const assigned = builder
+            .subQuery()
+            .select('1')
+            .from('participant_host_family_assignments', 'assignment')
+            .where('assignment.participant_id = participant.id')
+            .andWhere('assignment.status != :cancelled')
+            .getQuery();
+          return `NOT EXISTS ${assigned}`;
+        })
+        .setParameter('cancelled', 'CANCELLED');
     }
 
     const [items, total] = await query.skip(offset).take(limit).getManyAndCount();
@@ -93,7 +100,9 @@ export class ParticipantsService {
     const participant = await this.findOne(id);
 
     if (Object.prototype.hasOwnProperty.call(dto, 'groupId')) {
-      participant.group = dto.groupId ? await this.groupsRepository.findOneBy({ id: dto.groupId }) : null;
+      participant.group = dto.groupId
+        ? await this.groupsRepository.findOneBy({ id: dto.groupId })
+        : null;
     }
 
     Object.assign(participant, dto);
@@ -106,5 +115,3 @@ export class ParticipantsService {
     await this.participantsRepository.remove(participant);
   }
 }
-
-

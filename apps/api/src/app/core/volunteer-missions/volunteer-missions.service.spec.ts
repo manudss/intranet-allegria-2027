@@ -46,12 +46,14 @@ function makeMockMissionRepo(missionStatus = VolunteerMissionStatus.TODO) {
  * volunteersRepository, membershipsRepository,
  * missionStatusLogsRepository, shiftStatusLogsRepository
  */
-function makeService(overrides: {
-  shiftRepo?: ReturnType<typeof makeMockShiftRepo>;
-  missionRepo?: ReturnType<typeof makeMockMissionRepo>;
-  shiftLogSave?: ReturnType<typeof vi.fn>;
-  missionLogSave?: ReturnType<typeof vi.fn>;
-} = {}) {
+function makeService(
+  overrides: {
+    shiftRepo?: ReturnType<typeof makeMockShiftRepo>;
+    missionRepo?: ReturnType<typeof makeMockMissionRepo>;
+    shiftLogSave?: ReturnType<typeof vi.fn>;
+    missionLogSave?: ReturnType<typeof vi.fn>;
+  } = {},
+) {
   const shiftRepo = overrides.shiftRepo ?? makeMockShiftRepo(VolunteerShiftStatus.TODO);
   const missionRepo = overrides.missionRepo ?? makeMockMissionRepo();
 
@@ -137,20 +139,34 @@ describe('changeShiftStatus — transitions valides', () => {
     );
   }
 
-  it('TODO → ASSIGNED', () => expectTransitionAllowed(VolunteerShiftStatus.TODO, VolunteerShiftStatus.ASSIGNED));
-  it('TODO → IN_PROGRESS', () => expectTransitionAllowed(VolunteerShiftStatus.TODO, VolunteerShiftStatus.IN_PROGRESS));
-  it('TODO → DONE', () => expectTransitionAllowed(VolunteerShiftStatus.TODO, VolunteerShiftStatus.DONE));
-  it('TODO → NOT_DONE', () => expectTransitionAllowed(VolunteerShiftStatus.TODO, VolunteerShiftStatus.NOT_DONE));
-  it('TODO → CANCELLED', () => expectTransitionAllowed(VolunteerShiftStatus.TODO, VolunteerShiftStatus.CANCELLED));
-  it('ASSIGNED → IN_PROGRESS', () => expectTransitionAllowed(VolunteerShiftStatus.ASSIGNED, VolunteerShiftStatus.IN_PROGRESS));
-  it('ASSIGNED → DONE', () => expectTransitionAllowed(VolunteerShiftStatus.ASSIGNED, VolunteerShiftStatus.DONE));
-  it('ASSIGNED → NOT_DONE', () => expectTransitionAllowed(VolunteerShiftStatus.ASSIGNED, VolunteerShiftStatus.NOT_DONE));
-  it('ASSIGNED → CANCELLED', () => expectTransitionAllowed(VolunteerShiftStatus.ASSIGNED, VolunteerShiftStatus.CANCELLED));
-  it('IN_PROGRESS → DONE', () => expectTransitionAllowed(VolunteerShiftStatus.IN_PROGRESS, VolunteerShiftStatus.DONE));
-  it('IN_PROGRESS → NOT_DONE', () => expectTransitionAllowed(VolunteerShiftStatus.IN_PROGRESS, VolunteerShiftStatus.NOT_DONE));
-  it('IN_PROGRESS → CANCELLED', () => expectTransitionAllowed(VolunteerShiftStatus.IN_PROGRESS, VolunteerShiftStatus.CANCELLED));
-  it('DONE → NOT_DONE (ADMIN)', () => expectTransitionAllowed(VolunteerShiftStatus.DONE, VolunteerShiftStatus.NOT_DONE, ADMIN));
-  it('DONE → NOT_DONE (COORDINATOR)', () => expectTransitionAllowed(VolunteerShiftStatus.DONE, VolunteerShiftStatus.NOT_DONE, COORDINATOR));
+  it('TODO → ASSIGNED', () =>
+    expectTransitionAllowed(VolunteerShiftStatus.TODO, VolunteerShiftStatus.ASSIGNED));
+  it('TODO → IN_PROGRESS', () =>
+    expectTransitionAllowed(VolunteerShiftStatus.TODO, VolunteerShiftStatus.IN_PROGRESS));
+  it('TODO → DONE', () =>
+    expectTransitionAllowed(VolunteerShiftStatus.TODO, VolunteerShiftStatus.DONE));
+  it('TODO → NOT_DONE', () =>
+    expectTransitionAllowed(VolunteerShiftStatus.TODO, VolunteerShiftStatus.NOT_DONE));
+  it('TODO → CANCELLED', () =>
+    expectTransitionAllowed(VolunteerShiftStatus.TODO, VolunteerShiftStatus.CANCELLED));
+  it('ASSIGNED → IN_PROGRESS', () =>
+    expectTransitionAllowed(VolunteerShiftStatus.ASSIGNED, VolunteerShiftStatus.IN_PROGRESS));
+  it('ASSIGNED → DONE', () =>
+    expectTransitionAllowed(VolunteerShiftStatus.ASSIGNED, VolunteerShiftStatus.DONE));
+  it('ASSIGNED → NOT_DONE', () =>
+    expectTransitionAllowed(VolunteerShiftStatus.ASSIGNED, VolunteerShiftStatus.NOT_DONE));
+  it('ASSIGNED → CANCELLED', () =>
+    expectTransitionAllowed(VolunteerShiftStatus.ASSIGNED, VolunteerShiftStatus.CANCELLED));
+  it('IN_PROGRESS → DONE', () =>
+    expectTransitionAllowed(VolunteerShiftStatus.IN_PROGRESS, VolunteerShiftStatus.DONE));
+  it('IN_PROGRESS → NOT_DONE', () =>
+    expectTransitionAllowed(VolunteerShiftStatus.IN_PROGRESS, VolunteerShiftStatus.NOT_DONE));
+  it('IN_PROGRESS → CANCELLED', () =>
+    expectTransitionAllowed(VolunteerShiftStatus.IN_PROGRESS, VolunteerShiftStatus.CANCELLED));
+  it('DONE → NOT_DONE (ADMIN)', () =>
+    expectTransitionAllowed(VolunteerShiftStatus.DONE, VolunteerShiftStatus.NOT_DONE, ADMIN));
+  it('DONE → NOT_DONE (COORDINATOR)', () =>
+    expectTransitionAllowed(VolunteerShiftStatus.DONE, VolunteerShiftStatus.NOT_DONE, COORDINATOR));
 });
 
 // ─── Transitions de statut de shift — invalides ───────────────────────────────
@@ -172,9 +188,9 @@ describe('changeShiftStatus — transitions invalides', () => {
       status: VolunteerMissionStatus.TODO,
     } as never);
 
-    await expect(
-      service.changeShiftStatus(actor, 1, 10, { status: to }),
-    ).rejects.toBeInstanceOf(expectedError);
+    await expect(service.changeShiftStatus(actor, 1, 10, { status: to })).rejects.toBeInstanceOf(
+      expectedError,
+    );
   }
 
   it('DONE → IN_PROGRESS est invalide', () =>
@@ -213,7 +229,7 @@ describe('changeShiftStatus — transitions invalides', () => {
 // ─── Journalisation des transitions de shift ─────────────────────────────────
 
 describe('changeShiftStatus — journalisation', () => {
-  it('enregistre un log avec reason lors d\'une transition valide', async () => {
+  it("enregistre un log avec reason lors d'une transition valide", async () => {
     const shiftLogSave = vi.fn().mockResolvedValue({});
     const shiftRepo = makeMockShiftRepo(VolunteerShiftStatus.TODO);
     const service = makeService({ shiftRepo, shiftLogSave });
@@ -269,15 +285,36 @@ describe('changeStatus (mission) — transitions valides', () => {
     );
   }
 
-  it('DRAFT → TODO', () => expectMissionTransitionAllowed(VolunteerMissionStatus.DRAFT, VolunteerMissionStatus.TODO));
-  it('DRAFT → CANCELLED', () => expectMissionTransitionAllowed(VolunteerMissionStatus.DRAFT, VolunteerMissionStatus.CANCELLED));
-  it('TODO → IN_PROGRESS', () => expectMissionTransitionAllowed(VolunteerMissionStatus.TODO, VolunteerMissionStatus.IN_PROGRESS));
-  it('TODO → DONE', () => expectMissionTransitionAllowed(VolunteerMissionStatus.TODO, VolunteerMissionStatus.DONE));
-  it('TODO → NOT_DONE', () => expectMissionTransitionAllowed(VolunteerMissionStatus.TODO, VolunteerMissionStatus.NOT_DONE));
-  it('TODO → CANCELLED', () => expectMissionTransitionAllowed(VolunteerMissionStatus.TODO, VolunteerMissionStatus.CANCELLED));
-  it('IN_PROGRESS → DONE', () => expectMissionTransitionAllowed(VolunteerMissionStatus.IN_PROGRESS, VolunteerMissionStatus.DONE));
-  it('IN_PROGRESS → NOT_DONE', () => expectMissionTransitionAllowed(VolunteerMissionStatus.IN_PROGRESS, VolunteerMissionStatus.NOT_DONE));
-  it('IN_PROGRESS → CANCELLED', () => expectMissionTransitionAllowed(VolunteerMissionStatus.IN_PROGRESS, VolunteerMissionStatus.CANCELLED));
+  it('DRAFT → TODO', () =>
+    expectMissionTransitionAllowed(VolunteerMissionStatus.DRAFT, VolunteerMissionStatus.TODO));
+  it('DRAFT → CANCELLED', () =>
+    expectMissionTransitionAllowed(VolunteerMissionStatus.DRAFT, VolunteerMissionStatus.CANCELLED));
+  it('TODO → IN_PROGRESS', () =>
+    expectMissionTransitionAllowed(
+      VolunteerMissionStatus.TODO,
+      VolunteerMissionStatus.IN_PROGRESS,
+    ));
+  it('TODO → DONE', () =>
+    expectMissionTransitionAllowed(VolunteerMissionStatus.TODO, VolunteerMissionStatus.DONE));
+  it('TODO → NOT_DONE', () =>
+    expectMissionTransitionAllowed(VolunteerMissionStatus.TODO, VolunteerMissionStatus.NOT_DONE));
+  it('TODO → CANCELLED', () =>
+    expectMissionTransitionAllowed(VolunteerMissionStatus.TODO, VolunteerMissionStatus.CANCELLED));
+  it('IN_PROGRESS → DONE', () =>
+    expectMissionTransitionAllowed(
+      VolunteerMissionStatus.IN_PROGRESS,
+      VolunteerMissionStatus.DONE,
+    ));
+  it('IN_PROGRESS → NOT_DONE', () =>
+    expectMissionTransitionAllowed(
+      VolunteerMissionStatus.IN_PROGRESS,
+      VolunteerMissionStatus.NOT_DONE,
+    ));
+  it('IN_PROGRESS → CANCELLED', () =>
+    expectMissionTransitionAllowed(
+      VolunteerMissionStatus.IN_PROGRESS,
+      VolunteerMissionStatus.CANCELLED,
+    ));
 });
 
 // ─── Transitions de statut de mission — invalides ────────────────────────────
@@ -296,16 +333,19 @@ describe('changeStatus (mission) — transitions invalides', () => {
       status: from,
     } as never);
 
-    await expect(
-      service.changeStatus(ADMIN, 1, { status: to }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.changeStatus(ADMIN, 1, { status: to })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   }
 
   it('DONE → TODO est invalide', () =>
     expectMissionTransitionRejected(VolunteerMissionStatus.DONE, VolunteerMissionStatus.TODO));
 
   it('DONE → IN_PROGRESS est invalide', () =>
-    expectMissionTransitionRejected(VolunteerMissionStatus.DONE, VolunteerMissionStatus.IN_PROGRESS));
+    expectMissionTransitionRejected(
+      VolunteerMissionStatus.DONE,
+      VolunteerMissionStatus.IN_PROGRESS,
+    ));
 
   it('CANCELLED → TODO est invalide', () =>
     expectMissionTransitionRejected(VolunteerMissionStatus.CANCELLED, VolunteerMissionStatus.TODO));

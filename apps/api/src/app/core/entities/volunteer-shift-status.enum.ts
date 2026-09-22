@@ -6,4 +6,3 @@ export enum VolunteerShiftStatus {
   CANCELLED = 'CANCELLED',
   NOT_DONE = 'NOT_DONE',
 }
-

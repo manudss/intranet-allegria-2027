@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project overview
 
 MEJ Allegria intranet — Nx 23 monorepo with three projects:
+
 - `apps/web` — Angular 22 (standalone, zoneless, Taiga UI)
 - `apps/api` — NestJS 11 (TypeORM, PostgreSQL)
 - `libs/shared` — shared TypeScript library (`@mej-allegria/shared`)
@@ -58,6 +59,7 @@ Database config is in `apps/api/src/database/typeorm.config.ts`. `synchronize` i
 ### Web (Angular)
 
 Bootstrap: `bootstrapApplication(App, appConfig)` — no `AppModule`.
+
 - `app.config.ts` — providers (zoneless change detection, Taiga UI, HTTP client with interceptors)
 - `app.routes.ts` — all routes; all feature pages are lazy-loaded
 - `apps/web/src/app/core/` — `AuthService` (signals + localStorage token), `authGuard`, `authInterceptor` (Bearer header), `httpErrorInterceptor`, `roleGuard`
@@ -67,6 +69,7 @@ Bootstrap: `bootstrapApplication(App, appConfig)` — no `AppModule`.
 ### Frontend shared layer
 
 `apps/web/src/app/shared/` contains:
+
 - `SHARED_IMPORTS` — a const array of commonly needed imports; spread it in feature component `imports: [...SHARED_IMPORTS]`
 - `DataTableComponent` (`app-data-table`) — the main generic table UI; configured via `DataTableColumn<T>[]` and optional `DataTableAction<T>[]`
 - `PageLayoutComponent` — standard page shell with title/description slot and an `actions` content projection slot

@@ -2,6 +2,7 @@ Crée le tableau de bord opérationnel jour J dans l’application existante.
 
 Ne crée pas de nouveau système d’authentification.
 Utilise les rôles existants :
+
 - ADMIN ;
 - COORDINATOR ;
 - HEALTH ;
@@ -13,6 +14,7 @@ Backend :
 crée des endpoints de synthèse performants et filtrables :
 
 1. Vue globale du jour
+
 - date ;
 - nombre de missions ;
 - nombre de shifts ;
@@ -28,6 +30,7 @@ crée des endpoints de synthèse performants et filtrables :
 - bénévoles avec affectation PROVISIONAL.
 
 2. Vue par équipe opérationnelle
+
 - équipe ;
 - nombre de missions ;
 - shifts par statut ;
@@ -37,6 +40,7 @@ crée des endpoints de synthèse performants et filtrables :
 - alertes.
 
 3. Vue par lieu
+
 - lieu ;
 - shifts en cours ;
 - shifts à venir ;
@@ -44,6 +48,7 @@ crée des endpoints de synthèse performants et filtrables :
 - alertes de sous-effectif.
 
 4. Vue “Qui fait quoi”
+
 - recherche par nom de bénévole ;
 - missions ;
 - shifts ;
@@ -54,6 +59,7 @@ crée des endpoints de synthèse performants et filtrables :
 - statut du shift.
 
 5. Vue “À faire”
+
 - missions obligatoires non terminées ;
 - shifts non commencés ;
 - shifts sans effectif confirmé ;
@@ -63,6 +69,7 @@ Les requêtes doivent être paginées lorsque nécessaire et utiliser des indexe
 
 Frontend Angular :
 crée une page responsive “Tableau de bord jour J” avec :
+
 - cartes de synthèse ;
 - filtres date, équipe, lieu et statut ;
 - onglet “Missions et shifts” ;
@@ -76,6 +83,7 @@ crée une page responsive “Tableau de bord jour J” avec :
 - actions rapides autorisées selon le rôle.
 
 Permissions :
+
 - ADMIN et COORDINATOR : vue complète ;
 - HEALTH : vue limitée aux missions santé ;
 - ANIMATOR : vue limitée aux missions animation ;

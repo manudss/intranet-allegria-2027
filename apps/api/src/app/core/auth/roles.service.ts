@@ -60,4 +60,3 @@ export class RolesService {
     await this.userRolesRepository.remove(link);
   }
 }
-

@@ -36,4 +36,3 @@ export class ParticipantHealth {
   @JoinColumn({ name: 'last_updated_by_user_id' })
   lastUpdatedBy!: User | null;
 }
-

@@ -124,26 +124,26 @@ Le dépôt versionne `render.yaml` pour rendre le service reproductible.
 
 Paramètres attendus :
 
-| Champ | Valeur |
-| --- | --- |
-| Service type | `Web Service` |
-| Runtime | `Node` |
-| Production branch | `main` |
-| Root directory | repository root |
-| Build command | `npm ci && npm run db:migrate && npm run build:api` |
-| Start command | `npm run start:prod` |
-| Health check path | `/health` |
-| Auto deploy | activé |
+| Champ             | Valeur                                              |
+| ----------------- | --------------------------------------------------- |
+| Service type      | `Web Service`                                       |
+| Runtime           | `Node`                                              |
+| Production branch | `main`                                              |
+| Root directory    | repository root                                     |
+| Build command     | `npm ci && npm run db:migrate && npm run build:api` |
+| Start command     | `npm run start:prod`                                |
+| Health check path | `/health`                                           |
+| Auto deploy       | activé                                              |
 
 Variables à renseigner dans Render :
 
-| Variable | Valeur |
-| --- | --- |
-| `NODE_ENV` | `production` |
-| `DATABASE_URL` | chaîne Neon **poolée** |
-| `DATABASE_URL_DIRECT` | chaîne Neon **directe** si disponible |
-| `CORS_ORIGIN` | `http://localhost:4200,https://<votre-projet>.pages.dev` |
-| `DB_SSL` | `true` |
+| Variable              | Valeur                                                   |
+| --------------------- | -------------------------------------------------------- |
+| `NODE_ENV`            | `production`                                             |
+| `DATABASE_URL`        | chaîne Neon **poolée**                                   |
+| `DATABASE_URL_DIRECT` | chaîne Neon **directe** si disponible                    |
+| `CORS_ORIGIN`         | `http://localhost:4200,https://<votre-projet>.pages.dev` |
+| `DB_SSL`              | `true`                                                   |
 
 Ne définissez pas `PORT` manuellement sur Render : la plateforme l'injecte automatiquement.
 
@@ -153,17 +153,17 @@ Le frontend Angular est statique et le fallback SPA est versionné via `apps/web
 
 Paramètres attendus :
 
-| Champ | Valeur |
-| --- | --- |
-| Framework preset | `None` ou configuration manuelle |
-| Production branch | `main` |
-| Build command | `npm ci && npm run build:web` |
-| Build output directory | `dist/apps/web/browser` |
+| Champ                  | Valeur                           |
+| ---------------------- | -------------------------------- |
+| Framework preset       | `None` ou configuration manuelle |
+| Production branch      | `main`                           |
+| Build command          | `npm ci && npm run build:web`    |
+| Build output directory | `dist/apps/web/browser`          |
 
 Variables de build publiques à renseigner dans Cloudflare Pages :
 
-| Variable | Valeur |
-| --- | --- |
+| Variable      | Valeur                                         |
+| ------------- | ---------------------------------------------- |
 | `WEB_API_URL` | `https://<nom-du-service-render>.onrender.com` |
 
 `WEB_API_URL` ne doit pas inclure `/api`. Le frontend ajoute ensuite les chemins API (`/api/...`) lui-même.

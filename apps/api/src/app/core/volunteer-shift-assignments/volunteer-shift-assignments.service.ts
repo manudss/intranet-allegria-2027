@@ -62,7 +62,12 @@ export class VolunteerShiftAssignmentsService {
     private readonly membershipsRepository: Repository<VolunteerTeamMembership>,
   ) {}
 
-  async listForShift(actingUser: SessionUser, missionId: number, shiftId: number, status?: VolunteerShiftAssignmentStatus) {
+  async listForShift(
+    actingUser: SessionUser,
+    missionId: number,
+    shiftId: number,
+    status?: VolunteerShiftAssignmentStatus,
+  ) {
     const scope = await this.resolveScope(actingUser);
     const shift = await this.findShift(shiftId, missionId);
     this.assertMissionInScope(scope, shift.mission, true);
@@ -96,7 +101,10 @@ export class VolunteerShiftAssignmentsService {
 
     const volunteer = await this.findVolunteer(dto.volunteerId);
 
-    const existing = await this.assignmentsRepository.findOneBy({ volunteerId: volunteer.id, shiftId: shift.id });
+    const existing = await this.assignmentsRepository.findOneBy({
+      volunteerId: volunteer.id,
+      shiftId: shift.id,
+    });
     if (existing) {
       throw new ConflictException('Ce benevole est deja affecte a ce shift');
     }
@@ -185,10 +193,15 @@ export class VolunteerShiftAssignmentsService {
       order: { shift: { startAt: 'ASC' } },
     });
 
-    return assignments.filter((assignment) => this.canAccessMission(scope, assignment.shift.mission));
+    return assignments.filter((assignment) =>
+      this.canAccessMission(scope, assignment.shift.mission),
+    );
   }
 
-  async searchVolunteers(actingUser: SessionUser, query: SearchShiftAssignmentVolunteerQueryDto): Promise<VolunteerSearchResult[]> {
+  async searchVolunteers(
+    actingUser: SessionUser,
+    query: SearchShiftAssignmentVolunteerQueryDto,
+  ): Promise<VolunteerSearchResult[]> {
     const scope = await this.resolveScope(actingUser);
     const availableOnly = this.toBoolean(query.availableOnly);
 
@@ -220,15 +233,25 @@ export class VolunteerShiftAssignmentsService {
     }
 
     if (query.skill) {
-      qb.innerJoin(VolunteerSkill, 'skill', 'skill.volunteer_id = volunteer.id AND skill.skill = :skill', {
-        skill: query.skill,
-      });
+      qb.innerJoin(
+        VolunteerSkill,
+        'skill',
+        'skill.volunteer_id = volunteer.id AND skill.skill = :skill',
+        {
+          skill: query.skill,
+        },
+      );
     }
 
     if (query.tag?.trim()) {
-      qb.innerJoin(VolunteerTag, 'tag', 'tag.volunteer_id = volunteer.id AND LOWER(tag.value) LIKE :tag', {
-        tag: `%${query.tag.trim().toLowerCase()}%`,
-      });
+      qb.innerJoin(
+        VolunteerTag,
+        'tag',
+        'tag.volunteer_id = volunteer.id AND LOWER(tag.value) LIKE :tag',
+        {
+          tag: `%${query.tag.trim().toLowerCase()}%`,
+        },
+      );
     }
 
     if (query.volunteerTeamId) {
@@ -269,7 +292,12 @@ export class VolunteerShiftAssignmentsService {
 
     const results = await Promise.all(
       volunteers.map(async (volunteer) => {
-        const overlaps = await this.findOverlaps(volunteer.id, intervalStart as Date, intervalEnd as Date, query.shiftId);
+        const overlaps = await this.findOverlaps(
+          volunteer.id,
+          intervalStart as Date,
+          intervalEnd as Date,
+          query.shiftId,
+        );
         return { volunteer, hasOverlap: overlaps.length > 0 };
       }),
     );
@@ -332,7 +360,13 @@ export class VolunteerShiftAssignmentsService {
       return;
     }
 
-    const overlaps = await this.findOverlaps(volunteerId, shift.startAt, shift.endAt, shift.id, excludedAssignmentId);
+    const overlaps = await this.findOverlaps(
+      volunteerId,
+      shift.startAt,
+      shift.endAt,
+      shift.id,
+      excludedAssignmentId,
+    );
 
     if (overlaps.length === 0) {
       return;
@@ -372,7 +406,9 @@ export class VolunteerShiftAssignmentsService {
       .innerJoinAndSelect('assignment.shift', 'shift')
       .innerJoinAndSelect('shift.mission', 'mission')
       .where('assignment.volunteer_id = :volunteerId', { volunteerId })
-      .andWhere('assignment.status != :cancelled', { cancelled: VolunteerShiftAssignmentStatus.CANCELLED })
+      .andWhere('assignment.status != :cancelled', {
+        cancelled: VolunteerShiftAssignmentStatus.CANCELLED,
+      })
       .andWhere('shift."startAt" < :endAt', { endAt: endAt.toISOString() })
       .andWhere('shift."endAt" > :startAt', { startAt: startAt.toISOString() });
 
@@ -396,7 +432,9 @@ export class VolunteerShiftAssignmentsService {
     }));
   }
 
-  async getCountsForShift(shiftId: number): Promise<{ activeAssignmentsCount: number; confirmedAssignmentsCount: number }> {
+  async getCountsForShift(
+    shiftId: number,
+  ): Promise<{ activeAssignmentsCount: number; confirmedAssignmentsCount: number }> {
     const rows = await this.assignmentsRepository
       .createQueryBuilder('assignment')
       .select('assignment.status', 'status')
@@ -491,7 +529,11 @@ export class VolunteerShiftAssignmentsService {
     }
   }
 
-  private assertMissionInScope(scope: ScopeContext, mission: VolunteerMission, readOperation: boolean): void {
+  private assertMissionInScope(
+    scope: ScopeContext,
+    mission: VolunteerMission,
+    readOperation: boolean,
+  ): void {
     if (readOperation && scope.readOnly) {
       return;
     }
@@ -506,7 +548,10 @@ export class VolunteerShiftAssignmentsService {
       return true;
     }
 
-    if (mission.responsibleVolunteerId && mission.responsibleVolunteerId === scope.actorVolunteerId) {
+    if (
+      mission.responsibleVolunteerId &&
+      mission.responsibleVolunteerId === scope.actorVolunteerId
+    ) {
       return true;
     }
 
@@ -534,8 +579,3 @@ export class VolunteerShiftAssignmentsService {
     return teamCode.includes('LOG');
   }
 }
-
-
-
-
-

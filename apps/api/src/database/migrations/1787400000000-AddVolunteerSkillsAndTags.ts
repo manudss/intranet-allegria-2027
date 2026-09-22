@@ -29,8 +29,12 @@ export class AddVolunteerSkillsAndTags1787400000000 implements MigrationInterfac
       CONSTRAINT "uq_volunteer_skills_volunteer_skill" UNIQUE ("volunteer_id", "skill")
     )`);
 
-    await queryRunner.query(`CREATE INDEX "IDX_volunteer_skills_volunteer" ON "volunteer_skills" ("volunteer_id")`);
-    await queryRunner.query(`CREATE INDEX "IDX_volunteer_skills_skill" ON "volunteer_skills" ("skill")`);
+    await queryRunner.query(
+      `CREATE INDEX "IDX_volunteer_skills_volunteer" ON "volunteer_skills" ("volunteer_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_volunteer_skills_skill" ON "volunteer_skills" ("skill")`,
+    );
 
     await queryRunner.query(`ALTER TABLE "volunteer_skills"
       ADD CONSTRAINT "FK_volunteer_skills_volunteer"
@@ -44,8 +48,12 @@ export class AddVolunteerSkillsAndTags1787400000000 implements MigrationInterfac
       CONSTRAINT "PK_volunteer_tags_id" PRIMARY KEY ("id")
     )`);
 
-    await queryRunner.query(`CREATE INDEX "IDX_volunteer_tags_volunteer" ON "volunteer_tags" ("volunteer_id")`);
-    await queryRunner.query(`CREATE INDEX "IDX_volunteer_tags_value" ON "volunteer_tags" ("value")`);
+    await queryRunner.query(
+      `CREATE INDEX "IDX_volunteer_tags_volunteer" ON "volunteer_tags" ("volunteer_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_volunteer_tags_value" ON "volunteer_tags" ("value")`,
+    );
 
     await queryRunner.query(`ALTER TABLE "volunteer_tags"
       ADD CONSTRAINT "FK_volunteer_tags_volunteer"
@@ -53,12 +61,16 @@ export class AddVolunteerSkillsAndTags1787400000000 implements MigrationInterfac
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE "volunteer_tags" DROP CONSTRAINT "FK_volunteer_tags_volunteer"`);
+    await queryRunner.query(
+      `ALTER TABLE "volunteer_tags" DROP CONSTRAINT "FK_volunteer_tags_volunteer"`,
+    );
     await queryRunner.query(`DROP INDEX "public"."IDX_volunteer_tags_value"`);
     await queryRunner.query(`DROP INDEX "public"."IDX_volunteer_tags_volunteer"`);
     await queryRunner.query(`DROP TABLE "volunteer_tags"`);
 
-    await queryRunner.query(`ALTER TABLE "volunteer_skills" DROP CONSTRAINT "FK_volunteer_skills_volunteer"`);
+    await queryRunner.query(
+      `ALTER TABLE "volunteer_skills" DROP CONSTRAINT "FK_volunteer_skills_volunteer"`,
+    );
     await queryRunner.query(`DROP INDEX "public"."IDX_volunteer_skills_skill"`);
     await queryRunner.query(`DROP INDEX "public"."IDX_volunteer_skills_volunteer"`);
     await queryRunner.query(`DROP TABLE "volunteer_skills"`);

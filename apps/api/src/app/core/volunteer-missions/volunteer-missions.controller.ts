@@ -28,7 +28,15 @@ import {
 import { VolunteerMissionsService } from './volunteer-missions.service';
 import { VolunteerShiftStatus, VolunteerMissionStatus } from '../entities';
 
-const READ_ROLES = ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'LOGISTICS', 'VOLUNTEERS', 'VIEWER'];
+const READ_ROLES = [
+  'ADMIN',
+  'COORDINATOR',
+  'HEALTH',
+  'ANIMATOR',
+  'LOGISTICS',
+  'VOLUNTEERS',
+  'VIEWER',
+];
 const WRITE_ROLES = ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'LOGISTICS', 'VOLUNTEERS'];
 
 type UserRequest = { user: { id: number; email: string; roles: string[] } };
@@ -71,7 +79,11 @@ export class VolunteerMissionsController {
   @ApiOperation({ summary: 'Mettre a jour une mission benevole' })
   @Roles(...WRITE_ROLES)
   @Patch(':id')
-  update(@Req() req: UserRequest, @Param('id', ParseIntPipe) id: number, @Body() dto: UpdateVolunteerMissionDto) {
+  update(
+    @Req() req: UserRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateVolunteerMissionDto,
+  ) {
     return this.volunteerMissionsService.update(req.user, id, dto);
   }
 
@@ -179,6 +191,3 @@ export class VolunteerMissionsController {
     return this.volunteerMissionsService.listMissionsByStatus(req.user, status, isMandatory);
   }
 }
-
-
-

@@ -1,4 +1,12 @@
-import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, Unique, UpdateDateColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  Unique,
+  UpdateDateColumn,
+} from 'typeorm';
 import { VolunteerMission } from './volunteer-mission.entity';
 import { VolunteerTeamMembership } from './volunteer-team-membership.entity';
 

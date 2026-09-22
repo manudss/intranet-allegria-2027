@@ -91,6 +91,3 @@ export class ChangeVolunteerShiftStatusDto {
   @ApiPropertyOptional({ default: false })
   force?: boolean;
 }
-
-
-

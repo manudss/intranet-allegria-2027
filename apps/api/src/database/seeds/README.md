@@ -26,4 +26,3 @@ Ce dossier contient un script de generation de donnees de test coherentes pour l
 2. Seed ensuite
 
 Le script purge puis regenere les donnees (`TRUNCATE ... RESTART IDENTITY CASCADE`).
-

@@ -63,5 +63,3 @@ export class ParticipantHealthService {
     return participant;
   }
 }
-
-

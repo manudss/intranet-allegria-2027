@@ -1,4 +1,12 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Group } from './group.entity';
 import { ParticipantHostFamilyAssignment } from './participant-host-family-assignment.entity';
 import { ParticipantHealth } from './participant-health.entity';
@@ -60,4 +68,3 @@ export class Participant {
   @OneToOne(() => ParticipantHealth, (health) => health.participant)
   health!: ParticipantHealth | null;
 }
-

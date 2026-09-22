@@ -17,6 +17,7 @@ Crée VolunteerAuditLog :
 - createdAt timestamptz.
 
 Trace les modifications sur :
+
 - volunteers si le module les modifie ;
 - volunteer_teams ;
 - volunteer_team_memberships ;
@@ -28,6 +29,7 @@ Trace les modifications sur :
 - volunteer_shift_assignments.
 
 Ne trace pas :
+
 - les lectures ;
 - les mots de passe ;
 - passwordHash ;
@@ -36,11 +38,13 @@ Ne trace pas :
 - les données sans rapport avec la modification.
 
 Implémente un mécanisme cohérent avec l’architecture existante :
+
 - interceptor NestJS ;
 - subscriber TypeORM ;
 - ou service d’audit centralisé.
 
 Le journal doit conserver :
+
 - l’utilisateur à l’origine de l’action ;
 - l’entité ;
 - l’identifiant ;
@@ -50,11 +54,13 @@ Le journal doit conserver :
 - la date.
 
 Permissions :
+
 - ADMIN : lecture complète ;
 - COORDINATOR : lecture complète ;
 - autres rôles : aucun accès au journal, sauf règle existante explicitement prévue.
 
 Ajoute :
+
 - migration ;
 - entité ;
 - service ;

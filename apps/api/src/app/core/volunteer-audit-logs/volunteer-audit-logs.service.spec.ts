@@ -53,7 +53,8 @@ describe('VolunteerAuditLogsService', () => {
     };
 
     const service = new VolunteerAuditLogsService(repository as never);
-    await expect(service.search({ from: 'not-a-date' })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.search({ from: 'not-a-date' })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 });
-

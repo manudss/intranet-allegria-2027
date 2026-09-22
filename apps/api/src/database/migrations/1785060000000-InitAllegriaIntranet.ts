@@ -204,16 +204,24 @@ export class InitAllegriaIntranet1785060000000 implements MigrationInterface {
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`ALTER TABLE "user_roles" DROP CONSTRAINT "FK_user_roles_role"`);
     await queryRunner.query(`ALTER TABLE "user_roles" DROP CONSTRAINT "FK_user_roles_user"`);
-    await queryRunner.query(`ALTER TABLE "participant_health" DROP CONSTRAINT "FK_participant_health_last_updated_by"`);
-    await queryRunner.query(`ALTER TABLE "participant_health" DROP CONSTRAINT "FK_participant_health_participant"`);
+    await queryRunner.query(
+      `ALTER TABLE "participant_health" DROP CONSTRAINT "FK_participant_health_last_updated_by"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "participant_health" DROP CONSTRAINT "FK_participant_health_participant"`,
+    );
     await queryRunner.query(
       `ALTER TABLE "participant_host_family_assignments" DROP CONSTRAINT "FK_assignments_host_family"`,
     );
     await queryRunner.query(
       `ALTER TABLE "participant_host_family_assignments" DROP CONSTRAINT "FK_assignments_participant"`,
     );
-    await queryRunner.query(`ALTER TABLE "team_participants" DROP CONSTRAINT "FK_team_participants_participant"`);
-    await queryRunner.query(`ALTER TABLE "team_participants" DROP CONSTRAINT "FK_team_participants_team"`);
+    await queryRunner.query(
+      `ALTER TABLE "team_participants" DROP CONSTRAINT "FK_team_participants_participant"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "team_participants" DROP CONSTRAINT "FK_team_participants_team"`,
+    );
     await queryRunner.query(`ALTER TABLE "teams" DROP CONSTRAINT "FK_teams_secondary_animator"`);
     await queryRunner.query(`ALTER TABLE "teams" DROP CONSTRAINT "FK_teams_primary_animator"`);
     await queryRunner.query(`ALTER TABLE "teams" DROP CONSTRAINT "FK_teams_group"`);
@@ -237,4 +245,3 @@ export class InitAllegriaIntranet1785060000000 implements MigrationInterface {
     await queryRunner.query(`DROP TYPE "public"."participants_sex_enum"`);
   }
 }
-

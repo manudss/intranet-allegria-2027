@@ -28,4 +28,3 @@ import { OperationalDashboardService } from './operational-dashboard.service';
   providers: [OperationalDashboardService],
 })
 export class OperationalDashboardModule {}
-

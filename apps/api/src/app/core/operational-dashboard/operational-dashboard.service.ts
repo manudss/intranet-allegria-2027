@@ -91,7 +91,10 @@ export class OperationalDashboardService {
 
   // ─── Vue globale du jour ────────────────────────────────────────────────────
 
-  async getGlobalSummary(actingUser: SessionUser, query: DashboardQueryDto): Promise<DashboardGlobalSummary> {
+  async getGlobalSummary(
+    actingUser: SessionUser,
+    query: DashboardQueryDto,
+  ): Promise<DashboardGlobalSummary> {
     const scope = await this.resolveScope(actingUser);
     const day = this.parseDay(query.date);
 
@@ -104,16 +107,24 @@ export class OperationalDashboardService {
       .addSelect('COUNT(s.id)::int', 'shiftCount')
       .addSelect("SUM(CASE WHEN s.status = 'TODO' THEN 1 ELSE 0 END)::int", 'shiftsTodo')
       .addSelect("SUM(CASE WHEN s.status = 'ASSIGNED' THEN 1 ELSE 0 END)::int", 'shiftsAssigned')
-      .addSelect("SUM(CASE WHEN s.status = 'IN_PROGRESS' THEN 1 ELSE 0 END)::int", 'shiftsInProgress')
+      .addSelect(
+        "SUM(CASE WHEN s.status = 'IN_PROGRESS' THEN 1 ELSE 0 END)::int",
+        'shiftsInProgress',
+      )
       .addSelect("SUM(CASE WHEN s.status = 'DONE' THEN 1 ELSE 0 END)::int", 'shiftsDone')
       .addSelect("SUM(CASE WHEN s.status = 'CANCELLED' THEN 1 ELSE 0 END)::int", 'shiftsCancelled')
       .addSelect("SUM(CASE WHEN s.status = 'NOT_DONE' THEN 1 ELSE 0 END)::int", 'shiftsNotDone')
       .where('DATE(s.startAt) <= :day AND DATE(s.endAt) >= :day', { day });
     this.applyScopeFilter(countersQb, scope, 'm', 'vt');
     const counters = await countersQb.getRawOne<{
-      missionCount: number; shiftCount: number;
-      shiftsTodo: number; shiftsAssigned: number; shiftsInProgress: number;
-      shiftsDone: number; shiftsCancelled: number; shiftsNotDone: number;
+      missionCount: number;
+      shiftCount: number;
+      shiftsTodo: number;
+      shiftsAssigned: number;
+      shiftsInProgress: number;
+      shiftsDone: number;
+      shiftsCancelled: number;
+      shiftsNotDone: number;
     }>();
 
     // 2. Shifts sans affectation confirmée (hors statuts terminaux)
@@ -188,7 +199,10 @@ export class OperationalDashboardService {
 
   // ─── Vue par équipe opérationnelle ─────────────────────────────────────────
 
-  async getTeamsSummary(actingUser: SessionUser, query: DashboardQueryDto): Promise<DashboardTeamSummary[]> {
+  async getTeamsSummary(
+    actingUser: SessionUser,
+    query: DashboardQueryDto,
+  ): Promise<DashboardTeamSummary[]> {
     const scope = await this.resolveScope(actingUser);
     const day = this.parseDay(query.date);
 
@@ -202,7 +216,10 @@ export class OperationalDashboardService {
       .addSelect('COUNT(DISTINCT m.id)::int', 'missionCount')
       .addSelect("SUM(CASE WHEN s.status = 'TODO' THEN 1 ELSE 0 END)::int", 'shiftsTodo')
       .addSelect("SUM(CASE WHEN s.status = 'ASSIGNED' THEN 1 ELSE 0 END)::int", 'shiftsAssigned')
-      .addSelect("SUM(CASE WHEN s.status = 'IN_PROGRESS' THEN 1 ELSE 0 END)::int", 'shiftsInProgress')
+      .addSelect(
+        "SUM(CASE WHEN s.status = 'IN_PROGRESS' THEN 1 ELSE 0 END)::int",
+        'shiftsInProgress',
+      )
       .addSelect("SUM(CASE WHEN s.status = 'DONE' THEN 1 ELSE 0 END)::int", 'shiftsDone')
       .addSelect("SUM(CASE WHEN s.status = 'CANCELLED' THEN 1 ELSE 0 END)::int", 'shiftsCancelled')
       .addSelect("SUM(CASE WHEN s.status = 'NOT_DONE' THEN 1 ELSE 0 END)::int", 'shiftsNotDone')
@@ -219,9 +236,16 @@ export class OperationalDashboardService {
     }
 
     type TeamRow = {
-      teamId: number; teamName: string; teamCode: string; missionCount: number;
-      shiftsTodo: number; shiftsAssigned: number; shiftsInProgress: number;
-      shiftsDone: number; shiftsCancelled: number; shiftsNotDone: number;
+      teamId: number;
+      teamName: string;
+      teamCode: string;
+      missionCount: number;
+      shiftsTodo: number;
+      shiftsAssigned: number;
+      shiftsInProgress: number;
+      shiftsDone: number;
+      shiftsCancelled: number;
+      shiftsNotDone: number;
       totalCapacity: number;
     };
     const rows = await qb.getRawMany<TeamRow>();
@@ -233,7 +257,7 @@ export class OperationalDashboardService {
           .innerJoin('vsa.shift', 's')
           .innerJoin('s.mission', 'm')
           .select('COUNT(DISTINCT vsa.volunteer_id)::int', 'cnt')
-      .where('DATE(s.startAt) <= :day AND DATE(s.endAt) >= :day', { day })
+          .where('DATE(s.startAt) <= :day AND DATE(s.endAt) >= :day', { day })
           .andWhere("vsa.status = 'CONFIRMED'")
           .andWhere('m.volunteer_team_id = :tid', { tid: row.teamId });
         const confRaw = await confQb.getRawOne<{ cnt: number }>();
@@ -243,18 +267,23 @@ export class OperationalDashboardService {
           .innerJoin('vsa.shift', 's')
           .innerJoin('s.mission', 'm')
           .select('COUNT(DISTINCT vsa.volunteer_id)::int', 'cnt')
-      .where('DATE(s.startAt) <= :day AND DATE(s.endAt) >= :day', { day })
+          .where('DATE(s.startAt) <= :day AND DATE(s.endAt) >= :day', { day })
           .andWhere("vsa.status = 'PROVISIONAL'")
           .andWhere('m.volunteer_team_id = :tid', { tid: row.teamId });
         const provRaw = await provQb.getRawOne<{ cnt: number }>();
 
         const alerts: string[] = [];
         if (row.shiftsTodo > 0) alerts.push(`${row.shiftsTodo} shift(s) non commencé(s)`);
-        if ((provRaw?.cnt ?? 0) > 0) alerts.push(`${provRaw!.cnt} bénévole(s) en affectation provisoire`);
+        if ((provRaw?.cnt ?? 0) > 0)
+          alerts.push(`${provRaw!.cnt} bénévole(s) en affectation provisoire`);
 
         const byStatus: ShiftsByStatus = {
-          TODO: row.shiftsTodo, ASSIGNED: row.shiftsAssigned, IN_PROGRESS: row.shiftsInProgress,
-          DONE: row.shiftsDone, CANCELLED: row.shiftsCancelled, NOT_DONE: row.shiftsNotDone,
+          TODO: row.shiftsTodo,
+          ASSIGNED: row.shiftsAssigned,
+          IN_PROGRESS: row.shiftsInProgress,
+          DONE: row.shiftsDone,
+          CANCELLED: row.shiftsCancelled,
+          NOT_DONE: row.shiftsNotDone,
         };
 
         return {
@@ -274,7 +303,10 @@ export class OperationalDashboardService {
 
   // ─── Vue par lieu ───────────────────────────────────────────────────────────
 
-  async getLocationsSummary(actingUser: SessionUser, query: DashboardQueryDto): Promise<DashboardLocationRow[]> {
+  async getLocationsSummary(
+    actingUser: SessionUser,
+    query: DashboardQueryDto,
+  ): Promise<DashboardLocationRow[]> {
     const scope = await this.resolveScope(actingUser);
     const day = this.parseDay(query.date);
 
@@ -285,8 +317,14 @@ export class OperationalDashboardService {
       .leftJoin('m.volunteerTeam', 'vt')
       .leftJoin('s.assignments', 'vsa', "vsa.status != 'CANCELLED'")
       .select("COALESCE(s.location, m.location, 'Non spécifié')", 'location')
-      .addSelect("SUM(CASE WHEN s.status = 'IN_PROGRESS' THEN 1 ELSE 0 END)::int", 'shiftsInProgress')
-      .addSelect("SUM(CASE WHEN s.status IN ('TODO', 'ASSIGNED') THEN 1 ELSE 0 END)::int", 'shiftsUpcoming')
+      .addSelect(
+        "SUM(CASE WHEN s.status = 'IN_PROGRESS' THEN 1 ELSE 0 END)::int",
+        'shiftsInProgress',
+      )
+      .addSelect(
+        "SUM(CASE WHEN s.status IN ('TODO', 'ASSIGNED') THEN 1 ELSE 0 END)::int",
+        'shiftsUpcoming',
+      )
       .addSelect('COUNT(DISTINCT vsa.volunteer_id)::int', 'assignedVolunteers')
       .addSelect('COALESCE(SUM(DISTINCT s.capacity), 0)::int', 'totalCapacity')
       .where('DATE(s.startAt) <= :day AND DATE(s.endAt) >= :day', { day })
@@ -294,7 +332,13 @@ export class OperationalDashboardService {
       .orderBy("COALESCE(s.location, m.location, 'Non spécifié')", 'ASC');
     this.applyScopeFilter(qb, scope, 'm', 'vt');
 
-    type LocRow = { location: string; shiftsInProgress: number; shiftsUpcoming: number; assignedVolunteers: number; totalCapacity: number };
+    type LocRow = {
+      location: string;
+      shiftsInProgress: number;
+      shiftsUpcoming: number;
+      assignedVolunteers: number;
+      totalCapacity: number;
+    };
     const rows = await qb.getRawMany<LocRow>();
 
     return rows.map((row) => {
@@ -314,7 +358,10 @@ export class OperationalDashboardService {
 
   // ─── Vue "Qui fait quoi" ────────────────────────────────────────────────────
 
-  async getWhoDoesWhat(actingUser: SessionUser, query: DashboardWhoDoesWhatQueryDto): Promise<DashboardWhoDoesWhatResult> {
+  async getWhoDoesWhat(
+    actingUser: SessionUser,
+    query: DashboardWhoDoesWhatQueryDto,
+  ): Promise<DashboardWhoDoesWhatResult> {
     const scope = await this.resolveScope(actingUser);
     const day = this.parseDay(query.date);
     const limit = Math.min(100, Math.max(1, query.limit ?? 20));
@@ -324,8 +371,9 @@ export class OperationalDashboardService {
 
     // Base conditions partagées
     const applyBase = (qb: SelectQueryBuilder<any>) => {
-      qb.where('DATE(s.startAt) <= :day AND DATE(s.endAt) >= :day', { day })
-        .andWhere("vsa.status != 'CANCELLED'");
+      qb.where('DATE(s.startAt) <= :day AND DATE(s.endAt) >= :day', { day }).andWhere(
+        "vsa.status != 'CANCELLED'",
+      );
       if (searchQ) {
         qb.andWhere(
           "(LOWER(v.firstName) LIKE :q OR LOWER(v.lastName) LIKE :q OR LOWER(CONCAT(v.firstName, ' ', v.lastName)) LIKE :q)",
@@ -370,7 +418,11 @@ export class OperationalDashboardService {
       .limit(limit)
       .offset(offset);
     applyBase(volQb);
-    const volRows = await volQb.getRawMany<{ volunteerId: number; firstName: string; lastName: string }>();
+    const volRows = await volQb.getRawMany<{
+      volunteerId: number;
+      firstName: string;
+      lastName: string;
+    }>();
 
     if (volRows.length === 0) {
       return { items: [], total, limit, offset };
@@ -400,15 +452,27 @@ export class OperationalDashboardService {
       .orderBy('vsa.volunteer_id', 'ASC')
       .addOrderBy('s.startAt', 'ASC')
       .getRawMany<{
-        volunteerId: number; assignmentStatus: string;
-        shiftId: number; startAt: string; endAt: string; shiftLocation: string | null; shiftStatus: string;
-        missionId: number; missionTitle: string; teamName: string | null;
+        volunteerId: number;
+        assignmentStatus: string;
+        shiftId: number;
+        startAt: string;
+        endAt: string;
+        shiftLocation: string | null;
+        shiftStatus: string;
+        missionId: number;
+        missionTitle: string;
+        teamName: string | null;
       }>();
 
     // Regrouper par bénévole
     const volMap = new Map<number, DashboardWhoDoesWhatItem>();
     for (const r of volRows) {
-      volMap.set(r.volunteerId, { volunteerId: r.volunteerId, firstName: r.firstName, lastName: r.lastName, shifts: [] });
+      volMap.set(r.volunteerId, {
+        volunteerId: r.volunteerId,
+        firstName: r.firstName,
+        lastName: r.lastName,
+        shifts: [],
+      });
     }
     for (const r of assignRows) {
       volMap.get(r.volunteerId)?.shifts.push({
@@ -524,28 +588,80 @@ export class OperationalDashboardService {
     this.applyScopeFilter(withoutConfirmedQb, scope, 'm', 'vt');
 
     const [mandatoryMissions, optionalMissions, unstarted, withoutConfirmed] = await Promise.all([
-      mandatoryQb.getRawMany<{ missionId: number; title: string; teamName: string | null; location: string | null; shiftCount: number }>(),
-      optionalQb.getRawMany<{ missionId: number; title: string; teamName: string | null; location: string | null; shiftCount: number }>(),
-      unstartedQb.getRawMany<{ shiftId: number; missionTitle: string; missionId: number; startAt: string; endAt: string; location: string | null; capacity: number | null; activeCount: number; confirmedCount: number }>(),
-      withoutConfirmedQb.getRawMany<{ shiftId: number; missionTitle: string; missionId: number; startAt: string; endAt: string; location: string | null; capacity: number | null; activeCount: number; confirmedCount: number }>(),
+      mandatoryQb.getRawMany<{
+        missionId: number;
+        title: string;
+        teamName: string | null;
+        location: string | null;
+        shiftCount: number;
+      }>(),
+      optionalQb.getRawMany<{
+        missionId: number;
+        title: string;
+        teamName: string | null;
+        location: string | null;
+        shiftCount: number;
+      }>(),
+      unstartedQb.getRawMany<{
+        shiftId: number;
+        missionTitle: string;
+        missionId: number;
+        startAt: string;
+        endAt: string;
+        location: string | null;
+        capacity: number | null;
+        activeCount: number;
+        confirmedCount: number;
+      }>(),
+      withoutConfirmedQb.getRawMany<{
+        shiftId: number;
+        missionTitle: string;
+        missionId: number;
+        startAt: string;
+        endAt: string;
+        location: string | null;
+        capacity: number | null;
+        activeCount: number;
+        confirmedCount: number;
+      }>(),
     ]);
 
     return {
       mandatoryIncomplete: mandatoryMissions.map((r) => ({
-        missionId: r.missionId, title: r.title, teamName: r.teamName ?? null, location: r.location ?? null, shiftCount: r.shiftCount,
+        missionId: r.missionId,
+        title: r.title,
+        teamName: r.teamName ?? null,
+        location: r.location ?? null,
+        shiftCount: r.shiftCount,
       })),
       unstarted: unstarted.map((r) => ({
-        shiftId: r.shiftId, missionTitle: r.missionTitle, missionId: r.missionId,
-        startAt: r.startAt, endAt: r.endAt, location: r.location ?? null, capacity: r.capacity ?? null,
-        activeCount: r.activeCount ?? 0, confirmedCount: r.confirmedCount ?? 0,
+        shiftId: r.shiftId,
+        missionTitle: r.missionTitle,
+        missionId: r.missionId,
+        startAt: r.startAt,
+        endAt: r.endAt,
+        location: r.location ?? null,
+        capacity: r.capacity ?? null,
+        activeCount: r.activeCount ?? 0,
+        confirmedCount: r.confirmedCount ?? 0,
       })),
       withoutConfirmedStaff: withoutConfirmed.map((r) => ({
-        shiftId: r.shiftId, missionTitle: r.missionTitle, missionId: r.missionId,
-        startAt: r.startAt, endAt: r.endAt, location: r.location ?? null, capacity: r.capacity ?? null,
-        activeCount: r.activeCount ?? 0, confirmedCount: r.confirmedCount ?? 0,
+        shiftId: r.shiftId,
+        missionTitle: r.missionTitle,
+        missionId: r.missionId,
+        startAt: r.startAt,
+        endAt: r.endAt,
+        location: r.location ?? null,
+        capacity: r.capacity ?? null,
+        activeCount: r.activeCount ?? 0,
+        confirmedCount: r.confirmedCount ?? 0,
       })),
       optionalIncomplete: optionalMissions.map((r) => ({
-        missionId: r.missionId, title: r.title, teamName: r.teamName ?? null, location: r.location ?? null, shiftCount: r.shiftCount,
+        missionId: r.missionId,
+        title: r.title,
+        teamName: r.teamName ?? null,
+        location: r.location ?? null,
+        shiftCount: r.shiftCount,
       })),
     };
   }
@@ -607,7 +723,9 @@ export class OperationalDashboardService {
     }
     scope.roleScopes.forEach((role, i) => {
       if (role === 'HEALTH') {
-        orParts.push(`(UPPER(${teamAlias}.code) LIKE :dashH1_${i} OR UPPER(${teamAlias}.code) LIKE :dashH2_${i})`);
+        orParts.push(
+          `(UPPER(${teamAlias}.code) LIKE :dashH1_${i} OR UPPER(${teamAlias}.code) LIKE :dashH2_${i})`,
+        );
         params[`dashH1_${i}`] = '%HEALTH%';
         params[`dashH2_${i}`] = '%SANTE%';
       } else if (role === 'ANIMATOR') {
@@ -669,8 +787,11 @@ export class OperationalDashboardService {
     }
   }
 
-  private normalizeExportQuery(query: OperationalExportQueryDto, scope: ScopeContext): NormalizedOperationalExportQuery {
-    const date = (query.date?.trim() || new Date().toISOString().slice(0, 10));
+  private normalizeExportQuery(
+    query: OperationalExportQueryDto,
+    scope: ScopeContext,
+  ): NormalizedOperationalExportQuery {
+    const date = query.date?.trim() || new Date().toISOString().slice(0, 10);
     const dateFrom = query.dateFrom?.trim() || date;
     const dateTo = query.dateTo?.trim() || date;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateFrom) || !/^\d{4}-\d{2}-\d{2}$/.test(dateTo)) {
@@ -734,22 +855,36 @@ export class OperationalDashboardService {
       });
 
     this.applyScopeFilter(qb, scope, 'm', 'vt');
-    if (query.volunteerTeamId) qb.andWhere('m.volunteer_team_id = :volunteerTeamId', { volunteerTeamId: query.volunteerTeamId });
-    if (query.location) qb.andWhere('COALESCE(s.location, m.location) ILIKE :location', { location: `%${query.location}%` });
-    if (query.missionStatus) qb.andWhere('m.status = :missionStatus', { missionStatus: query.missionStatus });
-    if (query.shiftStatus) qb.andWhere('s.status = :shiftStatus', { shiftStatus: query.shiftStatus });
-    if (query.assignmentStatus) qb.andWhere('a.status = :assignmentStatus', { assignmentStatus: query.assignmentStatus });
-    if (query.volunteerId) qb.andWhere('a.volunteer_id = :volunteerId', { volunteerId: query.volunteerId });
+    if (query.volunteerTeamId)
+      qb.andWhere('m.volunteer_team_id = :volunteerTeamId', {
+        volunteerTeamId: query.volunteerTeamId,
+      });
+    if (query.location)
+      qb.andWhere('COALESCE(s.location, m.location) ILIKE :location', {
+        location: `%${query.location}%`,
+      });
+    if (query.missionStatus)
+      qb.andWhere('m.status = :missionStatus', { missionStatus: query.missionStatus });
+    if (query.shiftStatus)
+      qb.andWhere('s.status = :shiftStatus', { shiftStatus: query.shiftStatus });
+    if (query.assignmentStatus)
+      qb.andWhere('a.status = :assignmentStatus', { assignmentStatus: query.assignmentStatus });
+    if (query.volunteerId)
+      qb.andWhere('a.volunteer_id = :volunteerId', { volunteerId: query.volunteerId });
 
     if (kind === 'confirmed-assignments') qb.andWhere("a.status = 'CONFIRMED'");
     if (kind === 'provisional-assignments') qb.andWhere("a.status = 'PROVISIONAL'");
     if (kind === 'unfinished-missions') qb.andWhere("m.status != 'DONE'");
     if (kind === 'unfilled-shifts') {
-      qb.andWhere("s.status NOT IN ('DONE', 'CANCELLED', 'NOT_DONE')")
-        .andWhere(`NOT EXISTS (SELECT 1 FROM volunteer_shift_assignments vsa WHERE vsa.shift_id = s.id AND vsa.status = 'CONFIRMED')`);
+      qb.andWhere("s.status NOT IN ('DONE', 'CANCELLED', 'NOT_DONE')").andWhere(
+        `NOT EXISTS (SELECT 1 FROM volunteer_shift_assignments vsa WHERE vsa.shift_id = s.id AND vsa.status = 'CONFIRMED')`,
+      );
     }
 
-    const rows = await qb.orderBy('s.startAt', 'ASC').addOrderBy('m.title', 'ASC').getRawMany<OperationalExportRow>();
+    const rows = await qb
+      .orderBy('s.startAt', 'ASC')
+      .addOrderBy('m.title', 'ASC')
+      .getRawMany<OperationalExportRow>();
     return rows;
   }
 
@@ -775,7 +910,13 @@ export class OperationalDashboardService {
     const parts = [kind, `${query.dateFrom}_${query.dateTo}`];
     if (query.volunteerTeamId) parts.push(`team-${query.volunteerTeamId}`);
     if (query.volunteerId) parts.push(`volunteer-${query.volunteerId}`);
-    if (query.location) parts.push(query.location.replace(/[^a-z0-9_-]+/gi, '-').replace(/-+/g, '-').toLowerCase());
+    if (query.location)
+      parts.push(
+        query.location
+          .replace(/[^a-z0-9_-]+/gi, '-')
+          .replace(/-+/g, '-')
+          .toLowerCase(),
+      );
     return `${parts.join('__')}.${format === 'print' ? 'html' : format}`;
   }
 
@@ -787,14 +928,16 @@ export class OperationalDashboardService {
     if (format === 'print') {
       const htmlRows = rows
         .map(
-          (row) => `<tr><td>${row.shiftStartAt}</td><td>${row.shiftEndAt}</td><td>${row.missionTitle}</td><td>${row.teamName ?? ''}</td><td>${row.location ?? ''}</td><td>${row.volunteerFirstName ?? ''} ${row.volunteerLastName ?? ''}</td><td>${row.assignmentStatus ?? ''}</td></tr>`,
+          (row) =>
+            `<tr><td>${row.shiftStartAt}</td><td>${row.shiftEndAt}</td><td>${row.missionTitle}</td><td>${row.teamName ?? ''}</td><td>${row.location ?? ''}</td><td>${row.volunteerFirstName ?? ''} ${row.volunteerLastName ?? ''}</td><td>${row.assignmentStatus ?? ''}</td></tr>`,
         )
         .join('');
       const html = `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title></head><body><h1>${title}</h1><table border="1"><thead><tr><th>Début</th><th>Fin</th><th>Mission</th><th>Équipe</th><th>Lieu</th><th>Bénévole</th><th>Affectation</th></tr></thead><tbody>${htmlRows}</tbody></table></body></html>`;
       return { contentType: 'text/html; charset=utf-8', body: Buffer.from(html, 'utf-8') };
     }
 
-    const header = 'Début\tFin\tMission\tStatut mission\tÉquipe\tLieu\tShift\tStatut shift\tBénévole\tStatut affectation\n';
+    const header =
+      'Début\tFin\tMission\tStatut mission\tÉquipe\tLieu\tShift\tStatut shift\tBénévole\tStatut affectation\n';
     const lines = rows
       .map(
         (row) =>
@@ -813,4 +956,3 @@ export class OperationalDashboardService {
     };
   }
 }
-

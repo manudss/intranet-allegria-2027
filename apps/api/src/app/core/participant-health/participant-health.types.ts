@@ -19,5 +19,3 @@ export class UpdateParticipantHealthDto {
   @ApiPropertyOptional({ example: 'Appeler le SAMU si detresse respiratoire' })
   emergencyInstructions?: string | null;
 }
-
-

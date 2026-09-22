@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -34,7 +39,9 @@ type ScopeContext = {
   readonly roleScopes: readonly ('HEALTH' | 'ANIMATOR' | 'LOGISTICS')[];
 };
 
-const MISSION_TRANSITIONS: Readonly<Record<VolunteerMissionStatus, readonly VolunteerMissionStatus[]>> = {
+const MISSION_TRANSITIONS: Readonly<
+  Record<VolunteerMissionStatus, readonly VolunteerMissionStatus[]>
+> = {
   [VolunteerMissionStatus.DRAFT]: [VolunteerMissionStatus.TODO, VolunteerMissionStatus.CANCELLED],
   [VolunteerMissionStatus.TODO]: [
     VolunteerMissionStatus.IN_PROGRESS,
@@ -116,7 +123,10 @@ export class VolunteerMissionsService {
     return this.findOne(actingUser, saved.id);
   }
 
-  async findAll(actingUser: SessionUser, query: FindVolunteerMissionsQueryDto): Promise<VolunteerMission[]> {
+  async findAll(
+    actingUser: SessionUser,
+    query: FindVolunteerMissionsQueryDto,
+  ): Promise<VolunteerMission[]> {
     const scope = await this.resolveScope(actingUser);
     const qb = this.missionsRepository
       .createQueryBuilder('mission')
@@ -127,7 +137,9 @@ export class VolunteerMissionsService {
       .addOrderBy('shift.startAt', 'ASC');
 
     if (query.volunteerTeamId) {
-      qb.andWhere('mission.volunteer_team_id = :volunteerTeamId', { volunteerTeamId: query.volunteerTeamId });
+      qb.andWhere('mission.volunteer_team_id = :volunteerTeamId', {
+        volunteerTeamId: query.volunteerTeamId,
+      });
     }
 
     if (query.location?.trim()) {
@@ -173,7 +185,11 @@ export class VolunteerMissionsService {
     return mission;
   }
 
-  async update(actingUser: SessionUser, id: number, dto: UpdateVolunteerMissionDto): Promise<VolunteerMission> {
+  async update(
+    actingUser: SessionUser,
+    id: number,
+    dto: UpdateVolunteerMissionDto,
+  ): Promise<VolunteerMission> {
     const scope = await this.resolveScope(actingUser);
     this.assertWriteScope(scope);
 
@@ -361,10 +377,15 @@ export class VolunteerMissionsService {
     const shift = await this.findShift(missionId, shiftId);
 
     // Check for restricted transitions
-    if (shift.status === VolunteerShiftStatus.DONE && dto.status === VolunteerShiftStatus.NOT_DONE) {
+    if (
+      shift.status === VolunteerShiftStatus.DONE &&
+      dto.status === VolunteerShiftStatus.NOT_DONE
+    ) {
       // Only ADMIN and COORDINATOR can transition from DONE to NOT_DONE
       if (!scope.fullAccess) {
-        throw new ForbiddenException('Seuls les ADMIN et COORDINATORS peuvent passer un shift de Terminé à Non réalisé');
+        throw new ForbiddenException(
+          'Seuls les ADMIN et COORDINATORS peuvent passer un shift de Terminé à Non réalisé',
+        );
       }
     }
 
@@ -484,7 +505,10 @@ export class VolunteerMissionsService {
       .filter((mission) => (mandatory !== undefined ? mission.isOptional === !mandatory : true));
   }
 
-  private async updateMissionStatusFromShifts(missionId: number, actingUser: SessionUser): Promise<void> {
+  private async updateMissionStatusFromShifts(
+    missionId: number,
+    actingUser: SessionUser,
+  ): Promise<void> {
     const mission = await this.missionsRepository.findOne({
       where: { id: missionId },
       relations: { shifts: true },
@@ -628,7 +652,11 @@ export class VolunteerMissionsService {
     return trimmed;
   }
 
-  private requireTrimmedText(value: string | undefined, fieldName: string, maxLength: number): string {
+  private requireTrimmedText(
+    value: string | undefined,
+    fieldName: string,
+    maxLength: number,
+  ): string {
     if (typeof value !== 'string' || value.trim().length === 0) {
       throw new BadRequestException(`${fieldName} est obligatoire`);
     }
@@ -655,7 +683,9 @@ export class VolunteerMissionsService {
     const allowed = allowedTransitions[from] ?? [];
 
     if (!allowed.includes(to)) {
-      throw new BadRequestException(`Transition de statut ${entityName} invalide: ${from} -> ${to}`);
+      throw new BadRequestException(
+        `Transition de statut ${entityName} invalide: ${from} -> ${to}`,
+      );
     }
   }
 
@@ -673,7 +703,9 @@ export class VolunteerMissionsService {
       : null;
 
     if (mission.responsibleVolunteerId && !mission.responsibleVolunteer) {
-      throw new NotFoundException(`Benevole responsable ${mission.responsibleVolunteerId} introuvable`);
+      throw new NotFoundException(
+        `Benevole responsable ${mission.responsibleVolunteerId} introuvable`,
+      );
     }
   }
 
@@ -718,7 +750,11 @@ export class VolunteerMissionsService {
     }
   }
 
-  private assertMissionInScope(scope: ScopeContext, mission: VolunteerMission, readOperation: boolean): void {
+  private assertMissionInScope(
+    scope: ScopeContext,
+    mission: VolunteerMission,
+    readOperation: boolean,
+  ): void {
     if (readOperation && scope.readOnly) {
       return;
     }
@@ -733,7 +769,10 @@ export class VolunteerMissionsService {
       return true;
     }
 
-    if (mission.responsibleVolunteerId && mission.responsibleVolunteerId === scope.actorVolunteerId) {
+    if (
+      mission.responsibleVolunteerId &&
+      mission.responsibleVolunteerId === scope.actorVolunteerId
+    ) {
       return true;
     }
 
@@ -762,7 +801,3 @@ export class VolunteerMissionsService {
     return teamCode.includes('LOG');
   }
 }
-
-
-
-

@@ -20,4 +20,3 @@ export class VolunteerAuditLogsController {
     return this.volunteerAuditLogsService.search(query);
   }
 }
-

@@ -28,15 +28,15 @@ users, volunteers, volunteer_teams, volunteer_missions, volunteer_shifts, ...
 Toutes les colonnes qui portent de la donnée métier sont en **camelCase** dans la base de données :
 
 | Propriété TypeScript | Colonne SQL attendue |
-|---|---|
-| `firstName` | `"firstName"` |
-| `passwordHash` | `"passwordHash"` |
-| `isActive` | `"isActive"` |
-| `createdAt` | `"createdAt"` |
-| `updatedAt` | `"updatedAt"` |
-| `startAt` | `"startAt"` |
-| `endAt` | `"endAt"` |
-| `isOptional` | `"isOptional"` |
+| -------------------- | -------------------- |
+| `firstName`          | `"firstName"`        |
+| `passwordHash`       | `"passwordHash"`     |
+| `isActive`           | `"isActive"`         |
+| `createdAt`          | `"createdAt"`        |
+| `updatedAt`          | `"updatedAt"`        |
+| `startAt`            | `"startAt"`          |
+| `endAt`              | `"endAt"`            |
+| `isOptional`         | `"isOptional"`       |
 
 Dans les entités TypeORM, **ne pas ajouter** de `name:` sur ces colonnes — TypeORM utilise directement le nom de propriété :
 
@@ -70,13 +70,13 @@ Le `name: 'xxx_id'` est **obligatoire** sur les colonnes FK et les `@JoinColumn`
 
 ## Résumé en un tableau
 
-| Type de colonne | Convention SQL | `name:` dans l'entité |
-|---|---|---|
-| Colonne métier ordinaire | camelCase | Non — omis |
-| Colonne de date (`createdAt`, etc.) | camelCase | Non — omis |
-| Booléen (`isActive`, `isOptional`) | camelCase | Non — omis |
-| Clé étrangère (`xxx_id`) | snake_case | **Oui — obligatoire** |
-| Table (`volunteer_teams`) | snake_case | Dans `@Entity({ name: '...' })` |
+| Type de colonne                     | Convention SQL | `name:` dans l'entité           |
+| ----------------------------------- | -------------- | ------------------------------- |
+| Colonne métier ordinaire            | camelCase      | Non — omis                      |
+| Colonne de date (`createdAt`, etc.) | camelCase      | Non — omis                      |
+| Booléen (`isActive`, `isOptional`)  | camelCase      | Non — omis                      |
+| Clé étrangère (`xxx_id`)            | snake_case     | **Oui — obligatoire**           |
+| Table (`volunteer_teams`)           | snake_case     | Dans `@Entity({ name: '...' })` |
 
 ---
 
@@ -118,13 +118,13 @@ CONSTRAINT "FK_608363acfb36882502e0e282ee8" FOREIGN KEY ...
 
 Schéma de nommage recommandé :
 
-| Type | Format |
-|---|---|
-| PK | `PK_{table}_id` |
-| FK | `FK_{table}_{relation}` |
-| Unique | `uq_{table}_{colonnes}` |
-| Check | `CHK_{table}_{description}` |
-| Index | `IDX_{table}_{colonne(s)}` |
+| Type   | Format                      |
+| ------ | --------------------------- |
+| PK     | `PK_{table}_id`             |
+| FK     | `FK_{table}_{relation}`     |
+| Unique | `uq_{table}_{colonnes}`     |
+| Check  | `CHK_{table}_{description}` |
+| Index  | `IDX_{table}_{colonne(s)}`  |
 
 ---
 
@@ -141,4 +141,3 @@ public async down(_queryRunner: QueryRunner): Promise<void> {
   // No-op: see up().
 }
 ```
-

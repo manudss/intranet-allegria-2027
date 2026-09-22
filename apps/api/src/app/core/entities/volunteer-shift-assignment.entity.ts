@@ -55,4 +55,3 @@ export class VolunteerShiftAssignment {
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt!: Date;
 }
-

@@ -12,6 +12,7 @@ Crée l’entité VolunteerAvailability :
 - updatedAt.
 
 Règles :
+
 - endAt doit être postérieur à startAt ;
 - volunteerTeamId est nullable ;
 - un bénévole peut avoir plusieurs disponibilités ;
@@ -20,6 +21,7 @@ Règles :
 - ne pas créer de workflow de validation.
 
 Permissions :
+
 - ADMIN et COORDINATOR : accès complet ;
 - responsables opérationnels : lecture et modification des bénévoles de leur périmètre ;
 - VIEWER : lecture seule ;
@@ -27,6 +29,7 @@ Permissions :
 - si l’application existante permet l’auto-édition du profil, autoriser le bénévole à modifier ses propres disponibilités uniquement.
 
 Ajoute :
+
 - migration ;
 - entité ;
 - DTOs ;

@@ -10,4 +10,3 @@ import { TeamParticipantsService } from './team-participants.service';
   providers: [TeamParticipantsService],
 })
 export class TeamParticipantsModule {}
-

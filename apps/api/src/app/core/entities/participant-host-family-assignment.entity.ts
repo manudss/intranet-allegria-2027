@@ -9,7 +9,9 @@ export class ParticipantHostFamilyAssignment {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @ManyToOne(() => Participant, (participant) => participant.hostFamilyAssignments, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Participant, (participant) => participant.hostFamilyAssignments, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'participant_id' })
   participant!: Participant;
 
@@ -38,4 +40,3 @@ export class ParticipantHostFamilyAssignment {
   @Column({ type: 'varchar', length: 120, nullable: true })
   roomLabel!: string | null;
 }
-

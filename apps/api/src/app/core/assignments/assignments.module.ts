@@ -12,4 +12,3 @@ import { HostFamilyAssignmentsController } from './host-family-assignments.contr
   exports: [AssignmentsService],
 })
 export class AssignmentsModule {}
-

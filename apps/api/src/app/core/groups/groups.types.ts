@@ -18,5 +18,3 @@ export class CreateGroupDto {
 }
 
 export class UpdateGroupDto extends PartialType(CreateGroupDto) {}
-
-

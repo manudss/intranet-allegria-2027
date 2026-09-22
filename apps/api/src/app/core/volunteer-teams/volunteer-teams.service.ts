@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Volunteer, VolunteerTeam, VolunteerTeamMembership } from '../entities';
@@ -118,7 +123,10 @@ export class VolunteerTeamsService {
   ): Promise<VolunteerTeamMembership> {
     const membership = await this.findVolunteerMembership(volunteerId, membershipId);
 
-    if (Object.prototype.hasOwnProperty.call(dto, 'volunteerTeamId') && dto.volunteerTeamId != null) {
+    if (
+      Object.prototype.hasOwnProperty.call(dto, 'volunteerTeamId') &&
+      dto.volunteerTeamId != null
+    ) {
       membership.volunteerTeam = await this.findTeam(dto.volunteerTeamId);
       membership.volunteerTeamId = membership.volunteerTeam.id;
     }
@@ -161,14 +169,19 @@ export class VolunteerTeamsService {
     return volunteer;
   }
 
-  private async findVolunteerMembership(volunteerId: number, membershipId: number): Promise<VolunteerTeamMembership> {
+  private async findVolunteerMembership(
+    volunteerId: number,
+    membershipId: number,
+  ): Promise<VolunteerTeamMembership> {
     const membership = await this.membershipsRepository.findOne({
       where: { id: membershipId, volunteer: { id: volunteerId } },
       relations: { volunteer: true, volunteerTeam: true },
     });
 
     if (!membership) {
-      throw new NotFoundException(`Rattachement ${membershipId} du benevole ${volunteerId} introuvable`);
+      throw new NotFoundException(
+        `Rattachement ${membershipId} du benevole ${volunteerId} introuvable`,
+      );
     }
 
     return membership;
@@ -257,7 +270,11 @@ export class VolunteerTeamsService {
     return trimmed.length > 0 ? trimmed : null;
   }
 
-  private requireTrimmedText(value: string | undefined, fieldName: string, maxLength: number): string {
+  private requireTrimmedText(
+    value: string | undefined,
+    fieldName: string,
+    maxLength: number,
+  ): string {
     if (typeof value !== 'string') {
       throw new BadRequestException(`${fieldName} est obligatoire`);
     }

@@ -69,4 +69,3 @@ export class CreateVolunteerShiftAssignments1788200000000 implements MigrationIn
     await queryRunner.query(`DROP TYPE "public"."volunteer_shift_assignment_status_enum"`);
   }
 }
-

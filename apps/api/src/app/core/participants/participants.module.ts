@@ -11,4 +11,3 @@ import { ParticipantsService } from './participants.service';
   exports: [ParticipantsService],
 })
 export class ParticipantsModule {}
-

@@ -31,10 +31,18 @@ export class CreateVolunteerTeams1787310000000 implements MigrationInterface {
 
     await queryRunner.query(`CREATE UNIQUE INDEX "IDX_volunteer_team_memberships_unique_scope"
       ON "volunteer_team_memberships" ("volunteer_id", "volunteer_team_id", (COALESCE("startAt", '0001-01-01'::date)))`);
-    await queryRunner.query(`CREATE INDEX "IDX_volunteer_team_memberships_volunteer" ON "volunteer_team_memberships" ("volunteer_id")`);
-    await queryRunner.query(`CREATE INDEX "IDX_volunteer_team_memberships_team" ON "volunteer_team_memberships" ("volunteer_team_id")`);
-    await queryRunner.query(`ALTER TABLE "volunteer_team_memberships" ADD CONSTRAINT "FK_volunteer_team_memberships_volunteer" FOREIGN KEY ("volunteer_id") REFERENCES "volunteers"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-    await queryRunner.query(`ALTER TABLE "volunteer_team_memberships" ADD CONSTRAINT "FK_volunteer_team_memberships_team" FOREIGN KEY ("volunteer_team_id") REFERENCES "volunteer_teams"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
+    await queryRunner.query(
+      `CREATE INDEX "IDX_volunteer_team_memberships_volunteer" ON "volunteer_team_memberships" ("volunteer_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_volunteer_team_memberships_team" ON "volunteer_team_memberships" ("volunteer_team_id")`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "volunteer_team_memberships" ADD CONSTRAINT "FK_volunteer_team_memberships_volunteer" FOREIGN KEY ("volunteer_id") REFERENCES "volunteers"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "volunteer_team_memberships" ADD CONSTRAINT "FK_volunteer_team_memberships_team" FOREIGN KEY ("volunteer_team_id") REFERENCES "volunteer_teams"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
     await queryRunner.query(`INSERT INTO "roles" ("code", "label")
       SELECT 'VOLUNTEERS', 'Bénévoles'
       WHERE NOT EXISTS (SELECT 1 FROM "roles" WHERE "code" = 'VOLUNTEERS')`);
@@ -42,8 +50,12 @@ export class CreateVolunteerTeams1787310000000 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DELETE FROM "roles" WHERE "code" = 'VOLUNTEERS'`);
-    await queryRunner.query(`ALTER TABLE "volunteer_team_memberships" DROP CONSTRAINT "FK_volunteer_team_memberships_team"`);
-    await queryRunner.query(`ALTER TABLE "volunteer_team_memberships" DROP CONSTRAINT "FK_volunteer_team_memberships_volunteer"`);
+    await queryRunner.query(
+      `ALTER TABLE "volunteer_team_memberships" DROP CONSTRAINT "FK_volunteer_team_memberships_team"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "volunteer_team_memberships" DROP CONSTRAINT "FK_volunteer_team_memberships_volunteer"`,
+    );
     await queryRunner.query(`DROP INDEX "public"."IDX_volunteer_team_memberships_team"`);
     await queryRunner.query(`DROP INDEX "public"."IDX_volunteer_team_memberships_volunteer"`);
     await queryRunner.query(`DROP INDEX "public"."IDX_volunteer_team_memberships_unique_scope"`);

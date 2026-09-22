@@ -28,4 +28,3 @@ export class Group {
   @OneToMany(() => Participant, (participant) => participant.group)
   participants!: Participant[];
 }
-

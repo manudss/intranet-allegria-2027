@@ -19,7 +19,9 @@ import { UsersService } from './users.service';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  private withoutPasswordHash<T extends { passwordHash?: string }>(user: T): Omit<T, 'passwordHash'> {
+  private withoutPasswordHash<T extends { passwordHash?: string }>(
+    user: T,
+  ): Omit<T, 'passwordHash'> {
     const safeUser = { ...user };
     delete safeUser.passwordHash;
     return safeUser;
@@ -61,5 +63,3 @@ export class UsersController {
     return this.withoutPasswordHash(user);
   }
 }
-
-

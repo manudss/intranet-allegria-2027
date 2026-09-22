@@ -51,5 +51,3 @@ export class GroupsController {
     return this.groupsService.getTeams(id);
   }
 }
-
-

@@ -1,7 +1,21 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ParticipantsService } from './participants.service';
-import { CreateParticipantDto, SearchParticipantsQuery, UpdateParticipantDto } from './participants.types';
+import {
+  CreateParticipantDto,
+  SearchParticipantsQuery,
+  UpdateParticipantDto,
+} from './participants.types';
 
 @ApiTags('Participants')
 @Controller('participants')
@@ -24,10 +38,7 @@ export class ParticipantsController {
   @ApiQuery({ name: 'groupId', required: false, type: Number })
   @ApiQuery({ name: 'diocese', required: false, type: String })
   @Get()
-  findAll(
-    @Query('groupId') groupId?: string,
-    @Query('diocese') diocese?: string,
-  ) {
+  findAll(@Query('groupId') groupId?: string, @Query('diocese') diocese?: string) {
     return this.participantsService.findAll(groupId ? Number(groupId) : undefined, diocese);
   }
 
@@ -50,5 +61,3 @@ export class ParticipantsController {
     return { deleted: true };
   }
 }
-
-

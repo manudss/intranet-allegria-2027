@@ -21,7 +21,12 @@ describe('VolunteerShiftAssignmentsService', () => {
   };
 
   const buildService = (overrides?: {
-    overlapRows?: Array<{ id: number; status: VolunteerShiftAssignmentStatus; shiftId: number; missionId: number }>;
+    overlapRows?: Array<{
+      id: number;
+      status: VolunteerShiftAssignmentStatus;
+      shiftId: number;
+      missionId: number;
+    }>;
   }) => {
     const overlapRows = overrides?.overlapRows ?? [];
 
@@ -86,19 +91,28 @@ describe('VolunteerShiftAssignmentsService', () => {
 
   it('bloque un chevauchement sans force', async () => {
     const service = buildService({
-      overlapRows: [{ id: 12, status: VolunteerShiftAssignmentStatus.CONFIRMED, shiftId: 77, missionId: 33 }],
+      overlapRows: [
+        { id: 12, status: VolunteerShiftAssignmentStatus.CONFIRMED, shiftId: 77, missionId: 33 },
+      ],
     });
 
     await expect(
-      service.create({ id: 1, email: 'admin@example.org', roles: ['ADMIN'] }, mission.id, shift.id, {
-        volunteerId: 1,
-      }),
+      service.create(
+        { id: 1, email: 'admin@example.org', roles: ['ADMIN'] },
+        mission.id,
+        shift.id,
+        {
+          volunteerId: 1,
+        },
+      ),
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('autorise un chevauchement force pour ADMIN', async () => {
     const service = buildService({
-      overlapRows: [{ id: 12, status: VolunteerShiftAssignmentStatus.CONFIRMED, shiftId: 77, missionId: 33 }],
+      overlapRows: [
+        { id: 12, status: VolunteerShiftAssignmentStatus.CONFIRMED, shiftId: 77, missionId: 33 },
+      ],
     });
 
     const created = await service.create(
@@ -113,7 +127,9 @@ describe('VolunteerShiftAssignmentsService', () => {
 
   it('interdit le force overlap hors ADMIN/COORDINATOR', async () => {
     const service = buildService({
-      overlapRows: [{ id: 12, status: VolunteerShiftAssignmentStatus.CONFIRMED, shiftId: 77, missionId: 33 }],
+      overlapRows: [
+        { id: 12, status: VolunteerShiftAssignmentStatus.CONFIRMED, shiftId: 77, missionId: 33 },
+      ],
     });
 
     await expect(
@@ -126,6 +142,3 @@ describe('VolunteerShiftAssignmentsService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });
-
-
-

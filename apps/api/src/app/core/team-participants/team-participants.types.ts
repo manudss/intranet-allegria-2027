@@ -11,5 +11,3 @@ export class AddTeamParticipantDto {
   @ApiPropertyOptional({ example: 'Participant deja forme pour co-animation.' })
   notes?: string | null;
 }
-
-

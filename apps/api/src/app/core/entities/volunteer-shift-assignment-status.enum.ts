@@ -3,4 +3,3 @@ export enum VolunteerShiftAssignmentStatus {
   CONFIRMED = 'CONFIRMED',
   CANCELLED = 'CANCELLED',
 }
-

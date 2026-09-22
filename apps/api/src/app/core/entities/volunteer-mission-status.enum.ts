@@ -6,4 +6,3 @@ export enum VolunteerMissionStatus {
   CANCELLED = 'CANCELLED',
   NOT_DONE = 'NOT_DONE',
 }
-

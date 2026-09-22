@@ -4,4 +4,3 @@ export enum ParticipantSex {
   OTHER = 'OTHER',
   UNDISCLOSED = 'UNDISCLOSED',
 }
-

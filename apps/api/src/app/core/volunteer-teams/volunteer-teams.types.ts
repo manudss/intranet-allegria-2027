@@ -30,4 +30,6 @@ export class CreateVolunteerTeamMembershipDto {
   role?: string | null;
 }
 
-export class UpdateVolunteerTeamMembershipDto extends PartialType(CreateVolunteerTeamMembershipDto) {}
+export class UpdateVolunteerTeamMembershipDto extends PartialType(
+  CreateVolunteerTeamMembershipDto,
+) {}

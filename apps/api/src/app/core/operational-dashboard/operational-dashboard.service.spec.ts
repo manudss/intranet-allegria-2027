@@ -57,14 +57,21 @@ describe('OperationalDashboardService', () => {
   describe('parseDay (via getGlobalSummary)', () => {
     it('lève BadRequestException si la date est invalide', async () => {
       const svc = makeService();
-      await expect(svc.getGlobalSummary(adminUser, { date: 'invalid' })).rejects.toBeInstanceOf(BadRequestException);
+      await expect(svc.getGlobalSummary(adminUser, { date: 'invalid' })).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
     });
 
-    it('utilise la date du jour si aucune date n\'est fournie', async () => {
+    it("utilise la date du jour si aucune date n'est fournie", async () => {
       const countersResult = {
-        missionCount: 0, shiftCount: 0,
-        shiftsTodo: 0, shiftsAssigned: 0, shiftsInProgress: 0,
-        shiftsDone: 0, shiftsCancelled: 0, shiftsNotDone: 0,
+        missionCount: 0,
+        shiftCount: 0,
+        shiftsTodo: 0,
+        shiftsAssigned: 0,
+        shiftsInProgress: 0,
+        shiftsDone: 0,
+        shiftsCancelled: 0,
+        shiftsNotDone: 0,
       };
       const svc = makeService({
         shiftsRepo: makeRepo(countersResult),
@@ -79,9 +86,14 @@ describe('OperationalDashboardService', () => {
   describe('getGlobalSummary', () => {
     it('retourne la structure complète avec les compteurs agrégés', async () => {
       const countersResult = {
-        missionCount: 3, shiftCount: 8,
-        shiftsTodo: 2, shiftsAssigned: 3, shiftsInProgress: 1,
-        shiftsDone: 1, shiftsCancelled: 0, shiftsNotDone: 1,
+        missionCount: 3,
+        shiftCount: 8,
+        shiftsTodo: 2,
+        shiftsAssigned: 3,
+        shiftsInProgress: 1,
+        shiftsDone: 1,
+        shiftsCancelled: 0,
+        shiftsNotDone: 1,
       };
       const svc = makeService({
         shiftsRepo: makeRepo(countersResult, [], 2),
@@ -99,7 +111,7 @@ describe('OperationalDashboardService', () => {
       expect(result.provisionalVolunteers).toBe(5);
     });
 
-    it('retourne des zéros quand aucun shift n\'existe pour la date', async () => {
+    it("retourne des zéros quand aucun shift n'existe pour la date", async () => {
       const svc = makeService({
         shiftsRepo: makeRepo(null, [], 0),
         assignmentsRepo: makeRepo({ cnt: 0 }),
@@ -119,10 +131,16 @@ describe('OperationalDashboardService', () => {
     it('retourne un tableau par équipe avec shiftsByStatus et alertes', async () => {
       const teamRows = [
         {
-          teamId: 1, teamName: 'Accueil', teamCode: 'ACCUEIL',
+          teamId: 1,
+          teamName: 'Accueil',
+          teamCode: 'ACCUEIL',
           missionCount: 2,
-          shiftsTodo: 1, shiftsAssigned: 1, shiftsInProgress: 0,
-          shiftsDone: 0, shiftsCancelled: 0, shiftsNotDone: 0,
+          shiftsTodo: 1,
+          shiftsAssigned: 1,
+          shiftsInProgress: 0,
+          shiftsDone: 0,
+          shiftsCancelled: 0,
+          shiftsNotDone: 0,
           totalCapacity: 10,
         },
       ];
@@ -140,7 +158,7 @@ describe('OperationalDashboardService', () => {
       expect(result[0].alerts).toContain('1 shift(s) non commencé(s)');
     });
 
-    it('retourne un tableau vide s\'il n\'y a pas d\'équipes ce jour', async () => {
+    it("retourne un tableau vide s'il n'y a pas d'équipes ce jour", async () => {
       const svc = makeService({
         shiftsRepo: makeRepo(undefined, []),
         assignmentsRepo: makeRepo({ cnt: 0 }),
@@ -155,8 +173,20 @@ describe('OperationalDashboardService', () => {
   describe('getLocationsSummary', () => {
     it('retourne les lieux avec compteurs et alertes de sous-effectif', async () => {
       const locRows = [
-        { location: 'Gymnase', shiftsInProgress: 1, shiftsUpcoming: 2, assignedVolunteers: 3, totalCapacity: 10 },
-        { location: 'Chapelle', shiftsInProgress: 0, shiftsUpcoming: 1, assignedVolunteers: 5, totalCapacity: 5 },
+        {
+          location: 'Gymnase',
+          shiftsInProgress: 1,
+          shiftsUpcoming: 2,
+          assignedVolunteers: 3,
+          totalCapacity: 10,
+        },
+        {
+          location: 'Chapelle',
+          shiftsInProgress: 0,
+          shiftsUpcoming: 1,
+          assignedVolunteers: 5,
+          totalCapacity: 5,
+        },
       ];
       const svc = makeService({
         shiftsRepo: makeRepo(undefined, locRows),
@@ -191,7 +221,11 @@ describe('OperationalDashboardService', () => {
         ]),
       });
 
-      const result = await svc.getWhoDoesWhat(adminUser, { date: '2027-07-24', page: 2, limit: 20 });
+      const result = await svc.getWhoDoesWhat(adminUser, {
+        date: '2027-07-24',
+        page: 2,
+        limit: 20,
+      });
 
       expect(result.limit).toBe(20);
       expect(result.offset).toBe(20);
@@ -210,22 +244,36 @@ describe('OperationalDashboardService', () => {
 
   describe('getTodoList', () => {
     it('retourne les 4 catégories de la liste à faire', async () => {
-      const mandatoryMission = { missionId: 1, title: 'Accueil', teamName: 'Logistique', location: null, shiftCount: 2 };
+      const mandatoryMission = {
+        missionId: 1,
+        title: 'Accueil',
+        teamName: 'Logistique',
+        location: null,
+        shiftCount: 2,
+      };
       const todoShift = {
-        shiftId: 10, missionTitle: 'Accueil', missionId: 1,
-        startAt: '2027-07-24T08:00:00Z', endAt: '2027-07-24T12:00:00Z',
-        location: null, capacity: 4, activeCount: 2, confirmedCount: 0,
+        shiftId: 10,
+        missionTitle: 'Accueil',
+        missionId: 1,
+        startAt: '2027-07-24T08:00:00Z',
+        endAt: '2027-07-24T12:00:00Z',
+        location: null,
+        capacity: 4,
+        activeCount: 2,
+        confirmedCount: 0,
       };
 
       const missionsRepo = {
-        createQueryBuilder: vi.fn()
+        createQueryBuilder: vi
+          .fn()
           .mockReturnValueOnce(makeMockQb(undefined, [mandatoryMission])) // mandatory
-          .mockReturnValueOnce(makeMockQb(undefined, [])),                // optional
+          .mockReturnValueOnce(makeMockQb(undefined, [])), // optional
       };
       const shiftsRepo = {
-        createQueryBuilder: vi.fn()
-          .mockReturnValueOnce(makeMockQb(undefined, [todoShift]))   // unstarted
-          .mockReturnValueOnce(makeMockQb(undefined, [todoShift])),  // withoutConfirmed
+        createQueryBuilder: vi
+          .fn()
+          .mockReturnValueOnce(makeMockQb(undefined, [todoShift])) // unstarted
+          .mockReturnValueOnce(makeMockQb(undefined, [todoShift])), // withoutConfirmed
       };
 
       const svc = makeService({
@@ -244,10 +292,14 @@ describe('OperationalDashboardService', () => {
   });
 
   describe('RBAC — scope filter', () => {
-    it('applique 1=0 si l\'utilisateur n\'a aucun rôle ni équipe', async () => {
+    it("applique 1=0 si l'utilisateur n'a aucun rôle ni équipe", async () => {
       const noScopeUser = { id: 99, email: 'nobody@test.com', roles: [] };
       const qbSpy = makeMockQb({ cnt: 0 });
-      const repo = { createQueryBuilder: vi.fn(() => qbSpy), find: vi.fn().mockResolvedValue([]), findOne: vi.fn().mockResolvedValue(null) };
+      const repo = {
+        createQueryBuilder: vi.fn(() => qbSpy),
+        find: vi.fn().mockResolvedValue([]),
+        findOne: vi.fn().mockResolvedValue(null),
+      };
       const svc = makeService({
         shiftsRepo: repo as never,
         assignmentsRepo: makeRepo({ cnt: 0 }) as never,
@@ -262,7 +314,11 @@ describe('OperationalDashboardService', () => {
 
     it('ne filtre pas pour ADMIN', async () => {
       const qbSpy = makeMockQb({ cnt: 0 });
-      const repo = { createQueryBuilder: vi.fn(() => qbSpy), find: vi.fn().mockResolvedValue([]), findOne: vi.fn().mockResolvedValue(null) };
+      const repo = {
+        createQueryBuilder: vi.fn(() => qbSpy),
+        find: vi.fn().mockResolvedValue([]),
+        findOne: vi.fn().mockResolvedValue(null),
+      };
       const svc = makeService({ assignmentsRepo: repo as never });
 
       await svc.getGlobalSummary(adminUser, { date: '2027-07-24' });
@@ -316,9 +372,10 @@ describe('OperationalDashboardService', () => {
       });
 
       expect(result.fileName).toContain('global-planning__2027-07-24_2027-07-24__team-2.xlsx');
-      expect(result.contentType).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      expect(result.contentType).toBe(
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
       expect(result.body.length).toBeGreaterThan(0);
     });
   });
 });
-

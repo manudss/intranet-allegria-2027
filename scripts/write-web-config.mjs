@@ -17,4 +17,3 @@ const config = {
 await mkdir(dirname(configPath), { recursive: true });
 await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
 console.log(`Runtime web config written to ${configPath}`);
-

@@ -10,4 +10,3 @@ describe('password util', () => {
     expect(verifyPassword('wrong-password', encoded)).toBe(false);
   });
 });
-

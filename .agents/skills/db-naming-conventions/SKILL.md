@@ -72,15 +72,14 @@ CREATE TABLE "volunteer_missions" (
 
 Toujours utiliser des noms descriptifs, jamais les hachés TypeORM :
 
-| Type | Patron |
-|---|---|
-| PK | `PK_{table}_id` |
-| FK | `FK_{table}_{relation}` |
-| Unique | `uq_{table}_{colonnes}` |
-| Check | `CHK_{table}_{description}` |
-| Index | `IDX_{table}_{colonne}` |
+| Type   | Patron                      |
+| ------ | --------------------------- |
+| PK     | `PK_{table}_id`             |
+| FK     | `FK_{table}_{relation}`     |
+| Unique | `uq_{table}_{colonnes}`     |
+| Check  | `CHK_{table}_{description}` |
+| Index  | `IDX_{table}_{colonne}`     |
 
 ## Référence complète
 
 Voir [`docs/db-naming-conventions.md`](../../../../docs/db-naming-conventions.md) pour les exemples exhaustifs et le tableau récapitulatif complet.
-

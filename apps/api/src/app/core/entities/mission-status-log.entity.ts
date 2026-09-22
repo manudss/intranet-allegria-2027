@@ -44,4 +44,3 @@ export class MissionStatusLog {
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 }
-

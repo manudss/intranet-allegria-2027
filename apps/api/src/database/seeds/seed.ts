@@ -149,7 +149,9 @@ const distanceKm = (
   const deltaLng = toRadians(to.longitude - from.longitude);
   const a =
     Math.sin(deltaLat / 2) ** 2 +
-    Math.cos(toRadians(from.latitude)) * Math.cos(toRadians(to.latitude)) * Math.sin(deltaLng / 2) ** 2;
+    Math.cos(toRadians(from.latitude)) *
+      Math.cos(toRadians(to.latitude)) *
+      Math.sin(deltaLng / 2) ** 2;
   return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
@@ -160,7 +162,8 @@ const offsetCoordinates = (
 ): { latitude: number; longitude: number } => {
   const latitude = origin.latitude + (km / KM_PER_DEGREE_LAT) * Math.cos(bearingRad);
   const longitude =
-    origin.longitude + (km / (KM_PER_DEGREE_LAT * Math.cos(toRadians(origin.latitude)))) * Math.sin(bearingRad);
+    origin.longitude +
+    (km / (KM_PER_DEGREE_LAT * Math.cos(toRadians(origin.latitude)))) * Math.sin(bearingRad);
   return { latitude, longitude };
 };
 
@@ -187,13 +190,39 @@ const buildHostFamilyLocation = (): HostTown => {
     }
   }
 
-  return { ...town, latitude: roundCoordinate(town.latitude), longitude: roundCoordinate(town.longitude) };
+  return {
+    ...town,
+    latitude: roundCoordinate(town.latitude),
+    longitude: roundCoordinate(town.longitude),
+  };
 };
 
-const teamAdjectives = ['Aurore', 'Sillage', 'Kairos', 'Orion', 'Etincelle', 'Horizon', 'Azimut', 'Atlas'];
-const teamNouns = ['Nomades', 'Pionniers', 'Sentinelles', 'Voyageurs', 'Boussoles', 'Eclaireurs', 'Convergences'];
+const teamAdjectives = [
+  'Aurore',
+  'Sillage',
+  'Kairos',
+  'Orion',
+  'Etincelle',
+  'Horizon',
+  'Azimut',
+  'Atlas',
+];
+const teamNouns = [
+  'Nomades',
+  'Pionniers',
+  'Sentinelles',
+  'Voyageurs',
+  'Boussoles',
+  'Eclaireurs',
+  'Convergences',
+];
 
-const sexValues = [ParticipantSex.FEMALE, ParticipantSex.MALE, ParticipantSex.OTHER, ParticipantSex.UNDISCLOSED];
+const sexValues = [
+  ParticipantSex.FEMALE,
+  ParticipantSex.MALE,
+  ParticipantSex.OTHER,
+  ParticipantSex.UNDISCLOSED,
+];
 const assignmentStatuses = [
   AssignmentStatus.CONFIRMED,
   AssignmentStatus.PENDING,
@@ -231,7 +260,7 @@ const roleLabels: Record<string, string> = {
 
 const parseProfile = (): SeedProfileName => {
   const cliArg = process.argv.find((arg) => arg.startsWith('--profile='));
-  const rawValue = cliArg ? cliArg.split('=')[1] : process.env.SEED_PROFILE ?? 'medium';
+  const rawValue = cliArg ? cliArg.split('=')[1] : (process.env.SEED_PROFILE ?? 'medium');
 
   if (rawValue === 'small' || rawValue === 'medium' || rawValue === 'large') {
     return rawValue;
@@ -242,12 +271,18 @@ const parseProfile = (): SeedProfileName => {
 
 const toDateString = (date: Date): string => date.toISOString().slice(0, 10);
 
-const chance = (probabilityTrue: number): boolean => faker.number.float({ min: 0, max: 1 }) < probabilityTrue;
+const chance = (probabilityTrue: number): boolean =>
+  faker.number.float({ min: 0, max: 1 }) < probabilityTrue;
 
 const pick = <T>(items: T[]): T => faker.helpers.arrayElement(items);
 
 const participantAgeDate = (): string => {
-  const birthday = faker.date.birthdate({ mode: 'age', min: 12, max: 18, refDate: new Date('2027-07-20') });
+  const birthday = faker.date.birthdate({
+    mode: 'age',
+    min: 12,
+    max: 18,
+    refDate: new Date('2027-07-20'),
+  });
   return toDateString(birthday);
 };
 
@@ -285,7 +320,10 @@ const buildTeamSizes = (participantsCount: number, teamCount: number): number[] 
   return sizes;
 };
 
-const allocateVolunteersPerGroup = (teamCountsPerGroup: number[], volunteersTotal: number): number[] => {
+const allocateVolunteersPerGroup = (
+  teamCountsPerGroup: number[],
+  volunteersTotal: number,
+): number[] => {
   const minTotal = teamCountsPerGroup.reduce((sum, count) => sum + count, 0);
   const maxTotal = teamCountsPerGroup.reduce((sum, count) => sum + count * 2, 0);
 
@@ -402,7 +440,11 @@ async function run(): Promise<void> {
     const baseUsers: Array<Partial<User>> = [
       { email: 'admin@allegria.local', passwordHash: hashPassword('Admin#2027!'), isActive: true },
       { email: 'sante@allegria.local', passwordHash: hashPassword('Health#2027!'), isActive: true },
-      { email: 'coordination@allegria.local', passwordHash: hashPassword('Coord#2027!'), isActive: true },
+      {
+        email: 'coordination@allegria.local',
+        passwordHash: hashPassword('Coord#2027!'),
+        isActive: true,
+      },
     ];
 
     for (let i = 0; i < profile.volunteers; i += 1) {
@@ -422,7 +464,10 @@ async function run(): Promise<void> {
       });
     }
 
-    const users = await userRepository.save(baseUsers.map((user) => userRepository.create(user)), { chunk: 1000 });
+    const users = await userRepository.save(
+      baseUsers.map((user) => userRepository.create(user)),
+      { chunk: 1000 },
+    );
     const [adminUser, healthUser, coordinatorUser, ...remainingUsers] = users;
     const animatorUsers = remainingUsers.slice(0, profile.volunteers);
     const logisticUsers = remainingUsers.slice(profile.volunteers);
@@ -457,8 +502,12 @@ async function run(): Promise<void> {
         groupRepository.create({
           name: `Rassemblement ${diocese} ${Math.floor(i / dioceses.length) + 1}`,
           diocese,
-          arrivalDatetime: new Date(`2027-07-${(19 + (i % 2)).toString().padStart(2, '0')}T08:00:00.000Z`),
-          departureDatetime: new Date(`2027-07-${(27 + (i % 2)).toString().padStart(2, '0')}T17:30:00.000Z`),
+          arrivalDatetime: new Date(
+            `2027-07-${(19 + (i % 2)).toString().padStart(2, '0')}T08:00:00.000Z`,
+          ),
+          departureDatetime: new Date(
+            `2027-07-${(27 + (i % 2)).toString().padStart(2, '0')}T17:30:00.000Z`,
+          ),
           notes: chance(0.2) ? 'Arrivee en bus de nuit, accueil gare requis.' : null,
         }),
       );
@@ -505,7 +554,10 @@ async function run(): Promise<void> {
     let volunteerSaveCursor = 0;
     for (const group of groups) {
       const expectedCount = volunteersByGroup.get(group.id)?.length ?? 0;
-      volunteersByGroupSaved.set(group.id, volunteers.slice(volunteerSaveCursor, volunteerSaveCursor + expectedCount));
+      volunteersByGroupSaved.set(
+        group.id,
+        volunteers.slice(volunteerSaveCursor, volunteerSaveCursor + expectedCount),
+      );
       volunteerSaveCursor += expectedCount;
     }
 
@@ -548,7 +600,10 @@ async function run(): Promise<void> {
     for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
       const group = groups[groupIndex];
       const count = participantsPerGroup[groupIndex];
-      participantsByGroupSaved.set(group.id, participants.slice(participantSaveCursor, participantSaveCursor + count));
+      participantsByGroupSaved.set(
+        group.id,
+        participants.slice(participantSaveCursor, participantSaveCursor + count),
+      );
       participantSaveCursor += count;
     }
 
@@ -621,7 +676,8 @@ async function run(): Promise<void> {
             teamParticipantRepository.create({
               team,
               participant,
-              role: i === 0 && chance(0.2) ? TeamParticipantRole.ASSISTANT : TeamParticipantRole.MEMBER,
+              role:
+                i === 0 && chance(0.2) ? TeamParticipantRole.ASSISTANT : TeamParticipantRole.MEMBER,
               notes: chance(0.04) ? 'Referent logistique equipe.' : null,
             }),
           );
@@ -691,8 +747,8 @@ async function run(): Promise<void> {
         assignmentRepository.create({
           participant,
           hostFamily: family,
-          arrivalDate: '2027-07-19',
-          departureDate: '2027-07-27',
+          arrivalDate: '2027-10-30',
+          departureDate: '2027-11-02',
           status,
           type: participant.type,
           notes:
@@ -709,8 +765,8 @@ async function run(): Promise<void> {
           assignmentRepository.create({
             participant,
             hostFamily: family,
-            arrivalDate: '2027-07-19',
-            departureDate: '2027-07-21',
+            arrivalDate: '2027-10-30',
+            departureDate: '2027-11-01',
             status: AssignmentStatus.CANCELLED,
             type: participant.type,
             notes: 'Historique: reaffecte apres ajustement transport.',
@@ -731,9 +787,13 @@ async function run(): Promise<void> {
       participantHealthToCreate.push(
         participantHealthRepository.create({
           participant,
-          medicalConditions: chance(0.5) ? pick(['Asthme', 'Diabete type 1', 'Epilepsie', 'Aucune']) : null,
+          medicalConditions: chance(0.5)
+            ? pick(['Asthme', 'Diabete type 1', 'Epilepsie', 'Aucune'])
+            : null,
           allergies: chance(0.5) ? pick(['Arachides', 'Pollen', 'Lactose', 'Aucune']) : null,
-          medications: chance(0.5) ? pick(['Ventoline', 'Insuline', 'Antihistaminique', 'Aucun traitement']) : null,
+          medications: chance(0.5)
+            ? pick(['Ventoline', 'Insuline', 'Antihistaminique', 'Aucun traitement'])
+            : null,
           specialNeeds: chance(0.4)
             ? pick(['Suivi animateur referent', 'Temps calme quotidien', 'Aucun besoin specifique'])
             : null,
@@ -745,7 +805,10 @@ async function run(): Promise<void> {
                 'Suivre la fiche d urgence remise au groupe.',
               ])
             : null,
-          lastUpdatedAt: faker.date.between({ from: '2027-07-01T00:00:00.000Z', to: '2027-07-25T23:59:59.000Z' }),
+          lastUpdatedAt: faker.date.between({
+            from: '2027-07-01T00:00:00.000Z',
+            to: '2027-07-25T23:59:59.000Z',
+          }),
           lastUpdatedBy: pick(medicalAuthors),
         }),
       );
@@ -765,7 +828,9 @@ async function run(): Promise<void> {
     console.log(`Host families: ${hostFamilies.length}`);
     console.log(`Assignments: ${assignmentsToCreate.length}`);
     console.log(`Health records: ${participantHealthToCreate.length}`);
-    console.log(`Unassigned participants (team): ${participants.length - teamParticipantsToCreate.length}`);
+    console.log(
+      `Unassigned participants (team): ${participants.length - teamParticipantsToCreate.length}`,
+    );
     console.log('Comptes de test:');
     console.log('- admin@allegria.local / Admin#2027!');
     console.log('- sante@allegria.local / Health#2027!');

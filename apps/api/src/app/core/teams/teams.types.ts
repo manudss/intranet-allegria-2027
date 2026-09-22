@@ -21,5 +21,3 @@ export class CreateTeamDto {
 }
 
 export class UpdateTeamDto extends PartialType(CreateTeamDto) {}
-
-

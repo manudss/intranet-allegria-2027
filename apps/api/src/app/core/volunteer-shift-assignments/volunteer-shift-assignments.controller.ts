@@ -24,7 +24,15 @@ import {
 } from './volunteer-shift-assignments.types';
 import { VolunteerShiftAssignmentsService } from './volunteer-shift-assignments.service';
 
-const READ_ROLES = ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'LOGISTICS', 'VOLUNTEERS', 'VIEWER'];
+const READ_ROLES = [
+  'ADMIN',
+  'COORDINATOR',
+  'HEALTH',
+  'ANIMATOR',
+  'LOGISTICS',
+  'VOLUNTEERS',
+  'VIEWER',
+];
 const WRITE_ROLES = ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'LOGISTICS', 'VOLUNTEERS'];
 
 type UserRequest = { user: { id: number; email: string; roles: string[] } };
@@ -39,7 +47,10 @@ export class VolunteerShiftAssignmentsController {
   @ApiOperation({ summary: 'Rechercher des benevoles pour une affectation de shift' })
   @Roles(...READ_ROLES)
   @Get('volunteer-shift-assignments/volunteer-search')
-  searchVolunteers(@Req() req: UserRequest, @Query() query: SearchShiftAssignmentVolunteerQueryDto) {
+  searchVolunteers(
+    @Req() req: UserRequest,
+    @Query() query: SearchShiftAssignmentVolunteerQueryDto,
+  ) {
     return this.assignmentsService.searchVolunteers(req.user, query);
   }
 
@@ -104,4 +115,3 @@ export class VolunteerShiftAssignmentsController {
     return this.assignmentsService.listVolunteerPlanning(req.user, volunteerId, query.status);
   }
 }
-

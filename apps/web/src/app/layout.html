@@ -1,95 +1,99 @@
 <div class="allegria-shell">
   <header class="allegria-header">
-	<div class="header-left">
-	  <button
-		tuiIconButton
-		type="button"
-		appearance="flat"
-		class="mobile-menu-btn"
-		aria-controls="main-navigation"
-		[attr.aria-expanded]="isMobileMenuOpen()"
-		(click)="toggleMobileMenu()"
-	  >
-		<tui-icon [icon]="isMobileMenuOpen() ? '@tui.x' : '@tui.menu'"></tui-icon>
-	  </button>
-	  <img src="assets/logo-allegria.svg" alt="Allegria 2027" class="logo" />
-	  <div class="header-titles">
-		<span class="header-title">Allegria 2027 - Intranet benevoles</span>
-		<h1 class="page-title">{{ currentPageTitle() }}</h1>
-	  </div>
-	</div>
+    <div class="header-left">
+      <button
+        tuiIconButton
+        type="button"
+        appearance="flat"
+        class="mobile-menu-btn"
+        aria-controls="main-navigation"
+        [attr.aria-expanded]="isMobileMenuOpen()"
+        (click)="toggleMobileMenu()"
+      >
+        <tui-icon [icon]="isMobileMenuOpen() ? '@tui.x' : '@tui.menu'"></tui-icon>
+      </button>
+      <img src="assets/logo-allegria.svg" alt="Allegria 2027" class="logo" />
+      <div class="header-titles">
+        <span class="header-title">Allegria 2027 - Intranet benevoles</span>
+        <h1 class="page-title">{{ currentPageTitle() }}</h1>
+      </div>
+    </div>
 
-	<div class="header-right">
-	  <button tuiButton appearance="secondary" type="button">
-		<tui-icon icon="@tui.user"></tui-icon>
-		<span>{{ auth.currentUser()?.email ?? 'Utilisateur' }}</span>
-	  </button>
-	  <button tuiButton appearance="primary" type="button" (click)="logout()">Deconnexion</button>
-	</div>
+    <div class="header-right">
+      <button tuiButton appearance="secondary" type="button">
+        <tui-icon icon="@tui.user"></tui-icon>
+        <span>{{ auth.currentUser()?.email ?? 'Utilisateur' }}</span>
+      </button>
+      <button tuiButton appearance="primary" type="button" (click)="logout()">Deconnexion</button>
+    </div>
   </header>
 
   @if (isMobileMenuOpen()) {
-	<button
-	  type="button"
-	  class="mobile-overlay"
-	  aria-label="Fermer le menu"
-	  (click)="closeMobileMenu()"
-	></button>
+  <button
+    type="button"
+    class="mobile-overlay"
+    aria-label="Fermer le menu"
+    (click)="closeMobileMenu()"
+  ></button>
   }
 
   <div class="allegria-body" [class.overlay-menu]="isCompactMenu()">
-	<aside
-	  id="main-navigation"
-	  class="allegria-sidebar"
-	  [class.compact]="isMenuVisuallyCompact()"
-	  [class.mobile-open]="isMobileMenuOpen()"
-	>
-	  <tui-scrollbar>
-		<nav
-		  aria-label="Navigation principale"
-		  class="allegria-nav"
-		  (mouseenter)="onMenuMouseEnter()"
-		  (mouseleave)="onMenuMouseLeave()"
-		  (focusin)="onMenuFocusIn()"
-		  (focusout)="onMenuFocusOut($event)"
-		>
-		  @for (group of navGroups; track group.label) {
-			<section class="nav-group">
-			  <h3>{{ group.label }}</h3>
+    <aside
+      id="main-navigation"
+      class="allegria-sidebar"
+      [class.compact]="isMenuVisuallyCompact()"
+      [class.mobile-open]="isMobileMenuOpen()"
+    >
+      <tui-scrollbar>
+        <nav
+          aria-label="Navigation principale"
+          class="allegria-nav"
+          (mouseenter)="onMenuMouseEnter()"
+          (mouseleave)="onMenuMouseLeave()"
+          (focusin)="onMenuFocusIn()"
+          (focusout)="onMenuFocusOut($event)"
+        >
+          @for (group of navGroups; track group.label) {
+          <section class="nav-group">
+            <h3>{{ group.label }}</h3>
 
-			  @for (item of group.items; track item.path) {
-				<a
-				  tuiLink
-				  [routerLink]="item.path"
-				  [title]="isMenuVisuallyCompact() ? item.label : ''"
-				  routerLinkActive="active"
-				  [routerLinkActiveOptions]="{ exact: true }"
-				  (click)="onMenuItemSelect()"
-				>
-				  <tui-icon [icon]="item.icon"></tui-icon>
-				  <span class="item-label">{{ item.label }}</span>
-				</a>
-			  }
-			</section>
-		  }
-		</nav>
-	  </tui-scrollbar>
+            @for (item of group.items; track item.path) {
+            <a
+              tuiLink
+              [routerLink]="item.path"
+              [title]="isMenuVisuallyCompact() ? item.label : ''"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              (click)="onMenuItemSelect()"
+            >
+              <tui-icon [icon]="item.icon"></tui-icon>
+              <span class="item-label">{{ item.label }}</span>
+            </a>
+            }
+          </section>
+          }
+        </nav>
+      </tui-scrollbar>
 
-	  <button
-		tuiButton
-		appearance="flat"
-		type="button"
-		class="sidebar-compact-toggle"
-		[attr.aria-pressed]="isCompactMenu()"
-		(click)="toggleCompactMenu()"
-	  >
-		<tui-icon [icon]="isCompactMenu() ? '@tui.panel-left-open' : '@tui.panel-left-close'"></tui-icon>
-		<span class="toggle-label">{{ isCompactMenu() ? 'Passer en menu large' : 'Passer en menu compact' }}</span>
-	  </button>
-	</aside>
+      <button
+        tuiButton
+        appearance="flat"
+        type="button"
+        class="sidebar-compact-toggle"
+        [attr.aria-pressed]="isCompactMenu()"
+        (click)="toggleCompactMenu()"
+      >
+        <tui-icon
+          [icon]="isCompactMenu() ? '@tui.panel-left-open' : '@tui.panel-left-close'"
+        ></tui-icon>
+        <span class="toggle-label"
+          >{{ isCompactMenu() ? 'Passer en menu large' : 'Passer en menu compact' }}</span
+        >
+      </button>
+    </aside>
 
-	<main class="allegria-content">
-	  <router-outlet></router-outlet>
-	</main>
+    <main class="allegria-content">
+      <router-outlet></router-outlet>
+    </main>
   </div>
 </div>

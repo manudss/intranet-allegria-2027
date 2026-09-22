@@ -1,4 +1,11 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { User } from './user.entity';
 import { VolunteerAuditAction } from './volunteer-audit-action.enum';
 
@@ -36,4 +43,3 @@ export class VolunteerAuditLog {
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 }
-

@@ -24,5 +24,3 @@ export class TeamParticipantsController {
     return { deleted: true };
   }
 }
-
-

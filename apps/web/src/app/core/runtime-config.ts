@@ -56,4 +56,3 @@ export const isApiRequest = (url: string): boolean => {
   const { apiBaseUrl } = currentRuntimeConfig();
   return url.startsWith('/api') || (apiBaseUrl.length > 0 && url.startsWith(`${apiBaseUrl}/api`));
 };
-

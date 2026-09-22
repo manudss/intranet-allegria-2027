@@ -38,4 +38,3 @@ export class Team {
   @OneToMany(() => TeamParticipant, (teamParticipant) => teamParticipant.team)
   members!: TeamParticipant[];
 }
-

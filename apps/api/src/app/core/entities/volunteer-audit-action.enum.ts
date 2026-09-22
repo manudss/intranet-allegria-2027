@@ -5,4 +5,3 @@ export enum VolunteerAuditAction {
   STATUS_CHANGED = 'STATUS_CHANGED',
   ASSIGNMENT_CHANGED = 'ASSIGNMENT_CHANGED',
 }
-

@@ -16,7 +16,9 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZonelessChangeDetection(),
     provideRouter(appRoutes),
-    provideHttpClient(withInterceptors([apiBaseUrlInterceptor, authInterceptor, httpErrorInterceptor])),
+    provideHttpClient(
+      withInterceptors([apiBaseUrlInterceptor, authInterceptor, httpErrorInterceptor]),
+    ),
     provideTaiga(),
   ],
 };

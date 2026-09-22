@@ -24,4 +24,3 @@ export const verifyPassword = (password: string, encodedHash: string): boolean =
 
   return timingSafeEqual(computedHash, storedHash);
 };
-

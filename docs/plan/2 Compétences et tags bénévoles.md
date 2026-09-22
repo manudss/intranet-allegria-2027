@@ -7,6 +7,7 @@ Ne duplique pas les informations firstName, lastName, phone ou email.
 Crée :
 
 1. VolunteerSkill
+
 - id integer ;
 - volunteerId clé étrangère vers volunteers.id ;
 - skill enum avec exactement :
@@ -26,12 +27,14 @@ Crée :
 - createdAt.
 
 2. VolunteerTag
+
 - id integer ;
 - volunteerId clé étrangère vers volunteers.id ;
 - value text non nul ;
 - createdAt.
 
 Contraintes :
+
 - un bénévole ne peut pas avoir deux fois la même compétence ;
 - les tags sont libres et non limités en nombre ;
 - supprimer un bénévole supprime ses compétences et tags ;
@@ -39,6 +42,7 @@ Contraintes :
 - ne jamais stocker les compétences sous forme de texte concaténé.
 
 Ajoute :
+
 - migrations ;
 - entités ;
 - DTOs ;
@@ -50,6 +54,7 @@ Ajoute :
 - tests.
 
 Permissions :
+
 - ADMIN et COORDINATOR : modification globale ;
 - HEALTH : modification uniquement si le bénévole est concerné par une mission santé, sauf règle contraire déjà existante ;
 - ANIMATOR : modification des données de bénévoles du périmètre animation ;

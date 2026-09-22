@@ -65,9 +65,21 @@ export const appRoutes: Route[] = [
         path: 'missions-benevoles',
         title: 'Missions bénévoles',
         canActivate: [roleGuard],
-        data: { roles: ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'VOLUNTEERS', 'LOGISTICS', 'VIEWER'] },
+        data: {
+          roles: [
+            'ADMIN',
+            'COORDINATOR',
+            'HEALTH',
+            'ANIMATOR',
+            'VOLUNTEERS',
+            'LOGISTICS',
+            'VIEWER',
+          ],
+        },
         loadComponent: () =>
-          import('./features/volunteer-missions/volunteer-missions').then((m) => m.VolunteerMissionsPage),
+          import('./features/volunteer-missions/volunteer-missions').then(
+            (m) => m.VolunteerMissionsPage,
+          ),
       },
       {
         path: 'journal-benevoles',
@@ -75,7 +87,9 @@ export const appRoutes: Route[] = [
         canActivate: [roleGuard],
         data: { roles: ['ADMIN', 'COORDINATOR'] },
         loadComponent: () =>
-          import('./features/volunteer-audit-logs/volunteer-audit-logs').then((m) => m.VolunteerAuditLogsPage),
+          import('./features/volunteer-audit-logs/volunteer-audit-logs').then(
+            (m) => m.VolunteerAuditLogsPage,
+          ),
       },
       {
         path: 'hebergement/carte',
@@ -96,26 +110,36 @@ export const appRoutes: Route[] = [
         title: 'Transports',
         loadComponent: () => import('./pages/transports').then((m) => m.Transports),
       },
-       {
-         path: 'jour-j',
-         title: 'Tableau de bord Jour J',
-         canActivate: [roleGuard],
-         data: { roles: ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'LOGISTICS', 'VIEWER'] },
-         loadComponent: () => import('./pages/jour-j').then((m) => m.JourJ),
-       },
-       {
-         path: 'suivi-operationnel',
-         title: 'Suivi opérationnel',
-         canActivate: [roleGuard],
-         data: { roles: ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'VOLUNTEERS', 'LOGISTICS', 'VIEWER'] },
-         loadComponent: () =>
-           import('./features/volunteer-missions/shifts-summary').then((m) => m.ShiftsSummaryPage),
-       },
-       {
-         path: 'incidents',
-         title: 'Incidents & demandes',
-         loadComponent: () => import('./pages/incidents').then((m) => m.Incidents),
-       },
+      {
+        path: 'jour-j',
+        title: 'Tableau de bord Jour J',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'LOGISTICS', 'VIEWER'] },
+        loadComponent: () => import('./pages/jour-j').then((m) => m.JourJ),
+      },
+      {
+        path: 'suivi-operationnel',
+        title: 'Suivi opérationnel',
+        canActivate: [roleGuard],
+        data: {
+          roles: [
+            'ADMIN',
+            'COORDINATOR',
+            'HEALTH',
+            'ANIMATOR',
+            'VOLUNTEERS',
+            'LOGISTICS',
+            'VIEWER',
+          ],
+        },
+        loadComponent: () =>
+          import('./features/volunteer-missions/shifts-summary').then((m) => m.ShiftsSummaryPage),
+      },
+      {
+        path: 'incidents',
+        title: 'Incidents & demandes',
+        loadComponent: () => import('./pages/incidents').then((m) => m.Incidents),
+      },
       {
         path: 'consignes-docs',
         title: 'Consignes & documents',
@@ -124,8 +148,7 @@ export const appRoutes: Route[] = [
       {
         path: 'parametres-roles',
         title: 'Parametres & roles',
-        loadComponent: () =>
-          import('./pages/parametres-roles').then((m) => m.ParametresRoles),
+        loadComponent: () => import('./pages/parametres-roles').then((m) => m.ParametresRoles),
       },
       {
         path: 'donnees-exports',

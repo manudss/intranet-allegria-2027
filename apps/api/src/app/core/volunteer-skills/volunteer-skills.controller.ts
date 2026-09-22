@@ -45,7 +45,7 @@ export class VolunteerSkillsController {
 
   // ── Compétences par bénévole ───────────────────────────────────────────────
 
-  @ApiOperation({ summary: 'Lister les compétences d\'un bénévole' })
+  @ApiOperation({ summary: "Lister les compétences d'un bénévole" })
   @Roles(...READ_ROLES)
   @Get('volunteers/:volunteerId/skills')
   listSkills(@Param('volunteerId', ParseIntPipe) volunteerId: number) {
@@ -63,7 +63,7 @@ export class VolunteerSkillsController {
     return this.volunteerSkillsService.addSkill(req.user, volunteerId, dto);
   }
 
-  @ApiOperation({ summary: 'Supprimer une compétence d\'un bénévole' })
+  @ApiOperation({ summary: "Supprimer une compétence d'un bénévole" })
   @Roles(...WRITE_ROLES)
   @Delete('volunteers/:volunteerId/skills/:skillId')
   async removeSkill(
@@ -77,7 +77,7 @@ export class VolunteerSkillsController {
 
   // ── Tags par bénévole ──────────────────────────────────────────────────────
 
-  @ApiOperation({ summary: 'Lister les tags d\'un bénévole' })
+  @ApiOperation({ summary: "Lister les tags d'un bénévole" })
   @Roles(...READ_ROLES)
   @Get('volunteers/:volunteerId/tags')
   listTags(@Param('volunteerId', ParseIntPipe) volunteerId: number) {
@@ -95,7 +95,7 @@ export class VolunteerSkillsController {
     return this.volunteerSkillsService.addTag(req.user, volunteerId, dto);
   }
 
-  @ApiOperation({ summary: 'Supprimer un tag d\'un bénévole' })
+  @ApiOperation({ summary: "Supprimer un tag d'un bénévole" })
   @Roles(...WRITE_ROLES)
   @Delete('volunteers/:volunteerId/tags/:tagId')
   async removeTag(

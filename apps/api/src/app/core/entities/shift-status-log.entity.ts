@@ -41,4 +41,3 @@ export class ShiftStatusLog {
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 }
-

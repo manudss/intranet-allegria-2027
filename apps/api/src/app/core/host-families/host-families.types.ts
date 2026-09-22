@@ -37,9 +37,8 @@ export class CreateHostFamilyDto {
   @ApiPropertyOptional({ example: 2, nullable: true }) maxAnimators?: number | null;
   @ApiPropertyOptional({ type: [String], nullable: true }) constraints?: string[] | null;
   @ApiPropertyOptional({ type: [String], nullable: true }) tags?: string[] | null;
-  @ApiPropertyOptional({ enum: HostFamilyStatus, default: HostFamilyStatus.DRAFT }) status?: HostFamilyStatus;
+  @ApiPropertyOptional({ enum: HostFamilyStatus, default: HostFamilyStatus.DRAFT })
+  status?: HostFamilyStatus;
 }
 
 export class UpdateHostFamilyDto extends PartialType(CreateHostFamilyDto) {}
-
-

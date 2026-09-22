@@ -27,10 +27,24 @@ const blank = (): TeamPayload => ({
       ><button actions tuiButton (click)="create()">Nouvelle équipe</button>
       <div class="filters">
         <tui-textfield iconStart="@tui.search">
-          <label for="rechercher-une-equipe" tuiLabel>Rechercher une équipe</label><input tuiInput placeholder="Nom d'équipe…" [value]="query()" (input)="query.set($any($event.target).value)" id="rechercher-une-equipe" />
+          <label for="rechercher-une-equipe" tuiLabel>Rechercher une équipe</label
+          ><input
+            tuiInput
+            placeholder="Nom d'équipe…"
+            [value]="query()"
+            (input)="query.set($any($event.target).value)"
+            id="rechercher-une-equipe"
+          />
         </tui-textfield>
         <tui-textfield iconStart="@tui.filter" tuiChevron [stringify]="stringifyGroup">
-          <label for="groupe-2" tuiLabel>Groupe</label><select tuiSelect placeholder="Tous les groupes" [items]="groupIds()" [formField]="groupFilterForm" id="groupe-2"></select>
+          <label for="groupe-2" tuiLabel>Groupe</label
+          ><select
+            tuiSelect
+            placeholder="Tous les groupes"
+            [items]="groupIds()"
+            [formField]="groupFilterForm"
+            id="groupe-2"
+          ></select>
         </tui-textfield>
       </div>
       @if (loading()) {
@@ -60,46 +74,88 @@ const blank = (): TeamPayload => ({
             </dd>
             <dt>Effectif</dt>
             <dd>
-              <span tuiBadge [class.over]="members().length > (selected()?.maxSize || 10)">{{ members().length }} / {{ selected()?.maxSize }}</span>
+              <span tuiBadge [class.over]="members().length > (selected()?.maxSize || 10)"
+                >{{ members().length }} / {{ selected()?.maxSize }}</span
+              >
             </dd>
           </dl>
-           <h3>Membres</h3>
-           <div class="member-add">
-             <tui-textfield iconStart="@tui.user-plus" tuiChevron [stringify]="stringifyParticipant">
-               <label for="ajouter-un-participant" tuiLabel>Ajouter un participant</label><select tuiSelect placeholder="Sélectionner…" [items]="availableParticipantIds()" [formField]="candidateForm" id="ajouter-un-participant"></select>
-             </tui-textfield>
-             <button tuiButton size="s" [disabled]="!candidateId()" (click)="addMember()">Ajouter</button>
-           </div>
+          <h3>Membres</h3>
+          <div class="member-add">
+            <tui-textfield iconStart="@tui.user-plus" tuiChevron [stringify]="stringifyParticipant">
+              <label for="ajouter-un-participant" tuiLabel>Ajouter un participant</label
+              ><select
+                tuiSelect
+                placeholder="Sélectionner…"
+                [items]="availableParticipantIds()"
+                [formField]="candidateForm"
+                id="ajouter-un-participant"
+              ></select>
+            </tui-textfield>
+            <button tuiButton size="s" [disabled]="!candidateId()" (click)="addMember()">
+              Ajouter
+            </button>
+          </div>
           <ul>
             @for (p of members(); track p.id) {
               <li>
                 {{ p.lastName }} {{ p.firstName }}
-                <button tuiButton size="xs" appearance="flat-destructive" (click)="removeMember(p.id)">Retirer</button>
+                <button
+                  tuiButton
+                  size="xs"
+                  appearance="flat-destructive"
+                  (click)="removeMember(p.id)"
+                >
+                  Retirer
+                </button>
               </li>
             }
           </ul>
-         } @else {
-           <form class="drawer-form">
-             <tui-textfield iconStart="@tui.briefcase">
-               <label for="nom-de-l-equipe" tuiLabel>Nom de l'équipe</label><input tuiInput [formField]="teamForm.name" id="nom-de-l-equipe" />
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyGroup">
-               <label for="groupe-3" tuiLabel>Groupe</label><select tuiSelect placeholder="Sans groupe" [items]="groupIds()" [formField]="teamForm.groupId" id="groupe-3"></select>
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.user-check" tuiChevron [stringify]="stringifyVolunteer">
-               <label for="animateur-2" tuiLabel>Animateur</label><select tuiSelect placeholder="Aucun" [items]="volunteerIds()" [formField]="teamForm.primaryAnimatorId" id="animateur-2"></select>
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.user" tuiChevron [stringify]="stringifyVolunteer">
-               <label for="co-animateur" tuiLabel>Co-animateur</label><select tuiSelect placeholder="Aucun" [items]="volunteerIds()" [formField]="teamForm.secondaryAnimatorId" id="co-animateur"></select>
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.hash">
-               <label for="taille-maximale" tuiLabel>Taille maximale</label><input tuiInput type="number" [formField]="teamForm.maxSize" id="taille-maximale" />
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.file-text" class="wide">
-               <label for="notes-2" tuiLabel>Notes</label><textarea tuiTextarea [formField]="$any(teamForm.notes)" id="notes-2"></textarea>
-             </tui-textfield>
-           </form>
-         }
+        } @else {
+          <form class="drawer-form">
+            <tui-textfield iconStart="@tui.briefcase">
+              <label for="nom-de-l-equipe" tuiLabel>Nom de l'équipe</label
+              ><input tuiInput [formField]="teamForm.name" id="nom-de-l-equipe" />
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyGroup">
+              <label for="groupe-3" tuiLabel>Groupe</label
+              ><select
+                tuiSelect
+                placeholder="Sans groupe"
+                [items]="groupIds()"
+                [formField]="teamForm.groupId"
+                id="groupe-3"
+              ></select>
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.user-check" tuiChevron [stringify]="stringifyVolunteer">
+              <label for="animateur-2" tuiLabel>Animateur</label
+              ><select
+                tuiSelect
+                placeholder="Aucun"
+                [items]="volunteerIds()"
+                [formField]="teamForm.primaryAnimatorId"
+                id="animateur-2"
+              ></select>
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.user" tuiChevron [stringify]="stringifyVolunteer">
+              <label for="co-animateur" tuiLabel>Co-animateur</label
+              ><select
+                tuiSelect
+                placeholder="Aucun"
+                [items]="volunteerIds()"
+                [formField]="teamForm.secondaryAnimatorId"
+                id="co-animateur"
+              ></select>
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.hash">
+              <label for="taille-maximale" tuiLabel>Taille maximale</label
+              ><input tuiInput type="number" [formField]="teamForm.maxSize" id="taille-maximale" />
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.file-text" class="wide">
+              <label for="notes-2" tuiLabel>Notes</label
+              ><textarea tuiTextarea [formField]="$any(teamForm.notes)" id="notes-2"></textarea>
+            </tui-textfield>
+          </form>
+        }
         <footer>
           <button tuiButton appearance="flat" (click)="opened.set(false)">Fermer</button>
           @if (mode() === 'detail') {
@@ -117,9 +173,28 @@ const blank = (): TeamPayload => ({
 })
 export class TeamsPage implements OnInit {
   protected readonly tableColumns: readonly DataTableColumn<Team>[] = [
-    { key: 'team', label: 'Équipe', type: 'text', value: (x) => x.name, presentation: { type: 'icon', icon: () => '@tui.users' } },
-    { key: 'group', label: 'Groupe', type: 'list', value: (x) => x.group?.name || '—', presentation: { type: 'chip', autoColor: true, icon: () => '@tui.users' } },
-    { key: 'animator', label: 'Animateur', type: 'list', value: (x) => x.primaryAnimator ? `${x.primaryAnimator.firstName} ${x.primaryAnimator.lastName}` : '—', presentation: { type: 'person', subtitle: (x) => x.primaryAnimator?.email } },
+    {
+      key: 'team',
+      label: 'Équipe',
+      type: 'text',
+      value: (x) => x.name,
+      presentation: { type: 'icon', icon: () => '@tui.users' },
+    },
+    {
+      key: 'group',
+      label: 'Groupe',
+      type: 'list',
+      value: (x) => x.group?.name || '—',
+      presentation: { type: 'chip', autoColor: true, icon: () => '@tui.users' },
+    },
+    {
+      key: 'animator',
+      label: 'Animateur',
+      type: 'list',
+      value: (x) =>
+        x.primaryAnimator ? `${x.primaryAnimator.firstName} ${x.primaryAnimator.lastName}` : '—',
+      presentation: { type: 'person', subtitle: (x) => x.primaryAnimator?.email },
+    },
   ];
   private api = inject(TeamsApiService);
   private membersApi = inject(TeamParticipantsApiService);

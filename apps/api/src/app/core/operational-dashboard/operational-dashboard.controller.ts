@@ -73,4 +73,3 @@ export class OperationalDashboardController {
     res.send(file.body);
   }
 }
-

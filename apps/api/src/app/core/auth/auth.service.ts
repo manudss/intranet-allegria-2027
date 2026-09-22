@@ -77,5 +77,3 @@ export class AuthService {
     return userRoles.map((row) => row.role.code);
   }
 }
-
-

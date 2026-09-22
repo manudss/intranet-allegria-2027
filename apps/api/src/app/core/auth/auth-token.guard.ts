@@ -26,4 +26,3 @@ export class AuthTokenGuard implements CanActivate {
     return true;
   }
 }
-

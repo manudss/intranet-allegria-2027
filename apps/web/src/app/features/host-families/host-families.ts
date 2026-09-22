@@ -30,7 +30,14 @@ const blank = (): HostFamilyPayload => ({
   template: `<app-page-layout title="Familles d'accueil" description="Capacités et coordonnées"
       ><button actions tuiButton (click)="create()">Nouvelle famille</button>
       <tui-textfield iconStart="@tui.search">
-        <label for="rechercher-une-famille" tuiLabel>Rechercher une famille</label><input tuiInput placeholder="Nom ou ville…" [value]="query()" (input)="query.set($any($event.target).value)" id="rechercher-une-famille" />
+        <label for="rechercher-une-famille" tuiLabel>Rechercher une famille</label
+        ><input
+          tuiInput
+          placeholder="Nom ou ville…"
+          [value]="query()"
+          (input)="query.set($any($event.target).value)"
+          id="rechercher-une-famille"
+        />
       </tui-textfield>
       @if (loading()) {
         <tui-loader />
@@ -56,40 +63,60 @@ const blank = (): HostFamilyPayload => ({
             <dt>Notes</dt>
             <dd>{{ selected()?.notes || '—' }}</dd>
           </dl>
-         } @else {
-           <form class="drawer-form">
-             <tui-textfield iconStart="@tui.home">
-               <label for="nom-de-la-famille" tuiLabel>Nom de la famille</label><input tuiInput [formField]="familyForm.familyName" id="nom-de-la-famille" />
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.map-pin" class="wide">
-               <label for="adresse-2" tuiLabel>Adresse</label><input tuiInput [formField]="familyForm.address" id="adresse-2" />
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.map">
-               <label for="code-postal" tuiLabel>Code postal</label><input tuiInput [formField]="familyForm.postalCode" id="code-postal" />
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.map-pin">
-               <label for="ville-2" tuiLabel>Ville</label><input tuiInput [formField]="familyForm.city" id="ville-2" />
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.mail">
-               <label for="email-2" tuiLabel>Email</label><input tuiInput type="email" [formField]="familyForm.email" id="email-2" />
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.phone">
-               <label for="telephone-2" tuiLabel>Téléphone</label><input tuiInput [formField]="familyForm.phone" id="telephone-2" />
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.users">
-               <label for="capacite-totale" tuiLabel>Capacité totale</label><input tuiInput type="number" [formField]="familyForm.maxCapacity" id="capacite-totale" />
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.baby">
-               <label for="capacite-mineurs" tuiLabel>Capacité mineurs</label><input tuiInput type="number" [formField]="familyForm.maxUnder18" id="capacite-mineurs" />
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.church">
-               <label for="paroisse-2" tuiLabel>Paroisse</label><input tuiInput [formField]="familyForm.parish" id="paroisse-2" />
-             </tui-textfield>
-             <tui-textfield iconStart="@tui.file-text" class="wide">
-               <label for="notes-2" tuiLabel>Notes</label><textarea tuiTextarea [formField]="$any(familyForm.notes)" id="notes-2"></textarea>
-             </tui-textfield>
-           </form>
-         }
+        } @else {
+          <form class="drawer-form">
+            <tui-textfield iconStart="@tui.home">
+              <label for="nom-de-la-famille" tuiLabel>Nom de la famille</label
+              ><input tuiInput [formField]="familyForm.familyName" id="nom-de-la-famille" />
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.map-pin" class="wide">
+              <label for="adresse-2" tuiLabel>Adresse</label
+              ><input tuiInput [formField]="familyForm.address" id="adresse-2" />
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.map">
+              <label for="code-postal" tuiLabel>Code postal</label
+              ><input tuiInput [formField]="familyForm.postalCode" id="code-postal" />
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.map-pin">
+              <label for="ville-2" tuiLabel>Ville</label
+              ><input tuiInput [formField]="familyForm.city" id="ville-2" />
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.mail">
+              <label for="email-2" tuiLabel>Email</label
+              ><input tuiInput type="email" [formField]="familyForm.email" id="email-2" />
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.phone">
+              <label for="telephone-2" tuiLabel>Téléphone</label
+              ><input tuiInput [formField]="familyForm.phone" id="telephone-2" />
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.users">
+              <label for="capacite-totale" tuiLabel>Capacité totale</label
+              ><input
+                tuiInput
+                type="number"
+                [formField]="familyForm.maxCapacity"
+                id="capacite-totale"
+              />
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.baby">
+              <label for="capacite-mineurs" tuiLabel>Capacité mineurs</label
+              ><input
+                tuiInput
+                type="number"
+                [formField]="familyForm.maxUnder18"
+                id="capacite-mineurs"
+              />
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.church">
+              <label for="paroisse-2" tuiLabel>Paroisse</label
+              ><input tuiInput [formField]="familyForm.parish" id="paroisse-2" />
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.file-text" class="wide">
+              <label for="notes-2" tuiLabel>Notes</label
+              ><textarea tuiTextarea [formField]="$any(familyForm.notes)" id="notes-2"></textarea>
+            </tui-textfield>
+          </form>
+        }
         <footer>
           <button tuiButton appearance="flat" (click)="opened.set(false)">Fermer</button>
           @if (mode() === 'detail') {
@@ -107,9 +134,29 @@ const blank = (): HostFamilyPayload => ({
 })
 export class HostFamiliesPage implements OnInit {
   protected readonly tableColumns: readonly DataTableColumn<HostFamily>[] = [
-    { key: 'family', label: 'Famille', type: 'text', value: (x) => x.familyName, presentation: { type: 'icon', icon: () => '@tui.house' } },
-    { key: 'city', label: 'Ville', type: 'list', value: (x) => `${x.postalCode} ${x.city}`, presentation: { type: 'chip', autoColor: true, icon: () => '@tui.map-pin' } },
-    { key: 'capacity', label: 'Capacité', type: 'number', value: (x) => `${x.maxCapacity} places`, filterValue: (x) => x.maxCapacity, sorter: (a, b) => a.maxCapacity - b.maxCapacity, presentation: { type: 'number' } },
+    {
+      key: 'family',
+      label: 'Famille',
+      type: 'text',
+      value: (x) => x.familyName,
+      presentation: { type: 'icon', icon: () => '@tui.house' },
+    },
+    {
+      key: 'city',
+      label: 'Ville',
+      type: 'list',
+      value: (x) => `${x.postalCode} ${x.city}`,
+      presentation: { type: 'chip', autoColor: true, icon: () => '@tui.map-pin' },
+    },
+    {
+      key: 'capacity',
+      label: 'Capacité',
+      type: 'number',
+      value: (x) => `${x.maxCapacity} places`,
+      filterValue: (x) => x.maxCapacity,
+      sorter: (a, b) => a.maxCapacity - b.maxCapacity,
+      presentation: { type: 'number' },
+    },
   ];
   private api = inject(HostFamiliesApiService);
   items = signal<HostFamily[]>([]);

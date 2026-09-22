@@ -46,5 +46,3 @@ export class SearchParticipantsQuery {
   @ApiPropertyOptional({ default: 20, maximum: 100 }) limit?: number | string;
   @ApiPropertyOptional({ default: 0 }) offset?: number | string;
 }
-
-

@@ -64,6 +64,3 @@ export class VolunteerMission {
   @OneToMany(() => VolunteerShift, (shift) => shift.mission)
   shifts!: VolunteerShift[];
 }
-
-
-

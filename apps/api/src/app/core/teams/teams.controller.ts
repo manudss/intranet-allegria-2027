@@ -45,5 +45,3 @@ export class TeamsController {
     return this.teamsService.getParticipants(id);
   }
 }
-
-

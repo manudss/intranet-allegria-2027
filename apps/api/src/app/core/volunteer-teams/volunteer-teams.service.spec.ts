@@ -32,7 +32,11 @@ describe('VolunteerTeamsService', () => {
       create: vi.fn(),
       save: vi.fn(),
     };
-    const service = new VolunteerTeamsService({} as never, membershipsRepository as never, {} as never);
+    const service = new VolunteerTeamsService(
+      {} as never,
+      membershipsRepository as never,
+      {} as never,
+    );
     vi.spyOn(service as never, 'findVolunteer').mockResolvedValue({ id: 12 } as never);
     vi.spyOn(service as never, 'findTeam').mockResolvedValue({ id: 4 } as never);
 
@@ -59,7 +63,11 @@ describe('VolunteerTeamsService', () => {
       save: vi.fn(),
       findOneOrFail: vi.fn(),
     };
-    const service = new VolunteerTeamsService({} as never, membershipsRepository as never, {} as never);
+    const service = new VolunteerTeamsService(
+      {} as never,
+      membershipsRepository as never,
+      {} as never,
+    );
     vi.spyOn(service as never, 'findVolunteer').mockResolvedValue({ id: 12 } as never);
     vi.spyOn(service as never, 'findTeam').mockResolvedValue({ id: 4 } as never);
 

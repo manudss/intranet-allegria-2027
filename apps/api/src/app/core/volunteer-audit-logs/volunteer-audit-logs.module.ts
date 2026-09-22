@@ -24,4 +24,3 @@ import { VolunteerAuditLogsService } from './volunteer-audit-logs.service';
   exports: [VolunteerAuditLogsService],
 })
 export class VolunteerAuditLogsModule {}
-

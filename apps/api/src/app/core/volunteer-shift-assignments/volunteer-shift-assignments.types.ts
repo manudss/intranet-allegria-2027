@@ -5,7 +5,10 @@ export class CreateVolunteerShiftAssignmentDto {
   @ApiProperty({ example: 42 })
   volunteerId!: number;
 
-  @ApiPropertyOptional({ enum: VolunteerShiftAssignmentStatus, default: VolunteerShiftAssignmentStatus.PROVISIONAL })
+  @ApiPropertyOptional({
+    enum: VolunteerShiftAssignmentStatus,
+    default: VolunteerShiftAssignmentStatus.PROVISIONAL,
+  })
   status?: VolunteerShiftAssignmentStatus;
 
   @ApiPropertyOptional({ example: 'Renfort accueil bus', nullable: true })
@@ -42,7 +45,10 @@ export class VolunteerPlanningQueryDto {
 }
 
 export class SearchShiftAssignmentVolunteerQueryDto {
-  @ApiPropertyOptional({ example: 88, description: 'Si fourni, startAt/endAt sont derives du shift' })
+  @ApiPropertyOptional({
+    example: 88,
+    description: 'Si fourni, startAt/endAt sont derives du shift',
+  })
   shiftId?: number;
 
   @ApiPropertyOptional({ example: 'Paul Martin' })
@@ -66,4 +72,3 @@ export class SearchShiftAssignmentVolunteerQueryDto {
   @ApiPropertyOptional({ example: '2027-07-24T12:00:00.000Z' })
   endAt?: string;
 }
-

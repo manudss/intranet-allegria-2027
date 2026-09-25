@@ -1,0 +1,33 @@
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  position: relative;
+}
+
+.steps__item {
+  display: flex;
+  gap: var(--space-md);
+  align-items: flex-start;
+}
+
+.steps__number {
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.steps__title {
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--space-xs);
+}

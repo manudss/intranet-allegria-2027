@@ -1,0 +1,132 @@
+<app-hero
+  [compact]="true"
+  eyebrow="Familles"
+  title="Inscrire votre enfant à Alegria 2027"
+  subtitle="Toutes les informations pour préparer sereinement l’inscription et le départ de votre enfant."
+/>
+
+<section class="container section">
+  <app-alert-banner variant="warning" title="Une question ou une difficulté financière ?">
+    <p>
+      Contactez l’équipe d’organisation avant de finaliser votre inscription si vous rencontrez
+      une difficulté, quelle qu’elle soit.
+      @if (contactEmail) {
+        Écrivez-nous à {{ contactEmail }}.
+      }
+    </p>
+  </app-alert-banner>
+</section>
+
+<section class="container section section--alt">
+  <h2>Votre parcours en 7 étapes</h2>
+  <app-steps [steps]="steps"></app-steps>
+</section>
+
+<section class="container section">
+  <h2>À qui s’adresse cette inscription ?</h2>
+  <p>
+    Cette page s’adresse aux parents et responsables légaux souhaitant inscrire un ou plusieurs
+    jeunes de 12 à 18 ans. Vous pouvez inscrire plusieurs enfants d’une même fratrie depuis un
+    même compte.
+  </p>
+</section>
+
+<section class="container section section--alt">
+  <h2>Informations à préparer</h2>
+  <ul>
+    <li>Coordonnées du ou des jeunes et des responsables légaux</li>
+    <li>Groupe MEJ ou diocèse d’origine, si connu</li>
+    <li>Moyen de transport envisagé (train, car, covoiturage...)</li>
+    <li>Besoins de santé, allergies ou régimes alimentaires particuliers</li>
+  </ul>
+</section>
+
+<section class="container section">
+  <h2>Transport</h2>
+  <p>
+    Le trajet aller-retour jusqu’au lieu du rassemblement reste généralement à la charge des
+    familles, parfois organisé collectivement par le diocèse d’origine. Les transports pendant les
+    quatre jours du rassemblement sont habituellement pris en charge par l’organisation. Ces
+    modalités seront confirmées pour 2027.
+  </p>
+</section>
+
+<section class="container section section--alt">
+  <h2>Conditions d’accueil et d’encadrement</h2>
+  <p>
+    Les jeunes sont encadrés en permanence par des animateurs, des volontaires et des bénévoles
+    formés. Une équipe sécurité et une équipe santé sont mobilisées tout au long du rassemblement.
+  </p>
+</section>
+
+<section class="container section">
+  <h2>Hébergement</h2>
+  <app-provisional-badge></app-provisional-badge>
+  <p>
+    Les modalités d’hébergement ne sont pas encore confirmées pour cette édition. Elles seront
+    communiquées dès que possible.
+  </p>
+</section>
+
+<section class="container section section--alt">
+  <h2>Repas et régimes particuliers</h2>
+  <p>
+    Les régimes alimentaires particuliers (allergies, convictions religieuses, régime
+    végétarien...) pourront être signalés lors de l’inscription et feront l’objet d’une attention
+    particulière.
+  </p>
+</section>
+
+<section class="container section">
+  <h2>Besoins de santé ou d’accessibilité</h2>
+  <p>
+    Un espace dédié du formulaire d’inscription permettra de signaler tout besoin de santé ou
+    d’accessibilité, traité de façon confidentielle par l’équipe santé de l’événement.
+  </p>
+</section>
+
+<section class="container section section--alt">
+  <h2>Autorisations parentales</h2>
+  <p>
+    Une autorisation parentale de participation sera à compléter et à retourner selon les
+    modalités précisées lors de l’inscription.
+  </p>
+</section>
+
+<section class="container section">
+  <h2>Tarifs</h2>
+  <app-provisional-badge></app-provisional-badge>
+  <p>
+    Les tarifs 2027 ne sont pas encore fixés. Une caisse de solidarité est habituellement proposée
+    pour accompagner les familles rencontrant des difficultés financières.
+  </p>
+</section>
+
+<section class="container section section--alt">
+  <h2>Contacts utiles</h2>
+  <p>
+    Retrouvez tous les contacts dédiés sur la page <a routerLink="/contact">Contact</a>.
+  </p>
+</section>
+
+<section class="container section">
+  <h2>Dates limites</h2>
+  <app-provisional-badge></app-provisional-badge>
+  <p>Les dates d’ouverture et de clôture des inscriptions seront annoncées sur cette page.</p>
+</section>
+
+<section class="container section section--alt">
+  <h2>Questions fréquentes</h2>
+  <p>Retrouvez toutes les réponses aux questions des familles sur la page <a routerLink="/faq">FAQ</a>.</p>
+</section>
+
+<section class="container section" aria-labelledby="cta-heading">
+  <h2 id="cta-heading">J’inscris mon enfant</h2>
+  @if (registrationLink) {
+    <a class="btn btn-primary" [href]="registrationLink">Accéder au formulaire d’inscription</a>
+  } @else {
+    <app-alert-banner variant="warning" title="Inscriptions pas encore ouvertes">
+      <p>Le lien vers le formulaire d’inscription sera activé dès l’ouverture officielle des inscriptions.</p>
+    </app-alert-banner>
+  }
+</section>

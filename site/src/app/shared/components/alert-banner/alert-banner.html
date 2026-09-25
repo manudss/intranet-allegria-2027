@@ -1,0 +1,14 @@
+<div
+  class="alert-banner"
+  [class]="'alert-banner--' + variant()"
+  [attr.role]="variant() === 'error' ? 'alert' : 'status'"
+>
+  <span class="alert-banner__icon" aria-hidden="true">{{ icons[variant()] }}</span>
+  <div class="alert-banner__content">
+    <span class="visually-hidden">{{ labels[variant()] }} : </span>
+    @if (title()) {
+      <p class="alert-banner__title">{{ title() }}</p>
+    }
+    <ng-content></ng-content>
+  </div>
+</div>

@@ -1,0 +1,61 @@
+<app-hero
+  [compact]="true"
+  eyebrow="Lieu et accès"
+  title="Le Centre de Congrès de Saint-Étienne"
+/>
+
+<section class="container section">
+  <h2>Adresse</h2>
+  <address>
+    {{ event.location.name }}<br />
+    {{ event.location.address }}<br />
+    {{ event.location.postalCode }} {{ event.location.city }}, {{ event.location.country }}
+  </address>
+  <p>
+    <a [href]="event.location.mapUrl" target="_blank" rel="noopener">
+      Voir le lieu sur une carte
+      <span class="visually-hidden">(ouvre un nouvel onglet)</span>
+    </a>
+  </p>
+</section>
+
+<section class="container section section--alt">
+  <h2>Comment venir ?</h2>
+
+  <h3>En train</h3>
+  <p>
+    Le Centre de Congrès est accessible depuis la gare de Saint-Étienne Châteaucreux, à proximité
+    du centre-ville de Saint-Étienne.
+  </p>
+
+  <h3>En transports en commun</h3>
+  <p>Les transports en commun de l’agglomération stéphanoise desservent le secteur.</p>
+
+  <h3>À vélo</h3>
+  <app-provisional-badge></app-provisional-badge>
+  <p>Les informations sur le stationnement vélo seront précisées ultérieurement.</p>
+
+  <h3>En voiture</h3>
+  <app-provisional-badge></app-provisional-badge>
+  <p>Les informations de stationnement voiture seront précisées ultérieurement.</p>
+</section>
+
+<section class="container section">
+  <h2>Accessibilité du lieu</h2>
+  <app-provisional-badge></app-provisional-badge>
+  <p>
+    Les informations d’accessibilité du Centre de Congrès (mobilité réduite, handicap sensoriel)
+    seront vérifiées auprès de l’établissement et publiées sur cette page. Contactez l’organisation
+    pour tout besoin spécifique.
+  </p>
+</section>
+
+<section class="container section section--alt">
+  <h2>Consignes à venir</h2>
+  <app-alert-banner variant="info" title="Informations complémentaires à venir">
+    <p>
+      Les consignes précises d’arrivée, de dépose et de stationnement seront communiquées avant le
+      rassemblement.
+    </p>
+  </app-alert-banner>
+</section>

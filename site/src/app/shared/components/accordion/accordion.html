@@ -1,0 +1,28 @@
+<ul class="accordion">
+  @for (item of items(); track item.id) {
+    <li class="accordion__item" [id]="anchorId(item.id)">
+      <h3 class="accordion__heading">
+        <button
+          type="button"
+          class="accordion__trigger"
+          [attr.aria-expanded]="isOpen(item.id)"
+          [attr.aria-controls]="panelId(item.id)"
+          (click)="toggle(item.id)"
+        >
+          <span>{{ item.question }}</span>
+          <span class="accordion__icon" aria-hidden="true">{{ isOpen(item.id) ? '−' : '+' }}</span>
+        </button>
+      </h3>
+      <div class="accordion__panel" [id]="panelId(item.id)" [hidden]="!isOpen(item.id)" role="region">
+        <p>{{ item.answer }}</p>
+        <a
+          class="accordion__anchor-link"
+          [href]="'#' + anchorId(item.id)"
+          [attr.aria-label]="'Lien direct vers la question : ' + item.question"
+        >
+          Lien direct vers cette question
+        </a>
+      </div>
+    </li>
+  }
+</ul>

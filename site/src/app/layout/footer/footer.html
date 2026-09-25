@@ -1,0 +1,49 @@
+<footer class="site-footer">
+  <div class="container site-footer__grid">
+    <div>
+      <p class="site-footer__brand">Alegria 2027</p>
+      <p>{{ event.location.name }}, {{ event.location.city }}</p>
+      <p>{{ event.dates.label }}</p>
+    </div>
+
+    <nav aria-label="Navigation secondaire">
+      <h2 class="site-footer__heading">Le site</h2>
+      <ul>
+        <li><a routerLink="/evenement">L’événement</a></li>
+        <li><a routerLink="/programme">Programme</a></li>
+        <li><a routerLink="/participer">Participer</a></li>
+        <li><a routerLink="/faq">FAQ</a></li>
+        <li><a routerLink="/contact">Contact</a></li>
+      </ul>
+    </nav>
+
+    <nav aria-label="Informations légales">
+      <h2 class="site-footer__heading">Informations légales</h2>
+      <ul>
+        <li><a routerLink="/mentions-legales">Mentions légales</a></li>
+        <li><a routerLink="/politique-confidentialite">Politique de confidentialité</a></li>
+        <li><a routerLink="/accessibilite">Accessibilité</a></li>
+      </ul>
+    </nav>
+
+    @if (event.socialLinks.length > 0) {
+      <nav aria-label="Réseaux sociaux">
+        <h2 class="site-footer__heading">Nous suivre</h2>
+        <ul>
+          @for (social of event.socialLinks; track social.url) {
+            <li>
+              <a [href]="social.url" target="_blank" rel="noopener">
+                {{ social.label }}
+                <span class="visually-hidden">(ouvre un nouvel onglet)</span>
+              </a>
+            </li>
+          }
+        </ul>
+      </nav>
+    }
+  </div>
+
+  <div class="container site-footer__bottom">
+    <p>© {{ currentYear }} Mouvement Eucharistique des Jeunes — Alegria 2027.</p>
+  </div>
+</footer>

@@ -1,0 +1,17 @@
+<app-hero
+  [compact]="true"
+  eyebrow="Participer"
+  title="Comment participer à Alegria 2027 ?"
+  subtitle="Chacun a une place dans ce rassemblement : trouvez le parcours qui vous correspond."
+/>
+
+<section class="container section">
+  <div class="card-grid">
+    @for (profile of profiles; track profile.id) {
+      <app-info-card [title]="profile.title">
+        <p>{{ profile.description }}</p>
+        <a class="btn btn-primary" [routerLink]="profile.ctaLink">{{ profile.ctaLabel }}</a>
+      </app-info-card>
+    }
+  </div>
+</section>

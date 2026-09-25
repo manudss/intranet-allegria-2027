@@ -1,9 +1,8 @@
 import { Component } from '@angular/core';
-import { RouterModule } from '@angular/router';
-import { NxWelcome } from './nx-welcome';
+import { Shell } from './layout/shell/shell';
 
 @Component({
-  imports: [NxWelcome, RouterModule],
+  imports: [Shell],
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.scss',

@@ -1,0 +1,73 @@
+<app-hero
+  [compact]="true"
+  eyebrow="Bénévoles et volontaires"
+  title="Rejoignez l’aventure Alegria 2027"
+  subtitle="Sans bénévoles, pas de rassemblement ! Donnez de votre temps avant ou pendant l’événement."
+/>
+
+<section class="container section">
+  <h2>Pourquoi devenir bénévole ?</h2>
+  <p>
+    Les bénévoles et volontaires rendent Alegria possible : accueil, logistique, sécurité,
+    animation... Chaque mission compte pour offrir aux jeunes une expérience inoubliable et
+    sécurisée.
+  </p>
+</section>
+
+<section class="container section section--alt">
+  <h2>Les domaines de mission</h2>
+  <app-provisional-badge></app-provisional-badge>
+  <p>Cette liste de missions pourra évoluer selon les besoins définitifs de l’organisation.</p>
+  <div class="card-grid">
+    @for (mission of missions; track mission.id) {
+      <app-info-card [title]="mission.label">
+        <p>{{ mission.description }}</p>
+      </app-info-card>
+    }
+  </div>
+</section>
+
+<section class="container section">
+  <h2>À qui s’adresse le bénévolat ?</h2>
+  <p>
+    Le bénévolat est ouvert aux adultes et jeunes majeurs souhaitant s’investir avant ou pendant le
+    rassemblement, avec ou sans expérience préalable du MEJ.
+  </p>
+</section>
+
+<section class="container section section--alt">
+  <h2>Disponibilité, formation et accompagnement</h2>
+  <p>
+    Une disponibilité pendant tout ou partie des quatre jours est généralement demandée, avec
+    parfois un temps de préparation en amont. Chaque bénévole reçoit une formation et des
+    consignes claires avant sa mission, en particulier concernant la posture à adopter vis-à-vis
+    des mineurs et les règles de sécurité du rassemblement.
+  </p>
+</section>
+
+<section class="container section">
+  <h2>Travailler en équipe</h2>
+  <p>
+    Les bénévoles sont répartis en équipes coordonnées par un ou une responsable de mission, en
+    lien constant avec l’équipe d’organisation générale.
+  </p>
+</section>
+
+<section class="container section section--alt">
+  <h2>Documents et justificatifs</h2>
+  <app-provisional-badge></app-provisional-badge>
+  <p>
+    Certaines missions impliquant un contact avec des mineurs pourront nécessiter un justificatif
+    administratif (ex. honorabilité). Les modalités précises seront communiquées lors de
+    l’inscription.
+  </p>
+</section>
+
+<section class="container section" aria-labelledby="cta-heading">
+  <h2 id="cta-heading">Je m’engage comme bénévole</h2>
+  @if (registrationLink) {
+    <a class="btn btn-primary" [href]="registrationLink">Accéder au formulaire d’inscription</a>
+  } @else {
+    <a class="btn btn-primary" routerLink="/inscription/benevoles">Voir les détails de l’inscription bénévoles</a>
+  }
+</section>

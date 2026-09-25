@@ -1,0 +1,30 @@
+<section class="hero" [class.hero--compact]="compact()">
+  <div class="container hero__inner">
+    @if (eyebrow()) {
+      <p class="hero__eyebrow">{{ eyebrow() }}</p>
+    }
+    <h1 class="hero__title">{{ title() }}</h1>
+    @if (subtitle()) {
+      <p class="hero__subtitle">{{ subtitle() }}</p>
+    }
+    <ng-content></ng-content>
+    @if (primaryCta() || secondaryCta()) {
+      <div class="hero__actions">
+        @if (primaryCta(); as cta) {
+          @if (cta.external) {
+            <a class="btn btn-primary" [href]="cta.link">{{ cta.label }}</a>
+          } @else {
+            <a class="btn btn-primary" [routerLink]="cta.link">{{ cta.label }}</a>
+          }
+        }
+        @if (secondaryCta(); as cta) {
+          @if (cta.external) {
+            <a class="btn btn-ghost" [href]="cta.link">{{ cta.label }}</a>
+          } @else {
+            <a class="btn btn-ghost" [routerLink]="cta.link">{{ cta.label }}</a>
+          }
+        }
+      </div>
+    }
+  </div>
+</section>

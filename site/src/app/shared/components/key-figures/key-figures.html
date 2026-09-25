@@ -1,0 +1,8 @@
+<dl class="key-figures">
+  @for (figure of figures(); track figure.label) {
+    <div class="key-figures__item">
+      <dt class="key-figures__value">{{ figure.value }}</dt>
+      <dd class="key-figures__label">{{ figure.label }}</dd>
+    </div>
+  }
+</dl>

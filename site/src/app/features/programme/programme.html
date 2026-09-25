@@ -1,0 +1,29 @@
+<app-hero [compact]="true" eyebrow="Programme" title="Le déroulé des quatre jours" />
+
+<section class="container section">
+  <app-alert-banner variant="info" title="Programme prévisionnel">
+    <p>{{ placeholderNotice }} La structure ci-dessous donne une idée du déroulé habituel, sans horaires définitifs.</p>
+  </app-alert-banner>
+
+  <ol class="timeline">
+    @for (day of days; track day.id) {
+      <li class="timeline__day">
+        <h2>{{ day.weekday }} {{ day.date }} — {{ day.title }}</h2>
+        @if (day.status === 'draft') {
+          <app-provisional-badge></app-provisional-badge>
+        }
+        <p><em>{{ day.intention }}</em></p>
+        <ul class="timeline__blocks">
+          @for (block of day.blocks; track block.label) {
+            <li class="timeline__block">
+              <strong>{{ blockTypeLabels[block.type] }} :</strong> {{ block.label }}
+              @if (block.description) {
+                — {{ block.description }}
+              }
+            </li>
+          }
+        </ul>
+      </li>
+    }
+  </ol>
+</section>

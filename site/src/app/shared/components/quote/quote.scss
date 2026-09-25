@@ -1,0 +1,18 @@
+.quote {
+  margin: 0;
+  padding: var(--space-lg);
+  background: var(--color-bg-alt);
+  border-left: 4px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xl);
+  font-style: italic;
+  color: var(--color-text);
+}
+
+.quote__attribution {
+  margin-top: var(--space-sm);
+  font-size: var(--font-size-base);
+  font-style: normal;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}

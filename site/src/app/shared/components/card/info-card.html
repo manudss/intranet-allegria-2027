@@ -1,0 +1,11 @@
+<article class="info-card">
+  <header class="info-card__header">
+    <h3 class="info-card__title">{{ title() }}</h3>
+    @if (badge()) {
+      <span class="badge-provisional">{{ badge() }}</span>
+    }
+  </header>
+  <div class="info-card__body">
+    <ng-content></ng-content>
+  </div>
+</article>

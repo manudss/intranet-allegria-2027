@@ -1,0 +1,6 @@
+<blockquote class="quote">
+  <p>« {{ quote().text }} »</p>
+  @if (quote().attribution) {
+    <footer class="quote__attribution">— {{ quote().attribution }}</footer>
+  }
+</blockquote>

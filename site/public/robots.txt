@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://alegria2027.mej.fr/sitemap.xml

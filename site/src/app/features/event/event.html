@@ -1,0 +1,76 @@
+<app-hero [compact]="true" eyebrow="L’événement" title="Qu’est-ce qu’Alegria ?" />
+
+<section class="container section">
+  <h2>Un temps fort national du MEJ</h2>
+  <p>
+    Alegria est le grand rassemblement national du Mouvement Eucharistique des Jeunes (MEJ). Il
+    réunit, tous les quelques années, des jeunes de toute la France, mejistes ou non, pour vivre
+    ensemble un temps de rencontre, de prière, de créativité et de fête.
+  </p>
+  <p>
+    Le MEJ organise ce rassemblement pour permettre à chaque jeune de vivre une expérience
+    collective forte, de grandir dans la foi à son rythme, et de découvrir la fraternité d’un
+    mouvement ouvert à tous.
+  </p>
+  <app-provisional-badge></app-provisional-badge>
+  <p>
+    Le thème officiel de l’édition 2027, {{ event.theme.label }}, sera dévoilé par l’équipe de
+    pilotage nationale.
+  </p>
+</section>
+
+<section class="container section section--alt">
+  <h2>L’esprit du rassemblement</h2>
+  <app-quote [quote]="quote"></app-quote>
+</section>
+
+<section class="container section">
+  <h2>Les valeurs d’Alegria</h2>
+  <div class="card-grid">
+    @for (value of values; track value.title) {
+      <app-info-card [title]="value.title">
+        <p>{{ value.description }}</p>
+      </app-info-card>
+    }
+  </div>
+</section>
+
+<section class="container section section--alt">
+  <h2>À qui s’adresse Alegria ?</h2>
+  <p>
+    Le rassemblement est ouvert aux jeunes de 12 à 18 ans, qu’ils connaissent déjà le MEJ ou qu’ils
+    découvrent le mouvement à cette occasion. Ils sont accompagnés par des animateurs, des
+    volontaires et des bénévoles tout au long des quatre jours.
+  </p>
+  <p>
+    Les familles, responsables diocésains et personnes curieuses de découvrir le MEJ trouvent
+    également leur place autour de ce projet collectif.
+  </p>
+</section>
+
+<section class="container section">
+  <h2>Le Centre de Congrès de Saint-Étienne</h2>
+  <p>
+    Alegria 2027 se déroulera au {{ event.location.name }}, {{ event.location.address }},
+    {{ event.location.postalCode }} {{ event.location.city }}. Retrouvez toutes les informations
+    d’accès sur la page « Lieu et accès ».
+  </p>
+  <a class="btn btn-secondary" routerLink="/lieu">Voir le lieu et l’accès</a>
+</section>
+
+<section class="container section section--alt">
+  <h2>Une aventure qui se construit ensemble</h2>
+  <app-key-figures [figures]="figures"></app-key-figures>
+  <p><em>Chiffres indicatifs de l’édition précédente, à confirmer pour 2027.</em></p>
+</section>
+
+<section class="container section">
+  <h2>Ce qui reste à confirmer</h2>
+  <app-alert-banner variant="info" title="Informations en cours de préparation">
+    <p>
+      Le thème 2027, le programme détaillé, les tarifs et les modalités précises d’hébergement et
+      de transport sont encore en cours de préparation par l’équipe de pilotage. Cette page sera
+      mise à jour progressivement.
+    </p>
+  </app-alert-banner>
+</section>

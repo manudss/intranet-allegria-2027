@@ -1,0 +1,86 @@
+<app-hero
+  [compact]="true"
+  eyebrow="Inscription bénévoles"
+  title="Candidater comme bénévole ou volontaire"
+/>
+
+<section class="container section">
+  <h2>Les étapes de la candidature</h2>
+  <ol>
+    <li>Je consulte les domaines de mission disponibles.</li>
+    <li>Je complète le formulaire de candidature avec mes disponibilités et compétences.</li>
+    <li>L’équipe d’organisation me recontacte pour préciser ma mission.</li>
+    <li>Je reçois les informations de formation et de préparation avant l’événement.</li>
+    <li>Je vis le rassemblement au sein de mon équipe de mission.</li>
+  </ol>
+</section>
+
+<section class="container section section--alt">
+  <h2>Informations à préparer</h2>
+  <ul>
+    <li>Vos coordonnées et votre âge</li>
+    <li>Vos disponibilités (dates, durée envisagée)</li>
+    <li>Vos compétences ou expériences utiles (premiers secours, logistique, animation...)</li>
+    <li>Vos éventuels besoins particuliers (accessibilité, alimentation...)</li>
+  </ul>
+</section>
+
+<section class="container section">
+  <h2>Domaines de mission</h2>
+  <div class="card-grid">
+    @for (mission of missions; track mission.id) {
+      <app-info-card [title]="mission.label">
+        <p>{{ mission.description }}</p>
+      </app-info-card>
+    }
+  </div>
+</section>
+
+<section class="container section section--alt">
+  <h2>Compétences utiles</h2>
+  <p>
+    Aucune compétence spécifique n’est exigée pour la plupart des missions : la motivation et la
+    disponibilité sont les qualités les plus recherchées. Certaines missions (santé, sécurité,
+    logistique lourde) bénéficient de compétences ou qualifications particulières.
+  </p>
+</section>
+
+<section class="container section">
+  <h2>Conditions d’encadrement</h2>
+  <p>
+    Chaque bénévole reçoit un accueil, une formation adaptée à sa mission et des consignes de
+    sécurité avant de commencer. Un.e responsable de mission reste disponible tout au long du
+    rassemblement.
+  </p>
+</section>
+
+<section class="container section section--alt">
+  <h2>Calendrier prévisionnel</h2>
+  <app-provisional-badge></app-provisional-badge>
+  <p>
+    Le calendrier précis (ouverture des candidatures, temps de préparation, dates de mission) sera
+    communiqué progressivement sur cette page.
+  </p>
+</section>
+
+<section class="container section">
+  <h2>Après l’inscription</h2>
+  <p>
+    Vous recevrez une confirmation puis, à l’approche de l’événement, toutes les informations
+    pratiques nécessaires à votre mission (lieu, horaires, contacts de votre équipe).
+  </p>
+</section>
+
+<section class="container section section--alt" aria-labelledby="cta-heading">
+  <h2 id="cta-heading">Je candidate</h2>
+  @if (registrationLink) {
+    <a class="btn btn-primary" [href]="registrationLink">Accéder au formulaire de candidature</a>
+  } @else {
+    <app-alert-banner variant="warning" title="Candidatures pas encore ouvertes">
+      <p>Le lien vers le formulaire de candidature sera activé prochainement.</p>
+    </app-alert-banner>
+  }
+  @if (contactEmail) {
+    <p>Une question ? Écrivez à l’équipe bénévoles : {{ contactEmail }}</p>
+  }
+</section>

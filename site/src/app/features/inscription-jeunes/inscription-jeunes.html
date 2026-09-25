@@ -1,0 +1,92 @@
+<app-hero
+  [compact]="true"
+  eyebrow="Inscription"
+  title="Inscription des jeunes (12-18 ans)"
+  subtitle="Toutes les informations pour t’inscrire ou inscrire un jeune de ton entourage."
+/>
+
+<section class="container section">
+  <h2>Qui peut s’inscrire ?</h2>
+  <p>
+    Alegria 2027 s’adresse aux jeunes de 12 à 18 ans, qu’ils fassent déjà partie d’une équipe MEJ
+    ou qu’ils découvrent le mouvement à cette occasion.
+  </p>
+  <app-alert-banner variant="info" title="Adhésion MEJ ou découverte">
+    <p>
+      Les modalités exactes concernant l’adhésion au MEJ (ou un éventuel tarif « découverte » pour
+      les jeunes non adhérents) ne sont pas encore confirmées. Elles seront précisées avant
+      l’ouverture des inscriptions.
+    </p>
+  </app-alert-banner>
+</section>
+
+<section class="container section section--alt">
+  <h2>Les étapes de l’inscription</h2>
+  <app-steps [steps]="steps"></app-steps>
+</section>
+
+<section class="container section">
+  <h2>Informations et documents à préparer</h2>
+  <app-provisional-badge></app-provisional-badge>
+  <p>La liste précise sera confirmée avant l’ouverture des inscriptions. Elle comprendra probablement :</p>
+  <ul>
+    <li>Les coordonnées du jeune et d’un représentant légal</li>
+    <li>L’autorisation parentale de participation</li>
+    <li>Une fiche sanitaire ou de renseignements santé</li>
+    <li>Les informations de transport (moyen, horaires envisagés)</li>
+  </ul>
+</section>
+
+<section class="container section section--alt">
+  <h2>Transport, hébergement et repas</h2>
+  <p>
+    Les modalités de transport, d’hébergement et de restauration ne sont pas encore arrêtées pour
+    cette édition. Retrouvez les informations disponibles sur la page
+    <a routerLink="/lieu">Lieu et accès</a> et sur la
+    <a routerLink="/faq">FAQ</a>, mises à jour au fil de l’avancement de l’organisation.
+  </p>
+</section>
+
+<section class="container section">
+  <h2>Santé et besoins particuliers</h2>
+  <p>
+    Le formulaire d’inscription permettra de signaler tout besoin de santé, allergie ou situation
+    de handicap, afin que l’équipe santé du rassemblement puisse s’organiser en amont.
+  </p>
+</section>
+
+<section class="container section section--alt">
+  <h2>Autorisations parentales</h2>
+  <p>
+    Les mineurs devront présenter une autorisation parentale de participation. Le document exact
+    sera fourni avec la confirmation d’inscription.
+  </p>
+</section>
+
+<section class="container section">
+  <h2>Tarifs et aides financières</h2>
+  <app-provisional-badge></app-provisional-badge>
+  <p>
+    Les tarifs 2027 ne sont pas encore fixés. Une caisse de solidarité est habituellement proposée
+    pour les familles rencontrant des difficultés financières : n’hésitez pas à contacter
+    l’organisation avant de renoncer à une inscription pour ce motif.
+  </p>
+</section>
+
+<section class="container section section--alt" aria-labelledby="cta-heading">
+  <h2 id="cta-heading">Je m’inscris</h2>
+  @if (registrationLink) {
+    <a class="btn btn-primary" [href]="registrationLink">Accéder au formulaire d’inscription</a>
+  } @else {
+    <app-alert-banner variant="warning" title="Inscriptions pas encore ouvertes">
+      <p>Le lien vers le formulaire d’inscription sera activé dès l’ouverture officielle des inscriptions.</p>
+    </app-alert-banner>
+  }
+  <p>
+    Une question ? Consultez la <a routerLink="/faq">FAQ</a> ou la page
+    <a routerLink="/contact">Contact</a>.
+  </p>
+  @if (contactEmail) {
+    <p>Vous pouvez aussi écrire directement à l’équipe familles : {{ contactEmail }}</p>
+  }
+</section>

@@ -30,3 +30,7 @@ export { MissionStatusLog } from './mission-status-log.entity';
 export { ShiftStatusLog } from './shift-status-log.entity';
 export { VolunteerAuditAction } from './volunteer-audit-action.enum';
 export { VolunteerAuditLog } from './volunteer-audit-log.entity';
+export { ParticipantRegistrationStatus } from './participant-registration-status.enum';
+export { PersonSource } from './person-source.enum';
+export { VolunteerApplicationStatus } from './volunteer-application-status.enum';
+export { VolunteerApplication } from './volunteer-application.entity';

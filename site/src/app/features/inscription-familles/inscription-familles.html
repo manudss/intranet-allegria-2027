@@ -124,9 +124,209 @@
   <h2 id="cta-heading">J’inscris mon enfant</h2>
   @if (registrationLink) {
     <a class="btn btn-primary" [href]="registrationLink">Accéder au formulaire d’inscription</a>
+  } @else if (submitted()) {
+    <p class="form-alert form-alert--success" role="status">
+      Merci ! Votre demande d’inscription a bien été envoyée à l’équipe d’organisation. Elle sera
+      examinée puis vous recevrez une confirmation par nos soins.
+    </p>
   } @else {
-    <app-alert-banner variant="warning" title="Inscriptions pas encore ouvertes">
-      <p>Le lien vers le formulaire d’inscription sera activé dès l’ouverture officielle des inscriptions.</p>
-    </app-alert-banner>
+    <p>
+      Ce formulaire envoie directement votre demande à l’équipe d’organisation. Elle sera examinée
+      et confirmée manuellement : aucune confirmation automatique n’est envoyée pour le moment. Vous
+      pouvez inscrire plusieurs enfants d’une même fratrie en une seule fois.
+    </p>
+    <form class="form" novalidate (submit)="onSubmit($event)">
+      <fieldset class="form-fieldset">
+        <legend class="form-legend">Vos coordonnées (parent ou représentant légal)</legend>
+        <div class="form-grid">
+          <div class="form-field">
+            <label class="form-label" for="famille-parentName">Nom et prénom</label>
+            <input
+              class="form-control"
+              id="famille-parentName"
+              type="text"
+              autocomplete="name"
+              [formField]="registrationForm.parentContact.name"
+              [attr.aria-invalid]="
+                registrationForm.parentContact.name().touched() && registrationForm.parentContact.name().invalid()
+              "
+            />
+            @if (
+              registrationForm.parentContact.name().touched() && registrationForm.parentContact.name().invalid()
+            ) {
+              <p class="form-error">{{ registrationForm.parentContact.name().errors()[0]?.message }}</p>
+            }
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="famille-parentPhone">Téléphone</label>
+            <input
+              class="form-control"
+              id="famille-parentPhone"
+              type="tel"
+              autocomplete="tel"
+              [formField]="registrationForm.parentContact.phone"
+              [attr.aria-invalid]="
+                registrationForm.parentContact.phone().touched() && registrationForm.parentContact.phone().invalid()
+              "
+            />
+            @if (
+              registrationForm.parentContact.phone().touched() && registrationForm.parentContact.phone().invalid()
+            ) {
+              <p class="form-error">{{ registrationForm.parentContact.phone().errors()[0]?.message }}</p>
+            }
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="famille-parentEmail">E-mail (facultatif)</label>
+            <input
+              class="form-control"
+              id="famille-parentEmail"
+              type="email"
+              autocomplete="email"
+              [formField]="registrationForm.parentContact.email"
+            />
+          </div>
+        </div>
+      </fieldset>
+
+      @for (child of registrationForm.children; track $index; let i = $index) {
+        <fieldset class="form-fieldset form-child-block">
+          <div class="form-child-block__header">
+            <legend class="form-legend">Enfant {{ i + 1 }}</legend>
+            @if (registrationForm.children().value().length > 1) {
+              <button type="button" class="btn btn-secondary" (click)="removeChild(i)">
+                Retirer cet enfant
+              </button>
+            }
+          </div>
+          <div class="form-grid">
+            <div class="form-field">
+              <label class="form-label" [attr.for]="'famille-child-' + i + '-firstName'">Prénom</label>
+              <input
+                class="form-control"
+                [id]="'famille-child-' + i + '-firstName'"
+                type="text"
+                [formField]="child.firstName"
+                [attr.aria-invalid]="child.firstName().touched() && child.firstName().invalid()"
+              />
+              @if (child.firstName().touched() && child.firstName().invalid()) {
+                <p class="form-error">{{ child.firstName().errors()[0]?.message }}</p>
+              }
+            </div>
+            <div class="form-field">
+              <label class="form-label" [attr.for]="'famille-child-' + i + '-lastName'">Nom</label>
+              <input
+                class="form-control"
+                [id]="'famille-child-' + i + '-lastName'"
+                type="text"
+                [formField]="child.lastName"
+                [attr.aria-invalid]="child.lastName().touched() && child.lastName().invalid()"
+              />
+              @if (child.lastName().touched() && child.lastName().invalid()) {
+                <p class="form-error">{{ child.lastName().errors()[0]?.message }}</p>
+              }
+            </div>
+            <div class="form-field">
+              <label class="form-label" [attr.for]="'famille-child-' + i + '-dob'">Date de naissance</label>
+              <input
+                class="form-control"
+                [id]="'famille-child-' + i + '-dob'"
+                type="date"
+                [formField]="child.dateOfBirth"
+                [attr.aria-invalid]="child.dateOfBirth().touched() && child.dateOfBirth().invalid()"
+              />
+              @if (child.dateOfBirth().touched() && child.dateOfBirth().invalid()) {
+                <p class="form-error">{{ child.dateOfBirth().errors()[0]?.message }}</p>
+              }
+            </div>
+            <div class="form-field">
+              <label class="form-label" [attr.for]="'famille-child-' + i + '-sex'">Sexe</label>
+              <select
+                class="form-control"
+                [id]="'famille-child-' + i + '-sex'"
+                [formField]="child.sex"
+                [attr.aria-invalid]="child.sex().touched() && child.sex().invalid()"
+              >
+                <option value="" disabled selected>Choisir…</option>
+                @for (option of sexOptions; track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                }
+              </select>
+              @if (child.sex().touched() && child.sex().invalid()) {
+                <p class="form-error">{{ child.sex().errors()[0]?.message }}</p>
+              }
+            </div>
+            <div class="form-field">
+              <label class="form-label" [attr.for]="'famille-child-' + i + '-ageGroup'">Tranche d’âge MEJ</label>
+              <select
+                class="form-control"
+                [id]="'famille-child-' + i + '-ageGroup'"
+                [formField]="child.mejAgeGroup"
+                [attr.aria-invalid]="child.mejAgeGroup().touched() && child.mejAgeGroup().invalid()"
+              >
+                <option value="" disabled selected>Choisir…</option>
+                @for (option of ageGroupOptions; track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                }
+              </select>
+              @if (child.mejAgeGroup().touched() && child.mejAgeGroup().invalid()) {
+                <p class="form-error">{{ child.mejAgeGroup().errors()[0]?.message }}</p>
+              }
+            </div>
+            <div class="form-field">
+              <label class="form-label" [attr.for]="'famille-child-' + i + '-diocese'">Diocèse (facultatif)</label>
+              <input class="form-control" [id]="'famille-child-' + i + '-diocese'" type="text" [formField]="child.diocese" />
+            </div>
+            <div class="form-field">
+              <label class="form-label" [attr.for]="'famille-child-' + i + '-city'">Ville (facultatif)</label>
+              <input class="form-control" [id]="'famille-child-' + i + '-city'" type="text" [formField]="child.city" />
+            </div>
+          </div>
+        </fieldset>
+      }
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="addChild()">+ Ajouter un autre enfant</button>
+      </div>
+
+      <div class="form-field form-field--checkbox">
+        <input
+          class="form-control"
+          id="famille-consent"
+          type="checkbox"
+          [formField]="registrationForm.consent"
+          [attr.aria-invalid]="registrationForm.consent().touched() && registrationForm.consent().invalid()"
+        />
+        <label class="form-label" for="famille-consent">
+          J’ai pris connaissance de la
+          <a routerLink="/politique-confidentialite">politique de confidentialité</a>
+          et j’accepte que ces informations soient transmises à l’équipe d’organisation d’Alegria 2027.
+        </label>
+      </div>
+      @if (registrationForm.consent().touched() && registrationForm.consent().invalid()) {
+        <p class="form-error">{{ registrationForm.consent().errors()[0]?.message }}</p>
+      }
+
+      <div class="form-honeypot" aria-hidden="true">
+        <label for="famille-honeypot">Ne pas remplir ce champ</label>
+        <input
+          id="famille-honeypot"
+          type="text"
+          tabindex="-1"
+          autocomplete="off"
+          [formField]="registrationForm.honeypot"
+        />
+      </div>
+
+      @if (submitError()) {
+        <p class="form-alert form-alert--error" role="alert">{{ submitError() }}</p>
+      }
+
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit" [disabled]="submitting()">
+          {{ submitting() ? 'Envoi en cours…' : 'Envoyer l’inscription' }}
+        </button>
+        <span class="form-hint">Les champs sans mention « facultatif » sont obligatoires.</span>
+      </div>
+    </form>
   }
 </section>

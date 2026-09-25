@@ -14,6 +14,8 @@ import { ParticipantSex } from './participant-sex.enum';
 import { MejAgeGroup } from './mej-age-group.enum';
 import { TeamParticipant } from './team-participant.entity';
 import { PersonType } from './person-type.enum';
+import { ParticipantRegistrationStatus } from './participant-registration-status.enum';
+import { PersonSource } from './person-source.enum';
 
 @Entity({ name: 'participants' })
 export class Participant {
@@ -54,6 +56,28 @@ export class Participant {
 
   @Column({ type: 'varchar', length: 120, nullable: true })
   city!: string | null;
+
+  /**
+   * Statut de la fiche : CONFIRMED = créée par le staff dans l'intranet (défaut,
+   * ne change pas le comportement existant), PENDING = soumise via un formulaire
+   * public et en attente de validation par un staff.
+   */
+  @Column({
+    type: 'enum',
+    enum: ParticipantRegistrationStatus,
+    enumName: 'participant_registration_status_enum',
+    default: ParticipantRegistrationStatus.CONFIRMED,
+  })
+  status!: ParticipantRegistrationStatus;
+
+  /** Origine de la création de la fiche (staff intranet ou formulaire public). */
+  @Column({
+    type: 'enum',
+    enum: PersonSource,
+    enumName: 'person_source_enum',
+    default: PersonSource.STAFF,
+  })
+  source!: PersonSource;
 
   @ManyToOne(() => Group, (group) => group.participants, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'group_id' })

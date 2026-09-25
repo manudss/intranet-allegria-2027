@@ -300,3 +300,151 @@ img {
   margin-bottom: var(--space-xl);
 }
 
+/* Formulaires d'inscription publics (jeunes, familles, bénévoles) */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  max-width: 42rem;
+  margin-top: var(--space-md);
+}
+
+.form-fieldset {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  background: var(--color-surface);
+}
+
+.form-legend {
+  font-weight: 700;
+  font-size: var(--font-size-lg);
+  padding: 0 var(--space-xs);
+  color: var(--color-primary-dark);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-md);
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.form-field--checkbox {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.form-label {
+  font-weight: 600;
+}
+
+.form-hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.form-control {
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--color-border);
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.form-control:focus-visible {
+  border-color: var(--color-accent);
+}
+
+.form-control[aria-invalid='true'] {
+  border-color: var(--color-error);
+}
+
+textarea.form-control {
+  resize: vertical;
+  min-height: 6rem;
+}
+
+.form-error {
+  color: var(--color-error);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.form-checkbox-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.6rem;
+}
+
+.form-checkbox-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-weight: normal;
+}
+
+.form-child-block {
+  border: 1px dashed var(--color-accent-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  background: var(--color-bg-alt);
+}
+
+.form-child-block__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.form-alert {
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+}
+
+.form-alert--success {
+  background: #e6f4ea;
+  color: var(--color-success);
+  border: 1px solid var(--color-success);
+}
+
+.form-alert--error {
+  background: #fdecec;
+  color: var(--color-error);
+  border: 1px solid var(--color-error);
+}
+
+/* Champ honeypot anti-bot : jamais visible ni annoncé, mais toujours présent dans le DOM
+   et le tabindex pour ne pas gêner la navigation clavier des personnes réelles. */
+.form-honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+

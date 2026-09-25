@@ -75,10 +75,158 @@
   <h2 id="cta-heading">Je candidate</h2>
   @if (registrationLink) {
     <a class="btn btn-primary" [href]="registrationLink">Accéder au formulaire de candidature</a>
+  } @else if (submitted()) {
+    <p class="form-alert form-alert--success" role="status">
+      Merci pour votre candidature ! L’équipe d’organisation va l’examiner et reviendra vers vous
+      pour préciser votre mission.
+    </p>
   } @else {
-    <app-alert-banner variant="warning" title="Candidatures pas encore ouvertes">
-      <p>Le lien vers le formulaire de candidature sera activé prochainement.</p>
-    </app-alert-banner>
+    <p>
+      Ce formulaire envoie directement votre candidature à l’équipe d’organisation. Elle sera
+      examinée puis vous serez recontacté·e pour préciser votre mission.
+    </p>
+    <form class="form" novalidate (submit)="onSubmit($event)">
+      <fieldset class="form-fieldset">
+        <legend class="form-legend">Vos coordonnées</legend>
+        <div class="form-grid">
+          <div class="form-field">
+            <label class="form-label" for="benevole-firstName">Prénom</label>
+            <input
+              class="form-control"
+              id="benevole-firstName"
+              type="text"
+              autocomplete="given-name"
+              [formField]="applicationForm.firstName"
+              [attr.aria-invalid]="applicationForm.firstName().touched() && applicationForm.firstName().invalid()"
+            />
+            @if (applicationForm.firstName().touched() && applicationForm.firstName().invalid()) {
+              <p class="form-error">{{ applicationForm.firstName().errors()[0]?.message }}</p>
+            }
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="benevole-lastName">Nom</label>
+            <input
+              class="form-control"
+              id="benevole-lastName"
+              type="text"
+              autocomplete="family-name"
+              [formField]="applicationForm.lastName"
+              [attr.aria-invalid]="applicationForm.lastName().touched() && applicationForm.lastName().invalid()"
+            />
+            @if (applicationForm.lastName().touched() && applicationForm.lastName().invalid()) {
+              <p class="form-error">{{ applicationForm.lastName().errors()[0]?.message }}</p>
+            }
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="benevole-email">E-mail</label>
+            <input
+              class="form-control"
+              id="benevole-email"
+              type="email"
+              autocomplete="email"
+              [formField]="applicationForm.email"
+              [attr.aria-invalid]="applicationForm.email().touched() && applicationForm.email().invalid()"
+            />
+            @if (applicationForm.email().touched() && applicationForm.email().invalid()) {
+              <p class="form-error">{{ applicationForm.email().errors()[0]?.message }}</p>
+            }
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="benevole-phone">Téléphone</label>
+            <input
+              class="form-control"
+              id="benevole-phone"
+              type="tel"
+              autocomplete="tel"
+              [formField]="applicationForm.phone"
+              [attr.aria-invalid]="applicationForm.phone().touched() && applicationForm.phone().invalid()"
+            />
+            @if (applicationForm.phone().touched() && applicationForm.phone().invalid()) {
+              <p class="form-error">{{ applicationForm.phone().errors()[0]?.message }}</p>
+            }
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="form-fieldset">
+        <legend class="form-legend">Domaines de mission qui vous intéressent (facultatif)</legend>
+        <div class="form-checkbox-group">
+          @for (mission of missions; track mission.id) {
+            <label class="form-checkbox-option">
+              <input
+                type="checkbox"
+                [checked]="model().missionsOfInterest.includes(mission.id)"
+                (change)="toggleMission(mission.id, $any($event.target).checked)"
+              />
+              {{ mission.label }}
+            </label>
+          }
+        </div>
+      </fieldset>
+
+      <fieldset class="form-fieldset">
+        <legend class="form-legend">Disponibilité et motivation (facultatif)</legend>
+        <div class="form-field">
+          <label class="form-label" for="benevole-availability">Vos disponibilités</label>
+          <input
+            class="form-control"
+            id="benevole-availability"
+            type="text"
+            placeholder="Ex. les 4 jours, week-end uniquement, montage/démontage..."
+            [formField]="applicationForm.availability"
+          />
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="benevole-motivation">Votre message</label>
+          <textarea
+            class="form-control"
+            id="benevole-motivation"
+            rows="4"
+            [formField]="applicationForm.motivation"
+          ></textarea>
+        </div>
+      </fieldset>
+
+      <div class="form-field form-field--checkbox">
+        <input
+          class="form-control"
+          id="benevole-consent"
+          type="checkbox"
+          [formField]="applicationForm.consent"
+          [attr.aria-invalid]="applicationForm.consent().touched() && applicationForm.consent().invalid()"
+        />
+        <label class="form-label" for="benevole-consent">
+          J’ai pris connaissance de la
+          <a routerLink="/politique-confidentialite">politique de confidentialité</a>
+          et j’accepte que ces informations soient transmises à l’équipe d’organisation d’Alegria 2027.
+        </label>
+      </div>
+      @if (applicationForm.consent().touched() && applicationForm.consent().invalid()) {
+        <p class="form-error">{{ applicationForm.consent().errors()[0]?.message }}</p>
+      }
+
+      <div class="form-honeypot" aria-hidden="true">
+        <label for="benevole-honeypot">Ne pas remplir ce champ</label>
+        <input
+          id="benevole-honeypot"
+          type="text"
+          tabindex="-1"
+          autocomplete="off"
+          [formField]="applicationForm.honeypot"
+        />
+      </div>
+
+      @if (submitError()) {
+        <p class="form-alert form-alert--error" role="alert">{{ submitError() }}</p>
+      }
+
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit" [disabled]="submitting()">
+          {{ submitting() ? 'Envoi en cours…' : 'Envoyer ma candidature' }}
+        </button>
+        <span class="form-hint">Seuls les champs des coordonnées sont obligatoires.</span>
+      </div>
+    </form>
   }
   @if (contactEmail) {
     <p>Une question ? Écrivez à l’équipe bénévoles : {{ contactEmail }}</p>

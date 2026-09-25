@@ -60,7 +60,9 @@
           "buildTarget": "site:build:production"
         },
         "development": {
-          "buildTarget": "site:build:development"
+          "buildTarget": "site:build:development",
+          "proxyConfig": "site/proxy.conf.json",
+          "port": 4300
         }
       }
     },

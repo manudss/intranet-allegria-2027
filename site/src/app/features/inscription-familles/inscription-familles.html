@@ -1,332 +1,380 @@
 <app-hero
   [compact]="true"
-  eyebrow="Familles"
-  title="Inscrire votre enfant à Alegria 2027"
-  subtitle="Toutes les informations pour préparer sereinement l’inscription et le départ de votre enfant."
+  eyebrow="Familles d’accueil"
+  title="Devenir famille d’accueil"
+  subtitle="Ouvrez votre foyer aux jeunes du rassemblement Alegria 2027."
 />
 
 <section class="container section">
-  <app-alert-banner variant="warning" title="Une question ou une difficulté financière ?">
+  <h2>Accueillir des jeunes pendant le rassemblement</h2>
+  <p>
+    Vous habitez à Saint-Étienne ou dans les environs et souhaitez proposer un hébergement ? Faites
+    connaître vos possibilités d’accueil pour le rassemblement, {{ event.dates.label.toLowerCase()
+    }}. Chaque foyer remplit une seule proposition.
+  </p>
+  <p>
+    L’équipe de coordination échange avec vous, examine votre proposition et organise l’accueil.
+    Elle choisit les jeunes accueillis et réalise les affectations : vous n’avez aucun jeune à
+    inscrire dans ce formulaire.
+  </p>
+  <p>
+    Pour inscrire un jeune au rassemblement, consultez la page
+    <a routerLink="/inscription/jeunes">Inscription des jeunes</a>.
+  </p>
+</section>
+
+<section class="container section section--alt">
+  <h2>Les étapes pour devenir famille d’accueil</h2>
+  <app-steps [steps]="steps" />
+</section>
+
+<section class="container section">
+  <h2>Préparer l’accueil avec la coordination</h2>
+  <p>
+    Précisez le nombre de personnes que vous pouvez héberger et les contraintes de votre logement.
+    Les nuits d’accueil, les repas, les déplacements et les modalités d’encadrement seront confirmés
+    avec l’organisation.
+  </p>
+  <p>
+    Votre proposition permet à l’équipe de vous recontacter. Son envoi ne vaut pas validation de
+    l’accueil. Aucun e-mail automatique de confirmation n’est envoyé.
+  </p>
+  <p>
+    Pour toute question, consultez les <a routerLink="/faq">questions fréquentes</a> ou la page
+    <a routerLink="/contact">Contact</a>. @if (contactEmail) { Vous pouvez écrire à {{ contactEmail
+    }}. }
+  </p>
+</section>
+
+<section class="container section section--alt" aria-labelledby="form-heading">
+  <h2 id="form-heading">Proposer un accueil</h2>
+  <p role="status">{{ submitting() ? 'Envoi de votre proposition en cours…' : '' }}</p>
+  @if (submitted()) {
+  <div #confirmation tabindex="-1" class="form-alert form-alert--success">
+    <h3>Merci ! Votre proposition d’accueil est enregistrée.</h3>
     <p>
-      Contactez l’équipe d’organisation avant de finaliser votre inscription si vous rencontrez
-      une difficulté, quelle qu’elle soit.
-      @if (contactEmail) {
-        Écrivez-nous à {{ contactEmail }}.
-      }
+      L’équipe de coordination examinera votre proposition et vous recontactera pour préparer
+      l’accueil.
     </p>
-  </app-alert-banner>
-</section>
-
-<section class="container section section--alt">
-  <h2>Votre parcours en 7 étapes</h2>
-  <app-steps [steps]="steps"></app-steps>
-</section>
-
-<section class="container section">
-  <h2>À qui s’adresse cette inscription ?</h2>
-  <p>
-    Cette page s’adresse aux parents et responsables légaux souhaitant inscrire un ou plusieurs
-    jeunes de 12 à 18 ans. Vous pouvez inscrire plusieurs enfants d’une même fratrie depuis un
-    même compte.
-  </p>
-</section>
-
-<section class="container section section--alt">
-  <h2>Informations à préparer</h2>
-  <ul>
-    <li>Coordonnées du ou des jeunes et des responsables légaux</li>
-    <li>Groupe MEJ ou diocèse d’origine, si connu</li>
-    <li>Moyen de transport envisagé (train, car, covoiturage...)</li>
-    <li>Besoins de santé, allergies ou régimes alimentaires particuliers</li>
-  </ul>
-</section>
-
-<section class="container section">
-  <h2>Transport</h2>
-  <p>
-    Le trajet aller-retour jusqu’au lieu du rassemblement reste généralement à la charge des
-    familles, parfois organisé collectivement par le diocèse d’origine. Les transports pendant les
-    quatre jours du rassemblement sont habituellement pris en charge par l’organisation. Ces
-    modalités seront confirmées pour 2027.
-  </p>
-</section>
-
-<section class="container section section--alt">
-  <h2>Conditions d’accueil et d’encadrement</h2>
-  <p>
-    Les jeunes sont encadrés en permanence par des animateurs, des volontaires et des bénévoles
-    formés. Une équipe sécurité et une équipe santé sont mobilisées tout au long du rassemblement.
-  </p>
-</section>
-
-<section class="container section">
-  <h2>Hébergement</h2>
-  <app-provisional-badge></app-provisional-badge>
-  <p>
-    Les modalités d’hébergement ne sont pas encore confirmées pour cette édition. Elles seront
-    communiquées dès que possible.
-  </p>
-</section>
-
-<section class="container section section--alt">
-  <h2>Repas et régimes particuliers</h2>
-  <p>
-    Les régimes alimentaires particuliers (allergies, convictions religieuses, régime
-    végétarien...) pourront être signalés lors de l’inscription et feront l’objet d’une attention
-    particulière.
-  </p>
-</section>
-
-<section class="container section">
-  <h2>Besoins de santé ou d’accessibilité</h2>
-  <p>
-    Un espace dédié du formulaire d’inscription permettra de signaler tout besoin de santé ou
-    d’accessibilité, traité de façon confidentielle par l’équipe santé de l’événement.
-  </p>
-</section>
-
-<section class="container section section--alt">
-  <h2>Autorisations parentales</h2>
-  <p>
-    Une autorisation parentale de participation sera à compléter et à retourner selon les
-    modalités précisées lors de l’inscription.
-  </p>
-</section>
-
-<section class="container section">
-  <h2>Tarifs</h2>
-  <app-provisional-badge></app-provisional-badge>
-  <p>
-    Les tarifs 2027 ne sont pas encore fixés. Une caisse de solidarité est habituellement proposée
-    pour accompagner les familles rencontrant des difficultés financières.
-  </p>
-</section>
-
-<section class="container section section--alt">
-  <h2>Contacts utiles</h2>
-  <p>
-    Retrouvez tous les contacts dédiés sur la page <a routerLink="/contact">Contact</a>.
-  </p>
-</section>
-
-<section class="container section">
-  <h2>Dates limites</h2>
-  <app-provisional-badge></app-provisional-badge>
-  <p>Les dates d’ouverture et de clôture des inscriptions seront annoncées sur cette page.</p>
-</section>
-
-<section class="container section section--alt">
-  <h2>Questions fréquentes</h2>
-  <p>Retrouvez toutes les réponses aux questions des familles sur la page <a routerLink="/faq">FAQ</a>.</p>
-</section>
-
-<section class="container section" aria-labelledby="cta-heading">
-  <h2 id="cta-heading">J’inscris mon enfant</h2>
-  @if (registrationLink) {
-    <a class="btn btn-primary" [href]="registrationLink">Accéder au formulaire d’inscription</a>
-  } @else if (submitted()) {
-    <p class="form-alert form-alert--success" role="status">
-      Merci ! Votre demande d’inscription a bien été envoyée à l’équipe d’organisation. Elle sera
-      examinée puis vous recevrez une confirmation par nos soins.
-    </p>
+  </div>
   } @else {
-    <p>
-      Ce formulaire envoie directement votre demande à l’équipe d’organisation. Elle sera examinée
-      et confirmée manuellement : aucune confirmation automatique n’est envoyée pour le moment. Vous
-      pouvez inscrire plusieurs enfants d’une même fratrie en une seule fois.
-    </p>
-    <form class="form" novalidate (submit)="onSubmit($event)">
-      <fieldset class="form-fieldset">
-        <legend class="form-legend">Vos coordonnées (parent ou représentant légal)</legend>
-        <div class="form-grid">
-          <div class="form-field">
-            <label class="form-label" for="famille-parentName">Nom et prénom</label>
-            <input
-              class="form-control"
-              id="famille-parentName"
-              type="text"
-              autocomplete="name"
-              [formField]="registrationForm.parentContact.name"
-              [attr.aria-invalid]="
-                registrationForm.parentContact.name().touched() && registrationForm.parentContact.name().invalid()
-              "
-            />
-            @if (
-              registrationForm.parentContact.name().touched() && registrationForm.parentContact.name().invalid()
-            ) {
-              <p class="form-error">{{ registrationForm.parentContact.name().errors()[0]?.message }}</p>
-            }
-          </div>
-          <div class="form-field">
-            <label class="form-label" for="famille-parentPhone">Téléphone</label>
-            <input
-              class="form-control"
-              id="famille-parentPhone"
-              type="tel"
-              autocomplete="tel"
-              [formField]="registrationForm.parentContact.phone"
-              [attr.aria-invalid]="
-                registrationForm.parentContact.phone().touched() && registrationForm.parentContact.phone().invalid()
-              "
-            />
-            @if (
-              registrationForm.parentContact.phone().touched() && registrationForm.parentContact.phone().invalid()
-            ) {
-              <p class="form-error">{{ registrationForm.parentContact.phone().errors()[0]?.message }}</p>
-            }
-          </div>
-          <div class="form-field">
-            <label class="form-label" for="famille-parentEmail">E-mail (facultatif)</label>
-            <input
-              class="form-control"
-              id="famille-parentEmail"
-              type="email"
-              autocomplete="email"
-              [formField]="registrationForm.parentContact.email"
-            />
-          </div>
+  <p>
+    Les champs sans mention « facultatif » sont obligatoires. Préparez vos coordonnées et les
+    capacités de votre hébergement.
+  </p>
+  <p>Si vous ne pouvez pas utiliser ce formulaire, <a routerLink="/contact">contactez l’organisation pour proposer un accueil</a>.</p>
+  <form class="form" novalidate (submit)="onSubmit($event)" [attr.aria-busy]="submitting()">
+    <div
+      #errorSummary
+      tabindex="-1"
+      class="form-alert form-alert--error"
+      [hidden]="!attempted() || (!registrationForm().invalid() && !submitError())"
+    >
+      @if (registrationForm().invalid()) {
+      <h3>Vérifiez les informations du formulaire</h3>
+      <ul>
+        @for (entry of errorFields; track entry.label) { @if (entry.field().invalid()) {
+        <li>
+          <button type="button" class="form-error-link" (click)="entry.field().focusBoundControl()">
+            {{ entry.label }} : {{ entry.field().errors()[0]?.message }}
+          </button>
+        </li>
+        } }
+      </ul>
+      } @if (submitError()) {
+      <p>{{ submitError() }}</p>
+      }
+    </div>
+    <fieldset class="form-fieldset">
+      <legend class="form-legend">Vos coordonnées</legend>
+      <div class="form-grid">
+        <div class="form-field">
+          <label class="form-label" for="famille-familyName"
+            >Nom de la famille ou de la personne référente</label
+          >
+          <input
+            class="form-control"
+            id="famille-familyName"
+            type="text"
+            autocomplete="name"
+            [formField]="registrationForm.familyName"
+            [attr.aria-invalid]="(registrationForm.familyName().touched() || attempted()) && registrationForm.familyName().invalid()"
+            [attr.aria-describedby]="((registrationForm.familyName().touched() || attempted()) && registrationForm.familyName().invalid()) ? ' famille-familyName-error' : ''"
+          />
+          @if ((registrationForm.familyName().touched() || attempted()) &&
+          registrationForm.familyName().invalid()) {
+          <p class="form-error" id="famille-familyName-error">
+            {{ registrationForm.familyName().errors()[0]?.message }}
+          </p>
+          }
         </div>
-      </fieldset>
-
-      @for (child of registrationForm.children; track $index; let i = $index) {
-        <fieldset class="form-fieldset form-child-block">
-          <div class="form-child-block__header">
-            <legend class="form-legend">Enfant {{ i + 1 }}</legend>
-            @if (registrationForm.children().value().length > 1) {
-              <button type="button" class="btn btn-secondary" (click)="removeChild(i)">
-                Retirer cet enfant
-              </button>
-            }
-          </div>
-          <div class="form-grid">
-            <div class="form-field">
-              <label class="form-label" [attr.for]="'famille-child-' + i + '-firstName'">Prénom</label>
-              <input
-                class="form-control"
-                [id]="'famille-child-' + i + '-firstName'"
-                type="text"
-                [formField]="child.firstName"
-                [attr.aria-invalid]="child.firstName().touched() && child.firstName().invalid()"
-              />
-              @if (child.firstName().touched() && child.firstName().invalid()) {
-                <p class="form-error">{{ child.firstName().errors()[0]?.message }}</p>
-              }
-            </div>
-            <div class="form-field">
-              <label class="form-label" [attr.for]="'famille-child-' + i + '-lastName'">Nom</label>
-              <input
-                class="form-control"
-                [id]="'famille-child-' + i + '-lastName'"
-                type="text"
-                [formField]="child.lastName"
-                [attr.aria-invalid]="child.lastName().touched() && child.lastName().invalid()"
-              />
-              @if (child.lastName().touched() && child.lastName().invalid()) {
-                <p class="form-error">{{ child.lastName().errors()[0]?.message }}</p>
-              }
-            </div>
-            <div class="form-field">
-              <label class="form-label" [attr.for]="'famille-child-' + i + '-dob'">Date de naissance</label>
-              <input
-                class="form-control"
-                [id]="'famille-child-' + i + '-dob'"
-                type="date"
-                [formField]="child.dateOfBirth"
-                [attr.aria-invalid]="child.dateOfBirth().touched() && child.dateOfBirth().invalid()"
-              />
-              @if (child.dateOfBirth().touched() && child.dateOfBirth().invalid()) {
-                <p class="form-error">{{ child.dateOfBirth().errors()[0]?.message }}</p>
-              }
-            </div>
-            <div class="form-field">
-              <label class="form-label" [attr.for]="'famille-child-' + i + '-sex'">Sexe</label>
-              <select
-                class="form-control"
-                [id]="'famille-child-' + i + '-sex'"
-                [formField]="child.sex"
-                [attr.aria-invalid]="child.sex().touched() && child.sex().invalid()"
-              >
-                <option value="" disabled selected>Choisir…</option>
-                @for (option of sexOptions; track option.value) {
-                  <option [value]="option.value">{{ option.label }}</option>
-                }
-              </select>
-              @if (child.sex().touched() && child.sex().invalid()) {
-                <p class="form-error">{{ child.sex().errors()[0]?.message }}</p>
-              }
-            </div>
-            <div class="form-field">
-              <label class="form-label" [attr.for]="'famille-child-' + i + '-ageGroup'">Tranche d’âge MEJ</label>
-              <select
-                class="form-control"
-                [id]="'famille-child-' + i + '-ageGroup'"
-                [formField]="child.mejAgeGroup"
-                [attr.aria-invalid]="child.mejAgeGroup().touched() && child.mejAgeGroup().invalid()"
-              >
-                <option value="" disabled selected>Choisir…</option>
-                @for (option of ageGroupOptions; track option.value) {
-                  <option [value]="option.value">{{ option.label }}</option>
-                }
-              </select>
-              @if (child.mejAgeGroup().touched() && child.mejAgeGroup().invalid()) {
-                <p class="form-error">{{ child.mejAgeGroup().errors()[0]?.message }}</p>
-              }
-            </div>
-            <div class="form-field">
-              <label class="form-label" [attr.for]="'famille-child-' + i + '-diocese'">Diocèse (facultatif)</label>
-              <input class="form-control" [id]="'famille-child-' + i + '-diocese'" type="text" [formField]="child.diocese" />
-            </div>
-            <div class="form-field">
-              <label class="form-label" [attr.for]="'famille-child-' + i + '-city'">Ville (facultatif)</label>
-              <input class="form-control" [id]="'famille-child-' + i + '-city'" type="text" [formField]="child.city" />
-            </div>
-          </div>
-        </fieldset>
-      }
-
-      <div class="form-actions">
-        <button type="button" class="btn btn-secondary" (click)="addChild()">+ Ajouter un autre enfant</button>
+        <div class="form-field">
+          <label class="form-label" for="famille-phone">Téléphone</label>
+          <input
+            class="form-control"
+            id="famille-phone"
+            type="tel"
+            autocomplete="tel"
+            [formField]="registrationForm.phone"
+            [attr.aria-invalid]="(registrationForm.phone().touched() || attempted()) && registrationForm.phone().invalid()"
+            [attr.aria-describedby]="((registrationForm.phone().touched() || attempted()) && registrationForm.phone().invalid()) ? ' famille-phone-error' : ''"
+          />
+          @if ((registrationForm.phone().touched() || attempted()) &&
+          registrationForm.phone().invalid()) {
+          <p class="form-error" id="famille-phone-error">
+            {{ registrationForm.phone().errors()[0]?.message }}
+          </p>
+          }
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="famille-email">E-mail</label>
+          <input
+            class="form-control"
+            id="famille-email"
+            type="email"
+            autocomplete="email"
+            [formField]="registrationForm.email"
+            [attr.aria-invalid]="(registrationForm.email().touched() || attempted()) && registrationForm.email().invalid()"
+            [attr.aria-describedby]="((registrationForm.email().touched() || attempted()) && registrationForm.email().invalid()) ? ' famille-email-error' : ''"
+          />
+          @if ((registrationForm.email().touched() || attempted()) &&
+          registrationForm.email().invalid()) {
+          <p class="form-error" id="famille-email-error">
+            {{ registrationForm.email().errors()[0]?.message }}
+          </p>
+          }
+        </div>
       </div>
-
-      <div class="form-field form-field--checkbox">
-        <input
-          class="form-control"
-          id="famille-consent"
-          type="checkbox"
-          [formField]="registrationForm.consent"
-          [attr.aria-invalid]="registrationForm.consent().touched() && registrationForm.consent().invalid()"
-        />
-        <label class="form-label" for="famille-consent">
-          J’ai pris connaissance de la
-          <a routerLink="/politique-confidentialite">politique de confidentialité</a>
-          et j’accepte que ces informations soient transmises à l’équipe d’organisation d’Alegria 2027.
-        </label>
+    </fieldset>
+    <fieldset class="form-fieldset">
+      <legend class="form-legend">Adresse de l’hébergement</legend>
+      <div class="form-grid">
+        <div class="form-field">
+          <label class="form-label" for="famille-address">Adresse</label>
+          <input
+            class="form-control"
+            id="famille-address"
+            type="text"
+            autocomplete="street-address"
+            [formField]="registrationForm.address"
+            [attr.aria-invalid]="(registrationForm.address().touched() || attempted()) && registrationForm.address().invalid()"
+            [attr.aria-describedby]="((registrationForm.address().touched() || attempted()) && registrationForm.address().invalid()) ? ' famille-address-error' : ''"
+          />
+          @if ((registrationForm.address().touched() || attempted()) &&
+          registrationForm.address().invalid()) {
+          <p class="form-error" id="famille-address-error">
+            {{ registrationForm.address().errors()[0]?.message }}
+          </p>
+          }
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="famille-postalCode">Code postal</label>
+          <input
+            class="form-control"
+            id="famille-postalCode"
+            type="text"
+            autocomplete="postal-code"
+            [formField]="registrationForm.postalCode"
+            [attr.aria-invalid]="(registrationForm.postalCode().touched() || attempted()) && registrationForm.postalCode().invalid()"
+            [attr.aria-describedby]="((registrationForm.postalCode().touched() || attempted()) && registrationForm.postalCode().invalid()) ? ' famille-postalCode-error' : ''"
+          />
+          @if ((registrationForm.postalCode().touched() || attempted()) &&
+          registrationForm.postalCode().invalid()) {
+          <p class="form-error" id="famille-postalCode-error">
+            {{ registrationForm.postalCode().errors()[0]?.message }}
+          </p>
+          }
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="famille-city">Ville</label>
+          <input
+            class="form-control"
+            id="famille-city"
+            type="text"
+            autocomplete="address-level2"
+            [formField]="registrationForm.city"
+            [attr.aria-invalid]="(registrationForm.city().touched() || attempted()) && registrationForm.city().invalid()"
+            [attr.aria-describedby]="((registrationForm.city().touched() || attempted()) && registrationForm.city().invalid()) ? ' famille-city-error' : ''"
+          />
+          @if ((registrationForm.city().touched() || attempted()) &&
+          registrationForm.city().invalid()) {
+          <p class="form-error" id="famille-city-error">
+            {{ registrationForm.city().errors()[0]?.message }}
+          </p>
+          }
+        </div>
       </div>
-      @if (registrationForm.consent().touched() && registrationForm.consent().invalid()) {
-        <p class="form-error">{{ registrationForm.consent().errors()[0]?.message }}</p>
-      }
-
-      <div class="form-honeypot" aria-hidden="true">
-        <label for="famille-honeypot">Ne pas remplir ce champ</label>
-        <input
-          id="famille-honeypot"
-          type="text"
-          tabindex="-1"
-          autocomplete="off"
-          [formField]="registrationForm.honeypot"
-        />
+    </fieldset>
+    <fieldset class="form-fieldset">
+      <legend class="form-legend">Vos capacités d’accueil</legend>
+      <p id="capacity-hint">
+        La capacité totale comprend les jeunes et les animateurs. Les deux autres nombres sont des
+        plafonds inclus dans ce total. Indiquez 0 si vous ne pouvez accueillir aucun mineur.
+      </p>
+      <div class="form-grid">
+        <div class="form-field">
+          <label class="form-label" for="famille-maxCapacity"
+            >Nombre total de personnes pouvant être accueillies</label
+          >
+          <input
+            class="form-control"
+            id="famille-maxCapacity"
+            type="number"
+            autocomplete="off"
+            step="1"
+            [formField]="registrationForm.maxCapacity"
+            [attr.aria-invalid]="(registrationForm.maxCapacity().touched() || attempted()) && registrationForm.maxCapacity().invalid()"
+            [attr.aria-describedby]="((registrationForm.maxCapacity().touched() || attempted()) && registrationForm.maxCapacity().invalid()) ? 'capacity-hint famille-maxCapacity-error' : 'capacity-hint'"
+          />
+          @if ((registrationForm.maxCapacity().touched() || attempted()) &&
+          registrationForm.maxCapacity().invalid()) {
+          <p class="form-error" id="famille-maxCapacity-error">
+            {{ registrationForm.maxCapacity().errors()[0]?.message }}
+          </p>
+          }
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="famille-maxUnder18"
+            >Nombre maximal de jeunes de moins de 18 ans</label
+          >
+          <input
+            class="form-control"
+            id="famille-maxUnder18"
+            type="number"
+            autocomplete="off"
+            step="1"
+            [formField]="registrationForm.maxUnder18"
+            [attr.aria-invalid]="(registrationForm.maxUnder18().touched() || attempted()) && registrationForm.maxUnder18().invalid()"
+            [attr.aria-describedby]="((registrationForm.maxUnder18().touched() || attempted()) && registrationForm.maxUnder18().invalid()) ? 'capacity-hint famille-maxUnder18-error' : 'capacity-hint'"
+          />
+          @if ((registrationForm.maxUnder18().touched() || attempted()) &&
+          registrationForm.maxUnder18().invalid()) {
+          <p class="form-error" id="famille-maxUnder18-error">
+            {{ registrationForm.maxUnder18().errors()[0]?.message }}
+          </p>
+          }
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="famille-maxAnimators"
+            >Nombre maximal d’animateurs (facultatif)</label
+          >
+          <input
+            class="form-control"
+            id="famille-maxAnimators"
+            type="number"
+            autocomplete="off"
+            step="1"
+            [formField]="registrationForm.maxAnimators"
+            [attr.aria-invalid]="(registrationForm.maxAnimators().touched() || attempted()) && registrationForm.maxAnimators().invalid()"
+            [attr.aria-describedby]="((registrationForm.maxAnimators().touched() || attempted()) && registrationForm.maxAnimators().invalid()) ? 'capacity-hint famille-maxAnimators-error' : 'capacity-hint'"
+          />
+          @if ((registrationForm.maxAnimators().touched() || attempted()) &&
+          registrationForm.maxAnimators().invalid()) {
+          <p class="form-error" id="famille-maxAnimators-error">
+            {{ registrationForm.maxAnimators().errors()[0]?.message }}
+          </p>
+          }
+        </div>
       </div>
-
-      @if (submitError()) {
-        <p class="form-alert form-alert--error" role="alert">{{ submitError() }}</p>
-      }
-
-      <div class="form-actions">
-        <button class="btn btn-primary" type="submit" [disabled]="submitting()">
-          {{ submitting() ? 'Envoi en cours…' : 'Envoyer l’inscription' }}
-        </button>
-        <span class="form-hint">Les champs sans mention « facultatif » sont obligatoires.</span>
+    </fieldset>
+    <fieldset class="form-fieldset">
+      <legend class="form-legend">Informations complémentaires</legend>
+      <div class="form-grid">
+        <div class="form-field">
+          <label class="form-label" for="famille-parish">Paroisse (facultatif)</label>
+          <input
+            class="form-control"
+            id="famille-parish"
+            type="text"
+            autocomplete="off"
+            [formField]="registrationForm.parish"
+            [attr.aria-invalid]="(registrationForm.parish().touched() || attempted()) && registrationForm.parish().invalid()"
+            [attr.aria-describedby]="((registrationForm.parish().touched() || attempted()) && registrationForm.parish().invalid()) ? ' famille-parish-error' : ''"
+          />
+          @if ((registrationForm.parish().touched() || attempted()) &&
+          registrationForm.parish().invalid()) {
+          <p class="form-error" id="famille-parish-error">
+            {{ registrationForm.parish().errors()[0]?.message }}
+          </p>
+          }
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="famille-constraints"
+            >Contraintes d’accueil (facultatif)</label
+          >
+          <p class="form-hint" id="constraints-hint">
+            Une contrainte par ligne, par exemple : logement sans ascenseur, présence d’animaux.
+            Maximum 20 lignes de 255 caractères.
+          </p>
+          <textarea
+            class="form-control"
+            id="famille-constraints"
+            rows="4"
+            [formField]="registrationForm.constraints"
+            [attr.aria-invalid]="(registrationForm.constraints().touched() || attempted()) && registrationForm.constraints().invalid()"
+            [attr.aria-describedby]="((registrationForm.constraints().touched() || attempted()) && registrationForm.constraints().invalid()) ? 'constraints-hint famille-constraints-error' : 'constraints-hint'"
+          ></textarea>
+          @if ((registrationForm.constraints().touched() || attempted()) &&
+          registrationForm.constraints().invalid()) {
+          <p class="form-error" id="famille-constraints-error">
+            {{ registrationForm.constraints().errors()[0]?.message }}
+          </p>
+          }
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="famille-notes">Remarques (facultatif)</label>
+          <textarea
+            class="form-control"
+            id="famille-notes"
+            rows="4"
+            [formField]="registrationForm.notes"
+            [attr.aria-invalid]="(registrationForm.notes().touched() || attempted()) && registrationForm.notes().invalid()"
+            [attr.aria-describedby]="((registrationForm.notes().touched() || attempted()) && registrationForm.notes().invalid()) ? ' famille-notes-error' : ''"
+          ></textarea>
+          @if ((registrationForm.notes().touched() || attempted()) &&
+          registrationForm.notes().invalid()) {
+          <p class="form-error" id="famille-notes-error">
+            {{ registrationForm.notes().errors()[0]?.message }}
+          </p>
+          }
+        </div>
       </div>
-    </form>
+    </fieldset>
+    <div class="form-field form-field--checkbox">
+      <input
+        class="form-control"
+        id="famille-consent"
+        type="checkbox"
+        [formField]="registrationForm.consent"
+        [attr.aria-invalid]="attempted() && registrationForm.consent().invalid()"
+        [attr.aria-describedby]="attempted() && registrationForm.consent().invalid() ? 'famille-consent-error' : null"
+      />
+      <label class="form-label" for="famille-consent">
+        J’ai lu la <a routerLink="/politique-confidentialite">politique de confidentialité</a>
+        et j’accepte que mes informations soient transmises à la coordination pour étudier ma
+        proposition d’accueil et me recontacter.
+      </label>
+    </div>
+    @if (attempted() && registrationForm.consent().invalid()) {
+    <p class="form-error" id="famille-consent-error">
+      {{ registrationForm.consent().errors()[0]?.message }}
+    </p>
+    }
+    <div class="form-honeypot" aria-hidden="true">
+      <label for="famille-honeypot">Ne pas remplir ce champ</label>
+      <input
+        id="famille-honeypot"
+        type="text"
+        tabindex="-1"
+        autocomplete="off"
+        [formField]="registrationForm.honeypot"
+      />
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit" [disabled]="submitting()">
+        {{ submitting() ? 'Envoi en cours…' : 'Envoyer ma proposition d’accueil' }}
+      </button>
+    </div>
+  </form>
   }
 </section>

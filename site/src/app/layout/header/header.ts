@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, ElementRef, HostListener, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  HostListener,
+  inject,
+  signal,
+} from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 interface NavLink {
@@ -11,7 +18,7 @@ const NAV_LINKS: NavLink[] = [
   { label: 'L’événement', path: '/evenement' },
   { label: 'Programme', path: '/programme' },
   { label: 'Participer', path: '/participer' },
-  { label: 'Familles', path: '/inscription/familles' },
+  { label: 'Familles d’accueil', path: '/inscription/familles' },
   { label: 'Bénévoles', path: '/benevoles' },
   { label: 'FAQ', path: '/faq' },
   { label: 'Contact', path: '/contact' },

@@ -24,16 +24,16 @@
     >
       <ul>
         @for (link of navLinks; track link.path) {
-          <li>
-            <a
-              [routerLink]="link.path"
-              routerLinkActive="is-active"
-              [routerLinkActiveOptions]="{ exact: link.path === '/' }"
-              (click)="closeMenu()"
-            >
-              {{ link.label }}
-            </a>
-          </li>
+        <li>
+          <a
+            [routerLink]="link.path"
+            routerLinkActive="is-active"
+            [routerLinkActiveOptions]="{ exact: link.path === '/' }"
+            (click)="closeMenu()"
+          >
+            {{ link.label }}
+          </a>
+        </li>
         }
       </ul>
 
@@ -49,23 +49,32 @@
           S’inscrire
         </button>
         @if (registerMenuOpen()) {
-          <ul id="register-menu" class="site-header__register-menu" role="menu">
-            <li role="none">
-              <a role="menuitem" routerLink="/inscription/jeunes" (click)="closeRegisterMenu(); closeMenu()"
-                >Je suis un jeune (12-18 ans)</a
-              >
-            </li>
-            <li role="none">
-              <a role="menuitem" routerLink="/inscription/familles" (click)="closeRegisterMenu(); closeMenu()"
-                >Je suis une famille</a
-              >
-            </li>
-            <li role="none">
-              <a role="menuitem" routerLink="/inscription/benevoles" (click)="closeRegisterMenu(); closeMenu()"
-                >Je deviens bénévole</a
-              >
-            </li>
-          </ul>
+        <ul id="register-menu" class="site-header__register-menu" role="menu">
+          <li role="none">
+            <a
+              role="menuitem"
+              routerLink="/inscription/jeunes"
+              (click)="closeRegisterMenu(); closeMenu()"
+              >Je suis un jeune (12-18 ans)</a
+            >
+          </li>
+          <li role="none">
+            <a
+              role="menuitem"
+              routerLink="/inscription/familles"
+              (click)="closeRegisterMenu(); closeMenu()"
+              >Je deviens famille d’accueil</a
+            >
+          </li>
+          <li role="none">
+            <a
+              role="menuitem"
+              routerLink="/inscription/benevoles"
+              (click)="closeRegisterMenu(); closeMenu()"
+              >Je deviens bénévole</a
+            >
+          </li>
+        </ul>
         }
       </div>
     </nav>

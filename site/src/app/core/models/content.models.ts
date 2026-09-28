@@ -9,7 +9,6 @@ export type ContentStatus = 'draft' | 'confirmed';
 
 export interface RegistrationLinks {
   youngPeople: string;
-  families: string;
   volunteers: string;
 }
 
@@ -65,12 +64,7 @@ export interface FaqCategory {
 }
 
 export type ProgramBlockType =
-  | 'collectif'
-  | 'atelier'
-  | 'spirituel'
-  | 'repas'
-  | 'libre'
-  | 'pratique';
+  'collectif' | 'atelier' | 'spirituel' | 'repas' | 'libre' | 'pratique';
 
 export interface ProgramBlock {
   type: ProgramBlockType;
@@ -96,12 +90,7 @@ export interface VolunteerMission {
 }
 
 export type ParticipationProfileId =
-  | 'jeune'
-  | 'famille'
-  | 'animateur'
-  | 'benevole'
-  | 'responsable'
-  | 'decouverte';
+  'jeune' | 'famille' | 'animateur' | 'benevole' | 'responsable' | 'decouverte';
 
 export interface ParticipationProfile {
   id: ParticipationProfileId;

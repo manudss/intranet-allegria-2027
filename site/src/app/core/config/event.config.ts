@@ -33,15 +33,13 @@ export const eventConfig: EventConfig = {
   registrationLinks: {
     // TODO(organisation): remplacer par l'URL réelle du formulaire d'inscription jeunes.
     youngPeople: '',
-    // TODO(organisation): remplacer par l'URL réelle du formulaire d'inscription familles.
-    families: '',
     // TODO(organisation): remplacer par l'URL réelle du formulaire d'inscription bénévoles.
     volunteers: '',
   },
   contacts: {
     // TODO(organisation): renseigner l'adresse e-mail de contact général.
     general: '',
-    // TODO(organisation): renseigner l'adresse e-mail dédiée aux familles.
+    // TODO(organisation): renseigner l'adresse e-mail dédiée aux familles d'accueil.
     families: '',
     // TODO(organisation): renseigner l'adresse e-mail dédiée aux bénévoles.
     volunteers: '',

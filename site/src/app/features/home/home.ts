@@ -25,8 +25,9 @@ export class Home implements OnInit {
   protected readonly faqPreview = faqCategories.slice(0, 3);
 
   protected readonly youngLink = resolveRegistrationLink(eventConfig.registrationLinks.youngPeople);
-  protected readonly familyLink = resolveRegistrationLink(eventConfig.registrationLinks.families);
-  protected readonly volunteerLink = resolveRegistrationLink(eventConfig.registrationLinks.volunteers);
+  protected readonly volunteerLink = resolveRegistrationLink(
+    eventConfig.registrationLinks.volunteers,
+  );
 
   ngOnInit(): void {
     this.seo.apply({

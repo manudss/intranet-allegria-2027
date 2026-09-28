@@ -11,3 +11,4 @@ import { HostFamiliesService } from './host-families.service';
   exports: [HostFamiliesService],
 })
 export class HostFamiliesModule {}
+

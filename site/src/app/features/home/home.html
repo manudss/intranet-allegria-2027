@@ -8,11 +8,11 @@
   </p>
   <div class="hero__actions">
     @if (youngLink) {
-      <a class="btn btn-primary" [href]="youngLink">Je m’inscris</a>
+    <a class="btn btn-primary" [href]="youngLink">Je m’inscris</a>
     } @else {
-      <a class="btn btn-primary" routerLink="/inscription/jeunes">Je m’inscris</a>
+    <a class="btn btn-primary" routerLink="/inscription/jeunes">Je m’inscris</a>
     }
-    <a class="btn btn-ghost" routerLink="/inscription/familles">Je suis parent</a>
+    <a class="btn btn-ghost" routerLink="/inscription/familles">Je deviens famille d’accueil</a>
     <a class="btn btn-ghost" routerLink="/inscription/benevoles">Je deviens bénévole</a>
   </div>
 </app-hero>
@@ -21,28 +21,31 @@
   <h2 id="temps-forts-heading">L’esprit d’Alegria</h2>
   <p>
     Alegria est un temps fort national du MEJ : une rencontre entre jeunes de toute la France, un
-    temps de partage, de prière, de créativité et de joie. C’est une expérience collective,
-    encadrée et sécurisée, ouverte à celles et ceux qui découvrent le MEJ comme à celles et ceux
-    qui le vivent déjà au quotidien.
+    temps de partage, de prière, de créativité et de joie. C’est une expérience collective, encadrée
+    et sécurisée, ouverte à celles et ceux qui découvrent le MEJ comme à celles et ceux qui le
+    vivent déjà au quotidien.
   </p>
   <div class="card-grid">
     @for (value of values; track value.title) {
-      <app-info-card [title]="value.title">
-        <p>{{ value.description }}</p>
-      </app-info-card>
+    <app-info-card [title]="value.title">
+      <p>{{ value.description }}</p>
+    </app-info-card>
     }
   </div>
 </section>
 
 <section class="container section" aria-labelledby="pour-qui-heading">
   <h2 id="pour-qui-heading">Pour qui ?</h2>
-  <p>Alegria s’adresse à toutes celles et ceux qui veulent vivre cette aventure, quel que soit leur rôle.</p>
+  <p>
+    Alegria s’adresse à toutes celles et ceux qui veulent vivre cette aventure, quel que soit leur
+    rôle.
+  </p>
   <div class="card-grid">
     @for (profile of profiles; track profile.id) {
-      <app-info-card [title]="profile.title">
-        <p>{{ profile.description }}</p>
-        <a class="btn btn-secondary" [routerLink]="profile.ctaLink">{{ profile.ctaLabel }}</a>
-      </app-info-card>
+    <app-info-card [title]="profile.title">
+      <p>{{ profile.description }}</p>
+      <a class="btn btn-secondary" [routerLink]="profile.ctaLink">{{ profile.ctaLabel }}</a>
+    </app-info-card>
     }
   </div>
 </section>
@@ -57,22 +60,22 @@
 </section>
 
 <section class="container section section--alt" aria-labelledby="familles-heading">
-  <h2 id="familles-heading">Un cadre rassurant pour les familles</h2>
-  <app-alert-banner variant="info" title="Une expérience encadrée et sécurisée">
+  <h2 id="familles-heading">Ouvrez votre foyer aux jeunes</h2>
+  <app-alert-banner variant="info" title="Devenir famille d’accueil">
     <p>
-      Pendant tout le rassemblement, les jeunes sont accompagnés par une équipe d’animateurs, de
-      bénévoles et de volontaires formés. Toutes les informations pratiques (transport,
-      hébergement, repas, santé) sont détaillées sur la page dédiée aux familles.
+      Vous pouvez proposer un hébergement pour des jeunes pendant Alegria 2027. Indiquez vos
+      possibilités d’accueil : la coordination vous recontactera et organisera les affectations des
+      jeunes dans les familles.
     </p>
   </app-alert-banner>
-  <a class="btn btn-secondary" routerLink="/inscription/familles">Voir les informations familles</a>
+  <a class="btn btn-secondary" routerLink="/inscription/familles">Proposer un accueil</a>
 </section>
 
 <section class="container section" aria-labelledby="benevoles-heading">
   <h2 id="benevoles-heading">Un rassemblement qui se construit ensemble</h2>
   <p>
-    Accueil, logistique, animation, santé, sécurité, communication... Alegria a besoin de
-    nombreux bénévoles et volontaires pour réussir. Rejoignez l’aventure !
+    Accueil, logistique, animation, santé, sécurité, communication... Alegria a besoin de nombreux
+    bénévoles et volontaires pour réussir. Rejoignez l’aventure !
   </p>
   <a class="btn btn-primary" routerLink="/benevoles">Devenir bénévole</a>
 </section>
@@ -81,10 +84,10 @@
   <h2 id="faq-heading">Questions fréquentes</h2>
   <ul class="faq-preview-list">
     @for (category of faqPreview; track category.id) {
-      <li>
-        <strong>{{ category.label }} :</strong>
-        {{ category.items[0].question }}
-      </li>
+    <li>
+      <strong>{{ category.label }} :</strong>
+      {{ category.items[0].question }}
+    </li>
     }
   </ul>
   <a class="btn btn-secondary" routerLink="/faq">Consulter toute la FAQ</a>

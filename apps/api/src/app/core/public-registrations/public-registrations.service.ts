@@ -2,10 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import type {
+  PublicHostFamilyRegistrationResult,
   PublicParticipantRegistrationResult,
   PublicVolunteerApplicationResult,
 } from '@mej-allegria/shared';
 import {
+  HostFamily,
+  HostFamilyStatus,
   Participant,
   ParticipantRegistrationStatus,
   ParticipantSex,
@@ -15,6 +18,7 @@ import {
 } from '../entities';
 import { CreatePublicParticipantRegistrationDto } from './public-participant-registration.dto';
 import { CreatePublicVolunteerApplicationDto } from './public-volunteer-application.dto';
+import { CreatePublicHostFamilyRegistrationDto } from './public-host-family-registration.dto';
 
 @Injectable()
 export class PublicRegistrationsService {
@@ -24,7 +28,35 @@ export class PublicRegistrationsService {
     private readonly dataSource: DataSource,
     @InjectRepository(VolunteerApplication)
     private readonly volunteerApplicationsRepository: Repository<VolunteerApplication>,
+    @InjectRepository(HostFamily)
+    private readonly hostFamiliesRepository: Repository<HostFamily>,
   ) {}
+
+  async createHostFamilyRegistration(
+    dto: CreatePublicHostFamilyRegistrationDto,
+  ): Promise<PublicHostFamilyRegistrationResult> {
+    const family = this.hostFamiliesRepository.create({
+      familyName: dto.familyName,
+      address: dto.address,
+      postalCode: dto.postalCode,
+      city: dto.city,
+      phone: dto.phone,
+      email: dto.email,
+      maxCapacity: dto.maxCapacity,
+      maxUnder18: dto.maxUnder18,
+      maxAnimators: dto.maxAnimators ?? null,
+      parish: dto.parish || null,
+      constraints: dto.constraints?.length ? dto.constraints : null,
+      notes: dto.notes || null,
+      latitude: null,
+      longitude: null,
+      tags: null,
+      status: HostFamilyStatus.DRAFT,
+    });
+    await this.hostFamiliesRepository.save(family);
+    this.logger.log("Nouvelle proposition de famille d'accueil à examiner");
+    return { status: 'DRAFT' };
+  }
 
   async createParticipantRegistration(
     dto: CreatePublicParticipantRegistrationDto,
@@ -51,7 +83,9 @@ export class PublicRegistrationsService {
       return saved.length;
     });
 
-    this.logger.log(`Inscription publique : ${createdCount} participant(s) en attente de validation`);
+    this.logger.log(
+      `Inscription publique : ${createdCount} participant(s) en attente de validation`,
+    );
 
     return { createdCount, status: 'PENDING' };
   }

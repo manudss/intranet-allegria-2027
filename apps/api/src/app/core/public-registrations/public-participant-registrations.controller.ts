@@ -1,4 +1,13 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { PublicParticipantRegistrationResult } from '@mej-allegria/shared';
@@ -7,7 +16,7 @@ import { CreatePublicParticipantRegistrationDto } from './public-participant-reg
 
 /**
  * Endpoint public (sans authentification) utilisé par le site public `site`
- * pour les pages /inscription/jeunes et /inscription/familles.
+ * pour la page /inscription/jeunes.
  *
  * Sécurité : validation stricte scopée à ce contrôleur (whitelist +
  * forbidNonWhitelisted), rate-limiting dédié (guard local, pas global), et
@@ -23,7 +32,8 @@ export class PublicParticipantRegistrationsController {
   constructor(private readonly publicRegistrationsService: PublicRegistrationsService) {}
 
   @ApiOperation({
-    summary: "Inscrire un ou plusieurs jeunes (formulaire public) — statut PENDING en attente de validation",
+    summary:
+      'Inscrire un ou plusieurs jeunes (formulaire public) — statut PENDING en attente de validation',
   })
   @Post()
   @HttpCode(HttpStatus.CREATED)

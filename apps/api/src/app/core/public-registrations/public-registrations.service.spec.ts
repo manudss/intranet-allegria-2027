@@ -21,6 +21,7 @@ describe('PublicRegistrationsService', () => {
     const service = new PublicRegistrationsService(
       dataSource as never,
       volunteerApplicationsRepository as never,
+      {} as never,
     );
 
     const result = await service.createParticipantRegistration({
@@ -67,6 +68,7 @@ describe('PublicRegistrationsService', () => {
     const service = new PublicRegistrationsService(
       dataSource as never,
       volunteerApplicationsRepository as never,
+      {} as never,
     );
 
     const result = await service.createVolunteerApplication({
@@ -78,5 +80,73 @@ describe('PublicRegistrationsService', () => {
 
     expect(result).toEqual({ status: 'PENDING' });
     expect(saved).toHaveLength(1);
+  });
+});
+
+describe('Proposition publique de famille d’accueil', () => {
+  it('enregistre uniquement une famille DRAFT et conserve les informations utiles', async () => {
+    const repository = {
+      create: vi.fn((data) => data),
+      save: vi.fn().mockResolvedValue({ id: 12 }),
+    };
+    const dataSource = { transaction: vi.fn() };
+    const volunteerRepository = { save: vi.fn() };
+    const service = new PublicRegistrationsService(
+      dataSource as never,
+      volunteerRepository as never,
+      repository as never,
+    );
+    const payload = {
+      familyName: 'Famille Bernard',
+      address: '12 rue des Tilleuls',
+      postalCode: '42000',
+      city: 'Saint-Étienne',
+      phone: '+33601020304',
+      email: 'bernard@example.fr',
+      maxCapacity: 4,
+      maxUnder18: 3,
+      maxAnimators: 0,
+      parish: 'Saint-Pierre',
+      constraints: ['Sans ascenseur'],
+      notes: 'Deux chambres',
+    };
+    expect(await service.createHostFamilyRegistration(payload)).toEqual({ status: 'DRAFT' });
+    expect(repository.save).toHaveBeenCalledExactlyOnceWith({
+      ...payload,
+      status: 'DRAFT',
+      latitude: null,
+      longitude: null,
+      tags: null,
+    });
+    expect(dataSource.transaction).not.toHaveBeenCalled();
+    expect(volunteerRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('laisse les capacités facultatives non renseignées et propage les erreurs de persistance', async () => {
+    const repository = {
+      create: vi.fn((data) => data),
+      save: vi.fn().mockRejectedValue(new Error('database unavailable')),
+    };
+    const service = new PublicRegistrationsService({} as never, {} as never, repository as never);
+    await expect(
+      service.createHostFamilyRegistration({
+        familyName: 'Bernard',
+        address: '12 rue des Tilleuls',
+        postalCode: '42000',
+        city: 'Saint-Étienne',
+        phone: '+33601020304',
+        email: 'bernard@example.fr',
+        maxCapacity: 4,
+        maxUnder18: 0,
+      }),
+    ).rejects.toThrow('database unavailable');
+    expect(repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        maxAnimators: null,
+        parish: null,
+        constraints: null,
+        notes: null,
+      }),
+    );
   });
 });

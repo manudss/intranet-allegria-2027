@@ -28,7 +28,7 @@ export class Faq implements OnInit {
     this.seo.apply({
       title: 'Foire aux questions',
       description:
-        'Toutes les réponses aux questions fréquentes des familles sur Alegria 2027 : inscription, tarifs, transport, hébergement, santé et sécurité.',
+        'Les réponses aux questions sur Alegria 2027 : inscription des jeunes, familles d’accueil, hébergement et informations pratiques.',
       canonicalPath: '/faq',
     });
   }

@@ -30,7 +30,7 @@ export const appRoutes: Route[] = [
   },
   {
     path: 'inscription/familles',
-    title: 'Inscription des familles',
+    title: 'Devenir famille d’accueil',
     loadComponent: () =>
       import('./features/inscription-familles/inscription-familles').then(
         (m) => m.InscriptionFamilles,

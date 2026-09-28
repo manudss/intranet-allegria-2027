@@ -2,6 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import type {
+  PublicHostFamilyRegistrationPayload,
+  PublicHostFamilyRegistrationResult,
   PublicParticipantRegistrationPayload,
   PublicParticipantRegistrationResult,
   PublicVolunteerApplicationPayload,
@@ -14,7 +16,7 @@ import type {
  * aucune authentification mais sont limitées en fréquence (rate-limiting)
  * et valident strictement les données côté serveur.
  *
- * Toutes les fiches créées ont le statut `PENDING` : elles sont revues et
+ * Les demandes sont en attente de validation (familles : `DRAFT`), revues et
  * validées manuellement par un membre de l'équipe d'organisation avant tout
  * traitement (aucune confirmation automatique par e-mail n'est envoyée).
  */
@@ -22,11 +24,16 @@ import type {
 export class RegistrationApiService {
   private readonly http = inject(HttpClient);
 
-  /**
-   * Utilisé par /inscription/jeunes (1 seul élément dans `participants`,
-   * sans `parentContact`) et /inscription/familles (N éléments +
-   * `parentContact` partagé).
-   */
+  submitHostFamilyRegistration(
+    payload: PublicHostFamilyRegistrationPayload,
+  ): Observable<PublicHostFamilyRegistrationResult> {
+    return this.http.post<PublicHostFamilyRegistrationResult>(
+      '/api/public/host-family-registrations',
+      payload,
+    );
+  }
+
+  /** Inscription des jeunes au rassemblement. */
   submitParticipantRegistration(
     payload: PublicParticipantRegistrationPayload,
   ): Observable<PublicParticipantRegistrationResult> {

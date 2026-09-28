@@ -4,7 +4,7 @@
   <h2>Pour quel motif nous contacter ?</h2>
   <ul>
     <li>Question générale sur le rassemblement</li>
-    <li>Inscription ou situation particulière d’une famille</li>
+    <li>Proposition d’hébergement ou question d’une famille d’accueil</li>
     <li>Candidature ou question de bénévole/volontaire</li>
     <li>Question d’un responsable diocésain ou d’un partenaire</li>
   </ul>
@@ -13,43 +13,39 @@
 <section class="container section section--alt">
   <h2>Contacts officiels</h2>
   @if (event.contacts.general) {
-    <p><strong>Contact général :</strong> {{ event.contacts.general }}</p>
+  <p><strong>Contact général :</strong> {{ event.contacts.general }}</p>
   } @else {
-    <app-alert-banner variant="info" title="Contact général à venir">
-      <p>L’adresse de contact générale sera publiée ici prochainement.</p>
-    </app-alert-banner>
-  }
-
-  @if (event.contacts.families) {
-    <p><strong>Contact familles :</strong> {{ event.contacts.families }}</p>
+  <app-alert-banner variant="info" title="Contact général à venir">
+    <p>L’adresse de contact générale sera publiée ici prochainement.</p>
+  </app-alert-banner>
+  } @if (event.contacts.families) {
+  <p><strong>Contact familles d’accueil :</strong> {{ event.contacts.families }}</p>
   } @else {
-    <app-alert-banner variant="info" title="Contact familles à venir">
-      <p>L’adresse dédiée aux familles sera publiée ici prochainement.</p>
-    </app-alert-banner>
-  }
-
-  @if (event.contacts.volunteers) {
-    <p><strong>Contact bénévoles :</strong> {{ event.contacts.volunteers }}</p>
+  <app-alert-banner variant="info" title="Contact familles d’accueil à venir">
+    <p>L’adresse dédiée aux familles d’accueil sera publiée ici prochainement.</p>
+  </app-alert-banner>
+  } @if (event.contacts.volunteers) {
+  <p><strong>Contact bénévoles :</strong> {{ event.contacts.volunteers }}</p>
   } @else {
-    <app-alert-banner variant="info" title="Contact bénévoles à venir">
-      <p>L’adresse dédiée aux bénévoles sera publiée ici prochainement.</p>
-    </app-alert-banner>
+  <app-alert-banner variant="info" title="Contact bénévoles à venir">
+    <p>L’adresse dédiée aux bénévoles sera publiée ici prochainement.</p>
+  </app-alert-banner>
   }
 </section>
 
 @if (event.socialLinks.length > 0) {
-  <section class="container section">
-    <h2>Réseaux sociaux</h2>
-    <ul>
-      @for (social of event.socialLinks; track social.url) {
-        <li>
-          <a [href]="social.url" target="_blank" rel="noopener"
-            >{{ social.label }} <span class="visually-hidden">(ouvre un nouvel onglet)</span></a
-          >
-        </li>
-      }
-    </ul>
-  </section>
+<section class="container section">
+  <h2>Réseaux sociaux</h2>
+  <ul>
+    @for (social of event.socialLinks; track social.url) {
+    <li>
+      <a [href]="social.url" target="_blank" rel="noopener"
+        >{{ social.label }} <span class="visually-hidden">(ouvre un nouvel onglet)</span></a
+      >
+    </li>
+    }
+  </ul>
+</section>
 }
 
 <section class="container section section--alt">

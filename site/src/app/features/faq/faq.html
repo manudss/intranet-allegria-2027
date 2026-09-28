@@ -1,15 +1,19 @@
 <app-hero
   [compact]="true"
   eyebrow="Questions fréquentes"
-  title="La FAQ des familles"
+  title="Questions fréquentes"
   subtitle="Toutes les réponses par catégorie. Vous pouvez partager le lien direct d’une question."
 />
 
 <section class="container section">
   @for (category of categories; track category.id) {
-    <div class="faq-category">
-      <h2>{{ category.label }}</h2>
-      <app-accordion [items]="category.items" [idPrefix]="category.id" [initialOpenId]="initialOpenId()"></app-accordion>
-    </div>
+  <div class="faq-category">
+    <h2>{{ category.label }}</h2>
+    <app-accordion
+      [items]="category.items"
+      [idPrefix]="category.id"
+      [initialOpenId]="initialOpenId()"
+    ></app-accordion>
+  </div>
   }
 </section>

@@ -11,8 +11,7 @@ function setInputValue(el: HTMLInputElement | HTMLSelectElement, value: string):
 }
 
 function setChecked(el: HTMLInputElement, checked: boolean): void {
-  el.checked = checked;
-  el.dispatchEvent(new Event('change'));
+  if (el.checked !== checked) el.click();
 }
 
 describe('InscriptionJeunes', () => {

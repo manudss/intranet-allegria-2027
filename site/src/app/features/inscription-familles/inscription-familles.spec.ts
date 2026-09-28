@@ -4,20 +4,10 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideHttpClient } from '@angular/common/http';
 import { InscriptionFamilles } from './inscription-familles';
 
-function setInputValue(el: HTMLInputElement | HTMLSelectElement, value: string): void {
-  el.value = value;
-  el.dispatchEvent(new Event('input'));
-  el.dispatchEvent(new Event('change'));
-}
-
-function setChecked(el: HTMLInputElement, checked: boolean): void {
-  el.checked = checked;
-  el.dispatchEvent(new Event('change'));
-}
+const endpoint = '/api/public/host-family-registrations';
 
 describe('InscriptionFamilles', () => {
   let httpMock: HttpTestingController;
-
   async function createFixture() {
     await TestBed.configureTestingModule({
       imports: [InscriptionFamilles],
@@ -28,91 +18,160 @@ describe('InscriptionFamilles', () => {
     httpMock = TestBed.inject(HttpTestingController);
     return fixture;
   }
+  afterEach(() => httpMock?.verify());
 
-  afterEach(() => {
-    httpMock.verify();
-  });
+  function input(root: HTMLElement, name: string, value: string) {
+    const el = root.querySelector(`#famille-${name}`) as HTMLInputElement;
+    el.value = value;
+    el.dispatchEvent(new Event('input'));
+    el.dispatchEvent(new Event('change'));
+  }
+  function fill(root: HTMLElement, consent = true) {
+    for (const [name, value] of Object.entries({
+      familyName: '  Famille Bernard  ',
+      phone: '0600000000',
+      email: 'bernard@example.fr',
+      address: '12 rue des Tilleuls',
+      postalCode: '42000',
+      city: 'Saint-Étienne',
+      maxCapacity: '4',
+      maxUnder18: '3',
+    }))
+      input(root, name, value);
+    const checkbox = root.querySelector('#famille-consent') as HTMLInputElement;
+    if (checkbox.checked !== consent) checkbox.click();
+  }
+  function send(root: HTMLElement) {
+    (root.querySelector('form') as HTMLFormElement).dispatchEvent(
+      new Event('submit', { cancelable: true }),
+    );
+  }
 
-  it('starts with a single child block', async () => {
-    const fixture = await createFixture();
-    const blocks = fixture.nativeElement.querySelectorAll('.form-child-block');
-    expect(blocks.length).toBe(1);
-  });
-
-  it('adds and removes child blocks', async () => {
-    const fixture = await createFixture();
-    const root = fixture.nativeElement as HTMLElement;
-
-    (Array.from(root.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Ajouter un autre enfant'),
-    ) as HTMLButtonElement).click();
-    fixture.detectChanges();
-    expect(root.querySelectorAll('.form-child-block').length).toBe(2);
-
-    (root.querySelector('.form-child-block button') as HTMLButtonElement).click();
-    fixture.detectChanges();
-    expect(root.querySelectorAll('.form-child-block').length).toBe(1);
-  });
-
-  it('submits a batch payload with the shared parent contact and all children', async () => {
-    const fixture = await createFixture();
-    const root = fixture.nativeElement as HTMLElement;
-
-    setInputValue(root.querySelector('#famille-parentName') as HTMLInputElement, 'Bob Martin');
-    setInputValue(root.querySelector('#famille-parentPhone') as HTMLInputElement, '0600000000');
-
-    setInputValue(root.querySelector('#famille-child-0-firstName') as HTMLInputElement, 'Alice');
-    setInputValue(root.querySelector('#famille-child-0-lastName') as HTMLInputElement, 'Martin');
-    setInputValue(root.querySelector('#famille-child-0-dob') as HTMLInputElement, '2012-05-01');
-    setInputValue(root.querySelector('#famille-child-0-sex') as HTMLSelectElement, 'FEMALE');
-    setInputValue(root.querySelector('#famille-child-0-ageGroup') as HTMLSelectElement, 'TA');
-
-    (Array.from(root.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Ajouter un autre enfant'),
-    ) as HTMLButtonElement).click();
-    fixture.detectChanges();
-
-    setInputValue(root.querySelector('#famille-child-1-firstName') as HTMLInputElement, 'Léo');
-    setInputValue(root.querySelector('#famille-child-1-lastName') as HTMLInputElement, 'Martin');
-    setInputValue(root.querySelector('#famille-child-1-dob') as HTMLInputElement, '2014-03-02');
-    setInputValue(root.querySelector('#famille-child-1-sex') as HTMLSelectElement, 'MALE');
-    setInputValue(root.querySelector('#famille-child-1-ageGroup') as HTMLSelectElement, 'TA');
-
-    setChecked(root.querySelector('#famille-consent') as HTMLInputElement, true);
-    fixture.detectChanges();
-
-    const form = root.querySelector('form') as HTMLFormElement;
-    form.dispatchEvent(new Event('submit', { cancelable: true }));
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    const req = httpMock.expectOne('/api/public/participant-registrations');
-    expect(req.request.body.parentContact.name).toBe('Bob Martin');
-    expect(req.request.body.participants.length).toBe(2);
-    expect(req.request.body.participants[1].firstName).toBe('Léo');
-    req.flush({ createdCount: 2, status: 'PENDING' });
-
-    fixture.detectChanges();
-    expect(root.textContent).toContain('Merci');
-  });
-
-  it('does not call the API when the consent checkbox is unchecked', async () => {
+  it('présente uniquement la proposition d’accueil, avec les coordonnées et sans enfant à saisir', async () => {
     const fixture = await createFixture();
     const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('.form-child-block')).toBeNull();
+    expect(root.textContent).toContain('Devenir famille d’accueil');
+    expect(root.textContent).toContain('réalise les affectations');
+    expect(root.querySelector('a[href="/inscription/jeunes"]')).not.toBeNull();
+    for (const control of root.querySelectorAll('input:not([tabindex="-1"]), textarea')) {
+      expect(root.querySelector(`label[for="${control.id}"]`)).not.toBeNull();
+    }
+  });
 
-    setInputValue(root.querySelector('#famille-parentName') as HTMLInputElement, 'Bob Martin');
-    setInputValue(root.querySelector('#famille-parentPhone') as HTMLInputElement, '0600000000');
-    setInputValue(root.querySelector('#famille-child-0-firstName') as HTMLInputElement, 'Alice');
-    setInputValue(root.querySelector('#famille-child-0-lastName') as HTMLInputElement, 'Martin');
-    setInputValue(root.querySelector('#famille-child-0-dob') as HTMLInputElement, '2012-05-01');
-    setInputValue(root.querySelector('#famille-child-0-sex') as HTMLSelectElement, 'FEMALE');
-    setInputValue(root.querySelector('#famille-child-0-ageGroup') as HTMLSelectElement, 'TA');
+  it('envoie une famille, normalise les contraintes, empêche le double envoi et affiche la confirmation', async () => {
+    const fixture = await createFixture();
+    const root = fixture.nativeElement as HTMLElement;
+    fill(root);
+    input(root, 'maxAnimators', '0');
+    input(root, 'parish', ' Saint-Pierre ');
+    input(root, 'constraints', ' Sans ascenseur \n\n Présence d’un chien ');
+    input(root, 'notes', ' Deux chambres ');
     fixture.detectChanges();
-
-    const form = root.querySelector('form') as HTMLFormElement;
-    form.dispatchEvent(new Event('submit', { cancelable: true }));
+    send(root);
+    send(root);
     fixture.detectChanges();
-
+    const req = httpMock.expectOne(endpoint);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({
+      familyName: 'Famille Bernard',
+      phone: '0600000000',
+      email: 'bernard@example.fr',
+      address: '12 rue des Tilleuls',
+      postalCode: '42000',
+      city: 'Saint-Étienne',
+      maxCapacity: 4,
+      maxUnder18: 3,
+      maxAnimators: 0,
+      parish: 'Saint-Pierre',
+      constraints: ['Sans ascenseur', 'Présence d’un chien'],
+      notes: 'Deux chambres',
+      honeypot: undefined,
+    });
     httpMock.expectNone('/api/public/participant-registrations');
+    expect((root.querySelector('button[type="submit"]') as HTMLButtonElement).disabled).toBe(true);
+    req.flush({ status: 'DRAFT' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(root.textContent).toContain('Votre proposition d’accueil est enregistrée');
+    expect(root.querySelector('form')).toBeNull();
+    expect(document.activeElement?.textContent).toContain(
+      'Votre proposition d’accueil est enregistrée',
+    );
   });
+
+  it('omet la capacité facultative lorsqu’elle n’est pas renseignée', async () => {
+    const fixture = await createFixture();
+    const root = fixture.nativeElement as HTMLElement;
+    fill(root);
+    fixture.detectChanges();
+    send(root);
+    const req = httpMock.expectOne(endpoint);
+    expect(req.request.body.maxAnimators).toBeUndefined();
+    req.flush({ status: 'DRAFT' });
+    await fixture.whenStable();
+  });
+
+  it('exige le consentement et place le focus sur le résumé des erreurs', async () => {
+    const fixture = await createFixture();
+    const root = fixture.nativeElement as HTMLElement;
+    fill(root, false);
+    fixture.detectChanges();
+    send(root);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    httpMock.expectNone(endpoint);
+    const checkbox = root.querySelector('#famille-consent') as HTMLInputElement;
+    expect(checkbox.getAttribute('aria-invalid')).toBe('true');
+    expect(checkbox.getAttribute('aria-describedby')).toBe('famille-consent-error');
+    expect(document.activeElement?.textContent).toContain('Vérifiez les informations');
+    (root.querySelector('.form-error-link') as HTMLButtonElement).click();
+    expect(document.activeElement).toBe(checkbox);
+  });
+
+  it.each([
+    ['phone', ''],
+    ['email', 'incorrect'],
+    ['familyName', '   '],
+    ['maxCapacity', '0'],
+    ['maxUnder18', '5'],
+    ['maxUnder18', '1.5'],
+    ['maxAnimators', '-1'],
+  ])('refuse %s = %s et associe l’erreur au champ', async (name, value) => {
+    const fixture = await createFixture();
+    const root = fixture.nativeElement as HTMLElement;
+    fill(root);
+    input(root, name, value);
+    fixture.detectChanges();
+    send(root);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    httpMock.expectNone(endpoint);
+    expect(root.querySelector(`#famille-${name}`)?.getAttribute('aria-invalid')).toBe('true');
+    expect(root.querySelector(`#famille-${name}-error`)?.textContent?.trim()).toBeTruthy();
+  });
+
+  it.each([500, 429])(
+    'conserve les valeurs après une erreur %s et permet de réessayer',
+    async (status) => {
+      const fixture = await createFixture();
+      const root = fixture.nativeElement as HTMLElement;
+      fill(root);
+      fixture.detectChanges();
+      send(root);
+      httpMock.expectOne(endpoint).flush({}, { status, statusText: 'Error' });
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(root.textContent).toContain(
+        status === 429 ? 'Patientez dix minutes' : 'Vos informations sont conservées',
+      );
+      expect((root.querySelector('#famille-phone') as HTMLInputElement).value).toBe('0600000000');
+      expect((root.querySelector('button[type="submit"]') as HTMLButtonElement).disabled).toBe(
+        false,
+      );
+      send(root);
+      httpMock.expectOne(endpoint).flush({ status: 'DRAFT' });
+      await fixture.whenStable();
+    },
+  );
 });

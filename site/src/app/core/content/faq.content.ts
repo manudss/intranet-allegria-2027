@@ -1,7 +1,7 @@
 import { FaqCategory } from '../models/content.models';
 
 /**
- * Contenu éditorial de la FAQ familles, organisé par catégories.
+ * Contenu éditorial de la FAQ du rassemblement, organisé par catégories.
  * Facilement modifiable sans toucher aux composants.
  */
 export const faqCategories: FaqCategory[] = [
@@ -11,9 +11,9 @@ export const faqCategories: FaqCategory[] = [
     items: [
       {
         id: 'comment-inscrire',
-        question: "Comment inscrire mon jeune ou ma famille à Alegria 2027 ?",
+        question: 'Comment inscrire un jeune à Alegria 2027 ?',
         answer:
-          "L'inscription se fera via un formulaire dédié, accessible depuis les pages « Inscription jeunes » et « Inscription familles ». Le lien sera activé dès l'ouverture officielle des inscriptions.",
+          'Rendez-vous sur la page « Inscription des jeunes ». La page « Devenir famille d’accueil » sert uniquement à proposer un hébergement pour le rassemblement.',
       },
       {
         id: 'ouverture-inscriptions',
@@ -26,6 +26,36 @@ export const faqCategories: FaqCategory[] = [
         question: 'Puis-je modifier une inscription après l’avoir envoyée ?',
         answer:
           "Les modalités de modification seront précisées dans la confirmation d'inscription. Contactez l'équipe d'organisation en cas de besoin urgent.",
+      },
+    ],
+  },
+  {
+    id: 'familles-accueil',
+    label: 'Familles d’accueil',
+    items: [
+      {
+        id: 'proposer-accueil',
+        question: 'Comment devenir famille d’accueil ?',
+        answer:
+          'Complétez le formulaire « Devenir famille d’accueil » avec vos coordonnées, l’adresse de l’hébergement, vos capacités et vos contraintes. La coordination examinera votre proposition et vous recontactera.',
+      },
+      {
+        id: 'affectation-jeunes',
+        question: 'Dois-je inscrire ou choisir les jeunes que je vais accueillir ?',
+        answer:
+          'Non. Vous proposez uniquement un accueil pour votre foyer. L’équipe de coordination valide les propositions et réalise les affectations des jeunes dans les familles.',
+      },
+      {
+        id: 'modalites-accueil',
+        question: 'Quelles nuits, quels repas et quels déplacements faut-il prévoir ?',
+        answer:
+          'Ces modalités seront confirmées avec la coordination. Vous pouvez préciser vos possibilités et vos contraintes dans le formulaire.',
+      },
+      {
+        id: 'modifier-accueil',
+        question: 'Comment modifier ma proposition d’accueil ?',
+        answer:
+          'Contactez l’organisation en indiquant le nom et les coordonnées utilisés dans votre proposition. Aucun e-mail automatique de confirmation n’est envoyé.',
       },
     ],
   },
@@ -59,7 +89,7 @@ export const faqCategories: FaqCategory[] = [
       },
       {
         id: 'aide-financiere',
-        question: "Existe-t-il une aide en cas de difficulté financière ?",
+        question: 'Existe-t-il une aide en cas de difficulté financière ?',
         answer:
           "Une solidarité entre participants est envisagée. Si le coût est un frein, contactez l'équipe d'organisation avant de renoncer à l'inscription.",
       },
@@ -73,7 +103,7 @@ export const faqCategories: FaqCategory[] = [
         id: 'venir-comment',
         question: 'Comment se rendre à Saint-Étienne ?',
         answer:
-          "Le Centre de Congrès est accessible depuis la gare de Saint-Étienne Châteaucreux et par les transports en commun locaux. Le détail des modalités de transport collectif sera précisé ultérieurement.",
+          'Le Centre de Congrès est accessible depuis la gare de Saint-Étienne Châteaucreux et par les transports en commun locaux. Le détail des modalités de transport collectif sera précisé ultérieurement.',
       },
     ],
   },
@@ -85,7 +115,7 @@ export const faqCategories: FaqCategory[] = [
         id: 'ou-dormir',
         question: 'Où seront hébergés les participants ?',
         answer:
-          "Les modalités d'hébergement ne sont pas encore confirmées. Elles seront communiquées avec les informations pratiques définitives.",
+          'Des familles peuvent proposer d’accueillir les jeunes. La coordination organise les affectations et confirme les modalités pratiques d’hébergement.',
       },
     ],
   },
@@ -155,7 +185,7 @@ export const faqCategories: FaqCategory[] = [
     items: [
       {
         id: 'documents-necessaires',
-        question: "Quels documents faut-il préparer ?",
+        question: 'Quels documents faut-il préparer ?',
         answer:
           "La liste précise des documents (autorisation parentale, fiche sanitaire, etc.) sera communiquée avec la confirmation d'inscription.",
       },
@@ -181,7 +211,7 @@ export const faqCategories: FaqCategory[] = [
         id: 'qui-contacter',
         question: 'Qui contacter en cas de question ?',
         answer:
-          "Rendez-vous sur la page Contact pour connaître les interlocuteurs dédiés aux familles, aux bénévoles et aux questions générales.",
+          'Rendez-vous sur la page Contact pour connaître les interlocuteurs dédiés aux familles, aux bénévoles et aux questions générales.',
       },
     ],
   },

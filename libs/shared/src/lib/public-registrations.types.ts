@@ -14,7 +14,7 @@ export type PublicParticipantSex = 'FEMALE' | 'MALE' | 'OTHER' | 'UNDISCLOSED';
 /** Miroir de apps/api MejAgeGroup (TA = Tranche Témoins Aujourd'hui, ES = tranche Equipe Espérance). */
 export type PublicMejAgeGroup = 'TA' | 'ES';
 
-/** Un jeune à inscrire, saisi soit directement, soit au sein d'une inscription famille. */
+/** Un jeune à inscrire au rassemblement. */
 export interface PublicParticipantEntry {
   firstName: string;
   lastName: string;
@@ -29,7 +29,7 @@ export interface PublicParticipantEntry {
   emergencyContactPhone?: string;
 }
 
-/** Coordonnées d'un parent/représentant légal, communes à tous les enfants d'une même inscription famille. */
+/** Coordonnées d'un parent/représentant légal, communes aux participants d'un même envoi. */
 export interface PublicParentContact {
   name: string;
   phone: string;
@@ -38,8 +38,8 @@ export interface PublicParentContact {
 
 /**
  * Corps de requête pour `POST /api/public/participant-registrations`.
- * Utilisé à la fois par `/inscription/jeunes` (1 seul élément dans `participants`,
- * sans `parentContact`) et `/inscription/familles` (N éléments + `parentContact`).
+ * Utilisé par `/inscription/jeunes`. L'API accepte également plusieurs participants
+ * avec un contact parental partagé.
  */
 export interface PublicParticipantRegistrationPayload {
   parentContact?: PublicParentContact;
@@ -48,7 +48,7 @@ export interface PublicParticipantRegistrationPayload {
   honeypot?: string;
 }
 
-/** Réponse de succès de l'inscription participants/famille. */
+/** Réponse de succès de l'inscription des participants. */
 export interface PublicParticipantRegistrationResult {
   createdCount: number;
   status: 'PENDING';
@@ -71,4 +71,26 @@ export interface PublicVolunteerApplicationPayload {
 /** Réponse de succès de la candidature bénévole. */
 export interface PublicVolunteerApplicationResult {
   status: 'PENDING';
+}
+
+/** Proposition d'accueil : POST /api/public/host-family-registrations. */
+export interface PublicHostFamilyRegistrationPayload {
+  familyName: string;
+  address: string;
+  postalCode: string;
+  city: string;
+  phone: string;
+  email: string;
+  /** Capacité totale, jeunes et animateurs compris. */
+  maxCapacity: number;
+  maxUnder18: number;
+  maxAnimators?: number;
+  parish?: string;
+  constraints?: string[];
+  notes?: string;
+  honeypot?: string;
+}
+
+export interface PublicHostFamilyRegistrationResult {
+  status: 'DRAFT';
 }

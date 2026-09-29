@@ -17,8 +17,8 @@ import { TuiPassword } from "@taiga-ui/kit";
       <p>Intranet des bénévoles</p>
       <form (submit)="onSubmit($event)">
         <tui-textfield>
-          <label tuiLabel>Email</label>
-          <input tuiInput type="email" autocomplete="username" [formField]="loginForm.email" />
+          <label tuiLabel for="email">Email</label>
+          <input tuiInput type="email" autocomplete="username" [formField]="loginForm.email" id="email" />
         </tui-textfield>
         <tui-error
           [error]="
@@ -28,12 +28,13 @@ import { TuiPassword } from "@taiga-ui/kit";
           "
         />
         <tui-textfield>
-          <label tuiLabel>Mot de passe</label>
+          <label tuiLabel for="password">Mot de passe</label>
           <input
             tuiInput
             type="password"
             autocomplete="current-password"
             [formField]="loginForm.password"
+            id="password"
           />
           <tui-icon tuiPassword />
         </tui-textfield>

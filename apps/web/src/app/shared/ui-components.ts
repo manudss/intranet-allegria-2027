@@ -1,6 +1,6 @@
 import { Component, input } from '@angular/core';
-import { TuiHeader, TuiMainComponent, TuiNavigation, TuiSubheaderComponent } from "@taiga-ui/layout";
-import { TuiGroup, TuiTitle } from "@taiga-ui/core";
+import { TuiNavigation } from "@taiga-ui/layout";
+import { TuiTitle } from "@taiga-ui/core";
 @Component({
   selector: 'app-page-layout',
   standalone: true,

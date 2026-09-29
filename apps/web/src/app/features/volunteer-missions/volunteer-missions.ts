@@ -26,6 +26,8 @@ import { DataTableColumn } from '../../shared/data-table';
 import { ALLEGRIA_2027_EVENT_DATES } from '../../shared/event-date-selector/event-date.config';
 import { EventDateSelectorComponent } from '../../shared/event-date-selector/event-date-selector.component';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
+import { TuiDataListWrapper, TuiSelect } from "@taiga-ui/kit";
+import { FormsModule } from "@angular/forms";
 
 const MISSION_STATUSES = Object.values(VolunteerMissionStatus);
 const SHIFT_STATUSES = Object.values(VolunteerShiftStatus);
@@ -60,7 +62,7 @@ const assignmentDraft = (): VolunteerShiftAssignmentPayload => ({
 @Component({
   selector: 'app-volunteer-missions',
   standalone: true,
-  imports: [...SHARED_IMPORTS, EventDateSelectorComponent],
+  imports: [...SHARED_IMPORTS, EventDateSelectorComponent, TuiDataListWrapper, TuiSelect, FormsModule],
   templateUrl: './volunteer-missions.html',
   styleUrls: ['../../shared/crud.scss', './volunteer-missions.scss'],
 })
@@ -160,13 +162,38 @@ export class VolunteerMissionsPage implements OnInit {
 
   readonly teamIds = computed(() => this.teams().map((team) => team.id));
 
-  stringifyTeam = (id: number): string => {
+  readonly teamFilterItems = computed(() => [null, ...this.teams().map((team) => team.id)]);
+  readonly missionStatusFilterItems = ['', ...this.missionStatuses];
+  readonly assignmentStatusFilterItems = ['', ...this.assignmentStatuses];
+  readonly skillFilterItems = ['', ...this.allSkills];
+
+  stringifyTeam = (id: number | null): string => {
+    if (id === null) {
+      return 'Mission transversale';
+    }
+
     const team = this.teams().find((item) => item.id === id);
     return team ? `${team.code} · ${team.name}` : 'Mission transversale';
   };
 
+  stringifyTeamFilter = (id: number | null): string => {
+    if (id === null) {
+      return 'Toutes';
+    }
+
+    return this.stringifyTeam(id);
+  };
+
   stringifyMissionStatus = (status: VolunteerMissionStatus): string =>
     this.missionStatusLabel(status);
+
+  stringifyMissionStatusFilter = (status: VolunteerMissionStatus | ''): string =>
+    status ? this.missionStatusLabel(status) : 'Tous';
+
+  stringifyAssignmentStatusFilter = (status: VolunteerShiftAssignmentStatus | ''): string =>
+    status ? this.assignmentStatusLabel(status) : 'Toutes';
+
+  stringifySkillFilter = (skill: VolunteerSkillType | ''): string => skill || 'Compétence';
 
   ngOnInit(): void {
     this.teamsApi.list().subscribe((teams) => this.teams.set(teams));

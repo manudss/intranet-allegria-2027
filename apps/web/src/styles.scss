@@ -7,6 +7,67 @@
   --allegria-bg-alt: #f7f7f9;
   --allegria-text: #222222;
   --allegria-muted: #777777;
+
+  /*
+  * Thème Taiga UI - Allegria
+  * Couleur principale : rose Allegria
+  * Couleur secondaire : orange Allegria
+  */
+
+  /* Backgrounds */
+  --tui-background-base: var(--allegria-bg);
+  --tui-background-base-alt: var(--allegria-bg-alt);
+  --tui-background-neutral-1: #fff4f7;
+  --tui-background-neutral-1-hover: #ffe8ef;
+  --tui-background-neutral-1-pressed: #ffd9e4;
+
+  /* Accent principal Taiga */
+  --tui-background-accent-1: var(--allegria-primary);
+  --tui-background-accent-1-hover: #bf294e;
+  --tui-background-accent-1-pressed: #aa2445;
+
+  /* Accent secondaire */
+  --tui-background-accent-2: var(--allegria-secondary);
+  --tui-background-accent-2-hover: #dd941f;
+  --tui-background-accent-2-pressed: #c7841c;
+
+  /* Texte */
+  --tui-text-primary: var(--allegria-text);
+  --tui-text-secondary: var(--allegria-muted);
+  --tui-text-tertiary: #9a9aa3;
+  --tui-text-action: var(--allegria-primary);
+  --tui-text-action-hover: #bf294e;
+  --tui-text-negative: #c62828;
+  --tui-text-positive: #2e7d32;
+
+  /* Texte sur couleurs accentuées */
+  --tui-text-primary-on-accent-1: var(--allegria-on-primary);
+  --tui-text-primary-on-accent-2: var(--allegria-on-secondary);
+
+  /* Bordures */
+  --tui-border-normal: #ececf1;
+  --tui-border-hover: #d52f5740;
+  --tui-border-focus: var(--allegria-primary);
+
+  /* Sélection, focus, états actifs */
+  --tui-service-selection-background: #d52f5720;
+  --tui-service-selection-background-hover: #d52f5730;
+  --tui-service-autofill-background: #f5a62320;
+
+  /* Statuts */
+  --tui-status-info: var(--allegria-primary);
+  --tui-status-info-pale: #d52f571a;
+  --tui-status-warning: var(--allegria-secondary);
+  --tui-status-warning-pale: #f5a62326;
+  --tui-status-positive: #2e7d32;
+  --tui-status-positive-pale: #2e7d321a;
+  --tui-status-negative: #c62828;
+  --tui-status-negative-pale: #c628281a;
+
+  /* Shadows */
+  --tui-shadow-small: 0 0.25rem 1rem rgba(213, 47, 87, 0.12);
+  --tui-shadow-medium: 0 0.5rem 2rem rgba(213, 47, 87, 0.16);
+  --tui-shadow-large: 0 1rem 3rem rgba(213, 47, 87, 0.2);
 }
 
 html,
@@ -37,4 +98,48 @@ body {
 .page p {
   margin: 0;
   color: var(--allegria-muted);
+}
+
+/*
+ * Ajustements globaux Taiga UI
+ */
+
+[tuiButton][appearance='primary'],
+[tuiButton][appearance='accent'] {
+  background: var(--allegria-primary);
+  color: var(--allegria-on-primary);
+}
+
+[tuiButton][appearance='primary']:hover,
+[tuiButton][appearance='accent']:hover {
+  background: #bf294e;
+}
+
+[tuiButton][appearance='secondary'],
+[tuiButton][appearance='flat'] {
+  color: var(--allegria-primary);
+}
+
+[tuiButton][appearance='secondary']:hover,
+[tuiButton][appearance='flat']:hover {
+  background: #d52f5714;
+}
+
+[tuiChip],
+[tuiBadge] {
+  --tui-background-accent-1: var(--allegria-primary);
+  --tui-background-accent-2: var(--allegria-secondary);
+}
+
+[tuiTabs] button[tuiTab][data-active='true'],
+[tuiTabs] button[tuiTab]._active {
+  color: var(--allegria-primary);
+}
+
+a {
+  color: var(--allegria-primary);
+}
+
+a:hover {
+  color: #bf294e;
 }

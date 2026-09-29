@@ -1,0 +1,445 @@
+<app-page-layout
+      title="Missions opérationnelles"
+      description="Pilotage des missions bénévoles et des créneaux associés."
+    >
+      @if (canWrite()) {
+        <button actions tuiButton (click)="openCreateMission()">Nouvelle mission</button>
+      }
+
+      <div class="filters">
+        <label>
+          <span>Équipe</span>
+          <select
+            [value]="filters().volunteerTeamId ?? ''"
+            (change)="setTeamFilter($any($event.target).value)"
+          >
+            <option value="">Toutes</option>
+            @for (team of teams(); track team.id) {
+              <option [value]="team.id">{{ team.code }} · {{ team.name }}</option>
+            }
+          </select>
+        </label>
+        <label>
+          <span>Lieu</span>
+          <input
+            [value]="filters().location"
+            placeholder="Gymnase, chapelle..."
+            (input)="setLocationFilter($any($event.target).value)"
+          />
+        </label>
+        <div class="date-filter">
+          <span>Date</span>
+          <app-event-date-selector
+            label="Date"
+            hint="Filtrer par date de preparation, de rassemblement ou de rangement."
+            [config]="eventDateConfig"
+            [value]="filters().date"
+            (valueChange)="setDateFilter($any($event))"
+          />
+        </div>
+        <label>
+          <span>Statut</span>
+          <select [value]="filters().status" (change)="setStatusFilter($any($event.target).value)">
+            <option value="">Tous</option>
+            @for (status of missionStatuses; track status) {
+              <option [value]="status">{{ missionStatusLabel(status) }}</option>
+            }
+          </select>
+        </label>
+      </div>
+
+      @if (loading()) {
+        <tui-loader />
+      } @else {
+        <app-data-table
+          [rows]="missions()"
+          [columns]="columns"
+          (rowSelected)="openMission($event)"
+        />
+      }
+    </app-page-layout>
+
+    @if (opened()) {
+      <tui-drawer direction="end">
+        <header>
+          <h2>
+            {{
+              drawerMode() === 'detail'
+                ? selectedMission()?.title
+                : drawerMode() === 'create'
+                  ? 'Nouvelle mission'
+                  : 'Modifier mission'
+            }}
+          </h2>
+        </header>
+
+        @if (drawerMode() === 'detail') {
+          <dl>
+            <dt>Statut</dt>
+            <dd>
+              <span
+                size="m"
+                tuiBadge
+                [appearance]="
+                  statusAppearance(selectedMission()?.status || VolunteerMissionStatus.DRAFT)
+                "
+                >{{
+                  missionStatusLabel(selectedMission()?.status || VolunteerMissionStatus.DRAFT)
+                }}</span
+              >
+            </dd>
+            <dt>Équipe</dt>
+            <dd>{{ selectedMission()?.volunteerTeam?.name || 'Mission transversale' }}</dd>
+            <dt>Lieu</dt>
+            <dd>{{ selectedMission()?.location || '—' }}</dd>
+            <dt>Optionnelle</dt>
+            <dd>{{ selectedMission()?.isOptional ? 'Oui' : 'Non' }}</dd>
+            <dt>Description</dt>
+            <dd>{{ selectedMission()?.description || '—' }}</dd>
+          </dl>
+
+          @if (canWrite()) {
+            <div class="status-actions">
+              @for (status of missionStatuses; track status) {
+                <button
+                  tuiButton
+                  size="s"
+                  type="button"
+                  [appearance]="status === selectedMission()?.status ? 'primary' : 'secondary'"
+                  [disabled]="status === selectedMission()?.status"
+                  (click)="changeMissionStatus(status)"
+                >
+                  {{ missionStatusLabel(status) }}
+                </button>
+              }
+            </div>
+          }
+
+          <section>
+            <h3>Shifts</h3>
+            @if (shiftsLoading()) {
+              <tui-loader />
+            } @else if (shifts().length === 0) {
+              <p>Aucun créneaux pour cette mission.</p>
+            } @else {
+              <ul class="shift-list">
+                @for (shift of shifts(); track shift.id) {
+                  <li>
+                    <div class="shift-head">
+                      <strong
+                        >{{ shift.startAt | date: 'shortTime' }} -
+                        {{ shift.endAt | date: 'shortTime' }}</strong
+                      >
+                      <span size="s" tuiBadge [appearance]="statusAppearance(shift.status)">{{
+                        shiftStatusLabel(shift.status)
+                      }}</span>
+                    </div>
+                    <p>
+                      {{ shift.location || selectedMission()?.location || 'Sans lieu' }} · Capacité
+                      {{ shift.capacity || '—' }}
+                    </p>
+                    <p>
+                      Affectés actifs : {{ shift.activeAssignmentsCount ?? 0 }} · Confirmés :
+                      {{ shift.confirmedAssignmentsCount ?? 0 }}
+                    </p>
+                    <small>{{ shift.notes || 'Aucune note' }}</small>
+                    <div class="shift-assignments">
+                      <label>
+                        <span>Filtrer affectations</span>
+                        <select
+                          [value]="assignmentStatusFilters()[shift.id] || ''"
+                          (change)="setAssignmentStatusFilter(shift.id, $any($event.target).value)"
+                        >
+                          <option value="">Toutes</option>
+                          @for (status of assignmentStatuses; track status) {
+                            <option [value]="status">{{ assignmentStatusLabel(status) }}</option>
+                          }
+                        </select>
+                      </label>
+                      @if (filteredAssignmentsForShift(shift).length === 0) {
+                        <p>Aucune affectation.</p>
+                      } @else {
+                        <ul>
+                          @for (
+                            assignment of filteredAssignmentsForShift(shift);
+                            track assignment.id
+                          ) {
+                            <li>
+                              <strong
+                                >{{ assignment.volunteer.lastName }}
+                                {{ assignment.volunteer.firstName }}</strong
+                              >
+                              <span
+                                size="s"
+                                tuiBadge
+                                [appearance]="statusAppearance(assignment.status)"
+                                >{{ assignmentStatusLabel(assignment.status) }}</span
+                              >
+                              <small> · par {{ assignment.assignedByUser.email }}</small>
+                              @if (canWrite()) {
+                                <select
+                                  [value]="assignment.status"
+                                  (change)="
+                                    changeAssignmentStatus(
+                                      shift,
+                                      assignment,
+                                      $any($event.target).value
+                                    )
+                                  "
+                                >
+                                  @for (status of assignmentStatuses; track status) {
+                                    <option [value]="status">
+                                      {{ assignmentStatusLabel(status) }}
+                                    </option>
+                                  }
+                                </select>
+                                <button
+                                  tuiButton
+                                  size="s"
+                                  appearance="secondary-destructive"
+                                  type="button"
+                                  (click)="cancelAssignment(shift, assignment)"
+                                >
+                                  Annuler
+                                </button>
+                              }
+                            </li>
+                          }
+                        </ul>
+                      }
+
+                      @if (canWrite()) {
+                        <div class="assign-search">
+                          <input
+                            placeholder="Recherche bénévole"
+                            [value]="assignmentSearchQuery()"
+                            (input)="assignmentSearchQuery.set($any($event.target).value)"
+                          />
+                          <select
+                            [value]="assignmentSearchSkill() || ''"
+                            (change)="assignmentSearchSkill.set($any($event.target).value || null)"
+                          >
+                            <option value="">Compétence</option>
+                            @for (skill of allSkills; track skill) {
+                              <option [value]="skill">{{ skill }}</option>
+                            }
+                          </select>
+                          <input
+                            placeholder="Tag"
+                            [value]="assignmentSearchTag()"
+                            (input)="assignmentSearchTag.set($any($event.target).value)"
+                          />
+                          <label class="check">
+                            <input
+                              type="checkbox"
+                              [checked]="assignmentSearchAvailableOnly()"
+                              (change)="
+                                assignmentSearchAvailableOnly.set($any($event.target).checked)
+                              "
+                            />
+                            Disponibles
+                          </label>
+                          <button
+                            tuiButton
+                            size="s"
+                            type="button"
+                            (click)="searchVolunteersForShift(shift)"
+                          >
+                            Rechercher
+                          </button>
+                        </div>
+                        @if (assignmentSearchResults()[shift.id]?.length) {
+                          <ul>
+                            @for (
+                              entry of assignmentSearchResults()[shift.id];
+                              track entry.volunteer.id
+                            ) {
+                              <li>
+                                {{ entry.volunteer.lastName }} {{ entry.volunteer.firstName }}
+                                @if (entry.hasOverlap) {
+                                  <small class="warning">Chevauchement détecté</small>
+                                }
+                                <button
+                                  tuiButton
+                                  size="s"
+                                  type="button"
+                                  (click)="
+                                    assignVolunteer(
+                                      shift,
+                                      entry.volunteer.id,
+                                      VolunteerShiftAssignmentStatus.PROVISIONAL
+                                    )
+                                  "
+                                >
+                                  Provisoire
+                                </button>
+                                <button
+                                  tuiButton
+                                  size="s"
+                                  type="button"
+                                  (click)="
+                                    assignVolunteer(
+                                      shift,
+                                      entry.volunteer.id,
+                                      VolunteerShiftAssignmentStatus.CONFIRMED
+                                    )
+                                  "
+                                >
+                                  Confirmée
+                                </button>
+                              </li>
+                            }
+                          </ul>
+                        }
+                      }
+                    </div>
+                    @if (canWrite()) {
+                      <div class="shift-actions">
+                        <button
+                          tuiButton
+                          size="s"
+                          appearance="secondary"
+                          type="button"
+                          (click)="startEditShift(shift)"
+                        >
+                          Modifier
+                        </button>
+                        <button
+                          tuiButton
+                          size="s"
+                          appearance="secondary-destructive"
+                          type="button"
+                          (click)="removeShift(shift.id)"
+                        >
+                          Supprimer
+                        </button>
+                        <select
+                          [value]="shift.status"
+                          (change)="changeShiftStatus(shift.id, $any($event.target).value)"
+                        >
+                          @for (status of shiftStatuses; track status) {
+                            <option [value]="status">{{ shiftStatusLabel(status) }}</option>
+                          }
+                        </select>
+                      </div>
+                    }
+                  </li>
+                }
+              </ul>
+            }
+
+            @if (canWrite()) {
+              <h4>{{ editingShiftId() ? 'Modifier un créneau' : 'Ajouter un créneau' }}</h4>
+              <form class="drawer-form">
+                <app-event-date-selector
+                  label="Début"
+                  hint="Date et heure de debut du créneau."
+                  [config]="eventDateConfig"
+                  mode="datetime-local"
+                  [formField]="shiftForm.startAt"
+                  id="debut-2"
+                />
+                <app-event-date-selector
+                  label="Fin"
+                  hint="Date et heure de fin du créneau."
+                  [config]="eventDateConfig"
+                  mode="datetime-local"
+                  [formField]="shiftForm.endAt"
+                  id="fin-2"
+                />
+                <tui-textfield iconStart="@tui.map-pin">
+                  <label for="lieu-2" tuiLabel>Lieu</label
+                  ><input tuiInput [formField]="$any(shiftForm.location)" id="lieu-2" />
+                </tui-textfield>
+                <tui-textfield iconStart="@tui.users">
+                  <label for="capacite-2" tuiLabel>Capacité</label
+                  ><input tuiInput type="number" [formField]="shiftForm.capacity" id="capacite-2" />
+                </tui-textfield>
+                <label class="check"
+                  ><input type="checkbox" [formField]="shiftForm.isOptional" /> Optionnel</label
+                >
+                <tui-textfield iconStart="@tui.file-text" class="wide">
+                  <label for="notes-2" tuiLabel>Notes</label
+                  ><textarea
+                    tuiTextarea
+                    [formField]="$any(shiftForm.notes)"
+                    id="notes-2"
+                  ></textarea>
+                </tui-textfield>
+              </form>
+              <div class="shift-form-actions">
+                <button tuiButton appearance="flat" type="button" (click)="resetShiftForm()">
+                  Réinitialiser
+                </button>
+                <button tuiButton type="button" (click)="saveShift()">
+                  {{ editingShiftId() ? 'Mettre à jour' : 'Ajouter' }}
+                </button>
+              </div>
+            }
+          </section>
+        } @else {
+          <form class="drawer-form">
+            <tui-textfield iconStart="@tui.briefcase">
+              <label for="titre-2" tuiLabel>Titre</label
+              ><input tuiInput [formField]="missionForm.title" id="titre-2" />
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.map-pin">
+              <label for="lieu-3" tuiLabel>Lieu</label
+              ><input tuiInput [formField]="missionForm.location" id="lieu-3" />
+            </tui-textfield>
+            <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyTeam">
+              <label for="equipe-operationnelle" tuiLabel>Équipe opérationnelle</label
+              ><select
+                tuiSelect
+                [items]="teamIds()"
+                [formField]="missionForm.volunteerTeamId"
+                id="equipe-operationnelle"
+              ></select>
+            </tui-textfield>
+            <tui-textfield
+              iconStart="@tui.activity"
+              tuiChevron
+              [stringify]="stringifyMissionStatus"
+            >
+              <label for="statut-2" tuiLabel>Statut</label
+              ><select
+                tuiSelect
+                [items]="missionStatuses"
+                [formField]="missionForm.status"
+                id="statut-2"
+              ></select>
+            </tui-textfield>
+            <label class="check"
+              ><input type="checkbox" [formField]="missionForm.isOptional" /> Optionnelle</label
+            >
+            <tui-textfield iconStart="@tui.file-text" class="wide">
+              <label for="description-2" tuiLabel>Description</label
+              ><textarea
+                tuiTextarea
+                [formField]="$any(missionForm.description)"
+                id="description-2"
+              ></textarea>
+            </tui-textfield>
+          </form>
+        }
+
+        <footer>
+          <button tuiButton appearance="flat" type="button" (click)="opened.set(false)">
+            Fermer
+          </button>
+          @if (drawerMode() === 'detail' && canWrite()) {
+            <button tuiButton type="button" (click)="openEditMission()">Modifier</button>
+            <button
+              tuiButton
+              appearance="secondary-destructive"
+              type="button"
+              (click)="removeMission()"
+            >
+              Supprimer
+            </button>
+          } @else if (drawerMode() !== 'detail') {
+            <button tuiButton type="button" (click)="saveMission()">Enregistrer</button>
+          }
+        </footer>
+      </tui-drawer>
+    }

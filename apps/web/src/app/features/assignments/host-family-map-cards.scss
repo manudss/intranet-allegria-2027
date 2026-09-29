@@ -1,0 +1,48 @@
+.cards {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+}
+.family-card {
+  display: grid;
+  gap: 0.35rem;
+  text-align: start;
+  border: 1px solid var(--tui-border-normal);
+  background: var(--tui-background-base);
+  border-radius: 0.9rem;
+  padding: 0.8rem 0.9rem;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+.family-card:hover {
+  box-shadow: var(--tui-shadow-small);
+  transform: translateY(-1px);
+}
+.family-card--active {
+  border-color: var(--tui-status-info);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tui-status-info) 20%, transparent);
+}
+.family-card > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.meta {
+  margin: 0;
+  color: var(--tui-text-secondary);
+  font-size: 0.875rem;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+}
+.empty {
+  margin: 0.2rem 0;
+  color: var(--tui-text-secondary);
+}

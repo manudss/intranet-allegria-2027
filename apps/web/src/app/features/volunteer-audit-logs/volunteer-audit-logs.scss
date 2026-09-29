@@ -1,0 +1,28 @@
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  align-items: end;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 180px;
+}
+.wide {
+  min-width: 260px;
+}
+.input {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--tui-border-normal, #ccc);
+  border-radius: 4px;
+}
+.pager {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  align-items: center;
+}

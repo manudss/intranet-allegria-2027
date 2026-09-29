@@ -1,0 +1,111 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+.table-tools {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  margin-block-end: 0.75rem;
+}
+details {
+  position: relative;
+}
+summary {
+  color: var(--tui-text-secondary);
+  cursor: pointer;
+}
+tui-reorder {
+  position: absolute;
+  z-index: 5;
+  inset-inline-end: 0;
+  inline-size: 15rem;
+  padding: 0.75rem;
+  border: 1px solid var(--tui-border-normal);
+  border-radius: 0.75rem;
+  background: var(--tui-background-base);
+  box-shadow: var(--tui-shadow-medium);
+}
+.table-scroll {
+  inline-size: 100%;
+  max-inline-size: 100%;
+  max-block-size: calc(100vh - 17rem);
+  min-block-size: 24rem;
+  overflow: auto;
+  border-radius: 0.75rem;
+}
+table {
+  inline-size: 100%;
+}
+[tuiTh] {
+  z-index: 2;
+  background: var(--tui-background-base);
+}
+[tuiTh] > span {
+  display: block;
+  margin-block-end: 0.375rem;
+}
+.column-filter {
+  min-inline-size: 9rem;
+  font-weight: normal;
+}
+.range-filter {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, 1fr) minmax(5.5rem, 1fr);
+  gap: 0.25rem;
+}
+.option-search {
+  margin: 0.25rem;
+}
+.empty-options {
+  padding: 0.75rem;
+  margin: 0;
+  color: var(--tui-text-secondary);
+  text-align: center;
+}
+.person-cell,
+.icon-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+.cell-copy {
+  display: flex;
+  min-inline-size: 0;
+  flex-direction: column;
+}
+.cell-copy small {
+  overflow: hidden;
+  color: var(--tui-text-secondary);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+}
+.icon-cell tui-icon {
+  flex: 0 0 auto;
+}
+.data-value {
+  font-variant-numeric: tabular-nums;
+}
+.number-value {
+  display: block;
+  text-align: end;
+}
+.cell-link {
+  color: inherit;
+  text-decoration: none;
+}
+.row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+tr[tabindex] {
+  cursor: pointer;
+}
+tr[tabindex]:hover td,
+tr[tabindex]:focus-visible td {
+  background: var(--tui-background-neutral-1-hover);
+}

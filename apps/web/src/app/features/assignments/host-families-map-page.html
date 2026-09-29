@@ -1,0 +1,133 @@
+<app-page-layout
+  title="Hébergement - Carte & cards"
+  description="Carte interactive des familles d'accueil avec capacites et disponibilites"
+>
+  <a actions tuiButton routerLink="/hebergement" appearance="secondary" type="button">
+    ← Retour hébergement
+  </a>
+  <button
+    actions
+    tuiButton
+    type="button"
+    class="mobile-list-button"
+    (click)="mobileCardsOpened.set(true)"
+  >
+    Liste des familles
+  </button>
+
+  <section class="host-family-map-page">
+    <form [formGroup]="filters" class="filters">
+      <div class="filter-block">
+        <strong>Secteurs</strong>
+        <div class="chip-group">
+          @for (sector of sectors; track sector) {
+            <button
+              type="button"
+              size="s"
+              tuiChip
+              [appearance]="isSectorSelected(sector) ? 'primary' : 'neutral'"
+              (click)="toggleSector(sector)"
+            >
+              {{ sector }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="filter-grid">
+        <tui-textfield tuiChevron>
+          <label for="statut-2" tuiLabel>Statut</label
+          ><input tuiSelect formControlName="statusLabel" aria-label="Statut" id="statut-2" />
+          <tui-data-list-wrapper *tuiDropdown [items]="statusLabelOptions" />
+        </tui-textfield>
+        <tui-textfield tuiChevron>
+          <label for="capacite-2" tuiLabel>Capacite</label
+          ><input
+            tuiSelect
+            formControlName="capacityLabel"
+            aria-label="Etat de capacite"
+            id="capacite-2"
+          />
+          <tui-data-list-wrapper *tuiDropdown [items]="capacityLabelOptions" />
+        </tui-textfield>
+        <tui-textfield tuiChevron>
+          <label for="animateurs-2" tuiLabel>Animateurs</label
+          ><input
+            tuiSelect
+            formControlName="animatorLabel"
+            aria-label="Presence animateurs"
+            id="animateurs-2"
+          />
+          <tui-data-list-wrapper *tuiDropdown [items]="animatorLabelOptions" />
+        </tui-textfield>
+        <tui-textfield iconStart="@tui.map-pin">
+          <label for="distance-max-km" tuiLabel>Distance max (km)</label
+          ><input
+            tuiInput
+            type="number"
+            min="0"
+            formControlName="maxDistanceKm"
+            placeholder="Illimite"
+            aria-label="Distance max en kilometres"
+            id="distance-max-km"
+          />
+        </tui-textfield>
+        <tui-textfield iconStart="@tui.search" class="search-field">
+          <label for="recherche-2" tuiLabel>Recherche</label
+          ><input
+            tuiInput
+            formControlName="search"
+            placeholder="Famille, ville, paroisse..."
+            aria-label="Recherche libre"
+            id="recherche-2"
+          />
+        </tui-textfield>
+      </div>
+
+      <div class="sector-summary">
+        @for (summary of sectorSummary(); track summary.sector) {
+          <span size="s" tuiChip>
+            {{ summary.sector }} ({{ summary.families }} familles,
+            {{ summary.available }} places)
+          </span>
+        }
+      </div>
+    </form>
+
+    <div class="map-and-cards">
+      <section class="map-surface">
+        <div
+          class="map-canvas"
+          leaflet
+          [leafletOptions]="mapOptions"
+          [leafletMarkerCluster]="markerClusterData()"
+          [leafletMarkerClusterOptions]="markerClusterOptions"
+          (leafletMapReady)="onMapReady($event)"
+        ></div>
+      </section>
+      <aside class="cards-pane">
+        <app-host-family-map-cards
+          [families]="filteredFamilies()"
+          [selectedFamilyId]="selectedFamilyId()"
+          (selectFamily)="onCardSelected($event)"
+        />
+      </aside>
+    </div>
+  </section>
+</app-page-layout>
+
+@if (mobileCardsOpened()) {
+  <tui-drawer direction="end" [overlay]="true">
+    <header class="mobile-drawer-header">
+      <h2>Familles d'accueil</h2>
+      <button tuiButton appearance="flat" type="button" (click)="mobileCardsOpened.set(false)">
+        Fermer
+      </button>
+    </header>
+    <app-host-family-map-cards
+      [families]="filteredFamilies()"
+      [selectedFamilyId]="selectedFamilyId()"
+      (selectFamily)="onCardSelected($event); mobileCardsOpened.set(false)"
+    />
+  </tui-drawer>
+}

@@ -1,0 +1,48 @@
+
+:host {
+  display: block;
+}
+
+.event-date-selector {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.field-label {
+  font-weight: 600;
+}
+
+.field-hint {
+  margin: 0;
+  color: var(--tui-text-secondary);
+  font-size: 0.875rem;
+}
+
+.field-control {
+  min-block-size: 2.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--tui-border-normal);
+  padding-inline: 0.75rem;
+  background: var(--tui-background-base);
+}
+
+.field-control[aria-invalid='true'] {
+  border-color: var(--tui-status-negative);
+}
+
+.other-date-panel {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.other-date-label {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--tui-text-secondary);
+}
+
+.field-error {
+  margin: 0;
+  color: var(--tui-status-negative);
+  font-size: 0.875rem;
+}

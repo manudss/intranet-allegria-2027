@@ -1,9 +1,9 @@
 {
   "name": "site",
-  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
   "prefix": "app",
-  "sourceRoot": "site/src",
+  "sourceRoot": "apps/site/src",
   "tags": [],
   "targets": {
     "build": {
@@ -11,20 +11,20 @@
       "outputs": ["{options.outputPath}"],
       "defaultConfiguration": "production",
       "options": {
-        "outputPath": "dist/site",
-        "browser": "site/src/main.ts",
-        "tsConfig": "site/tsconfig.app.json",
+        "outputPath": "dist/apps/site",
+        "browser": "apps/site/src/main.ts",
+        "tsConfig": "apps/site/tsconfig.app.json",
         "inlineStyleLanguage": "scss",
         "assets": [
           {
             "glob": "**/*",
-            "input": "site/public"
+            "input": "apps/site/public"
           }
         ],
-        "styles": ["site/src/styles.scss"],
-        "server": "site/src/main.server.ts",
+        "styles": ["apps/site/src/styles.scss"],
+        "server": "apps/site/src/main.server.ts",
         "ssr": {
-          "entry": "site/src/server.ts"
+          "entry": "apps/site/src/server.ts"
         },
         "outputMode": "server"
       },
@@ -61,7 +61,7 @@
         },
         "development": {
           "buildTarget": "site:build:development",
-          "proxyConfig": "site/proxy.conf.json",
+          "proxyConfig": "apps/site/proxy.conf.json",
           "port": 4300
         }
       }
@@ -90,7 +90,7 @@
       "executor": "@nx/web:file-server",
       "options": {
         "buildTarget": "site:build",
-        "staticFilePath": "dist/site/browser",
+        "staticFilePath": "dist/apps/site/browser",
         "spa": true
       }
     }

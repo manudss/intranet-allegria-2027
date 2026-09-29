@@ -37,7 +37,7 @@ const SHIFT_NEXT_STATUSES: Partial<Record<VolunteerShiftStatus, VolunteerShiftSt
   imports: [...SHARED_IMPORTS],
   template: `<app-page-layout
     title="Suivi opérationnel"
-    description="Synthèse des missions et shifts par statut"
+    description="Synthèse des missions et créneaux par statut"
   >
     @if (countersLoading()) {
       <tui-loader />
@@ -152,7 +152,7 @@ const SHIFT_NEXT_STATUSES: Partial<Record<VolunteerShiftStatus, VolunteerShiftSt
       </section>
     }
 
-    <!-- Vue détail shifts -->
+
     @if (currentView() === 'shifts' && currentStatus()) {
       <section class="details-section">
         <div class="details-header">
@@ -191,7 +191,7 @@ const SHIFT_NEXT_STATUSES: Partial<Record<VolunteerShiftStatus, VolunteerShiftSt
         @if (detailsLoading()) {
           <tui-loader />
         } @else if (filteredShifts().length === 0) {
-          <p class="empty">Aucun shift à afficher.</p>
+          <p class="empty">Aucun créneaux à afficher.</p>
         } @else {
           <ul class="detail-list">
             @for (shift of filteredShifts(); track shift.id) {

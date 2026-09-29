@@ -63,7 +63,7 @@ const assignmentDraft = (): VolunteerShiftAssignmentPayload => ({
   imports: [...SHARED_IMPORTS, EventDateSelectorComponent],
   template: `<app-page-layout
       title="Missions opérationnelles"
-      description="Pilotage des missions bénévoles et des shifts"
+      description="Pilotage des missions bénévoles et des créneaux associés."
     >
       @if (canWrite()) {
         <button actions tuiButton (click)="openCreateMission()">Nouvelle mission</button>
@@ -183,7 +183,7 @@ const assignmentDraft = (): VolunteerShiftAssignmentPayload => ({
             @if (shiftsLoading()) {
               <tui-loader />
             } @else if (shifts().length === 0) {
-              <p>Aucun shift pour cette mission.</p>
+              <p>Aucun créneaux pour cette mission.</p>
             } @else {
               <ul class="shift-list">
                 @for (shift of shifts(); track shift.id) {
@@ -392,11 +392,11 @@ const assignmentDraft = (): VolunteerShiftAssignmentPayload => ({
             }
 
             @if (canWrite()) {
-              <h4>{{ editingShiftId() ? 'Modifier un shift' : 'Ajouter un shift' }}</h4>
+              <h4>{{ editingShiftId() ? 'Modifier un créneau' : 'Ajouter un créneau' }}</h4>
               <form class="drawer-form">
                 <app-event-date-selector
                   label="Début"
-                  hint="Date et heure de debut du shift."
+                  hint="Date et heure de debut du créneau."
                   [config]="eventDateConfig"
                   mode="datetime-local"
                   [formField]="shiftForm.startAt"
@@ -404,7 +404,7 @@ const assignmentDraft = (): VolunteerShiftAssignmentPayload => ({
                 />
                 <app-event-date-selector
                   label="Fin"
-                  hint="Date et heure de fin du shift."
+                  hint="Date et heure de fin du créneau."
                   [config]="eventDateConfig"
                   mode="datetime-local"
                   [formField]="shiftForm.endAt"

@@ -109,12 +109,12 @@ export class JourJ implements OnInit, OnDestroy {
     if (!g) return [];
     const list: { type: 'warning' | 'danger'; message: string }[] = [];
     if (g.understaffedShifts > 0) {
-      list.push({ type: 'danger', message: `${g.understaffedShifts} shift(s) sous-doté(s)` });
+      list.push({ type: 'danger', message: `${g.understaffedShifts} créneau(x) sous-doté(s)` });
     }
     if (g.shiftsWithoutConfirmedAssignment > 0) {
       list.push({
         type: 'warning',
-        message: `${g.shiftsWithoutConfirmedAssignment} shift(s) sans effectif confirmé`,
+        message: `${g.shiftsWithoutConfirmedAssignment} créneau(x) sans effectif confirmé`,
       });
     }
     if (g.provisionalVolunteers > 0) {

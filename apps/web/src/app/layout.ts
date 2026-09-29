@@ -9,9 +9,12 @@ import {
   RouterLinkActive,
   RouterOutlet,
 } from '@angular/router';
-import { TuiButton, TuiIcon, TuiLink, TuiScrollbar } from '@taiga-ui/core';
+import { TuiButton, TuiIcon } from '@taiga-ui/core';
 import { filter, map, startWith } from 'rxjs';
 import { AuthService } from './core/auth.service';
+import { TuiNavigation } from '@taiga-ui/layout';
+import { NgTemplateOutlet } from "@angular/common";
+import { TuiAvatar, TuiChevron, TuiFade } from "@taiga-ui/kit";
 
 type MenuItem = {
   label: string;
@@ -21,13 +24,25 @@ type MenuItem = {
 
 type MenuGroup = {
   label: string;
+  icon: string;
   items: MenuItem[];
 };
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, RouterOutlet, TuiButton, TuiIcon, TuiLink, TuiScrollbar],
+  imports: [
+    NgTemplateOutlet,
+    RouterLink,
+    RouterLinkActive,
+    RouterOutlet,
+    TuiButton,
+    TuiIcon,
+    TuiNavigation,
+    TuiChevron,
+    TuiFade,
+    TuiAvatar,
+  ],
   templateUrl: './layout.html',
   styleUrl: './layout.scss',
 })
@@ -44,16 +59,14 @@ export class Layout {
     ),
     { initialValue: 'Accueil' },
   );
-  protected readonly isCompactMenu = signal(false);
-  protected readonly isMenuExpandedByInteraction = signal(false);
+
+  protected readonly expanded = signal(true);
   protected readonly isMobileMenuOpen = signal(false);
-  protected readonly isMenuVisuallyCompact = computed(
-    () => this.isCompactMenu() && !this.isMenuExpandedByInteraction(),
-  );
 
   protected readonly navGroups: MenuGroup[] = [
     {
       label: 'Vue generale',
+      icon: '@tui.layout-dashboard',
       items: [
         { label: 'Accueil', path: '/accueil', icon: '@tui.house' },
         { label: 'Rassemblement', path: '/rassemblement', icon: '@tui.calendar' },
@@ -61,6 +74,7 @@ export class Layout {
     },
     {
       label: 'Inscriptions & personnes',
+      icon: '@tui.users',
       items: [
         { label: 'Participants', path: '/participants', icon: '@tui.users' },
         { label: 'Équipes participants', path: '/equipes', icon: '@tui.users-round' },
@@ -70,6 +84,7 @@ export class Layout {
     },
     {
       label: 'Organisation & logistique',
+      icon: '@tui.briefcase-business',
       items: [
         { label: 'Équipes opérationnelles', path: '/equipes-operationnelles', icon: '@tui.users' },
         { label: 'Missions bénévoles', path: '/missions-benevoles', icon: '@tui.clipboard-list' },
@@ -79,6 +94,7 @@ export class Layout {
     },
     {
       label: 'Jour J & pilotage',
+      icon: '@tui.activity',
       items: [
         { label: 'Tableau de bord Jour J', path: '/jour-j', icon: '@tui.activity' },
         { label: 'Incidents & demandes', path: '/incidents', icon: '@tui.triangle-alert' },
@@ -87,6 +103,7 @@ export class Layout {
     },
     {
       label: 'Administration',
+      icon: '@tui.settings',
       items: [
         { label: 'Paramètres & rôles', path: '/parametres-roles', icon: '@tui.settings' },
         { label: 'Journal bénévoles', path: '/journal-benevoles', icon: '@tui.file-text' },
@@ -104,14 +121,12 @@ export class Layout {
       const currentPageTitle = this.currentPageTitle();
 
       this.titleService.setTitle(`Allegria 2027 - ${currentPageTitle}`);
-      this.isMenuExpandedByInteraction.set(false);
       this.isMobileMenuOpen.set(false);
     });
   }
 
-  protected toggleCompactMenu(): void {
-    this.isCompactMenu.update((value) => !value);
-    this.isMenuExpandedByInteraction.set(false);
+  protected handleToggle(): void {
+    this.expanded.update((value) => !value);
   }
 
   protected toggleMobileMenu(): void {
@@ -123,33 +138,7 @@ export class Layout {
   }
 
   protected onMenuItemSelect(): void {
-    this.isMenuExpandedByInteraction.set(false);
     this.closeMobileMenu();
-  }
-
-  protected onMenuMouseEnter(): void {
-    if (this.isCompactMenu()) {
-      this.isMenuExpandedByInteraction.set(true);
-    }
-  }
-
-  protected onMenuMouseLeave(): void {
-    this.isMenuExpandedByInteraction.set(false);
-  }
-
-  protected onMenuFocusIn(): void {
-    if (this.isCompactMenu()) {
-      this.isMenuExpandedByInteraction.set(true);
-    }
-  }
-
-  protected onMenuFocusOut(event: FocusEvent): void {
-    const sidebar = event.currentTarget as HTMLElement | null;
-    const nextFocused = event.relatedTarget as Node | null;
-
-    if (!sidebar || !nextFocused || !sidebar.contains(nextFocused)) {
-      this.isMenuExpandedByInteraction.set(false);
-    }
   }
 
   private getRouteTitle(): string {

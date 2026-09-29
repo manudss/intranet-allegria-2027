@@ -1,6 +1,6 @@
 <div class="allegria-shell">
-  <header class="allegria-header">
-    <div class="header-left">
+  <header tuiNavigationHeader class="allegria-header">
+    <div tuiNavigationLogo class="header-left">
       <button
         tuiIconButton
         type="button"
@@ -13,15 +13,15 @@
         <tui-icon [icon]="isMobileMenuOpen() ? '@tui.x' : '@tui.menu'"></tui-icon>
       </button>
       <img src="assets/logo-allegria.svg" alt="Allegria 2027" class="logo" />
-      <div class="header-titles">
-        <span class="header-title">Allegria 2027 - Intranet benevoles</span>
+      <div class="header-titles" >
+        <span class="header-title" tuiFade>Allegria 2027 - Intranet benevoles</span>
         <h1 class="page-title">{{ currentPageTitle() }}</h1>
       </div>
     </div>
 
     <div class="header-right">
       <button tuiButton appearance="secondary" type="button">
-        <tui-icon icon="@tui.user"></tui-icon>
+        <div tuiAvatar="@tui.user"></div>
         <span>{{ auth.currentUser()?.email ?? 'Utilisateur' }}</span>
       </button>
       <button tuiButton appearance="primary" type="button" (click)="logout()">Deconnexion</button>
@@ -37,59 +37,73 @@
   ></button>
   }
 
-  <div class="allegria-body" [class.overlay-menu]="isCompactMenu()">
+  <div class="allegria-body">
     <aside
       id="main-navigation"
       class="allegria-sidebar"
-      [class.compact]="isMenuVisuallyCompact()"
+      [tuiNavigationAside]="expanded()"
       [class.mobile-open]="isMobileMenuOpen()"
     >
-      <tui-scrollbar>
-        <nav
-          aria-label="Navigation principale"
-          class="allegria-nav"
-          (mouseenter)="onMenuMouseEnter()"
-          (mouseleave)="onMenuMouseLeave()"
-          (focusin)="onMenuFocusIn()"
-          (focusout)="onMenuFocusOut($event)"
-        >
-          @for (group of navGroups; track group.label) {
-          <section class="nav-group">
-            <h3>{{ group.label }}</h3>
+      <header>
+        <button iconStart="@tui.home" type="button" [tuiAsideItem]="homeHint">
+          <ng-container [ngTemplateOutlet]="homeHint" />
 
+          <ng-template #homeHint>
+            <span tuiFade>Allegria 2027</span>
+            <div appearance="accent" tuiBadge>Intranet</div>
+          </ng-template>
+        </button>
+      </header>
+
+          @for (group of navGroups; track group.label) {
+      <tui-aside-group>
+        <button
+          tuiAsideItem
+          tuiChevron
+          type="button"
+          [iconStart]="group.icon"
+        >
+          {{ group.label }}
+
+          <ng-template>
             @for (item of group.items; track item.path) {
             <a
-              tuiLink
+              tuiAsideItem
+              [iconStart]="item.icon"
               [routerLink]="item.path"
-              [title]="isMenuVisuallyCompact() ? item.label : ''"
               routerLinkActive="active"
               [routerLinkActiveOptions]="{ exact: true }"
               (click)="onMenuItemSelect()"
             >
-              <tui-icon [icon]="item.icon"></tui-icon>
-              <span class="item-label">{{ item.label }}</span>
+              {{ item.label }}
             </a>
             }
-          </section>
+          </ng-template>
+        </button>
+      </tui-aside-group>
           }
-        </nav>
-      </tui-scrollbar>
 
+      <hr />
+
+      <footer>
       <button
-        tuiButton
-        appearance="flat"
-        type="button"
-        class="sidebar-compact-toggle"
-        [attr.aria-pressed]="isCompactMenu()"
-        (click)="toggleCompactMenu()"
-      >
-        <tui-icon
-          [icon]="isCompactMenu() ? '@tui.panel-left-open' : '@tui.panel-left-close'"
-        ></tui-icon>
-        <span class="toggle-label"
-          >{{ isCompactMenu() ? 'Passer en menu large' : 'Passer en menu compact' }}</span
+          tuiAsideItem
+          type="button"
+          iconStart="@tui.log-out"
+          (click)="logout()"
         >
+          Déconnexion
+        </button>
+
+        <button
+          tuiAsideItem
+        type="button"
+          [iconStart]="expanded() ? '@tui.chevron-left' : '@tui.chevron-right'"
+          (click)="handleToggle()"
+      >
+          {{ expanded() ? 'Réduire' : 'Étendre' }}
       </button>
+      </footer>
     </aside>
 
     <main class="allegria-content">

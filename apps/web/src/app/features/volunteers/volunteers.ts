@@ -254,7 +254,7 @@ const blankMembership = () => ({
               </select>
             </label>
             @if (volunteerPlanning().length === 0) {
-              <p>Aucune affectation de shift.</p>
+              <p>Aucune affectation de créneau.</p>
             } @else {
               <ul class="membership-list">
                 @for (assignment of volunteerPlanning(); track assignment.id) {

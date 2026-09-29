@@ -17,9 +17,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.75rem 1.25rem;
-  border-bottom: 1px solid #e5e5ea;
-  background: var(--allegria-bg);
+  min-height: 3.5rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 0;
+  background: var(--allegria-primary);
+  color: #ffffff;
+  box-shadow: 0 0.25rem 1rem rgba(34, 34, 34, 0.12);
 }
 
 .header-left,
@@ -43,18 +46,32 @@
 
 .header-title {
   font-weight: 700;
-  color: var(--allegria-primary);
+  color: var(--allegria-on-primary);
 }
 
 .page-title {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
-  color: var(--allegria-text);
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.header-right button[tuiButton] {
+  color: var(--allegria-on-primary);
+}
+
+.header-right button[tuiButton][appearance='secondary'] {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.header-right button[tuiButton][appearance='primary'] {
+  background: #ffffff;
+  color: var(--allegria-primary);
 }
 
 .mobile-menu-btn {
   display: none;
+  color: var(--allegria-on-primary);
 }
 
 .compact-toggle-btn {
@@ -64,180 +81,74 @@
 .allegria-body {
   position: relative;
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  min-height: calc(100vh - 73px);
-}
-
-.allegria-body.overlay-menu {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.allegria-body.overlay-menu .allegria-content {
-  margin-left: 72px;
-  transition: margin-left 0.24s ease;
-}
-
-.allegria-body.overlay-menu .allegria-sidebar {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 15;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
-}
-
-.allegria-body.overlay-menu .allegria-sidebar.compact {
-  width: 72px;
-  box-shadow: none;
-}
-
-.allegria-body.overlay-menu .allegria-sidebar:not(.compact) {
-  width: 280px;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-height: calc(100vh - 3.5rem);
+  background: var(--allegria-bg);
 }
 
 .allegria-sidebar {
   display: flex;
   flex-direction: column;
-  width: 280px;
   overflow: hidden;
-  border-right: 1px solid #ececf1;
-  background: var(--allegria-bg-alt);
-  transition:
-    width 0.24s ease,
-    box-shadow 0.24s ease;
+  border-right: 0;
+  background: var(--allegria-primary);
+  color: var(--allegria-on-primary);
+  box-shadow: 0.25rem 0 1rem rgba(34, 34, 34, 0.1);
 }
 
-.allegria-sidebar.compact {
-  width: 72px;
-}
-
-.allegria-nav {
+.allegria-sidebar header,
+.allegria-sidebar footer {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1rem;
+  gap: 0.25rem;
 }
 
-.allegria-sidebar tui-scrollbar {
-  flex: 1;
-  min-height: 0;
+.allegria-sidebar header {
+  padding-top: 0.5rem;
 }
 
-.sidebar-compact-toggle {
-  justify-content: flex-start;
-  gap: 0.5rem;
-  margin: 0.75rem;
+.allegria-sidebar footer {
+  margin-top: auto;
+  padding-bottom: 0.5rem;
 }
 
-.toggle-label {
-  white-space: nowrap;
-  overflow: hidden;
-  opacity: 1;
-  max-width: 18rem;
-  transform: translateX(0);
-  transition:
-    opacity 0.18s ease,
-    transform 0.18s ease,
-    max-width 0.18s ease;
+.allegria-sidebar hr {
+  width: calc(100% - 1rem);
+  margin: 0.5rem auto;
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
 }
 
-.nav-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
+.allegria-sidebar [tuiAsideItem] {
+  color: rgba(255, 255, 255, 0.9);
 }
 
-.nav-group h3 {
-  margin: 0 0 0.35rem;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--allegria-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  opacity: 1;
-  max-height: 2rem;
-  transform: translateX(0);
-  transition:
-    opacity 0.18s ease,
-    transform 0.18s ease,
-    max-height 0.18s ease,
-    margin 0.18s ease;
+.allegria-sidebar [tuiAsideItem]:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--allegria-on-primary);
 }
 
-.allegria-sidebar a[tuiLink] {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  border-left: 3px solid transparent;
-  padding: 0.35rem 0.5rem;
-  color: var(--allegria-text);
-  text-decoration: none;
+.allegria-sidebar a[tuiAsideItem].active {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--allegria-on-primary);
+  font-weight: 700;
 }
 
-.item-label {
-  white-space: nowrap;
-  overflow: hidden;
-  opacity: 1;
-  max-width: 16rem;
-  transform: translateX(0);
-  transition:
-    opacity 0.18s ease,
-    transform 0.18s ease,
-    max-width 0.18s ease;
-}
-
-.allegria-sidebar.compact .allegria-nav {
-  padding: 1rem 0.5rem;
-}
-
-.allegria-sidebar.compact .sidebar-compact-toggle {
-  justify-content: center;
-}
-
-.allegria-sidebar.compact .toggle-label,
-.allegria-sidebar.compact .nav-group h3,
-.allegria-sidebar.compact .item-label {
-  opacity: 0;
-  transform: translateX(-8px);
-  pointer-events: none;
-}
-
-.allegria-sidebar.compact .toggle-label,
-.allegria-sidebar.compact .item-label {
-  max-width: 0;
-}
-
-.allegria-sidebar.compact .nav-group h3 {
-  max-height: 0;
-  margin: 0;
-}
-
-.allegria-sidebar.compact .nav-group {
-  align-items: center;
-}
-
-.allegria-sidebar.compact a[tuiLink] {
-  justify-content: center;
-  width: 100%;
-}
-
-.allegria-sidebar a[tuiLink].active {
-  border-left-color: var(--allegria-primary);
-  color: var(--allegria-primary);
-  background: #fff5f8;
-  font-weight: 600;
+.allegria-sidebar tui-icon {
+  color: currentColor;
 }
 
 .allegria-content {
   min-width: 0;
   padding: 1.5rem;
-  background: var(--allegria-bg);
+  background:
+    radial-gradient(circle at top left, rgba(213, 47, 87, 0.08), transparent 22rem),
+    var(--allegria-bg);
 }
 
 .mobile-overlay {
   position: fixed;
-  inset: 73px 0 0;
+  inset: 3.5rem 0 0;
   z-index: 20;
   border: 0;
   padding: 0;
@@ -258,52 +169,21 @@
     grid-template-columns: 1fr;
   }
 
-  .allegria-body.overlay-menu .allegria-content {
-    margin-left: 0;
-  }
-
   .allegria-sidebar {
     position: fixed;
-    top: 73px;
+    top: 3.5rem;
     left: -100%;
     width: min(88vw, 320px);
-    height: calc(100vh - 73px);
-    border-right: 1px solid #ececf1;
+    height: calc(100vh - 3.5rem);
+    border-right: 0;
     border-bottom: 0;
     z-index: 25;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    box-shadow: 0.5rem 0 1.5rem rgba(0, 0, 0, 0.2);
     transition: left 0.2s ease;
-  }
-
-  .allegria-body.overlay-menu .allegria-sidebar {
-    position: fixed;
-    top: 73px;
-    left: -100%;
-    width: min(88vw, 320px);
-    height: calc(100vh - 73px);
-    z-index: 25;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   }
 
   .allegria-sidebar.mobile-open {
     left: 0;
-  }
-
-  .allegria-sidebar.compact {
-    width: min(88vw, 320px);
-  }
-
-  .sidebar-compact-toggle {
-    margin: 0.75rem;
-    justify-content: flex-start;
-  }
-
-  .allegria-sidebar.compact .nav-group {
-    align-items: stretch;
-  }
-
-  .allegria-sidebar.compact a[tuiLink] {
-    justify-content: flex-start;
   }
 
   .header-title {

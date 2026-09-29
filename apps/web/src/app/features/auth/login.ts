@@ -1,14 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
 import { form, FormField, required, email, submit } from '@angular/forms/signals';
 import { ActivatedRoute, Router } from '@angular/router';
-import { TuiButton, TuiError, TuiInput, TuiTextfield } from '@taiga-ui/core';
+import { TuiButton, TuiError, TuiInput, TuiTextfield, TuiIcon } from '@taiga-ui/core';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
+import { TuiPassword } from "@taiga-ui/kit";
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormField, TuiButton, TuiError, TuiTextfield, TuiInput],
+  imports: [FormField, TuiButton, TuiError, TuiTextfield, TuiInput, TuiPassword, TuiIcon],
   template: `<main class="login">
     <section class="card">
       <img src="assets/logo-allegria.svg" alt="Allegria 2027" />
@@ -16,7 +17,7 @@ import { AuthService } from '../../core/auth.service';
       <p>Intranet des bénévoles</p>
       <form (submit)="onSubmit($event)">
         <tui-textfield>
-          <span>Email</span>
+          <label tuiLabel>Email</label>
           <input tuiInput type="email" autocomplete="username" [formField]="loginForm.email" />
         </tui-textfield>
         <tui-error
@@ -27,13 +28,14 @@ import { AuthService } from '../../core/auth.service';
           "
         />
         <tui-textfield>
-          <span>Mot de passe</span>
+          <label tuiLabel>Mot de passe</label>
           <input
             tuiInput
             type="password"
             autocomplete="current-password"
             [formField]="loginForm.password"
           />
+          <tui-icon tuiPassword />
         </tui-textfield>
         <tui-error
           [error]="

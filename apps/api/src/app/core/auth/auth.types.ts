@@ -4,7 +4,7 @@ export class LoginDto {
   @ApiProperty({ example: 'admin@allegria.local' })
   email!: string;
 
-  @ApiProperty({ example: 'Admin#2027!' })
+  @ApiProperty({ example: '*******' })
   password!: string;
 }
 
@@ -39,3 +39,5 @@ export class AssignRoleDto {
   @ApiProperty({ example: 2 })
   roleId!: number;
 }
+
+

@@ -401,9 +401,10 @@ export class HostFamilyDetailDrawerComponent {
       description="Capacités et affectations"
     >
       <tui-tabs [(activeItemIndex)]="view"
-        ><button tuiTab type="button">Table</button><button tuiTab type="button">Cards</button
-        ><boutton tuiTab routerLink="/hebergement/carte">🗺 Carte</boutton></tui-tabs
-      >
+        ><button tuiTab type="button">Table</button>
+        <button tuiTab type="button">Cards</button>
+        <button tuiTab routerLink="/hebergement/carte">🗺 Carte</button>
+      </tui-tabs>
       @if (loading()) {
         <tui-loader />
       } @else if (view === 0) {

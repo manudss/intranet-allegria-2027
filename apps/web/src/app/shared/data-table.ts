@@ -36,7 +36,7 @@ import {
 export type DataTableColumnType = 'text' | 'list' | 'number' | 'date' | 'boolean';
 export type DataTableValue = string | number | boolean | null | undefined;
 export type DataTableCellType =
-  'text' | 'person' | 'badge' | 'chip' | 'icon' | 'date' | 'number' | 'boolean';
+  'text' | 'person' | 'badge' | 'chip' | 'chips' | 'icon' | 'date' | 'number' | 'boolean';
 
 export interface DataTableCellPresentation<T> {
   readonly type: DataTableCellType;
@@ -45,6 +45,8 @@ export interface DataTableCellPresentation<T> {
   readonly iconColor?: (row: T) => string;
   readonly appearance?: (row: T) => string;
   readonly autoColor?: boolean;
+  /** For 'chips' type: returns an array of string values to display as chips. */
+  readonly values?: (row: T) => readonly string[];
 }
 
 export interface DataTableColumn<T> {
@@ -59,6 +61,8 @@ export interface DataTableColumn<T> {
   readonly link?: (row: T) => string | readonly (string | number)[];
   readonly href?: (row: T) => string;
   readonly sorter?: TuiComparator<T>;
+  /** If true, the column is hidden by default and must be enabled by the user. */
+  readonly hidden?: boolean;
 }
 
 export interface DataTableAction<T> {
@@ -178,7 +182,7 @@ export class DataTableComponent<T extends { readonly id: number }> implements On
 
   ngOnInit(): void {
     this.orderedColumns.set(this.columns());
-    this.enabledColumns.set(this.columns());
+    this.enabledColumns.set(this.columns().filter((c) => !c.hidden));
   }
 
   defaultSorter(column: DataTableColumn<T>): TuiComparator<T> {

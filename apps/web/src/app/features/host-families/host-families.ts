@@ -1,10 +1,23 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { form, min, required, submit } from '@angular/forms/signals';
 import { finalize } from 'rxjs';
-import { HostFamily, HostFamilyPayload } from '../../models/models';
+import { HostFamily, HostFamilyPayload, HostFamilyStatus } from '../../models/models';
 import { HostFamiliesApiService } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { DataTableColumn } from '../../shared/data-table';
+
+const STATUS_LABELS: Record<HostFamilyStatus, string> = {
+  DRAFT: 'Brouillon',
+  VALIDATED: 'Validée',
+  INACTIVE: 'Inactive',
+};
+
+const STATUS_APPEARANCE: Record<HostFamilyStatus, string> = {
+  DRAFT: 'neutral',
+  VALIDATED: 'success',
+  INACTIVE: 'danger',
+};
+
 const blank = (): HostFamilyPayload => ({
   familyName: '',
   address: '',
@@ -37,7 +50,18 @@ export class HostFamiliesPage implements OnInit {
       label: 'Famille',
       type: 'text',
       value: (x) => x.familyName,
-      presentation: { type: 'icon', icon: () => '@tui.house' },
+      presentation: { type: 'icon', icon: () => '@tui.users' },
+    },
+    {
+      key: 'status',
+      label: 'Statut',
+      type: 'list',
+      value: (x) => STATUS_LABELS[x.status],
+      filterValue: (x) => x.status,
+      presentation: {
+        type: 'chip',
+        appearance: (x) => STATUS_APPEARANCE[x.status],
+      },
     },
     {
       key: 'city',
@@ -47,13 +71,101 @@ export class HostFamiliesPage implements OnInit {
       presentation: { type: 'chip', autoColor: true, icon: () => '@tui.map-pin' },
     },
     {
-      key: 'capacity',
-      label: 'Capacité',
+      key: 'address',
+      label: 'Adresse',
+      type: 'text',
+      value: (x) => x.address || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.home' },
+    },
+    {
+      key: 'phone',
+      label: 'Téléphone',
+      type: 'text',
+      value: (x) => x.phone || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.phone' },
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      type: 'text',
+      value: (x) => x.email || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.mail' },
+    },
+    {
+      key: 'maxCapacity',
+      label: 'Capacité max',
       type: 'number',
-      value: (x) => `${x.maxCapacity} places`,
-      filterValue: (x) => x.maxCapacity,
+      value: (x) => x.maxCapacity,
       sorter: (a, b) => a.maxCapacity - b.maxCapacity,
+      hidden: true,
       presentation: { type: 'number' },
+    },
+    {
+      key: 'maxUnder18',
+      label: 'Max -18 ans',
+      type: 'number',
+      value: (x) => x.maxUnder18,
+      sorter: (a, b) => a.maxUnder18 - b.maxUnder18,
+      hidden: true,
+      presentation: { type: 'number' },
+    },
+    {
+      key: 'maxAnimators',
+      label: 'Max animateurs',
+      type: 'number',
+      value: (x) => x.maxAnimators ?? '—',
+      sorter: (a, b) => (a.maxAnimators ?? 0) - (b.maxAnimators ?? 0),
+      hidden: true,
+      presentation: { type: 'number' },
+    },
+    {
+      key: 'parish',
+      label: 'Paroisse',
+      type: 'text',
+      value: (x) => x.parish || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.map-pin' },
+    },
+    {
+      key: 'latitude',
+      label: 'Latitude',
+      type: 'number',
+      value: (x) => x.latitude ?? '—',
+      hidden: true,
+    },
+    {
+      key: 'longitude',
+      label: 'Longitude',
+      type: 'number',
+      value: (x) => x.longitude ?? '—',
+      hidden: true,
+    },
+    {
+      key: 'constraints',
+      label: 'Contraintes',
+      type: 'text',
+      value: (x) => (x.constraints ? x.constraints.join(', ') : '—'),
+      hidden: true,
+      presentation: { type: 'chips', autoColor: true, values: (x) => x.constraints || [] },
+    },
+    {
+      key: 'tags',
+      label: 'Tags',
+      type: 'text',
+      value: (x) => (x.tags ? x.tags.join(', ') : '—'),
+      hidden: true,
+      presentation: { type: 'chips', autoColor: true, values: (x) => x.tags || [] },
+    },
+    {
+      key: 'notes',
+      label: 'Notes',
+      type: 'text',
+      value: (x) => x.notes || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.note' },
     },
   ];
   private api = inject(HostFamiliesApiService);

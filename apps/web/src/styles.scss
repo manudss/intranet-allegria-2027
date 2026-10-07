@@ -14,6 +14,9 @@
   * Couleur secondaire : orange Allegria
   */
 
+  --tui-theme-color: var(--allegria-primary);
+  --tui-theme-color-contrast: var(--allegria-on-primary);
+
   /* Backgrounds */
   --tui-background-base: var(--allegria-bg);
   --tui-background-base-alt: var(--allegria-bg-alt);

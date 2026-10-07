@@ -7,6 +7,17 @@ import { VolunteerTeamsApiService } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { DataTableColumn } from '../../shared/data-table';
 
+function formatDateTime(datetimeStr: string | undefined): string {
+  if (!datetimeStr) return '—';
+  const date = new Date(datetimeStr);
+  if (isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString('fr-FR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }) + ' ' + date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
 const blank = (): VolunteerTeamPayload => ({
   name: '',
   code: '',
@@ -38,17 +49,49 @@ export class VolunteerTeamsPage implements OnInit {
       presentation: { type: 'chip', autoColor: true, icon: () => '@tui.hash' },
     },
     {
-      key: 'status',
-      label: 'Statut',
+      key: 'isActive',
+      label: 'Actif',
       type: 'list',
-      value: (team) => (team.isActive ? 'Active' : 'Inactive'),
-      presentation: { type: 'badge' },
+      value: (team) => team.isActive,
+      presentation: { type: 'boolean' },
     },
     {
       key: 'description',
       label: 'Description',
       type: 'text',
       value: (team) => team.description || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.note' },
+    },
+    {
+      key: 'memberships',
+      label: 'Membres',
+      type: 'text',
+      value: (team) => (team.memberships ? team.memberships.map((m) => `${m.volunteer.lastName} ${m.volunteer.firstName}`).join(', ') : '—'),
+      hidden: true,
+      presentation: {
+        type: 'chips',
+        autoColor: true,
+        values: (team) => team.memberships?.map((m) => `${m.volunteer.lastName} ${m.volunteer.firstName}`) || [],
+      },
+    },
+    {
+      key: 'createdAt',
+      label: 'Créé le',
+      type: 'date',
+      value: (team) => formatDateTime(team.createdAt),
+      filterValue: (team) => team.createdAt,
+      hidden: true,
+      presentation: { type: 'date' },
+    },
+    {
+      key: 'updatedAt',
+      label: 'Modifié le',
+      type: 'date',
+      value: (team) => formatDateTime(team.updatedAt),
+      filterValue: (team) => team.updatedAt,
+      hidden: true,
+      presentation: { type: 'date' },
     },
   ];
 

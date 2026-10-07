@@ -4,6 +4,32 @@ import { VolunteerAuditLogsApiService } from '../../services/api.services';
 import { DataTableColumn } from '../../shared/data-table';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 
+const ACTION_LABELS: Record<VolunteerAuditAction, string> = {
+  [VolunteerAuditAction.CREATE]: 'Création',
+  [VolunteerAuditAction.UPDATE]: 'Modification',
+  [VolunteerAuditAction.DELETE]: 'Suppression',
+  [VolunteerAuditAction.STATUS_CHANGED]: 'Changement de statut',
+  [VolunteerAuditAction.ASSIGNMENT_CHANGED]: 'Changement d\'affectation',
+};
+
+const ACTION_APPEARANCE: Record<VolunteerAuditAction, string> = {
+  [VolunteerAuditAction.CREATE]: 'success',
+  [VolunteerAuditAction.UPDATE]: 'primary',
+  [VolunteerAuditAction.DELETE]: 'danger',
+  [VolunteerAuditAction.STATUS_CHANGED]: 'warning',
+  [VolunteerAuditAction.ASSIGNMENT_CHANGED]: 'info',
+};
+
+function formatDateTime(datetimeStr: string): string {
+  const date = new Date(datetimeStr);
+  if (isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString('fr-FR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }) + ' ' + date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
 @Component({
   selector: 'app-volunteer-audit-logs',
   standalone: true,
@@ -31,30 +57,60 @@ export class VolunteerAuditLogsPage {
     {
       key: 'createdAt',
       label: 'Date',
-      type: 'text',
-      value: (row) => new Date(row.createdAt).toLocaleString('fr-FR'),
+      type: 'date',
+      value: (row) => formatDateTime(row.createdAt),
+      filterValue: (row) => row.createdAt,
+      presentation: { type: 'date' },
     },
     {
       key: 'user',
       label: 'Utilisateur',
       type: 'text',
-      value: (row) => `${row.user?.email ?? 'inconnu'} (#${row.userId})`,
+      value: (row) => row.user?.email ?? 'inconnu',
+      presentation: { type: 'icon', icon: () => '@tui.user' },
     },
     {
       key: 'action',
       label: 'Action',
       type: 'list',
-      value: (row) => row.action,
-      presentation: { type: 'chip', autoColor: true },
+      value: (row) => ACTION_LABELS[row.action],
+      filterValue: (row) => row.action,
+      presentation: {
+        type: 'chip',
+        appearance: (row) => ACTION_APPEARANCE[row.action],
+      },
     },
     {
-      key: 'entity',
-      label: 'Entité',
+      key: 'entityType',
+      label: 'Type d\'entité',
       type: 'text',
-      value: (row) => `${row.entityType}#${row.entityId}`,
+      value: (row) => row.entityType,
+      presentation: { type: 'chip', autoColor: true, icon: () => '@tui.tag' },
     },
-    { key: 'before', label: 'Avant', type: 'text', value: (row) => this.stringify(row.beforeData) },
-    { key: 'after', label: 'Après', type: 'text', value: (row) => this.stringify(row.afterData) },
+    {
+      key: 'entityId',
+      label: 'ID Entité',
+      type: 'number',
+      value: (row) => row.entityId,
+      hidden: true,
+      presentation: { type: 'number' },
+    },
+    {
+      key: 'before',
+      label: 'Avant',
+      type: 'text',
+      value: (row) => this.stringify(row.beforeData),
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.history' },
+    },
+    {
+      key: 'after',
+      label: 'Après',
+      type: 'text',
+      value: (row) => this.stringify(row.afterData),
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.history' },
+    },
   ];
 
   constructor() {

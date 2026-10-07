@@ -33,6 +33,38 @@ const MISSION_STATUSES = Object.values(VolunteerMissionStatus);
 const SHIFT_STATUSES = Object.values(VolunteerShiftStatus);
 const ASSIGNMENT_STATUSES = Object.values(VolunteerShiftAssignmentStatus);
 
+const MISSION_STATUS_LABELS: Record<VolunteerMissionStatus, string> = {
+  [VolunteerMissionStatus.DRAFT]: 'Brouillon',
+  [VolunteerMissionStatus.TODO]: 'À faire',
+  [VolunteerMissionStatus.IN_PROGRESS]: 'En cours',
+  [VolunteerMissionStatus.DONE]: 'Terminée',
+  [VolunteerMissionStatus.CANCELLED]: 'Annulée',
+  [VolunteerMissionStatus.NOT_DONE]: 'Non réalisée',
+};
+
+const MISSION_STATUS_APPEARANCE: Record<VolunteerMissionStatus, string> = {
+  [VolunteerMissionStatus.DRAFT]: 'neutral',
+  [VolunteerMissionStatus.TODO]: 'warning',
+  [VolunteerMissionStatus.IN_PROGRESS]: 'primary',
+  [VolunteerMissionStatus.DONE]: 'success',
+  [VolunteerMissionStatus.CANCELLED]: 'danger',
+  [VolunteerMissionStatus.NOT_DONE]: 'danger',
+};
+
+function formatDateTime(datetimeStr: string): string {
+  const date = new Date(datetimeStr);
+  if (isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString('fr-FR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }) + ' ' + date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function volunteerName(v: Volunteer | null): string {
+  return v ? `${v.lastName} ${v.firstName}` : '—';
+}
+
 const missionDraft = (): VolunteerMissionPayload => ({
   title: '',
   description: '',
@@ -93,17 +125,17 @@ export class VolunteerMissionsPage implements OnInit {
       label: 'Équipe',
       type: 'list',
       value: (mission) => mission.volunteerTeam?.code || 'TRANSVERSAL',
-      presentation: { type: 'chip', autoColor: true },
+      presentation: { type: 'chip', autoColor: true, icon: () => '@tui.users' },
     },
     {
       key: 'status',
       label: 'Statut',
       type: 'list',
-      value: (mission) => this.missionStatusLabel(mission.status),
+      value: (mission) => MISSION_STATUS_LABELS[mission.status],
       filterValue: (mission) => mission.status,
       presentation: {
-        type: 'badge',
-        appearance: (mission) => this.statusAppearance(mission.status),
+        type: 'chip',
+        appearance: (mission) => MISSION_STATUS_APPEARANCE[mission.status],
       },
     },
     {
@@ -111,6 +143,58 @@ export class VolunteerMissionsPage implements OnInit {
       label: 'Lieu',
       type: 'text',
       value: (mission) => mission.location || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.map-pin' },
+    },
+    {
+      key: 'description',
+      label: 'Description',
+      type: 'text',
+      value: (mission) => mission.description || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.note' },
+    },
+    {
+      key: 'responsibleVolunteer',
+      label: 'Responsable',
+      type: 'list',
+      value: (mission) => volunteerName(mission.responsibleVolunteer),
+      hidden: true,
+      presentation: { type: 'person', subtitle: (mission) => mission.responsibleVolunteer?.email || '—' },
+    },
+    {
+      key: 'isOptional',
+      label: 'Optionnel',
+      type: 'list',
+      value: (mission) => mission.isOptional,
+      hidden: true,
+      presentation: { type: 'boolean' },
+    },
+    {
+      key: 'shifts',
+      label: 'Shifts',
+      type: 'number',
+      value: (mission) => mission.shifts?.length ?? 0,
+      hidden: true,
+      presentation: { type: 'number' },
+    },
+    {
+      key: 'createdAt',
+      label: 'Créé le',
+      type: 'date',
+      value: (mission) => formatDateTime(mission.createdAt),
+      filterValue: (mission) => mission.createdAt,
+      hidden: true,
+      presentation: { type: 'date' },
+    },
+    {
+      key: 'updatedAt',
+      label: 'Modifié le',
+      type: 'date',
+      value: (mission) => formatDateTime(mission.updatedAt),
+      filterValue: (mission) => mission.updatedAt,
+      hidden: true,
+      presentation: { type: 'date' },
     },
   ];
 

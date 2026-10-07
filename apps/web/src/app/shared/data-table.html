@@ -199,6 +199,30 @@
                       >{{ column.value(row) }}</span
                     >
                   }
+                  @case ('chips') {
+                    @let chipValues = column.presentation?.values?.(row) || [];
+                    @if (chipValues.length) {
+                      <span class="chips-cell">
+                        @for (val of chipValues; track val) {
+                          <span
+                            size="s"
+                            tuiChip
+                            [appearance]="
+                              column.presentation?.autoColor ? 'custom' : cellAppearance(column, row)
+                            "
+                            [style.background-color]="
+                              column.presentation?.autoColor
+                                ? (val | tuiAutoColor)
+                                : null
+                            "
+                            >{{ val }}</span
+                          >
+                        }
+                      </span>
+                    } @else {
+                      <span class="cell-copy">—</span>
+                    }
+                  }
                   @case ('icon') {
                     <span class="icon-cell"
                       ><tui-icon

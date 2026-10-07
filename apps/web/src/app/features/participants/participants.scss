@@ -1,7 +1,13 @@
 .filters {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 2fr 1fr auto;
   gap: 1rem;
+  align-items: end;
+}
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 @media (max-width: 700px) {
   .filters {

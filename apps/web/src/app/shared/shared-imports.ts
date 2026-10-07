@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { ScrollingModule } from '@angular/cdk/scrolling';
+import { FormsModule } from '@angular/forms';
 import { FormField } from '@angular/forms/signals';
 import { TuiItem } from '@taiga-ui/cdk';
-import { TuiButton, TuiIcon, TuiInput, TuiLabel, TuiLoader } from '@taiga-ui/core';
-import { TuiBadge, TuiChevron, TuiDrawer, TuiSelect, TuiTextarea } from '@taiga-ui/kit';
+import { TuiButton, TuiGroup, TuiIcon, TuiInput, TuiLabel, TuiLoader, TuiRadio } from '@taiga-ui/core';
+import { TuiBadge, TuiChevron, TuiDrawer, TuiSelect, TuiTextarea, TuiBlock } from '@taiga-ui/kit';
 import { PageLayoutComponent } from './ui-components';
 import { DataTableComponent } from './data-table';
 import { EventDateSelectorComponent } from './event-date-selector/event-date-selector.component';
@@ -11,6 +12,7 @@ import { EventDateSelectorComponent } from './event-date-selector/event-date-sel
 export const SHARED_IMPORTS = [
   CommonModule,
   ScrollingModule,
+  FormsModule,
   FormField,
   PageLayoutComponent,
   DataTableComponent,
@@ -25,5 +27,8 @@ export const SHARED_IMPORTS = [
   TuiChevron,
   TuiBadge,
   TuiDrawer,
+  TuiGroup,
+  TuiBlock,
   TuiSelect,
-] as const;
+  ...TuiRadio,
+];

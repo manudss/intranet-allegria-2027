@@ -164,10 +164,10 @@ export class VolunteersPage implements OnInit {
   protected readonly tableColumns: readonly DataTableColumn<Volunteer>[] = [
     {
       key: 'name',
-      label: 'Nom',
+      label: 'Bénévole',
       type: 'text',
       value: (x) => `${x.lastName} ${x.firstName}`,
-      presentation: { type: 'person', subtitle: (x) => x.email || x.phone },
+      presentation: { type: 'person', subtitle: (x) => x.team || '—' },
     },
     {
       key: 'team',
@@ -177,11 +177,91 @@ export class VolunteersPage implements OnInit {
       presentation: { type: 'chip', autoColor: true, icon: () => '@tui.users' },
     },
     {
-      key: 'contact',
-      label: 'Contact',
+      key: 'phone',
+      label: 'Téléphone',
       type: 'text',
-      value: (x) => x.email || x.phone || '—',
-      presentation: { type: 'icon', icon: (x) => (x.email ? '@tui.mail' : '@tui.phone') },
+      value: (x) => x.phone || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.phone' },
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      type: 'text',
+      value: (x) => x.email || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.mail' },
+    },
+    {
+      key: 'isGroupLeader',
+      label: 'Chef de groupe',
+      type: 'boolean',
+      value: (x) => x.isGroupLeader,
+      hidden: true,
+      presentation: { type: 'boolean' },
+    },
+    {
+      key: 'user',
+      label: 'Utilisateur',
+      type: 'text',
+      value: (x) => x.user?.email || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.user' },
+    },
+    {
+      key: 'skills',
+      label: 'Compétences',
+      type: 'text',
+      value: (x) => {
+        if (!x.skills || x.skills.length === 0) return '—';
+        return x.skills.map((s) => SKILL_LABELS[s.skill]).join(', ');
+      },
+      hidden: true,
+      presentation: {
+        type: 'chips',
+        autoColor: true,
+        values: (x) => (x.skills ? x.skills.map((s) => SKILL_LABELS[s.skill]) : []),
+      },
+    },
+    {
+      key: 'tags',
+      label: 'Tags',
+      type: 'text',
+      value: (x) => (x.tags ? x.tags.map((t) => t.value).join(', ') : '—'),
+      hidden: true,
+      presentation: {
+        type: 'chips',
+        autoColor: true,
+        values: (x) => (x.tags ? x.tags.map((t) => t.value) : []),
+      },
+    },
+    {
+      key: 'teamMemberships',
+      label: 'Équipes rattachées',
+      type: 'text',
+      value: (x) => {
+        if (!x.teamMemberships || x.teamMemberships.length === 0) return '—';
+        return x.teamMemberships
+          .map((m) => m.volunteerTeam?.name || '—')
+          .join(', ');
+      },
+      hidden: true,
+      presentation: {
+        type: 'chips',
+        autoColor: true,
+        values: (x) =>
+          x.teamMemberships
+            ? x.teamMemberships.map((m) => m.volunteerTeam?.name || '—').filter(Boolean)
+            : [],
+      },
+    },
+    {
+      key: 'notes',
+      label: 'Notes',
+      type: 'text',
+      value: (x) => x.notes || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.note' },
     },
   ];
 

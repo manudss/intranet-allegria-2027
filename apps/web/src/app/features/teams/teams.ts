@@ -11,6 +11,10 @@ import {
 } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { DataTableColumn } from '../../shared/data-table';
+
+function volunteerName(v: Volunteer | null): string {
+  return v ? `${v.lastName} ${v.firstName}` : '—';
+}
 const blank = (): TeamPayload => ({
   name: '',
   groupId: null,
@@ -44,11 +48,35 @@ export class TeamsPage implements OnInit {
     },
     {
       key: 'animator',
-      label: 'Animateur',
+      label: 'Animateur principal',
       type: 'list',
-      value: (x) =>
-        x.primaryAnimator ? `${x.primaryAnimator.firstName} ${x.primaryAnimator.lastName}` : '—',
-      presentation: { type: 'person', subtitle: (x) => x.primaryAnimator?.email },
+      value: (x) => volunteerName(x.primaryAnimator),
+      presentation: { type: 'person', subtitle: (x) => x.primaryAnimator?.email || '—' },
+    },
+    {
+      key: 'secondaryAnimator',
+      label: 'Animateur secondaire',
+      type: 'list',
+      value: (x) => volunteerName(x.secondaryAnimator),
+      hidden: true,
+      presentation: { type: 'person', subtitle: (x) => x.secondaryAnimator?.email || '—' },
+    },
+    {
+      key: 'maxSize',
+      label: 'Taille max',
+      type: 'number',
+      value: (x) => x.maxSize,
+      sorter: (a, b) => a.maxSize - b.maxSize,
+      hidden: true,
+      presentation: { type: 'number' },
+    },
+    {
+      key: 'notes',
+      label: 'Notes',
+      type: 'text',
+      value: (x) => x.notes || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.note' },
     },
   ];
   private api = inject(TeamsApiService);

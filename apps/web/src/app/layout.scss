@@ -42,6 +42,8 @@
   width: 40px;
   height: 40px;
   object-fit: contain;
+  background-color: var(--allegria-on-primary);
+  border-radius: 30px;
 }
 
 .header-title {
@@ -57,7 +59,7 @@
 }
 
 .header-right button[tuiButton] {
-  color: var(--allegria-on-primary);
+  color: var(--allegria-on-secondary);
 }
 
 .header-right button[tuiButton][appearance='secondary'] {
@@ -97,8 +99,8 @@
   overflow-y: auto;
   overflow-x: hidden;
   border-right: 0;
-  background: var(--allegria-primary);
-  color: var(--allegria-on-primary);
+  background: var(--allegria-secondary);
+  color: var(--allegria-primary);
   box-shadow: 0.25rem 0 1rem rgba(34, 34, 34, 0.1);
   overscroll-behavior: contain;
 }
@@ -110,7 +112,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  background: var(--allegria-primary);
+  background: var(--allegria-secondary);
 }
 
 .allegria-sidebar header {
@@ -137,12 +139,12 @@
 
 .allegria-sidebar [tuiAsideItem]:hover {
   background: rgba(255, 255, 255, 0.12);
-  color: var(--allegria-on-primary);
+  color: var(--allegria-on-secondary);
 }
 
 .allegria-sidebar a[tuiAsideItem].active {
   background: rgba(255, 255, 255, 0.2);
-  color: var(--allegria-on-primary);
+  color: var(--allegria-on-secondary);
   font-weight: 700;
 }
 

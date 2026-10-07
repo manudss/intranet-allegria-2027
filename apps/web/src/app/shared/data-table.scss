@@ -66,10 +66,14 @@ table {
   text-align: center;
 }
 .person-cell,
-.icon-cell {
+.icon-cell,
+.chips-cell {
   display: flex;
   align-items: center;
   gap: 0.625rem;
+}
+.chips-cell {
+  flex-wrap: wrap;
 }
 .cell-copy {
   display: flex;

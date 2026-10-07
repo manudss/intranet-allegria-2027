@@ -23,6 +23,23 @@
             id="groupe-2"
           ></select>
         </tui-textfield>
+        <div class="radio-group">
+          <label tuiLabel>Tranche d'âge</label>
+          <div tuiGroup>
+            <label tuiBlock for="age-all">
+              <input tuiRadio type="radio" [value]="null" [ngModel]="ageGroupFilter()" (ngModelChange)="ageGroupFilter.set($event)" id="age-all" />
+              Tous
+            </label>
+            <label tuiBlock for="age-ta">
+              <input tuiRadio type="radio" [value]="mejAgeGroups[0]" [ngModel]="ageGroupFilter()" (ngModelChange)="ageGroupFilter.set($event)" id="age-ta" />
+              TA
+            </label>
+            <label tuiBlock for="age-es">
+              <input tuiRadio type="radio" [value]="mejAgeGroups[1]" [ngModel]="ageGroupFilter()" (ngModelChange)="ageGroupFilter.set($event)" id="age-es" />
+              ES
+            </label>
+          </div>
+        </div>
       </div>
       @if (loading()) {
         <tui-loader />

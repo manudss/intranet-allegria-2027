@@ -7,6 +7,17 @@ import { ALLEGRIA_2027_EVENT_DATES } from '../../shared/event-date-selector/even
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { DataTableColumn } from '../../shared/data-table';
 
+function formatDateTime(datetimeStr: string | null): string {
+  if (!datetimeStr) return '—';
+  const date = new Date(datetimeStr);
+  if (isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString('fr-FR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }) + ' ' + date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
 const emptyGroup = (): GroupPayload => ({
   name: '',
   diocese: '',
@@ -26,7 +37,7 @@ export class GroupsPage implements OnInit {
   protected readonly tableColumns: readonly DataTableColumn<Group>[] = [
     {
       key: 'name',
-      label: 'Nom',
+      label: 'Groupe',
       type: 'text',
       value: (x) => x.name,
       presentation: { type: 'icon', icon: () => '@tui.users' },
@@ -42,9 +53,27 @@ export class GroupsPage implements OnInit {
       key: 'arrival',
       label: 'Arrivée',
       type: 'date',
-      value: (x) => (x.arrivalDatetime ? new Date(x.arrivalDatetime).toLocaleString('fr-FR') : '—'),
+      value: (x) => formatDateTime(x.arrivalDatetime),
       filterValue: (x) => x.arrivalDatetime,
+      hidden: true,
       presentation: { type: 'date' },
+    },
+    {
+      key: 'departure',
+      label: 'Départ',
+      type: 'date',
+      value: (x) => formatDateTime(x.departureDatetime),
+      filterValue: (x) => x.departureDatetime,
+      hidden: true,
+      presentation: { type: 'date' },
+    },
+    {
+      key: 'notes',
+      label: 'Notes',
+      type: 'text',
+      value: (x) => x.notes || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.note' },
     },
   ];
   private readonly api = inject(GroupsApiService);

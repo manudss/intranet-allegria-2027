@@ -23,6 +23,7 @@ import {
   AssignmentPayload,
   AssignmentStatus,
   HostFamily,
+  HostFamilyStatus,
   Participant,
   ParticipantHostFamilyAssignment,
   PersonType,
@@ -36,6 +37,42 @@ import { DataTableColumn } from '../../shared/data-table';
 import { ALLEGRIA_2027_EVENT_DATES } from '../../shared/event-date-selector/event-date.config';
 import { EventDateSelectorComponent } from '../../shared/event-date-selector/event-date-selector.component';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
+
+const STATUS_LABELS: Record<HostFamilyStatus, string> = {
+  DRAFT: 'Brouillon',
+  VALIDATED: 'Validée',
+  INACTIVE: 'Inactive',
+};
+
+const STATUS_APPEARANCE: Record<HostFamilyStatus, string> = {
+  DRAFT: 'neutral',
+  VALIDATED: 'success',
+  INACTIVE: 'danger',
+};
+
+const ASSIGNMENT_STATUS_LABELS: Record<AssignmentStatus, string> = {
+  [AssignmentStatus.PENDING]: 'En attente',
+  [AssignmentStatus.CONFIRMED]: 'Confirmé',
+  [AssignmentStatus.CANCELLED]: 'Annulé',
+};
+
+const ASSIGNMENT_STATUS_APPEARANCE: Record<AssignmentStatus, string> = {
+  [AssignmentStatus.PENDING]: 'warning',
+  [AssignmentStatus.CONFIRMED]: 'success',
+  [AssignmentStatus.CANCELLED]: 'danger',
+};
+
+const PERSON_TYPE_LABELS: Record<PersonType, string> = {
+  JEUNE: 'Jeune',
+  ANIMATEUR: 'Animateur',
+  BENEVOLE: 'Bénévole',
+};
+
+const PERSON_TYPE_APPEARANCE: Record<PersonType, string> = {
+  JEUNE: 'info',
+  ANIMATEUR: 'primary',
+  BENEVOLE: 'success',
+};
 
 @Component({
   selector: 'app-host-family-cards',
@@ -409,24 +446,211 @@ export class AssignmentsPage implements OnInit {
     {
       key: 'family',
       label: 'Famille',
+      type: 'text',
       value: (family) => family.familyName,
-      presentation: { type: 'icon', icon: () => '@tui.house' },
-    },
-    { key: 'city', label: 'Ville', type: 'list', value: (family) => family.city },
-    { key: 'parish', label: 'Paroisse', type: 'list', value: (family) => family.parish || '—' },
-    {
-      key: 'capacity',
-      label: 'Capacité',
-      type: 'number',
-      value: (family) => family.maxCapacity,
-      presentation: { type: 'number' },
+      presentation: { type: 'icon', icon: () => '@tui.users' },
     },
     {
       key: 'status',
       label: 'Statut',
       type: 'list',
-      value: (family) => family.status,
-      presentation: { type: 'badge' },
+      value: (family) => STATUS_LABELS[family.status],
+      filterValue: (family) => family.status,
+      presentation: {
+        type: 'chip',
+        appearance: (family) => STATUS_APPEARANCE[family.status],
+      },
+    },
+    {
+      key: 'city',
+      label: 'Ville',
+      type: 'list',
+      value: (family) => family.city,
+      presentation: { type: 'chip', autoColor: true, icon: () => '@tui.map-pin' },
+    },
+    {
+      key: 'address',
+      label: 'Adresse',
+      type: 'text',
+      value: (family) => family.address || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.home' },
+    },
+    {
+      key: 'phone',
+      label: 'Téléphone',
+      type: 'text',
+      value: (family) => family.phone || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.phone' },
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      type: 'text',
+      value: (family) => family.email || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.mail' },
+    },
+    {
+      key: 'maxCapacity',
+      label: 'Capacité max',
+      type: 'number',
+      value: (family) => family.maxCapacity,
+      sorter: (a, b) => a.maxCapacity - b.maxCapacity,
+      hidden: true,
+      presentation: { type: 'number' },
+    },
+    {
+      key: 'maxUnder18',
+      label: 'Max -18 ans',
+      type: 'number',
+      value: (family) => family.maxUnder18,
+      sorter: (a, b) => a.maxUnder18 - b.maxUnder18,
+      hidden: true,
+      presentation: { type: 'number' },
+    },
+    {
+      key: 'maxAnimators',
+      label: 'Max animateurs',
+      type: 'number',
+      value: (family) => family.maxAnimators ?? '—',
+      sorter: (a, b) => (a.maxAnimators ?? 0) - (b.maxAnimators ?? 0),
+      hidden: true,
+      presentation: { type: 'number' },
+    },
+    {
+      key: 'parish',
+      label: 'Paroisse',
+      type: 'text',
+      value: (family) => family.parish || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.map-pin' },
+    },
+    {
+      key: 'latitude',
+      label: 'Latitude',
+      type: 'number',
+      value: (family) => family.latitude ?? '—',
+      hidden: true,
+    },
+    {
+      key: 'longitude',
+      label: 'Longitude',
+      type: 'number',
+      value: (family) => family.longitude ?? '—',
+      hidden: true,
+    },
+    {
+      key: 'constraints',
+      label: 'Contraintes',
+      type: 'text',
+      value: (family) => (family.constraints ? family.constraints.join(', ') : '—'),
+      hidden: true,
+      presentation: { type: 'chips', autoColor: true, values: (family) => family.constraints || [] },
+    },
+    {
+      key: 'tags',
+      label: 'Tags',
+      type: 'text',
+      value: (family) => (family.tags ? family.tags.join(', ') : '—'),
+      hidden: true,
+      presentation: { type: 'chips', autoColor: true, values: (family) => family.tags || [] },
+    },
+    {
+      key: 'notes',
+      label: 'Notes',
+      type: 'text',
+      value: (family) => family.notes || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.note' },
+    },
+  ];
+  readonly assignmentColumns: readonly DataTableColumn<ParticipantHostFamilyAssignment>[] = [
+    {
+      key: 'participant',
+      label: 'Participant',
+      type: 'text',
+      value: (x) => `${x.participant.lastName} ${x.participant.firstName}`,
+      presentation: { type: 'person', subtitle: (x) => x.participant.group?.name || '—' },
+    },
+    {
+      key: 'status',
+      label: 'Statut',
+      type: 'list',
+      value: (x) => ASSIGNMENT_STATUS_LABELS[x.status],
+      filterValue: (x) => x.status,
+      presentation: {
+        type: 'chip',
+        appearance: (x) => ASSIGNMENT_STATUS_APPEARANCE[x.status],
+      },
+    },
+    {
+      key: 'hostFamily',
+      label: 'Famille d\'accueil',
+      type: 'list',
+      value: (x) => x.hostFamily?.familyName || '—',
+      hidden: true,
+      presentation: { type: 'chip', autoColor: true, icon: () => '@tui.users' },
+    },
+    {
+      key: 'type',
+      label: 'Type',
+      type: 'list',
+      value: (x) => PERSON_TYPE_LABELS[x.type],
+      filterValue: (x) => x.type,
+      hidden: true,
+      presentation: {
+        type: 'chip',
+        appearance: (x) => PERSON_TYPE_APPEARANCE[x.type],
+      },
+    },
+    {
+      key: 'arrivalDate',
+      label: 'Arrivée',
+      type: 'date',
+      value: (x) => {
+        const d = new Date(x.arrivalDate);
+        return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+      },
+      filterValue: (x) => x.arrivalDate,
+      hidden: true,
+      presentation: { type: 'date' },
+    },
+    {
+      key: 'departureDate',
+      label: 'Départ',
+      type: 'date',
+      value: (x) => {
+        const d = new Date(x.departureDate);
+        return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+      },
+      filterValue: (x) => x.departureDate,
+      hidden: true,
+      presentation: { type: 'date' },
+    },
+    {
+      key: 'groupId',
+      label: 'Groupe ID',
+      type: 'number',
+      value: (x) => x.groupId ?? '—',
+      hidden: true,
+    },
+    {
+      key: 'roomLabel',
+      label: 'Chambre',
+      type: 'text',
+      value: (x) => x.roomLabel || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.home' },
+    },
+    {
+      key: 'notes',
+      label: 'Notes',
+      type: 'text',
+      value: (x) => x.notes || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.note' },
     },
   ];
   ngOnInit(): void {

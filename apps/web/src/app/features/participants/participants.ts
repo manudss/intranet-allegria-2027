@@ -5,6 +5,7 @@ import { AuthService } from '../../core/auth.service';
 import {
   Group,
   MejAgeGroup,
+  PersonType,
   Participant,
   ParticipantHealth,
   ParticipantHealthPayload,
@@ -18,6 +19,61 @@ import {
 } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { DataTableColumn } from '../../shared/data-table';
+
+const SEX_LABELS: Record<ParticipantSex, string> = {
+  [ParticipantSex.FEMALE]: 'Femme',
+  [ParticipantSex.MALE]: 'Homme',
+  [ParticipantSex.OTHER]: 'Autre',
+  [ParticipantSex.UNDISCLOSED]: 'Non communiqué',
+};
+
+const SEX_APPEARANCE: Record<ParticipantSex, string> = {
+  [ParticipantSex.FEMALE]: 'info',
+  [ParticipantSex.MALE]: 'primary',
+  [ParticipantSex.OTHER]: 'warning',
+  [ParticipantSex.UNDISCLOSED]: 'neutral',
+};
+
+const MEJ_AGE_LABELS: Record<MejAgeGroup, string> = {
+  [MejAgeGroup.TA]: 'TA',
+  [MejAgeGroup.ES]: 'ES',
+};
+
+const TYPE_LABELS: Record<PersonType, string> = {
+  JEUNE: 'Jeune',
+  ANIMATEUR: 'Animateur',
+  BENEVOLE: 'Bénévole',
+};
+
+const TYPE_APPEARANCE: Record<PersonType, string> = {
+  JEUNE: 'success',
+  ANIMATEUR: 'primary',
+  BENEVOLE: 'warning',
+};
+
+function calculateAge(dateOfBirth: string): number | null {
+  if (!dateOfBirth) return null;
+  const today = new Date();
+  const birth = new Date(dateOfBirth);
+  if (isNaN(birth.getTime())) return null;
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+function formatDateFull(dateStr: string): string {
+  if (!dateStr) return '—';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString('fr-FR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
 const blank = (): ParticipantPayload => ({
   firstName: '',
   lastName: '',
@@ -68,6 +124,81 @@ export class ParticipantsPage implements OnInit {
       value: (x) => x.diocese || '—',
       presentation: { type: 'icon', icon: () => '@tui.map-pin' },
     },
+    {
+      key: 'city',
+      label: 'Ville',
+      type: 'text',
+      value: (x) => x.city || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.home' },
+    },
+    {
+      key: 'sex',
+      label: 'Sexe',
+      type: 'list',
+      value: (x) => SEX_LABELS[x.sex],
+      filterValue: (x) => x.sex,
+      hidden: true,
+      presentation: {
+        type: 'chip',
+        appearance: (x) => SEX_APPEARANCE[x.sex],
+      },
+    },
+    {
+      key: 'dateOfBirth',
+      label: 'Date de naissance',
+      type: 'date',
+      value: (x) => {
+        const age = calculateAge(x.dateOfBirth);
+        const formatted = formatDateFull(x.dateOfBirth);
+        if (age !== null) {
+          return `${formatted} (${age} ans)`;
+        }
+        return formatted;
+      },
+      filterValue: (x) => x.dateOfBirth,
+      hidden: true,
+    },
+    {
+      key: 'mejAgeGroup',
+      label: 'Groupe d\'âge MEJ',
+      type: 'list',
+      value: (x) => (x.mejAgeGroup ? MEJ_AGE_LABELS[x.mejAgeGroup] : '—'),
+      filterValue: (x) => x.mejAgeGroup || '',
+      hidden: true,
+      presentation: {
+        type: 'chip',
+        autoColor: true,
+      },
+    },
+    {
+      key: 'type',
+      label: 'Type',
+      type: 'list',
+      value: (x) => TYPE_LABELS[x.type],
+      filterValue: (x) => x.type,
+      hidden: true,
+      presentation: {
+        type: 'chip',
+        appearance: (x) => TYPE_APPEARANCE[x.type],
+      },
+    },
+    {
+      key: 'emergencyContactName',
+      label: 'Contact d\'urgence',
+      type: 'text',
+      value: (x) => x.emergencyContactName || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.user' },
+    },
+    {
+      key: 'emergencyContactPhone',
+      label: 'Tél. urgence',
+      type: 'text',
+      value: (x) => x.emergencyContactPhone || '—',
+      hidden: true,
+      presentation: { type: 'icon', icon: () => '@tui.phone' },
+    },
   ];
   private api = inject(ParticipantsApiService);
   private groupsApi = inject(GroupsApiService);
@@ -80,6 +211,8 @@ export class ParticipantsPage implements OnInit {
   query = signal('');
   groupFilter = signal<number | null>(null);
   groupFilterForm = form(this.groupFilter);
+  ageGroupFilter = signal<MejAgeGroup | null>(null);
+  ageGroupFilterForm = form(this.ageGroupFilter);
   loading = signal(true);
   opened = signal(false);
   mode = signal<'detail' | 'create' | 'edit' | 'health'>('detail');
@@ -101,9 +234,11 @@ export class ParticipantsPage implements OnInit {
   filtered = computed(() => {
     const q = this.query().toLowerCase();
     const gid = this.groupFilter();
+    const ageGroup = this.ageGroupFilter();
     return this.items().filter(
       (x) =>
         (!gid || x.group?.id === gid) &&
+        (!ageGroup || x.mejAgeGroup === ageGroup) &&
         `${x.firstName} ${x.lastName} ${x.diocese ?? ''} ${x.city ?? ''}`.toLowerCase().includes(q),
     );
   });

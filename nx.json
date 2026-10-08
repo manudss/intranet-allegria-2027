@@ -30,10 +30,7 @@
         "{workspaceRoot}/tools/eslint-rules/**/*"
       ]
     },
-    "@angular/build:unit-test": {
-      "cache": true,
-      "inputs": ["default", "^production"]
-    },
+    "@angular/build:unit-test": { "cache": true, "inputs": ["default", "^production"] },
     "@nx/js:tsc": {
       "cache": true,
       "dependsOn": ["^build"],
@@ -47,9 +44,7 @@
       "style": "scss",
       "unitTestRunner": "vitest-angular"
     },
-    "@nx/angular:component": {
-      "style": "scss"
-    }
+    "@nx/angular:component": { "style": "scss" }
   },
   "plugins": [
     {
@@ -63,19 +58,11 @@
         "serveStaticTargetName": "serve-static"
       }
     },
-    {
-      "plugin": "@nx/eslint/plugin",
-      "options": {
-        "targetName": "lint"
-      }
-    },
+    { "plugin": "@nx/eslint/plugin", "options": { "targetName": "lint" } },
     {
       "plugin": "@nx/vitest",
-      "options": {
-        "testTargetName": "test",
-        "ciTargetName": "test-ci",
-        "testMode": "watch"
-      }
+      "options": { "testTargetName": "test", "ciTargetName": "test-ci", "testMode": "watch" }
     }
-  ]
+  ],
+  "nxCloudId": "6ac758b3e891443e6ed11fe2"
 }

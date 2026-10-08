@@ -24,8 +24,8 @@
           ></select>
         </tui-textfield>
         <div class="radio-group">
-          <label tuiLabel>Tranche d'âge</label>
-          <div tuiGroup>
+          <label tuiLabel for="tranche-age">Tranche d'âge</label>
+          <div tuiGroup id="tranche-age">
             <label tuiBlock for="age-all">
               <input tuiRadio type="radio" [value]="null" [ngModel]="ageGroupFilter()" (ngModelChange)="ageGroupFilter.set($event)" id="age-all" />
               Tous

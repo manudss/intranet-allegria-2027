@@ -51,6 +51,7 @@ export class HostFamiliesPage implements OnInit {
       type: 'text',
       value: (x) => x.familyName,
       presentation: { type: 'icon', icon: () => '@tui.users' },
+      size: 'large',
     },
     {
       key: 'status',
@@ -62,6 +63,7 @@ export class HostFamiliesPage implements OnInit {
         type: 'chip',
         appearance: (x) => STATUS_APPEARANCE[x.status],
       },
+      size: 'small',
     },
     {
       key: 'city',
@@ -69,6 +71,7 @@ export class HostFamiliesPage implements OnInit {
       type: 'list',
       value: (x) => `${x.postalCode} ${x.city}`,
       presentation: { type: 'chip', autoColor: true, icon: () => '@tui.map-pin' },
+      size: 'medium',
     },
     {
       key: 'address',
@@ -77,6 +80,7 @@ export class HostFamiliesPage implements OnInit {
       value: (x) => x.address || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.home' },
+      size: 'xlarge',
     },
     {
       key: 'phone',
@@ -85,6 +89,7 @@ export class HostFamiliesPage implements OnInit {
       value: (x) => x.phone || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.phone' },
+      size: 'small',
     },
     {
       key: 'email',
@@ -93,6 +98,7 @@ export class HostFamiliesPage implements OnInit {
       value: (x) => x.email || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.mail' },
+      size: 'large',
     },
     {
       key: 'maxCapacity',
@@ -102,6 +108,7 @@ export class HostFamiliesPage implements OnInit {
       sorter: (a, b) => a.maxCapacity - b.maxCapacity,
       hidden: true,
       presentation: { type: 'number' },
+      size: 'xsmall',
     },
     {
       key: 'maxUnder18',
@@ -111,6 +118,7 @@ export class HostFamiliesPage implements OnInit {
       sorter: (a, b) => a.maxUnder18 - b.maxUnder18,
       hidden: true,
       presentation: { type: 'number' },
+      size: 'xsmall',
     },
     {
       key: 'maxAnimators',
@@ -120,6 +128,7 @@ export class HostFamiliesPage implements OnInit {
       sorter: (a, b) => (a.maxAnimators ?? 0) - (b.maxAnimators ?? 0),
       hidden: true,
       presentation: { type: 'number' },
+      size: 'xsmall',
     },
     {
       key: 'parish',
@@ -128,6 +137,7 @@ export class HostFamiliesPage implements OnInit {
       value: (x) => x.parish || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.map-pin' },
+      size: 'medium',
     },
     {
       key: 'latitude',
@@ -135,6 +145,7 @@ export class HostFamiliesPage implements OnInit {
       type: 'number',
       value: (x) => x.latitude ?? '—',
       hidden: true,
+      size: 'xsmall',
     },
     {
       key: 'longitude',
@@ -142,6 +153,7 @@ export class HostFamiliesPage implements OnInit {
       type: 'number',
       value: (x) => x.longitude ?? '—',
       hidden: true,
+      size: 'xsmall',
     },
     {
       key: 'constraints',
@@ -150,6 +162,7 @@ export class HostFamiliesPage implements OnInit {
       value: (x) => (x.constraints ? x.constraints.join(', ') : '—'),
       hidden: true,
       presentation: { type: 'chips', autoColor: true, values: (x) => x.constraints || [] },
+      size: 'xlarge',
     },
     {
       key: 'tags',
@@ -158,6 +171,7 @@ export class HostFamiliesPage implements OnInit {
       value: (x) => (x.tags ? x.tags.join(', ') : '—'),
       hidden: true,
       presentation: { type: 'chips', autoColor: true, values: (x) => x.tags || [] },
+      size: 'xlarge',
     },
     {
       key: 'notes',
@@ -166,6 +180,7 @@ export class HostFamiliesPage implements OnInit {
       value: (x) => x.notes || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.note' },
+      size: 'xlarge',
     },
   ];
   private api = inject(HostFamiliesApiService);

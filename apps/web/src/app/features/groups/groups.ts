@@ -41,6 +41,7 @@ export class GroupsPage implements OnInit {
       type: 'text',
       value: (x) => x.name,
       presentation: { type: 'icon', icon: () => '@tui.users' },
+      size: 'large',
     },
     {
       key: 'diocese',
@@ -48,6 +49,7 @@ export class GroupsPage implements OnInit {
       type: 'list',
       value: (x) => x.diocese || '—',
       presentation: { type: 'chip', autoColor: true, icon: () => '@tui.map-pin' },
+      size: 'medium',
     },
     {
       key: 'arrival',
@@ -57,6 +59,7 @@ export class GroupsPage implements OnInit {
       filterValue: (x) => x.arrivalDatetime,
       hidden: true,
       presentation: { type: 'date' },
+      size: 'large',
     },
     {
       key: 'departure',
@@ -66,6 +69,7 @@ export class GroupsPage implements OnInit {
       filterValue: (x) => x.departureDatetime,
       hidden: true,
       presentation: { type: 'date' },
+      size: 'large',
     },
     {
       key: 'notes',
@@ -74,6 +78,7 @@ export class GroupsPage implements OnInit {
       value: (x) => x.notes || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.note' },
+      size: 'xlarge',
     },
   ];
   private readonly api = inject(GroupsApiService);

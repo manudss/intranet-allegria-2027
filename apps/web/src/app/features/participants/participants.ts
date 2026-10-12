@@ -109,6 +109,7 @@ export class ParticipantsPage implements OnInit {
       type: 'text',
       value: (x) => `${x.lastName} ${x.firstName}`,
       presentation: { type: 'person', subtitle: (x) => x.city || x.diocese },
+      size: 'large',
     },
     {
       key: 'group',
@@ -116,6 +117,7 @@ export class ParticipantsPage implements OnInit {
       type: 'list',
       value: (x) => x.group?.name || 'Sans groupe',
       presentation: { type: 'chip', autoColor: true, icon: () => '@tui.users' },
+      size: 'large',
     },
     {
       key: 'diocese',
@@ -123,6 +125,7 @@ export class ParticipantsPage implements OnInit {
       type: 'list',
       value: (x) => x.diocese || '—',
       presentation: { type: 'icon', icon: () => '@tui.map-pin' },
+      size: 'medium',
     },
     {
       key: 'city',
@@ -131,6 +134,7 @@ export class ParticipantsPage implements OnInit {
       value: (x) => x.city || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.home' },
+      size: 'medium',
     },
     {
       key: 'sex',
@@ -143,6 +147,7 @@ export class ParticipantsPage implements OnInit {
         type: 'chip',
         appearance: (x) => SEX_APPEARANCE[x.sex],
       },
+      size: 'xsmall',
     },
     {
       key: 'dateOfBirth',
@@ -158,6 +163,7 @@ export class ParticipantsPage implements OnInit {
       },
       filterValue: (x) => x.dateOfBirth,
       hidden: true,
+      size: 'large',
     },
     {
       key: 'mejAgeGroup',
@@ -170,6 +176,7 @@ export class ParticipantsPage implements OnInit {
         type: 'chip',
         autoColor: true,
       },
+      size: 'medium',
     },
     {
       key: 'type',
@@ -182,6 +189,7 @@ export class ParticipantsPage implements OnInit {
         type: 'chip',
         appearance: (x) => TYPE_APPEARANCE[x.type],
       },
+      size: 'small',
     },
     {
       key: 'emergencyContactName',
@@ -190,6 +198,7 @@ export class ParticipantsPage implements OnInit {
       value: (x) => x.emergencyContactName || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.user' },
+      size: 'large',
     },
     {
       key: 'emergencyContactPhone',
@@ -198,6 +207,7 @@ export class ParticipantsPage implements OnInit {
       value: (x) => x.emergencyContactPhone || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.phone' },
+      size: 'small',
     },
   ];
   private api = inject(ParticipantsApiService);

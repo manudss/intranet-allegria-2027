@@ -449,6 +449,7 @@ export class AssignmentsPage implements OnInit {
       type: 'text',
       value: (family) => family.familyName,
       presentation: { type: 'icon', icon: () => '@tui.users' },
+      size: 'large',
     },
     {
       key: 'status',
@@ -460,6 +461,7 @@ export class AssignmentsPage implements OnInit {
         type: 'chip',
         appearance: (family) => STATUS_APPEARANCE[family.status],
       },
+      size: 'small',
     },
     {
       key: 'city',
@@ -467,6 +469,7 @@ export class AssignmentsPage implements OnInit {
       type: 'list',
       value: (family) => family.city,
       presentation: { type: 'chip', autoColor: true, icon: () => '@tui.map-pin' },
+      size: 'medium',
     },
     {
       key: 'address',
@@ -475,6 +478,7 @@ export class AssignmentsPage implements OnInit {
       value: (family) => family.address || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.home' },
+      size: 'xlarge',
     },
     {
       key: 'phone',
@@ -483,6 +487,7 @@ export class AssignmentsPage implements OnInit {
       value: (family) => family.phone || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.phone' },
+      size: 'small',
     },
     {
       key: 'email',
@@ -491,6 +496,7 @@ export class AssignmentsPage implements OnInit {
       value: (family) => family.email || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.mail' },
+      size: 'large',
     },
     {
       key: 'maxCapacity',
@@ -500,6 +506,7 @@ export class AssignmentsPage implements OnInit {
       sorter: (a, b) => a.maxCapacity - b.maxCapacity,
       hidden: true,
       presentation: { type: 'number' },
+      size: 'xsmall',
     },
     {
       key: 'maxUnder18',
@@ -509,6 +516,7 @@ export class AssignmentsPage implements OnInit {
       sorter: (a, b) => a.maxUnder18 - b.maxUnder18,
       hidden: true,
       presentation: { type: 'number' },
+      size: 'xsmall',
     },
     {
       key: 'maxAnimators',
@@ -518,6 +526,7 @@ export class AssignmentsPage implements OnInit {
       sorter: (a, b) => (a.maxAnimators ?? 0) - (b.maxAnimators ?? 0),
       hidden: true,
       presentation: { type: 'number' },
+      size: 'xsmall',
     },
     {
       key: 'parish',
@@ -526,6 +535,7 @@ export class AssignmentsPage implements OnInit {
       value: (family) => family.parish || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.map-pin' },
+      size: 'medium',
     },
     {
       key: 'latitude',
@@ -533,6 +543,7 @@ export class AssignmentsPage implements OnInit {
       type: 'number',
       value: (family) => family.latitude ?? '—',
       hidden: true,
+      size: 'xsmall',
     },
     {
       key: 'longitude',
@@ -540,6 +551,7 @@ export class AssignmentsPage implements OnInit {
       type: 'number',
       value: (family) => family.longitude ?? '—',
       hidden: true,
+      size: 'xsmall',
     },
     {
       key: 'constraints',
@@ -548,6 +560,7 @@ export class AssignmentsPage implements OnInit {
       value: (family) => (family.constraints ? family.constraints.join(', ') : '—'),
       hidden: true,
       presentation: { type: 'chips', autoColor: true, values: (family) => family.constraints || [] },
+      size: 'xlarge',
     },
     {
       key: 'tags',
@@ -556,6 +569,7 @@ export class AssignmentsPage implements OnInit {
       value: (family) => (family.tags ? family.tags.join(', ') : '—'),
       hidden: true,
       presentation: { type: 'chips', autoColor: true, values: (family) => family.tags || [] },
+      size: 'xlarge',
     },
     {
       key: 'notes',
@@ -564,6 +578,7 @@ export class AssignmentsPage implements OnInit {
       value: (family) => family.notes || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.note' },
+      size: 'xlarge',
     },
   ];
   readonly assignmentColumns: readonly DataTableColumn<ParticipantHostFamilyAssignment>[] = [
@@ -573,6 +588,7 @@ export class AssignmentsPage implements OnInit {
       type: 'text',
       value: (x) => `${x.participant.lastName} ${x.participant.firstName}`,
       presentation: { type: 'person', subtitle: (x) => x.participant.group?.name || '—' },
+      size: 'large',
     },
     {
       key: 'status',
@@ -584,6 +600,7 @@ export class AssignmentsPage implements OnInit {
         type: 'chip',
         appearance: (x) => ASSIGNMENT_STATUS_APPEARANCE[x.status],
       },
+      size: 'small',
     },
     {
       key: 'hostFamily',
@@ -592,6 +609,7 @@ export class AssignmentsPage implements OnInit {
       value: (x) => x.hostFamily?.familyName || '—',
       hidden: true,
       presentation: { type: 'chip', autoColor: true, icon: () => '@tui.users' },
+      size: 'large',
     },
     {
       key: 'type',
@@ -604,6 +622,7 @@ export class AssignmentsPage implements OnInit {
         type: 'chip',
         appearance: (x) => PERSON_TYPE_APPEARANCE[x.type],
       },
+      size: 'small',
     },
     {
       key: 'arrivalDate',
@@ -616,6 +635,7 @@ export class AssignmentsPage implements OnInit {
       filterValue: (x) => x.arrivalDate,
       hidden: true,
       presentation: { type: 'date' },
+      size: 'large',
     },
     {
       key: 'departureDate',
@@ -628,6 +648,7 @@ export class AssignmentsPage implements OnInit {
       filterValue: (x) => x.departureDate,
       hidden: true,
       presentation: { type: 'date' },
+      size: 'large',
     },
     {
       key: 'groupId',
@@ -635,6 +656,7 @@ export class AssignmentsPage implements OnInit {
       type: 'number',
       value: (x) => x.groupId ?? '—',
       hidden: true,
+      size: 'xsmall',
     },
     {
       key: 'roomLabel',
@@ -643,6 +665,7 @@ export class AssignmentsPage implements OnInit {
       value: (x) => x.roomLabel || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.home' },
+      size: 'small',
     },
     {
       key: 'notes',
@@ -651,6 +674,7 @@ export class AssignmentsPage implements OnInit {
       value: (x) => x.notes || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.note' },
+      size: 'xlarge',
     },
   ];
   ngOnInit(): void {

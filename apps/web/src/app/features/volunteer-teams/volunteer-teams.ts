@@ -40,6 +40,7 @@ export class VolunteerTeamsPage implements OnInit {
       type: 'text',
       value: (team) => team.name,
       presentation: { type: 'icon', icon: () => '@tui.users' },
+      size: 'large',
     },
     {
       key: 'code',
@@ -47,6 +48,7 @@ export class VolunteerTeamsPage implements OnInit {
       type: 'list',
       value: (team) => team.code,
       presentation: { type: 'chip', autoColor: true, icon: () => '@tui.hash' },
+      size: 'xsmall',
     },
     {
       key: 'isActive',
@@ -54,6 +56,7 @@ export class VolunteerTeamsPage implements OnInit {
       type: 'list',
       value: (team) => team.isActive,
       presentation: { type: 'boolean' },
+      size: 'xsmall',
     },
     {
       key: 'description',
@@ -62,6 +65,7 @@ export class VolunteerTeamsPage implements OnInit {
       value: (team) => team.description || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.note' },
+      size: 'xlarge',
     },
     {
       key: 'memberships',
@@ -74,6 +78,7 @@ export class VolunteerTeamsPage implements OnInit {
         autoColor: true,
         values: (team) => team.memberships?.map((m) => `${m.volunteer.lastName} ${m.volunteer.firstName}`) || [],
       },
+      size: 'xlarge',
     },
     {
       key: 'createdAt',
@@ -83,6 +88,7 @@ export class VolunteerTeamsPage implements OnInit {
       filterValue: (team) => team.createdAt,
       hidden: true,
       presentation: { type: 'date' },
+      size: 'large',
     },
     {
       key: 'updatedAt',
@@ -92,6 +98,7 @@ export class VolunteerTeamsPage implements OnInit {
       filterValue: (team) => team.updatedAt,
       hidden: true,
       presentation: { type: 'date' },
+      size: 'large',
     },
   ];
 

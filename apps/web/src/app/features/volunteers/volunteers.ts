@@ -168,6 +168,7 @@ export class VolunteersPage implements OnInit {
       type: 'text',
       value: (x) => `${x.lastName} ${x.firstName}`,
       presentation: { type: 'person', subtitle: (x) => x.team || '—' },
+      size: 'large',
     },
     {
       key: 'team',
@@ -175,6 +176,7 @@ export class VolunteersPage implements OnInit {
       type: 'list',
       value: (x) => x.team || '—',
       presentation: { type: 'chip', autoColor: true, icon: () => '@tui.users' },
+      size: 'large',
     },
     {
       key: 'phone',
@@ -183,6 +185,7 @@ export class VolunteersPage implements OnInit {
       value: (x) => x.phone || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.phone' },
+      size: 'small',
     },
     {
       key: 'email',
@@ -191,6 +194,7 @@ export class VolunteersPage implements OnInit {
       value: (x) => x.email || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.mail' },
+      size: 'large',
     },
     {
       key: 'isGroupLeader',
@@ -199,6 +203,7 @@ export class VolunteersPage implements OnInit {
       value: (x) => x.isGroupLeader,
       hidden: true,
       presentation: { type: 'boolean' },
+      size: 'xsmall',
     },
     {
       key: 'user',
@@ -207,6 +212,7 @@ export class VolunteersPage implements OnInit {
       value: (x) => x.user?.email || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.user' },
+      size: 'large',
     },
     {
       key: 'skills',
@@ -222,6 +228,7 @@ export class VolunteersPage implements OnInit {
         autoColor: true,
         values: (x) => (x.skills ? x.skills.map((s) => SKILL_LABELS[s.skill]) : []),
       },
+      size: 'xlarge',
     },
     {
       key: 'tags',
@@ -234,6 +241,7 @@ export class VolunteersPage implements OnInit {
         autoColor: true,
         values: (x) => (x.tags ? x.tags.map((t) => t.value) : []),
       },
+      size: 'xlarge',
     },
     {
       key: 'teamMemberships',
@@ -254,6 +262,7 @@ export class VolunteersPage implements OnInit {
             ? x.teamMemberships.map((m) => m.volunteerTeam?.name || '—').filter(Boolean)
             : [],
       },
+      size: 'xlarge',
     },
     {
       key: 'notes',
@@ -262,6 +271,7 @@ export class VolunteersPage implements OnInit {
       value: (x) => x.notes || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.note' },
+      size: 'xlarge',
     },
   ];
 

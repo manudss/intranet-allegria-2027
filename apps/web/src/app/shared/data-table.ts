@@ -38,6 +38,16 @@ export type DataTableValue = string | number | boolean | null | undefined;
 export type DataTableCellType =
   'text' | 'person' | 'badge' | 'chip' | 'chips' | 'icon' | 'date' | 'number' | 'boolean';
 
+/** Preset widths for table columns, used to set the Taiga UI minWidth constraint. */
+export const DataTableColumnSize = {
+  xsmall: 'xsmall',
+  small: 'small',
+  medium: 'medium',
+  large: 'large',
+  xlarge: 'xlarge',
+} as const;
+export type DataTableColumnSize = (typeof DataTableColumnSize)[keyof typeof DataTableColumnSize];
+
 export interface DataTableCellPresentation<T> {
   readonly type: DataTableCellType;
   readonly subtitle?: (row: T) => DataTableValue;
@@ -63,6 +73,8 @@ export interface DataTableColumn<T> {
   readonly sorter?: TuiComparator<T>;
   /** If true, the column is hidden by default and must be enabled by the user. */
   readonly hidden?: boolean;
+  /** Preset column width — defaults to 'medium' (160px). */
+  readonly size?: DataTableColumnSize;
 }
 
 export interface DataTableAction<T> {
@@ -127,6 +139,7 @@ export class DataTableComponent<T extends { readonly id: number }> implements On
 
   readonly orderedColumns = signal<readonly DataTableColumn<T>[]>([]);
   readonly enabledColumns = signal<readonly DataTableColumn<T>[]>([]);
+  readonly filtersVisible = signal(false);
   readonly filterValues = signal<Readonly<Record<string, ColumnFilterState>>>({});
   readonly optionSearch = signal<Readonly<Record<string, string>>>({});
   readonly hasFilters = computed(() =>
@@ -179,6 +192,17 @@ export class DataTableComponent<T extends { readonly id: number }> implements On
     $implicit.label;
   readonly standaloneModel = { standalone: true } as const;
   readonly booleanOptions = ['Tous', 'Oui', 'Non'] as const;
+
+  columnMinWidth(column: DataTableColumn<T>): number {
+    const sizeMap: Record<DataTableColumnSize, number> = {
+      xsmall: 80,
+      small: 110,
+      medium: 160,
+      large: 220,
+      xlarge: 300,
+    };
+    return sizeMap[column.size ?? 'medium'];
+  }
 
   ngOnInit(): void {
     this.orderedColumns.set(this.columns());

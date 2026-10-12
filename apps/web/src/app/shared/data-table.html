@@ -1,4 +1,17 @@
 <div class="table-tools">
+  <button
+    appearance="secondary"
+    size="s"
+    tuiButton
+    type="button"
+    (click)="filtersVisible.update((v) => !v)"
+  >
+    @if (filtersVisible()) {
+      Masquer les filtres
+    } @else {
+      Afficher les filtres
+    }
+  </button>
   @if (hasFilters()) {
     <button appearance="secondary" size="s" tuiButton type="button" (click)="clearFilters()">
       Effacer les filtres
@@ -26,118 +39,120 @@
             [sorter]="column.sorter || defaultSorter(column)"
             [resizable]="true"
             [sticky]="true"
-            [minWidth]="140"
+            [minWidth]="columnMinWidth(column)"
           >
-            <span>{{ column.label }}</span>
-            <div
-              class="column-filter"
-              tabindex="-1"
-              (click)="$event.stopPropagation()"
-              (keydown.enter)="$event.stopPropagation()"
-              (keydown.space)="$event.stopPropagation(); $event.preventDefault()"
-            >
-              @switch (column.type || 'text') {
-                @case ('list') {
-                  <tui-textfield multi tuiChevron>
-                    <input
-                      tuiInputChip
-                      tuiSelectLike
-                      [attr.aria-label]="'Filtrer la colonne ' + column.label"
-                      [placeholder]="
-                        filterValues()[column.key]?.list?.length ? '' : 'Sélectionner'
-                      "
-                      [ngModel]="filterValues()[column.key]?.list || []"
-                      [ngModelOptions]="standaloneModel"
-                      (ngModelChange)="setListFilter(column.key, $event)"
-                    />
-                    <ng-template tuiItem />
-                    <ng-container *tuiDropdown>
-                      <tui-textfield class="option-search">
-                        <input
+            <span class="column-label">{{ column.label }}</span>
+            @if (filtersVisible()) {
+              <div
+                class="column-filter"
+                tabindex="-1"
+                (click)="$event.stopPropagation()"
+                (keydown.enter)="$event.stopPropagation()"
+                (keydown.space)="$event.stopPropagation(); $event.preventDefault()"
+              >
+                @switch (column.type || 'text') {
+                  @case ('list') {
+                    <tui-textfield multi tuiChevron>
+                      <input
+                        tuiInputChip
+                        tuiSelectLike
+                        [attr.aria-label]="'Filtrer la colonne ' + column.label"
+                        [placeholder]="
+                          filterValues()[column.key]?.list?.length ? '' : 'Sélectionner'
+                        "
+                        [ngModel]="filterValues()[column.key]?.list || []"
+                        [ngModelOptions]="standaloneModel"
+                        (ngModelChange)="setListFilter(column.key, $event)"
+                      />
+                      <ng-template tuiItem />
+                      <ng-container *tuiDropdown>
+                        <tui-textfield class="option-search">
+                          <input
+                            tuiInput
+                            type="search"
+                            placeholder="Rechercher une option…"
+                            [attr.aria-label]="'Rechercher dans ' + column.label"
+                            [value]="optionSearch()[column.key] || ''"
+                            (input)="setOptionSearch(column.key, $any($event.target).value)"
+                          />
+                        </tui-textfield>
+                        <tui-data-list tuiMultiSelectGroup>
+                          @for (option of filteredListValues(column.key); track option) {
+                            <button tuiOption type="button" [value]="option">{{ option }}</button>
+                          } @empty {
+                            <p class="empty-options">Aucune option</p>
+                          }
+                        </tui-data-list>
+                      </ng-container>
+                    </tui-textfield>
+                  }
+                  @case ('number') {
+                    <div class="range-filter">
+                      <tui-textfield
+                        ><input
                           tuiInput
-                          type="search"
-                          placeholder="Rechercher une option…"
-                          [attr.aria-label]="'Rechercher dans ' + column.label"
-                          [value]="optionSearch()[column.key] || ''"
-                          (input)="setOptionSearch(column.key, $any($event.target).value)"
-                        />
-                      </tui-textfield>
-                      <tui-data-list tuiMultiSelectGroup>
-                        @for (option of filteredListValues(column.key); track option) {
-                          <button tuiOption type="button" [value]="option">{{ option }}</button>
-                        } @empty {
-                          <p class="empty-options">Aucune option</p>
-                        }
-                      </tui-data-list>
-                    </ng-container>
-                  </tui-textfield>
-                }
-                @case ('number') {
-                  <div class="range-filter">
+                          type="number"
+                          placeholder="Min"
+                          [attr.aria-label]="column.label + ' minimum'"
+                          [value]="filterValues()[column.key]?.min ?? ''"
+                          (input)="setNumberFilter(column.key, 'min', $any($event.target).value)"
+                      /></tui-textfield>
+                      <tui-textfield
+                        ><input
+                          tuiInput
+                          type="number"
+                          placeholder="Max"
+                          [attr.aria-label]="column.label + ' maximum'"
+                          [value]="filterValues()[column.key]?.max ?? ''"
+                          (input)="setNumberFilter(column.key, 'max', $any($event.target).value)"
+                      /></tui-textfield>
+                    </div>
+                  }
+                  @case ('date') {
+                    <div class="range-filter">
+                      <tui-textfield
+                        ><input
+                          tuiInput
+                          type="date"
+                          [attr.aria-label]="column.label + ' depuis'"
+                          [value]="filterValues()[column.key]?.from || ''"
+                          (input)="setDateFilter(column.key, 'from', $any($event.target).value)"
+                      /></tui-textfield>
+                      <tui-textfield
+                        ><input
+                          tuiInput
+                          type="date"
+                          [attr.aria-label]="column.label + ' jusqu\u00e0'"
+                          [value]="filterValues()[column.key]?.to || ''"
+                          (input)="setDateFilter(column.key, 'to', $any($event.target).value)"
+                      /></tui-textfield>
+                    </div>
+                  }
+                  @case ('boolean') {
+                    <tui-textfield tuiChevron>
+                      <select
+                        tuiSelect
+                        [items]="booleanOptions"
+                        [ngModel]="booleanLabel(column.key)"
+                        [ngModelOptions]="standaloneModel"
+                        (ngModelChange)="setBooleanFilter(column.key, $event)"
+                      ></select>
+                    </tui-textfield>
+                  }
+                  @default {
                     <tui-textfield
                       ><input
                         tuiInput
-                        type="number"
-                        placeholder="Min"
-                        [attr.aria-label]="column.label + ' minimum'"
-                        [value]="filterValues()[column.key]?.min ?? ''"
-                        (input)="setNumberFilter(column.key, 'min', $any($event.target).value)"
+                        type="search"
+                        [attr.aria-label]="'Filtrer la colonne ' + column.label"
+                        placeholder="Filtrer…"
+                        [value]="filterValues()[column.key]?.text || ''"
+                        (input)="setTextFilter(column.key, $any($event.target).value)"
                     /></tui-textfield>
-                    <tui-textfield
-                      ><input
-                        tuiInput
-                        type="number"
-                        placeholder="Max"
-                        [attr.aria-label]="column.label + ' maximum'"
-                        [value]="filterValues()[column.key]?.max ?? ''"
-                        (input)="setNumberFilter(column.key, 'max', $any($event.target).value)"
-                    /></tui-textfield>
-                  </div>
+                  }
                 }
-                @case ('date') {
-                  <div class="range-filter">
-                    <tui-textfield
-                      ><input
-                        tuiInput
-                        type="date"
-                        [attr.aria-label]="column.label + ' depuis'"
-                        [value]="filterValues()[column.key]?.from || ''"
-                        (input)="setDateFilter(column.key, 'from', $any($event.target).value)"
-                    /></tui-textfield>
-                    <tui-textfield
-                      ><input
-                        tuiInput
-                        type="date"
-                        [attr.aria-label]="column.label + ' jusqu’à'"
-                        [value]="filterValues()[column.key]?.to || ''"
-                        (input)="setDateFilter(column.key, 'to', $any($event.target).value)"
-                    /></tui-textfield>
-                  </div>
-                }
-                @case ('boolean') {
-                  <tui-textfield tuiChevron>
-                    <select
-                      tuiSelect
-                      [items]="booleanOptions"
-                      [ngModel]="booleanLabel(column.key)"
-                      [ngModelOptions]="standaloneModel"
-                      (ngModelChange)="setBooleanFilter(column.key, $event)"
-                    ></select>
-                  </tui-textfield>
-                }
-                @default {
-                  <tui-textfield
-                    ><input
-                      tuiInput
-                      type="search"
-                      [attr.aria-label]="'Filtrer la colonne ' + column.label"
-                      placeholder="Filtrer…"
-                      [value]="filterValues()[column.key]?.text || ''"
-                      (input)="setTextFilter(column.key, $any($event.target).value)"
-                  /></tui-textfield>
-                }
-              }
-            </div>
+              </div>
+            }
           </th>
         }
         <th *tuiHead="'actions'" tuiTh [sorter]="null" [sticky]="true" [minWidth]="96">

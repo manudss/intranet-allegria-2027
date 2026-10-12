@@ -38,6 +38,7 @@ export class TeamsPage implements OnInit {
       type: 'text',
       value: (x) => x.name,
       presentation: { type: 'icon', icon: () => '@tui.users' },
+      size: 'large',
     },
     {
       key: 'group',
@@ -45,6 +46,7 @@ export class TeamsPage implements OnInit {
       type: 'list',
       value: (x) => x.group?.name || '—',
       presentation: { type: 'chip', autoColor: true, icon: () => '@tui.users' },
+      size: 'large',
     },
     {
       key: 'animator',
@@ -52,6 +54,7 @@ export class TeamsPage implements OnInit {
       type: 'list',
       value: (x) => volunteerName(x.primaryAnimator),
       presentation: { type: 'person', subtitle: (x) => x.primaryAnimator?.email || '—' },
+      size: 'large',
     },
     {
       key: 'secondaryAnimator',
@@ -60,6 +63,7 @@ export class TeamsPage implements OnInit {
       value: (x) => volunteerName(x.secondaryAnimator),
       hidden: true,
       presentation: { type: 'person', subtitle: (x) => x.secondaryAnimator?.email || '—' },
+      size: 'large',
     },
     {
       key: 'maxSize',
@@ -69,6 +73,7 @@ export class TeamsPage implements OnInit {
       sorter: (a, b) => a.maxSize - b.maxSize,
       hidden: true,
       presentation: { type: 'number' },
+      size: 'xsmall',
     },
     {
       key: 'notes',
@@ -77,6 +82,7 @@ export class TeamsPage implements OnInit {
       value: (x) => x.notes || '—',
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.note' },
+      size: 'xlarge',
     },
   ];
   private api = inject(TeamsApiService);

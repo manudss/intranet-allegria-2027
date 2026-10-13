@@ -1,0 +1,283 @@
+<app-page-layout
+  title="Planning & Ordonnancement"
+  description="Planification en chaîne des séquences du programme (prototype — données mockées)"
+>
+  <div actions class="header-actions">
+    <button tuiButton appearance="secondary" type="button" iconStart="@tui.file-text" (click)="toggleChangeLog()">
+      Journal des modifications
+    </button>
+    @if (canEdit()) {
+      <button
+        tuiButton
+        appearance="primary"
+        type="button"
+        iconStart="@tui.plus"
+        (click)="openInsertForm(chain()[chain().length - 1].id)"
+        [disabled]="!chain().length"
+      >
+        Nouveau créneau
+      </button>
+    }
+  </div>
+
+  @if (actionMessage(); as message) {
+    <div class="banner" [class.positive]="message.appearance === 'positive'" [class.negative]="message.appearance === 'negative'" [class.warning]="message.appearance === 'warning'">
+      {{ message.text }}
+    </div>
+  }
+
+  <div class="toolbar">
+    <div class="day-tabs">
+      @for (day of days; track day; let i = $index) {
+        <button
+          tuiButton
+          type="button"
+          size="s"
+          [appearance]="dayIndex() === i ? 'primary' : 'secondary'"
+          (click)="setDay(i)"
+        >
+          J{{ i + 1 }} · {{ day }}
+        </button>
+      }
+    </div>
+
+    @if (locationsForDay().length > 1) {
+      <select [ngModel]="location()" (ngModelChange)="setLocation($event)">
+        @for (loc of locationsForDay(); track loc) {
+          <option [value]="loc">{{ loc }}</option>
+        }
+      </select>
+    }
+  </div>
+
+  <div class="kpis">
+    <div class="kpi-card">
+      <span class="kpi-value">{{ kpis().total }}</span>
+      <span class="kpi-label">Séquences</span>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-value">{{ kpis().mobile }}</span>
+      <span class="kpi-label">Mobiles</span>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-value">{{ kpis().frozen }}</span>
+      <span class="kpi-label">Figées</span>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-value">{{ kpis().branches }}</span>
+      <span class="kpi-label">Branches parallèles</span>
+    </div>
+  </div>
+
+  <div class="programme-layout">
+    <div class="chain-column">
+      <div class="calendar-scroll">
+        <div class="calendar" [style.block-size.px]="calendarHeightPx()">
+          <div class="calendar-axis">
+            @for (mark of hourMarks(); track mark.label) {
+              <div class="hour-mark" [style.top.px]="mark.topPx">
+                <span>{{ mark.label }}</span>
+              </div>
+            }
+          </div>
+
+          <div
+            class="calendar-events"
+            (pointermove)="onDragMove($event)"
+            (pointerup)="endDrag()"
+            (pointercancel)="endDrag()"
+          >
+            @for (mark of hourMarks(); track mark.label) {
+              <div class="hour-line" [style.top.px]="mark.topPx"></div>
+            }
+
+            @for (sequence of chain(); track sequence.id) {
+              <div
+                class="sequence-block"
+                [class]="'cat-' + categoryIndex(sequence)"
+                [class.frozen]="sequence.status === ProgramSequenceStatus.FROZEN"
+                [class.dragging]="dragState()?.sequenceId === sequence.id"
+                [style.top.px]="blockTop(sequence)"
+                [style.height.px]="blockHeight(sequence)"
+                [style.transform]="dragTransform(sequence)"
+                (pointerdown)="startDrag($event, sequence)"
+              >
+                <header>
+                  <span class="sequence-time">{{ sequence.startTime }} – {{ sequence.endTime }}</span>
+                  <div tuiBadge [appearance]="sequence.status === ProgramSequenceStatus.FROZEN ? 'warning' : 'info'">
+                    {{ sequence.status === ProgramSequenceStatus.FROZEN ? 'Figé' : 'Mobile' }}
+                  </div>
+                </header>
+                <h3>{{ sequence.title }}</h3>
+                <p class="sequence-meta">
+                  <tui-icon icon="@tui.map-pin" />
+                  {{ sequence.location }}
+                  @if (sequence.volunteerTeamName) {
+                    · <tui-icon icon="@tui.users" /> {{ sequence.volunteerTeamName }}
+                  }
+                </p>
+                @if (sequence.notes) {
+                  <p class="sequence-notes">{{ sequence.notes }}</p>
+                }
+                @if (sequence.documentLinks.length) {
+                  <ul class="sequence-documents">
+                    @for (doc of sequence.documentLinks; track doc.url) {
+                      <li><a [href]="doc.url" target="_blank" rel="noopener">{{ doc.label }}</a></li>
+                    }
+                  </ul>
+                }
+
+                @if (branchesFor(sequence.id).length) {
+                  <div class="parallel-branches">
+                    <div tuiBadge appearance="neutral">{{ branchesFor(sequence.id).length }} voies parallèles</div>
+                    <ul>
+                      @for (branch of branchesFor(sequence.id); track branch.id) {
+                        <li>{{ branch.location }} — {{ branch.title }}</li>
+                      }
+                    </ul>
+                  </div>
+                }
+
+                @if (canEdit()) {
+                  <footer class="sequence-actions">
+                    <button tuiButton appearance="flat" size="xs" type="button" (click)="openInsertForm(sequence.id)">
+                      Insérer après
+                    </button>
+                    <button
+                      tuiButton
+                      appearance="flat"
+                      size="xs"
+                      type="button"
+                      [disabled]="sequence.status === ProgramSequenceStatus.FROZEN"
+                      (click)="openResizeForm(sequence)"
+                    >
+                      Redimensionner
+                    </button>
+                    <button tuiButton appearance="flat" size="xs" type="button" (click)="toggleFreeze(sequence)">
+                      {{ sequence.status === ProgramSequenceStatus.FROZEN ? 'Défiger' : 'Figer' }}
+                    </button>
+                  </footer>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      @if (!chain().length) {
+        <p class="empty-state">Aucune séquence pour ce jour / lieu.</p>
+      }
+    </div>
+
+    <aside class="preview-panel">
+      @if (insertAfterId()) {
+        <div class="form-card">
+          <h4>Nouveau créneau</h4>
+          <label>
+            Titre
+            <input type="text" [ngModel]="insertDraft().title" (ngModelChange)="updateInsertDraft({ title: $event })" />
+          </label>
+          <label>
+            Durée (minutes)
+            <input
+              type="number"
+              [ngModel]="insertDraft().durationMinutes"
+              (ngModelChange)="updateInsertDraft({ durationMinutes: +$event })"
+            />
+          </label>
+          <label>
+            Notes
+            <textarea [ngModel]="insertDraft().notes" (ngModelChange)="updateInsertDraft({ notes: $event })"></textarea>
+          </label>
+          <button tuiButton appearance="primary" type="button" (click)="previewInsertAction()">
+            Prévisualiser l'insertion
+          </button>
+        </div>
+      }
+
+      @if (resizeSequenceId()) {
+        <div class="form-card">
+          <h4>Redimensionner</h4>
+          <label>
+            Nouvelle durée (minutes)
+            <input type="number" [ngModel]="resizeDuration()" (ngModelChange)="resizeDuration.set(+$event)" />
+          </label>
+          <button tuiButton appearance="primary" type="button" (click)="previewResizeAction()">
+            Prévisualiser le redimensionnement
+          </button>
+        </div>
+      }
+
+      @if (preview(); as current) {
+        <div class="preview-card">
+          <h4>Aperçu — avant / après</h4>
+          <div
+            class="outcome-banner"
+            [class.positive]="current.outcome === 'ok'"
+            [class.warning]="current.outcome === 'partial'"
+            [class.negative]="current.outcome === 'impossible'"
+          >
+            {{ current.message }}
+          </div>
+
+          <table class="schedule-comparison-table">
+            <thead>
+              <tr>
+                <th>Séquence</th>
+                <th>Avant</th>
+                <th>Après</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (current.kind === 'insert') {
+                <tr>
+                  <td>{{ current.newSequence.title }} (nouveau)</td>
+                  <td>—</td>
+                  <td>{{ current.newSequence.startTime }} – {{ current.newSequence.endTime }}</td>
+                </tr>
+              }
+              @for (diff of current.affected; track diff.sequenceId) {
+                <tr>
+                  <td>{{ diff.title }}</td>
+                  <td>{{ diff.before.startTime }} – {{ diff.before.endTime }} ({{ diff.before.durationMinutes }} min)</td>
+                  <td>{{ diff.after.startTime }} – {{ diff.after.endTime }} ({{ diff.after.durationMinutes }} min)</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+
+          <div class="preview-actions">
+            <button
+              tuiButton
+              appearance="primary"
+              type="button"
+              [disabled]="current.outcome === 'impossible'"
+              (click)="confirmPreview()"
+            >
+              Confirmer et appliquer
+            </button>
+            <button tuiButton appearance="secondary" type="button" (click)="cancelPreview()">Annuler</button>
+          </div>
+        </div>
+      }
+
+      @if (changeLogOpen()) {
+        <div class="changelog-card">
+          <h4>Journal des modifications</h4>
+          @if (!changeLog().length) {
+            <p class="empty-state">Aucune modification enregistrée.</p>
+          }
+          <ul>
+            @for (entry of changeLog(); track entry.id) {
+              <li>
+                <strong>{{ changeLogLabels[entry.action] }}</strong>
+                — {{ entry.authorName }} —
+                <span>{{ entry.comment }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    </aside>
+  </div>
+</app-page-layout>

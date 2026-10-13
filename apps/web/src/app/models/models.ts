@@ -507,6 +507,109 @@ export interface DashboardTodoMission {
   shiftCount: number;
 }
 
+// ─── Module Programme (planification en chaîne des séquences) — Phase 0 (mock) ──
+
+export enum ProgramSequenceStatus {
+  MOBILE = 'MOBILE',
+  FROZEN = 'FROZEN',
+}
+
+export interface ProgramDocumentLink {
+  label: string;
+  url: string;
+}
+
+export interface ProgramSequence {
+  id: string;
+  eventDate: string;
+  location: string;
+  title: string;
+  /** Heure de début au format HH:mm */
+  startTime: string;
+  durationMinutes: number;
+  /** Heure de fin calculée (HH:mm), dérivée de startTime + durationMinutes */
+  endTime: string;
+  status: ProgramSequenceStatus;
+  minDurationMinutes: number | null;
+  minMarginMinutes: number | null;
+  /** Prédécesseur dans la chaîne principale du lieu/jour ; null = tête de chaîne */
+  previousSequenceId: string | null;
+  /** Repère commun utilisé pour rattacher des branches parallèles */
+  anchorSequenceId: string | null;
+  volunteerTeamId: number | null;
+  volunteerTeamName: string | null;
+  missionIds: number[];
+  documentLinks: ProgramDocumentLink[];
+  notes: string | null;
+  frozenByUserId: number | null;
+  frozenByUserName: string | null;
+  frozenAt: string | null;
+}
+
+export type ProgramSequenceDraft = Pick<
+  ProgramSequence,
+  | 'eventDate'
+  | 'location'
+  | 'title'
+  | 'durationMinutes'
+  | 'volunteerTeamId'
+  | 'notes'
+> & {
+  minDurationMinutes?: number | null;
+  minMarginMinutes?: number | null;
+};
+
+export interface ProgramSequenceDiff {
+  sequenceId: string;
+  title: string;
+  before: { startTime: string; endTime: string; durationMinutes: number };
+  after: { startTime: string; endTime: string; durationMinutes: number };
+}
+
+export type ProgramRecalcOutcome = 'ok' | 'partial' | 'impossible';
+
+export interface ProgramInsertPreview {
+  kind: 'insert';
+  afterSequenceId: string;
+  draft: ProgramSequenceDraft;
+  newSequence: ProgramSequence;
+  affected: ProgramSequenceDiff[];
+  outcome: ProgramRecalcOutcome;
+  message: string;
+}
+
+export interface ProgramResizePreview {
+  kind: 'resize';
+  sequenceId: string;
+  previousDurationMinutes: number;
+  newDurationMinutes: number;
+  affected: ProgramSequenceDiff[];
+  stoppedAtFrozenId: string | null;
+  marginMinutes: number | null;
+  outcome: ProgramRecalcOutcome;
+  message: string;
+}
+
+export type ProgramPreview = ProgramInsertPreview | ProgramResizePreview;
+
+export type ProgramChangeLogAction =
+  | 'INSERT'
+  | 'RESIZE'
+  | 'MOVE'
+  | 'FREEZE'
+  | 'UNFREEZE'
+  | 'DELETE';
+
+export interface ProgramChangeLogEntry {
+  id: string;
+  action: ProgramChangeLogAction;
+  authorUserId: number | null;
+  authorName: string;
+  createdAt: string;
+  affectedSequenceIds: string[];
+  comment: string | null;
+}
+
 export interface DashboardTodoShift {
   shiftId: number;
   missionTitle: string;

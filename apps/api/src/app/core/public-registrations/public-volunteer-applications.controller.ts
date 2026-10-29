@@ -3,6 +3,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { PublicVolunteerApplicationResult } from '@mej-allegria/shared';
 import { PublicRegistrationsService } from './public-registrations.service';
+import { Public } from '../auth/public.decorator';
 import { CreatePublicVolunteerApplicationDto } from './public-volunteer-application.dto';
 
 /**
@@ -14,6 +15,7 @@ import { CreatePublicVolunteerApplicationDto } from './public-volunteer-applicat
  * pas été validée et convertie manuellement par un staff.
  */
 @ApiTags('Inscriptions publiques')
+@Public()
 @Controller('public/volunteer-applications')
 @UseGuards(ThrottlerGuard)
 @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))

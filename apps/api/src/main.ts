@@ -1,13 +1,15 @@
 import { Logger, RequestMethod } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app/app.module';
 import { parseCorsOrigins } from './app/config/environment';
+import { configureWebHosting, resolveWebStaticDir } from './app/config/web-hosting';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true });
 
   try {
     app.enableShutdownHooks();
@@ -45,6 +47,12 @@ async function bootstrap() {
     SwaggerModule.setup(`${globalPrefix}/docs`, app, swaggerDocument, {
       swaggerOptions: { persistAuthorization: true },
     });
+
+    const webStaticDir = resolveWebStaticDir(configService.get<string>('WEB_STATIC_DIR'));
+    if (webStaticDir) {
+      configureWebHosting(app, webStaticDir);
+      logger.log(`Serving the web app from ${webStaticDir} (preview mode)`);
+    }
 
     await app.listen(port, '0.0.0.0');
     logger.log(`Application is running on ${await app.getUrl()}/${globalPrefix}`);

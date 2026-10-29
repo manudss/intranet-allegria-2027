@@ -1,4 +1,6 @@
 export { AssignmentStatus } from './assignment-status.enum';
+export { AccommodationType } from './accommodation-type.enum';
+export { HostingGroupKind } from './hosting-group-kind.enum';
 export { HostFamilyStatus } from './host-family-status.enum';
 export { MejAgeGroup } from './mej-age-group.enum';
 export { PersonType } from './person-type.enum';

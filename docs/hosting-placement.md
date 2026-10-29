@@ -26,6 +26,13 @@ Chaîne : équipe → groupe d'hébergement → familles du groupe.
 - Les champs libres `constraints` et `tags` des familles ne sont pas interprétés : la famille est marquée « à relire ».
 - Écriture réservée à `ADMIN`, `COORDINATOR`, `LOGISTICS`. Lecture : ADMIN, COORDINATOR, HEALTH, VOLUNTEERS, LOGISTICS, VIEWER.
 
+## Groupes d'hébergement, hébergements collectifs, préparation du transport
+
+- Un groupe a un type (`ZONE`, `PAROISSE`/`PARISH`, `OTHER`) et une couleur. Il est visible sur la carte (contour coloré, légende filtrante). Regroupement depuis la carte : sélection (cartes ou maisons), « Affecter », « Retirer du groupe », « Créer et affecter », « Regrouper par paroisse » (champ libre paroisse, sans déplacer une famille déjà groupée).
+- API : `GET /hosting/groups` (liste légère), `PUT /hosting/families-group` (tout ou rien : 400 liste vide, 404 famille inconnue, 409 si déplacement d'une famille déjà placée), `POST /hosting/groups/from-parishes` (idempotent).
+- Type d'hébergement : `FAMILY` ou `COLLECTIVE` (internat, plus grande capacité). Mêmes contrôles de capacité, mineurs et animateurs que pour une famille ; ce point reste à confirmer.
+- Transport (page non construite) : une future table de transport référencera `hosting_group_id` (donc zone ou paroisse via `kind`), avec la distance au lieu de rassemblement déjà calculée côté carte, pour affecter un car à un groupe éloigné.
+
 ## Vérification
 
 `node scripts/check-hosting-placement.mjs` (API et base réelles, données fictives du seed) : exécuté en CI après le test d'authentification.

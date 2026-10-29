@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, In, Repository } from 'typeorm';
+import { EntityManager, In, IsNull, Not, Repository } from 'typeorm';
 import {
   AssignmentStatus,
   HostFamily,
@@ -16,6 +16,8 @@ import {
   PersonType,
   Team,
   TeamParticipant,
+  HostingGroupKind,
+  AccommodationType,
 } from '../entities';
 import {
   AssignToGroupDto,
@@ -92,7 +94,14 @@ export class HostingPlacementService {
 
   createGroup(dto: HostingGroupDto): Promise<HostingGroup> {
     if (!dto.name?.trim()) throw new BadRequestException('Nom requis');
-    return this.groups.save(this.groups.create({ name: dto.name.trim(), notes: dto.notes ?? null }));
+    return this.groups.save(
+      this.groups.create({
+        name: dto.name.trim(),
+        notes: dto.notes ?? null,
+        kind: this.checkKind(dto.kind) ?? HostingGroupKind.OTHER,
+        color: this.checkColor(dto.color) ?? null,
+      }),
+    );
   }
 
   async updateGroup(id: number, dto: Partial<HostingGroupDto>): Promise<HostingGroup> {
@@ -102,7 +111,100 @@ export class HostingPlacementService {
       group.name = dto.name.trim();
     }
     if (dto.notes !== undefined) group.notes = dto.notes ?? null;
+    if (dto.kind !== undefined) group.kind = this.checkKind(dto.kind) ?? group.kind;
+    if (dto.color !== undefined) group.color = this.checkColor(dto.color) ?? null;
     return this.groups.save(group);
+  }
+
+  /** Liste légère des groupes (carte, listes) : type, couleur, nombre de familles et de places. */
+  async listGroups(): Promise<
+    { id: number; name: string; notes: string | null; kind: HostingGroupKind; color: string | null; familyCount: number; seats: number; collectiveCount: number }[]
+  > {
+    const [groups, families] = await Promise.all([
+      this.groups.find({ order: { name: 'ASC' } }),
+      this.families.find({ where: { hostingGroup: Not(IsNull()) }, relations: { hostingGroup: true } }),
+    ]);
+    return groups.map((g) => {
+      const list = families.filter((f) => f.hostingGroup?.id === g.id);
+      return {
+        id: g.id,
+        name: g.name,
+        notes: g.notes,
+        kind: g.kind,
+        color: g.color,
+        familyCount: list.length,
+        seats: list.reduce((n, f) => n + f.maxCapacity, 0),
+        collectiveCount: list.filter((f) => f.accommodationType === AccommodationType.COLLECTIVE).length,
+      };
+    });
+  }
+
+  private checkKind(kind: HostingGroupKind | undefined): HostingGroupKind | undefined {
+    if (kind === undefined) return undefined;
+    if (!Object.values(HostingGroupKind).includes(kind)) throw new BadRequestException('Type de groupe inconnu');
+    return kind;
+  }
+
+  private checkColor(color: string | null | undefined): string | null | undefined {
+    if (color === undefined || color === null) return color;
+    if (!/^#[0-9a-fA-F]{6}$/.test(color)) throw new BadRequestException('Couleur attendue au format #rrggbb');
+    return color.toLowerCase();
+  }
+
+  /** Affecte plusieurs familles d'un coup. Tout ou rien : une famille qui accueille déjà des gens dans un autre groupe bloque l'opération. */
+  async setFamiliesGroup(dto: { familyIds: number[]; hostingGroupId: number | null }): Promise<{ updated: number; hostingGroupId: number | null }> {
+    const ids = [...new Set(dto.familyIds ?? [])];
+    if (ids.length === 0) throw new BadRequestException('Aucune famille sélectionnée');
+    const hostingGroupId = dto.hostingGroupId ?? null;
+    if (hostingGroupId !== null) await this.findGroup(hostingGroupId);
+    return this.families.manager.transaction(async (manager) => {
+      const rows = await manager
+        .getRepository(HostFamily)
+        .createQueryBuilder('f')
+        .setLock('pessimistic_write')
+        .where('f.id IN (:...ids)', { ids })
+        .getMany();
+      if (rows.length !== ids.length) throw new NotFoundException('Une ou plusieurs familles sont introuvables');
+      const moving = rows.filter((f) => f.hostingGroupId !== null && f.hostingGroupId !== hostingGroupId);
+      if (moving.length > 0) {
+        const busy = await manager
+          .getRepository(ParticipantHostFamilyAssignment)
+          .createQueryBuilder('a')
+          .where('a.host_family_id IN (:...mids)', { mids: moving.map((f) => f.id) })
+          .andWhere('a.status != :cancelled', { cancelled: AssignmentStatus.CANCELLED })
+          .getCount();
+        if (busy > 0) {
+          throw new ConflictException(
+            `Des familles sélectionnées accueillent déjà ${busy} personne(s) dans un autre groupe : retirez-les avant de changer leur groupe`,
+          );
+        }
+      }
+      await manager
+        .createQueryBuilder()
+        .update(HostFamily)
+        .set({ hostingGroup: hostingGroupId === null ? null : ({ id: hostingGroupId } as HostingGroup) })
+        .where('id IN (:...ids)', { ids })
+        .execute();
+      return { updated: ids.length, hostingGroupId };
+    });
+  }
+
+  /** Crée un groupe (type paroisse) par paroisse et y range uniquement les familles qui n'ont pas encore de groupe. Ne déplace rien. */
+  async groupFromParishes(dto: { parishes?: string[] }): Promise<{ groups: { id: number; name: string; created: boolean; families: number }[] }> {
+    const wanted = dto.parishes?.length ? new Set(dto.parishes.map((p) => p.trim())) : null;
+    const free = (await this.families.find({ where: { hostingGroup: IsNull() } })).filter(
+      (f) => f.parish && f.parish.trim() && (!wanted || wanted.has(f.parish.trim())),
+    );
+    const byParish = new Map<string, HostFamily[]>();
+    for (const f of free) byParish.set(f.parish!.trim(), [...(byParish.get(f.parish!.trim()) ?? []), f]);
+    const out: { id: number; name: string; created: boolean; families: number }[] = [];
+    for (const [parish, list] of byParish) {
+      const existing = await this.groups.findOneBy({ name: parish });
+      const group = existing ?? (await this.groups.save(this.groups.create({ name: parish, notes: null, kind: HostingGroupKind.PARISH, color: null })));
+      await this.setFamiliesGroup({ familyIds: list.map((f) => f.id), hostingGroupId: group.id });
+      out.push({ id: group.id, name: group.name, created: !existing, families: list.length });
+    }
+    return { groups: out };
   }
 
   async removeGroup(id: number): Promise<void> {
@@ -240,7 +342,7 @@ export class HostingPlacementService {
     for (const m of members) memberCount.set(m.teamId, (memberCount.get(m.teamId) ?? 0) + 1);
 
     return {
-      hostingGroups: hostingGroups.map((g) => ({ id: g.id, name: g.name, notes: g.notes })),
+      hostingGroups: hostingGroups.map((g) => ({ id: g.id, name: g.name, notes: g.notes, kind: g.kind, color: g.color })),
       teams: teams.map((t) => ({
         id: t.id,
         name: t.name,
@@ -254,6 +356,9 @@ export class HostingPlacementService {
         familyName: f.familyName,
         city: f.city,
         parish: f.parish,
+        accommodationType: f.accommodationType,
+        latitude: f.latitude,
+        longitude: f.longitude,
         maxCapacity: f.maxCapacity,
         maxUnder18: f.maxUnder18,
         maxAnimators: f.maxAnimators,

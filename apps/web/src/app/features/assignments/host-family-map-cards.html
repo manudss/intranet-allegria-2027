@@ -3,12 +3,14 @@
     <button
       type="button"
       class="family-card"
-      [class.family-card--active]="item.family.id === selectedFamilyId()"
+      [class.family-card--active]="item.family.id === selectedFamilyId() || checkedIds().has(item.family.id)"
+      [attr.aria-pressed]="selectMode() ? checkedIds().has(item.family.id) : null"
+      [style.border-left]="'6px solid ' + groupTone(item)"
       [id]="'family-card-' + item.family.id"
       (click)="selectFamily.emit(item.family.id)"
     >
       <header>
-        <strong>{{ item.family.familyName }}</strong>
+        <strong>{{ selectMode() ? (checkedIds().has(item.family.id) ? '☑ ' : '☐ ') : '' }}{{ item.collective ? '🏫 ' : '' }}{{ item.family.familyName }}</strong>
         <span size="s" tuiBadge [appearance]="badgeAppearance(item.capacityState)">
           {{ capacityLabel(item.capacityState) }}
         </span>
@@ -21,6 +23,7 @@
         {{ item.under18Count }}/{{ item.family.maxUnder18 }}
         mineurs
       </p>
+      <p class="meta">{{ item.collective ? 'Hébergement collectif' : 'Famille d\'accueil' }} · Groupe : {{ item.group ? item.group.name : 'aucun' }}</p>
       @if (item.distanceKm !== null) {
         <p class="meta">Distance: {{ formatDistance(item.distanceKm) }} km</p>
       }

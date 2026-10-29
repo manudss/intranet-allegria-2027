@@ -168,6 +168,10 @@ export class HostingPlacementPage implements OnInit {
     this.reload();
   }
 
+  protected kindLabel(kind: string | undefined): string {
+    return kind === 'ZONE' ? 'zone' : kind === 'PARISH' ? 'paroisse' : '';
+  }
+
   protected stats(groupId: number | null) {
     const b = this.board();
     return b ? groupStats(b, groupId) : { teams: 0, families: 0, people: 0, placed: 0, seats: 0 };

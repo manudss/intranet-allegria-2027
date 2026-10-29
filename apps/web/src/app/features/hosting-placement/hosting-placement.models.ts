@@ -5,10 +5,21 @@ export interface PlacementRules {
   sexMixing: SexMixingRule;
 }
 
+export type HostingGroupKind = 'ZONE' | 'PARISH' | 'OTHER';
+
 export interface HostingGroup {
   id: number;
   name: string;
   notes: string | null;
+  kind?: HostingGroupKind;
+  color?: string | null;
+}
+
+export interface HostingGroupSummary extends HostingGroup {
+  kind: HostingGroupKind;
+  familyCount: number;
+  seats: number;
+  collectiveCount: number;
 }
 
 export interface BoardTeam {
@@ -37,6 +48,9 @@ export interface BoardFamily {
   familyName: string;
   city: string;
   parish: string | null;
+  accommodationType?: 'FAMILY' | 'COLLECTIVE';
+  latitude?: number | null;
+  longitude?: number | null;
   maxCapacity: number;
   maxUnder18: number;
   maxAnimators: number | null;

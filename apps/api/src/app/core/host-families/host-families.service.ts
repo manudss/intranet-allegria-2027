@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { HostFamily } from '../entities';
+import { AccommodationType, HostFamily } from '../entities';
 import { CreateHostFamilyDto, UpdateHostFamilyDto } from './host-families.types';
 
 @Injectable()
@@ -14,7 +14,9 @@ export class HostFamiliesService {
   create(dto: CreateHostFamilyDto): Promise<HostFamily> {
     const hostFamily = this.hostFamiliesRepository.create({
       ...dto,
-      maxUnder18: dto.maxUnder18 ?? 0,
+      accommodationType: dto.accommodationType ?? AccommodationType.FAMILY,
+      // Hébergement collectif : par défaut, les mineurs ne sont limités que par la capacité totale.
+      maxUnder18: dto.maxUnder18 ?? (dto.accommodationType === AccommodationType.COLLECTIVE ? dto.maxCapacity : 0),
       phone: dto.phone ?? null,
       email: dto.email ?? null,
       parish: dto.parish ?? null,

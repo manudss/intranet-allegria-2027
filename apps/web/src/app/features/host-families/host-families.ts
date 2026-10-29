@@ -4,6 +4,7 @@ import { finalize } from 'rxjs';
 import { HostFamily, HostFamilyPayload, HostFamilyStatus } from '../../models/models';
 import { HostFamiliesApiService } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
+import { HostingPlacementApiService } from '../hosting-placement/hosting-placement.api';
 import { DataTableColumn } from '../../shared/data-table';
 
 const STATUS_LABELS: Record<HostFamilyStatus, string> = {
@@ -35,6 +36,7 @@ const blank = (): HostFamilyPayload => ({
   constraints: null,
   tags: null,
   status: 'DRAFT',
+  accommodationType: 'FAMILY',
 });
 @Component({
   selector: 'app-host-families',
@@ -99,6 +101,20 @@ export class HostFamiliesPage implements OnInit {
       hidden: true,
       presentation: { type: 'icon', icon: () => '@tui.mail' },
       size: 'large',
+    },
+    {
+      key: 'accommodationType',
+      label: 'Type',
+      type: 'text',
+      value: (x) => (x.accommodationType === 'COLLECTIVE' ? 'Collectif' : 'Famille'),
+      size: 'small',
+    },
+    {
+      key: 'hostingGroup',
+      label: 'Groupe',
+      type: 'text',
+      value: (x) => (x.hostingGroupId != null ? (this.groupNames().get(x.hostingGroupId) ?? '—') : '—'),
+      size: 'medium',
     },
     {
       key: 'maxCapacity',
@@ -184,6 +200,8 @@ export class HostFamiliesPage implements OnInit {
     },
   ];
   private api = inject(HostFamiliesApiService);
+  private hostingApi = inject(HostingPlacementApiService);
+  protected groupNames = signal(new Map<number, string>());
   items = signal<HostFamily[]>([]);
   query = signal('');
   loading = signal(true);
@@ -210,6 +228,20 @@ export class HostFamiliesPage implements OnInit {
       .list()
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe((x) => this.items.set(x));
+    this.hostingApi.listGroups().subscribe({
+      next: (groups) => this.groupNames.set(new Map(groups.map((g) => [g.id, g.name]))),
+      error: () => undefined,
+    });
+  }
+
+  protected groupNameOf(x: HostFamily | null): string {
+    const id = x?.hostingGroupId;
+    return typeof id === 'number' ? (this.groupNames().get(id) ?? '—') : '—';
+  }
+
+  protected setType(value: string): void {
+    const type = value === 'COLLECTIVE' ? 'COLLECTIVE' : 'FAMILY';
+    this.model.update((m) => ({ ...m, accommodationType: type }));
   }
   open(x: HostFamily) {
     this.selected.set(x);
@@ -223,8 +255,11 @@ export class HostFamiliesPage implements OnInit {
   }
   edit() {
     const x = this.requireSelectedFamily();
+    // hostingGroupId est en lecture seule ici (le groupe se gère depuis la carte ou le placement).
+    const { hostingGroupId: _ignored, ...rest } = x;
+    void _ignored;
     this.model.set({
-      ...x,
+      ...rest,
       phone: x.phone ?? '',
       email: x.email ?? '',
       parish: x.parish ?? '',

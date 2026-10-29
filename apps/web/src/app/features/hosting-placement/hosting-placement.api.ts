@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { AutoPlaceResult, Board, HostingGroup, PlaceResult, PlacementRules } from './hosting-placement.models';
+import { AutoPlaceResult, Board, HostingGroup, HostingGroupKind, HostingGroupSummary, PlaceResult, PlacementRules } from './hosting-placement.models';
 
 @Injectable({ providedIn: 'root' })
 export class HostingPlacementApiService {
@@ -11,8 +11,23 @@ export class HostingPlacementApiService {
   board(): Observable<Board> {
     return this.http.get<Board>(`${this.base}/board`);
   }
-  createGroup(name: string): Observable<HostingGroup> {
-    return this.http.post<HostingGroup>(`${this.base}/groups`, { name });
+  listGroups(): Observable<HostingGroupSummary[]> {
+    return this.http.get<HostingGroupSummary[]>(`${this.base}/groups`);
+  }
+  createGroup(name: string, extra: { kind?: HostingGroupKind; color?: string | null } = {}): Observable<HostingGroup> {
+    return this.http.post<HostingGroup>(`${this.base}/groups`, { name, ...extra });
+  }
+  setFamiliesGroup(familyIds: number[], hostingGroupId: number | null) {
+    return this.http.put<{ updated: number; hostingGroupId: number | null }>(`${this.base}/families-group`, {
+      familyIds,
+      hostingGroupId,
+    });
+  }
+  groupFromParishes() {
+    return this.http.post<{ groups: { id: number; name: string; created: boolean; families: number }[] }>(
+      `${this.base}/groups/from-parishes`,
+      {},
+    );
   }
   renameGroup(id: number, name: string): Observable<HostingGroup> {
     return this.http.patch<HostingGroup>(`${this.base}/groups/${id}`, { name });

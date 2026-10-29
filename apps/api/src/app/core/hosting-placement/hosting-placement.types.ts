@@ -1,12 +1,32 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { AccommodationType, HostingGroupKind } from '../entities';
 import { SexMixingRule, UnplacedReason } from './placement.algorithm';
 
 export class HostingGroupDto {
   @ApiProperty({ example: 'Quartier Croix-Rousse' })
   name!: string;
 
+  @ApiPropertyOptional({ enum: HostingGroupKind, example: 'PARISH', description: 'Type de regroupement : zone géographique, paroisse ou autre.' })
+  kind?: HostingGroupKind;
+
+  @ApiPropertyOptional({ example: '#2f7d6d', nullable: true, description: 'Couleur #rrggbb affichée sur la carte.' })
+  color?: string | null;
+
   @ApiPropertyOptional({ example: 'Familles à moins de 15 min du lieu.', nullable: true })
   notes?: string | null;
+}
+
+export class BulkAssignFamiliesDto {
+  @ApiProperty({ type: [Number], example: [1, 2, 3] })
+  familyIds!: number[];
+
+  @ApiProperty({ example: 3, nullable: true, description: 'null pour retirer du groupe' })
+  hostingGroupId!: number | null;
+}
+
+export class GroupFromParishesDto {
+  @ApiPropertyOptional({ type: [String], description: 'Limiter à ces paroisses (défaut : toutes celles qui ont des familles sans groupe).' })
+  parishes?: string[];
 }
 
 export class AssignToGroupDto {
@@ -73,7 +93,7 @@ export interface BoardMember {
 }
 
 export interface BoardResponse {
-  hostingGroups: { id: number; name: string; notes: string | null }[];
+  hostingGroups: { id: number; name: string; notes: string | null; kind: HostingGroupKind; color: string | null }[];
   teams: {
     id: number;
     name: string;
@@ -87,6 +107,9 @@ export interface BoardResponse {
     familyName: string;
     city: string;
     parish: string | null;
+    accommodationType: AccommodationType;
+    latitude: number | null;
+    longitude: number | null;
     maxCapacity: number;
     maxUnder18: number;
     maxAnimators: number | null;

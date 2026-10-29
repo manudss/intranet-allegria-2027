@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { TuiBadge, TuiChip } from '@taiga-ui/kit';
-import { HostFamilyMapItem } from './host-families-map.utils';
+import { HostFamilyMapItem, groupColor } from './host-families-map.utils';
 
 @Component({
   selector: 'app-host-family-map-cards',
@@ -13,6 +13,8 @@ import { HostFamilyMapItem } from './host-families-map.utils';
 export class HostFamilyMapCardsComponent {
   readonly families = input.required<readonly HostFamilyMapItem[]>();
   readonly selectedFamilyId = input<number | null>(null);
+  readonly checkedIds = input<ReadonlySet<number>>(new Set());
+  readonly selectMode = input(false);
   readonly selectFamily = output<number>();
 
   capacityLabel(state: HostFamilyMapItem['capacityState']): string {
@@ -25,6 +27,10 @@ export class HostFamilyMapCardsComponent {
     if (state === 'FULL') return 'negative';
     if (state === 'UNDER_USED') return 'warning';
     return 'positive';
+  }
+
+  groupTone(item: HostFamilyMapItem): string {
+    return groupColor(item.group);
   }
 
   formatDistance(distanceKm: number): string {

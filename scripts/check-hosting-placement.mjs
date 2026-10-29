@@ -81,5 +81,40 @@ await call('PUT', `/hosting/teams/${team.id}/group`, { hostingGroupId: null }, a
 for (const f of fams.slice(0, 3)) await call('PUT', `/hosting/families/${f.id}/group`, { hostingGroupId: null }, adm);
 await call('DELETE', `/hosting/groups/${gid}`, undefined, adm);
 
+// ── Groupes par zone/paroisse, regroupement en lot, hebergements collectifs ──
+{
+  const tag = `T${Date.now()}`;
+  const mkFam = (name, extra) => call('POST', '/host-families', { familyName: `${name} ${tag}`, address: '1 rue du Test', postalCode: '69000', city: 'Lyon', maxCapacity: 4, status: 'VALIDATED', ...extra }, adm);
+  const [, g1] = await call('POST', '/hosting/groups', { name: `Zone ${tag}`, kind: 'ZONE', color: '#2f7d6d' }, adm);
+  check('groupe avec type et couleur', g1?.kind === 'ZONE' && g1?.color === '#2f7d6d', g1);
+  check('couleur invalide -> 400', (await call('POST', '/hosting/groups', { name: 'x', color: 'rouge' }, adm))[0] === 400);
+  check('type inconnu -> 400', (await call('POST', '/hosting/groups', { name: 'x', kind: 'AUTRE' }, adm))[0] === 400);
+  const [, col] = await mkFam('Internat', { accommodationType: 'COLLECTIVE', maxCapacity: 30 });
+  check('collectif: type enregistre et mineurs = capacite par defaut', col?.accommodationType === 'COLLECTIVE' && col?.maxUnder18 === 30, col);
+  const [, fam] = await mkFam('Famille', { parish: `Paroisse ${tag}` });
+  const [, fam2] = await mkFam('Famille', { parish: `Paroisse ${tag}` });
+  check('famille: type par defaut FAMILY', fam?.accommodationType === 'FAMILY', fam);
+  check('lot sans selection -> 400', (await call('PUT', '/hosting/families-group', { familyIds: [], hostingGroupId: g1.id }, adm))[0] === 400);
+  check('lot avec famille inconnue -> 404', (await call('PUT', '/hosting/families-group', { familyIds: [fam.id, 99999999], hostingGroupId: g1.id }, adm))[0] === 404);
+  const [bs] = await call('PUT', '/hosting/families-group', { familyIds: [col.id, fam.id], hostingGroupId: g1.id }, adm);
+  check('regroupement en lot', bs === 200);
+  const [, b3] = await call('GET', '/hosting/board', undefined, adm);
+  const ff = (id) => b3.families.find((f) => f.id === id);
+  check('board: familles dans le groupe + type collectif visible', ff(col.id)?.hostingGroupId === g1.id && ff(fam.id)?.hostingGroupId === g1.id && ff(col.id)?.accommodationType === 'COLLECTIVE');
+  check('regroupement en lot interdit en lecture seule (403)', (await call('PUT', '/hosting/families-group', { familyIds: [fam.id], hostingGroupId: null }, health))[0] === 403);
+  const [ps, pr] = await call('POST', '/hosting/groups/from-parishes', { parishes: [`Paroisse ${tag}`] }, adm);
+  const made = pr?.groups?.find((x) => x.name === `Paroisse ${tag}`);
+  check('par paroisse: groupe cree pour les familles sans groupe', ps === 201 && made?.created && made.families === 1 && !pr.groups.some((x) => x.families > 1), pr);
+  const [, b4] = await call('GET', '/hosting/board', undefined, adm);
+  check('par paroisse: la famille deja groupee n est pas deplacee', b4.families.find((f) => f.id === fam.id).hostingGroupId === g1.id);
+  check('par paroisse: la famille libre est rangee', b4.families.find((f) => f.id === fam2.id).hostingGroupId === made.id);
+  const [, again2] = await call('POST', '/hosting/groups/from-parishes', { parishes: [`Paroisse ${tag}`] }, adm);
+  check('par paroisse: idempotent', again2.groups.length === 0, again2);
+  // nettoyage
+  await call('PUT', '/hosting/families-group', { familyIds: [col.id, fam.id, fam2.id], hostingGroupId: null }, adm);
+  for (const id of [col.id, fam.id, fam2.id]) await call('DELETE', `/host-families/${id}`, undefined, adm);
+  for (const id of [g1.id, made.id]) await call('DELETE', `/hosting/groups/${id}`, undefined, adm);
+}
+
 if (failures) { console.error(`${failures} verification(s) en echec`); process.exit(1); }
 console.log('Placement d hebergement: toutes les verifications sont OK');

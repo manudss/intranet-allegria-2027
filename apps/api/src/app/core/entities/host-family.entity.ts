@@ -1,4 +1,5 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, RelationId } from 'typeorm';
+import { AccommodationType } from './accommodation-type.enum';
 import { HostingGroup } from './hosting-group.entity';
 import { ParticipantHostFamilyAssignment } from './participant-host-family-assignment.entity';
 import { HostFamilyStatus } from './host-family-status.enum';
@@ -25,6 +26,9 @@ export class HostFamily {
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   email!: string | null;
+
+  @Column({ name: 'accommodation_type', type: 'varchar', length: 20, default: AccommodationType.FAMILY })
+  accommodationType!: AccommodationType;
 
   @Column({ type: 'int' })
   maxCapacity!: number;
@@ -55,6 +59,9 @@ export class HostFamily {
 
   @Column({ type: 'enum', enum: HostFamilyStatus, default: HostFamilyStatus.DRAFT })
   status!: HostFamilyStatus;
+
+  @RelationId((family: HostFamily) => family.hostingGroup)
+  hostingGroupId!: number | null;
 
   @ManyToOne(() => HostingGroup, (hostingGroup) => hostingGroup.hostFamilies, {
     nullable: true,

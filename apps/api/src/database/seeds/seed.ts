@@ -5,7 +5,9 @@ import {
   AssignmentStatus,
   Group,
   HostFamily,
+  AccommodationType,
   HostingGroup,
+  HostingGroupKind,
   HostFamilyStatus,
   MejAgeGroup,
   Participant,
@@ -861,6 +863,8 @@ async function run(): Promise<void> {
         hostingGroupRepository.create({
           name: `Groupe d'hébergement ${String.fromCharCode(65 + (index % 26))}${index >= 26 ? Math.floor(index / 26) : ''}`,
           notes: null,
+          kind: index % 2 === 0 ? HostingGroupKind.ZONE : HostingGroupKind.PARISH,
+          color: ['#2f7d6d', '#c2410c', '#1d4ed8', '#a21caf', '#b45309', '#0f766e'][index % 6],
         }),
       ),
     );
@@ -1104,9 +1108,10 @@ async function run(): Promise<void> {
           email: chance(0.9)
             ? `famille.${normalizeText(familyLastName)}.${i + 1}@example.org`
             : null,
-          maxCapacity: capacity,
-          maxUnder18: Math.max(0, capacity - faker.number.int({ min: 0, max: 2 })),
-          maxAnimators: chance(0.6) ? faker.number.int({ min: 1, max: 2 }) : null,
+          accommodationType: i % 40 === 39 ? AccommodationType.COLLECTIVE : AccommodationType.FAMILY,
+          maxCapacity: i % 40 === 39 ? 24 : capacity,
+          maxUnder18: i % 40 === 39 ? 24 : Math.max(0, capacity - faker.number.int({ min: 0, max: 2 })),
+          maxAnimators: i % 40 === 39 ? null : chance(0.6) ? faker.number.int({ min: 1, max: 2 }) : null,
           parish: chance(0.7) ? `Paroisse ${faker.person.lastName()}` : null,
           notes: chance(0.1) ? 'Animaux de compagnie presents.' : null,
           hostingGroup: hostingGroupFor(i),

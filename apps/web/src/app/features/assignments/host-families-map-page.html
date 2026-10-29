@@ -94,6 +94,60 @@
       </div>
     </form>
 
+    <section class="groups-panel" aria-label="Groupes d'hébergement">
+      <h3>Groupes d'hébergement</h3>
+      <div class="legend" data-testid="legend">
+        @for (g of legend(); track g.id) {
+          <button type="button" class="legend-chip" [attr.aria-pressed]="groupFilter().includes(g.id)" (click)="toggleGroupFilter(g.id)">
+            <span class="legend-dot" [style.background]="g.tone"></span>
+            {{ g.name }} · {{ g.familyCount }} lieu(x) · {{ g.seats }} places
+          </button>
+        }
+        <button type="button" class="legend-chip" [attr.aria-pressed]="groupFilter().includes(0)" (click)="toggleGroupFilter(0)">
+          <span class="legend-dot" style="background: #6b7280"></span> Sans groupe · {{ ungroupedCount() }}
+        </button>
+        <button type="button" class="legend-chip" [attr.aria-pressed]="typeFilter() === 'FAMILY'" (click)="setTypeFilter('FAMILY')">🏠 Familles</button>
+        <button type="button" class="legend-chip" [attr.aria-pressed]="typeFilter() === 'COLLECTIVE'" (click)="setTypeFilter('COLLECTIVE')">🏫 Hébergements collectifs</button>
+      </div>
+      <p class="muted">Couleur du contour = groupe. Cliquer un groupe filtre la carte et la liste.</p>
+      <div class="select-bar">
+        <button type="button" tuiButton size="s" [appearance]="selectMode() ? 'primary' : 'secondary'" data-testid="select-mode" (click)="toggleSelectMode()">
+          {{ selectMode() ? 'Terminer la sélection' : 'Sélectionner pour regrouper' }}
+        </button>
+        <button type="button" tuiButton size="s" appearance="secondary" data-testid="group-by-parish" [disabled]="busy()" (click)="groupByParish()">
+          Regrouper par paroisse
+        </button>
+      </div>
+      @if (selectMode()) {
+        <div class="select-bar" data-testid="select-bar">
+          <span><strong>{{ checkedCount() }}</strong> sélectionné(s)</span>
+          <button type="button" tuiButton size="s" appearance="flat" (click)="checkAllShown()">Tout sélectionner ({{ filteredFamilies().length }})</button>
+          <button type="button" tuiButton size="s" appearance="flat" (click)="clearChecked()">Vider</button>
+          <select aria-label="Groupe cible" data-testid="target-group" (change)="targetGroupId.set(+$any($event.target).value || null)">
+            <option value="0" [selected]="targetGroupId() === null">— groupe —</option>
+            @for (g of hostingGroups(); track g.id) {
+              <option [value]="g.id" [selected]="targetGroupId() === g.id">{{ g.name }}</option>
+            }
+          </select>
+          <button type="button" tuiButton size="s" data-testid="assign" [disabled]="busy() || !checkedCount() || targetGroupId() === null" (click)="assignChecked(targetGroupId())">Affecter</button>
+          <button type="button" tuiButton size="s" appearance="secondary" [disabled]="busy() || !checkedCount()" (click)="assignChecked(null)">Retirer du groupe</button>
+        </div>
+        <div class="select-bar">
+          <input aria-label="Nom du nouveau groupe" data-testid="new-group-name" placeholder="Nouveau groupe (ex. Nord, Paroisse X)" [value]="newGroupName()" (input)="newGroupName.set($any($event.target).value)" />
+          <select aria-label="Type de groupe" (change)="newGroupKind.set($any($event.target).value)">
+            <option value="ZONE" [selected]="newGroupKind() === 'ZONE'">Zone géographique</option>
+            <option value="PARISH" [selected]="newGroupKind() === 'PARISH'">Paroisse</option>
+            <option value="OTHER" [selected]="newGroupKind() === 'OTHER'">Autre</option>
+          </select>
+          <button type="button" tuiButton size="s" data-testid="create-assign" [disabled]="busy() || !checkedCount() || !newGroupName().trim()" (click)="createGroupAndAssign()">Créer et affecter</button>
+        </div>
+        <p class="muted">Cliquez sur les maisons de la carte ou sur les cartes de la liste pour les cocher.</p>
+      }
+      @if (feedback(); as f) {
+        <p class="feedback" [class.error]="f.error" role="status" data-testid="feedback">{{ f.text }}</p>
+      }
+    </section>
+
     <div class="map-and-cards">
       <section class="map-surface">
         <div
@@ -109,6 +163,8 @@
         <app-host-family-map-cards
           [families]="filteredFamilies()"
           [selectedFamilyId]="selectedFamilyId()"
+          [checkedIds]="checkedIds()"
+          [selectMode]="selectMode()"
           (selectFamily)="onCardSelected($event)"
         />
       </aside>

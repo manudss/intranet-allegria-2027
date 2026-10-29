@@ -17,6 +17,8 @@ import { Roles } from '../auth/roles.decorator';
 import { HostingPlacementService } from './hosting-placement.service';
 import {
   AssignToGroupDto,
+  BulkAssignFamiliesDto,
+  GroupFromParishesDto,
   AutoPlaceDto,
   HostingGroupDto,
   PlaceParticipantDto,
@@ -37,6 +39,13 @@ export class HostingPlacementController {
   @Get('board')
   board() {
     return this.service.board();
+  }
+
+  @ApiOperation({ summary: "Liste légère des groupes d'hébergement avec familles et places" })
+  @Roles(...READ_ROLES)
+  @Get('groups')
+  listGroups() {
+    return this.service.listGroups();
   }
 
   @ApiOperation({ summary: "Créer un groupe d'hébergement" })
@@ -66,6 +75,20 @@ export class HostingPlacementController {
   @Put('teams/:teamId/group')
   setTeamGroup(@Param('teamId', ParseIntPipe) teamId: number, @Body() dto: AssignToGroupDto) {
     return this.service.setTeamGroup(teamId, dto);
+  }
+
+  @ApiOperation({ summary: "Affecter plusieurs familles d'un coup à un groupe d'hébergement (null = retirer)" })
+  @Roles(...WRITE_ROLES)
+  @Put('families-group')
+  setFamiliesGroup(@Body() dto: BulkAssignFamiliesDto) {
+    return this.service.setFamiliesGroup(dto);
+  }
+
+  @ApiOperation({ summary: 'Créer un groupe par paroisse pour les familles sans groupe (ne déplace aucune famille déjà groupée)' })
+  @Roles(...WRITE_ROLES)
+  @Post('groups/from-parishes')
+  groupFromParishes(@Body() dto: GroupFromParishesDto) {
+    return this.service.groupFromParishes(dto);
   }
 
   @ApiOperation({ summary: "Affecter une famille d'accueil à un groupe d'hébergement (null = retirer)" })

@@ -82,3 +82,6 @@
 /* Chaque liste d'une colonne défile seule : équipes et familles restent visibles pour le glisser-déposer. */
 .column .drop { max-height: 15rem; overflow-y: auto; }
 @media (max-width: 760px) { .column .drop { max-height: 20rem; } }
+
+.gdot { display: inline-block; inline-size: 0.7rem; block-size: 0.7rem; border-radius: 999px; margin-inline-end: 0.3rem; }
+.kind { font-weight: 400; color: #6b7280; margin-inline-start: 0.3rem; }

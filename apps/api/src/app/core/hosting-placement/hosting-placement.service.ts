@@ -137,7 +137,8 @@ export class HostingPlacementService {
     const hostingGroupId = dto.hostingGroupId ?? null;
     if (hostingGroupId !== null) await this.findGroup(hostingGroupId);
     const current = (await this.teams.findOne({ where: { id: teamId }, relations: { hostingGroup: true } }))?.hostingGroup?.id ?? null;
-    if (current !== hostingGroupId) {
+    // Premier rattachement (groupe actuel vide) : autorise, les incoherences avec des placements existants sont listees dans le bandeau de conflits.
+    if (current !== null && current !== hostingGroupId) {
       const placed = await this.assignments
         .createQueryBuilder('a')
         .innerJoin('a.participant', 'p')
@@ -165,7 +166,8 @@ export class HostingPlacementService {
     if (!family) throw new NotFoundException(`Famille ${familyId} introuvable`);
     const hostingGroupId = dto.hostingGroupId ?? null;
     if (hostingGroupId !== null) await this.findGroup(hostingGroupId);
-    if ((family.hostingGroup?.id ?? null) !== hostingGroupId) {
+    const currentFamilyGroup = family.hostingGroup?.id ?? null;
+    if (currentFamilyGroup !== null && currentFamilyGroup !== hostingGroupId) {
       const active = await this.assignments
         .createQueryBuilder('a')
         .where('a.host_family_id = :familyId', { familyId })

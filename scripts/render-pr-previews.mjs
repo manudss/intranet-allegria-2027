@@ -56,7 +56,8 @@ const urlOf = (s, fallback) => s?.serviceDetails?.url ?? fallback;
 
 async function ensure() {
   const repo = `https://github.com/${repoFull}`;
-  const common = { ownerId: e.RENDER_OWNER_ID, repo, branch, autoDeploy: 'yes' };
+  if (!e.RENDER_ENVIRONMENT_ID) throw new Error('RENDER_ENVIRONMENT_ID is required (Allegria-demo project, dev environment)');
+  const common = { ownerId: e.RENDER_OWNER_ID, environmentId: e.RENDER_ENVIRONMENT_ID, repo, branch, autoDeploy: 'yes' };
   const guess = (n) => `https://${n}.onrender.com`;
   const webUrl = guess(names.web);
   const siteUrl = guess(names.site);

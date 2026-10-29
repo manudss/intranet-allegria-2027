@@ -57,7 +57,7 @@ const urlOf = (s, fallback) => s?.serviceDetails?.url ?? fallback;
 async function ensure() {
   const repo = `https://github.com/${repoFull}`;
   if (!e.RENDER_ENVIRONMENT_ID) throw new Error('RENDER_ENVIRONMENT_ID is required (Allegria-demo project, dev environment)');
-  const common = { ownerId: e.RENDER_OWNER_ID, environmentId: e.RENDER_ENVIRONMENT_ID, repo, branch, autoDeploy: 'yes' };
+  const common = { ownerId: e.RENDER_OWNER_ID, environmentId: e.RENDER_ENVIRONMENT_ID, repo, branch, autoDeploy: 'no' }; // deploys are triggered only by this trusted workflow (see end of ensure), not by Render's GitHub webhook
   const guess = (n) => `https://${n}.onrender.com`;
   const webUrl = guess(names.web);
   const siteUrl = guess(names.site);
@@ -107,7 +107,8 @@ async function ensure() {
 
   // PR update: do not rely on Render's GitHub webhook; explicitly deploy the newest commit of the branch.
   for (const id of existing) {
-    await render('POST', `/services/${id}/deploys`, { clearCache: 'do_not_clear' });
+    const d = await render('POST', `/services/${id}/deploys`, { clearCache: 'do_not_clear' });
+    console.log(`deploy requested for ${id}: ${d?.id ?? 'n/a'} (${d?.commit?.id?.slice(0, 7) ?? 'latest'})`);
   }
 
   // Real URLs can differ from the guess (name collision suffix): fix CORS if so.

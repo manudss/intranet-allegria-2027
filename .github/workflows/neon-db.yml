@@ -5,12 +5,7 @@ on:
     branches:
       - main
 
-  pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
-      - closed
+  # Les previews de PR sont gerees par pr-previews.yml (pull_request_target, sans code de PR).
 
   workflow_dispatch:
     inputs:

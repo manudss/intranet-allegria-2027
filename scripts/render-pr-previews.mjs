@@ -36,7 +36,7 @@ async function findService(name) {
   return hit ?? null;
 }
 async function gh(method, path, body) {
-  if (DRY) { console.log('[dry gh]', method, path); return []; }
+  if (DRY || e.GH_DRY === '1') { console.log('[dry gh]', method, path); return []; }
   const res = await fetch(`https://api.github.com/repos/${repoFull}${path}`, {
     method,
     headers: { Authorization: `Bearer ${e.GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
@@ -78,6 +78,10 @@ async function ensure() {
       },
     });
     api = r.service ?? r;
+  } else {
+    // Existing service (PR update): the trusted workflow rotates the DB password at each run.
+    await render('PUT', `/services/${api.id}/env-vars/DATABASE_URL`, { value: e.NEON_DB_URL });
+    await render('PUT', `/services/${api.id}/env-vars/DATABASE_URL_DIRECT`, { value: e.NEON_DB_URL_DIRECT });
   }
   const apiUrl = urlOf(api, guess(names.api));
 

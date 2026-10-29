@@ -56,3 +56,4 @@ et les trois `POST /public/*` d'inscription (limitées par `ThrottlerGuard`). La
 route par route.
 
 > Preview smoke test: this line only exists to trigger a PR preview.
+(retrigger)

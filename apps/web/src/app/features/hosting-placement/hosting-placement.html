@@ -90,9 +90,9 @@
                   <label class="mobile-select">
                     <span class="sr">Groupe de {{ team.name }}</span>
                     <select [value]="team.hostingGroupId ?? 0" (change)="onGroupSelect('team', team.id, $event)">
-                      <option [value]="0">Non affectée</option>
+                      <option [value]="0" [selected]="team.hostingGroupId === null">Non affectée</option>
                       @for (g of groups(); track g.id) {
-                        <option [value]="g.id">{{ g.name }}</option>
+                        <option [value]="g.id" [selected]="team.hostingGroupId === g.id">{{ g.name }}</option>
                       }
                     </select>
                   </label>
@@ -124,9 +124,9 @@
                   <label class="mobile-select">
                     <span class="sr">Groupe de {{ family.familyName }}</span>
                     <select [value]="family.hostingGroupId ?? 0" (change)="onGroupSelect('family', family.id, $event)">
-                      <option [value]="0">Non affectée</option>
+                      <option [value]="0" [selected]="family.hostingGroupId === null">Non affectée</option>
                       @for (g of groups(); track g.id) {
-                        <option [value]="g.id">{{ g.name }}</option>
+                        <option [value]="g.id" [selected]="family.hostingGroupId === g.id">{{ g.name }}</option>
                       }
                     </select>
                   </label>
@@ -144,24 +144,30 @@
           Groupe d’hébergement
           <select aria-label="Groupe d’hébergement" [value]="selectedGroupId() ?? 0" (change)="onSelectGroup($event)">
             @for (g of groups(); track g.id) {
-              <option [value]="g.id">{{ g.name }}</option>
+              <option [value]="g.id" [selected]="selectedGroupId() === g.id">{{ g.name }}</option>
             }
           </select>
         </label>
         <span class="muted">{{ pool().length }} à placer · {{ groupFamilies().length }} famille(s)</span>
       </div>
 
-      @if (conflictRows().length) {
+      @if (groupConflicts().length) {
         <div class="notice warning" role="alert">
-          <b>{{ conflictRows().length }} placement(s) existant(s) ne respectent pas équipe → groupe → famille.</b>
+          <b>{{ groupConflicts().length }} placement(s) de ce groupe ne respectent pas équipe → groupe → famille.</b>
           Ils n’ont pas été déplacés : à corriger à la main.
           <ul>
-            @for (c of conflictRows().slice(0, 5); track $index) {
+            @for (c of groupConflicts().slice(0, 5); track $index) {
               <li>{{ c.name }} chez {{ c.family }} : {{ c.reason }}</li>
             }
-            @if (conflictRows().length > 5) { <li>… et {{ conflictRows().length - 5 }} autre(s)</li> }
+            @if (groupConflicts().length > 5) { <li>… et {{ groupConflicts().length - 5 }} autre(s)</li> }
           </ul>
         </div>
+      }
+      @if (uninitialisedCount() > 0) {
+        <p class="muted">
+          {{ uninitialisedCount() }} placement(s) d’origine concernent des équipes ou familles pas encore rattachées à un groupe :
+          rattachez-les à l’étape 1, rien n’est déplacé. {{ otherGroupConflicts() }} autre(s) incohérence(s) dans les autres groupes.
+        </p>
       }
 
       <details class="auto">
@@ -180,17 +186,17 @@
             <legend>Règles à confirmer avec l’organisation (choix obligatoire)</legend>
             <label>Les animateurs comptent dans la capacité des familles ?
               <select aria-label="Animateurs dans la capacité" [value]="countAnimators() === null ? '' : countAnimators() ? 'yes' : 'no'" (change)="onAnimatorRule($event)">
-                <option value="">— choisir —</option>
-                <option value="yes">Oui : jeunes et animateurs comptent ensemble</option>
-                <option value="no">Non : seuls les jeunes comptent</option>
+                <option value="" [selected]="countAnimators() === null">— choisir —</option>
+                <option value="yes" [selected]="countAnimators() === true">Oui : jeunes et animateurs comptent ensemble</option>
+                <option value="no" [selected]="countAnimators() === false">Non : seuls les jeunes comptent</option>
               </select>
             </label>
             <label>Mixité filles/garçons dans une famille
               <select aria-label="Mixité filles garçons" [value]="sexMixing() ?? ''" (change)="onMixingRule($event)">
-                <option value="">— choisir —</option>
-                <option value="ignore">Aucune règle</option>
-                <option value="avoid">Éviter si possible</option>
-                <option value="forbid">Interdire</option>
+                <option value="" [selected]="sexMixing() === null">— choisir —</option>
+                <option value="ignore" [selected]="sexMixing() === 'ignore'">Aucune règle</option>
+                <option value="avoid" [selected]="sexMixing() === 'avoid'">Éviter si possible</option>
+                <option value="forbid" [selected]="sexMixing() === 'forbid'">Interdire</option>
               </select>
             </label>
             @if (!rulesChosen()) {

@@ -141,6 +141,29 @@ export class HostingPlacementPage implements OnInit {
     }));
   });
 
+  private readonly classified = computed(() => {
+    const b = this.board();
+    if (!b) return { group: [] as ReturnType<HostingPlacementPage['conflictRows']>, uninit: 0, other: 0 };
+    const teams = new Map(b.teams.map((x) => [x.id, x]));
+    const families = new Map(b.families.map((f) => [f.id, f]));
+    const sel = this.selectedGroupId();
+    const rows = this.conflictRows();
+    const group: typeof rows = [];
+    let uninit = 0;
+    let other = 0;
+    b.conflicts.forEach((c, i) => {
+      const tg = teams.get(c.teamId)?.hostingGroupId ?? null;
+      const fg = families.get(c.hostFamilyId)?.hostingGroupId ?? null;
+      if (tg === null || fg === null) uninit += 1;
+      else if (tg === sel || fg === sel) group.push(rows[i]);
+      else other += 1;
+    });
+    return { group, uninit, other };
+  });
+  protected readonly groupConflicts = computed(() => this.classified().group);
+  protected readonly uninitialisedCount = computed(() => this.classified().uninit);
+  protected readonly otherGroupConflicts = computed(() => this.classified().other);
+
   ngOnInit(): void {
     this.reload();
   }

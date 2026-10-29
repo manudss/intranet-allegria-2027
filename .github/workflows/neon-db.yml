@@ -5,12 +5,7 @@ on:
     branches:
       - main
 
-  pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
-      - closed
+  # Les previews de PR sont gerees par pr-previews.yml (pull_request_target, sans code de PR).
 
   workflow_dispatch:
     inputs:
@@ -90,6 +85,9 @@ jobs:
         with:
           project_id: ${{ vars.NEON_PROJECT_ID }}
           api_key: ${{ secrets.NEON_API_KEY }}
+          # Les branches PR derivent de preview/main (donnees fictives seedees), jamais de
+          # `production`. Si preview/main n'existe pas, l'action echoue au lieu de cloner production.
+          parent_branch: ${{ github.event_name == 'pull_request' && 'preview/main' || '' }}
           branch_name: ${{ github.event_name == 'pull_request' && format('preview/pr-{0}-{1}', github.event.number, needs.setup.outputs.branch) || 'preview/main' }}
           expires_at: ${{ github.event_name == 'pull_request' && env.EXPIRES_AT || '' }}
       - name: Check Neon outputs

@@ -13,9 +13,11 @@ import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { PublicHostFamilyRegistrationResult } from '@mej-allegria/shared';
 import { CreatePublicHostFamilyRegistrationDto } from './public-host-family-registration.dto';
 import { PublicRegistrationsService } from './public-registrations.service';
+import { Public } from '../auth/public.decorator';
 
 /** Proposition publique d'accueil. La coordination valide et affecte les jeunes séparément. */
 @ApiTags('Inscriptions publiques')
+@Public()
 @Controller('public/host-family-registrations')
 @UseGuards(ThrottlerGuard)
 @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))

@@ -38,3 +38,64 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+      - name: Build public site
+        run: npm run build:site
+
+  api-auth-smoke:
+    name: API auth smoke test (fictitious data)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: mej_user
+          POSTGRES_PASSWORD: mej_password
+          POSTGRES_DB: mej_allegria
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mej_user -d mej_allegria"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: development
+      DB_HOST: localhost
+      DB_PORT: '5432'
+      DB_NAME: mej_allegria
+      DB_USER: mej_user
+      DB_PASSWORD: mej_password
+      PORT: '3000'
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build API
+        run: npm run build:api
+
+      - name: Migrate and seed (fictitious data)
+        run: |
+          npm run migration:run
+          npm run seed:api:small
+
+      - name: Start API and check authentication
+        run: |
+          node dist/apps/api/main.js > api.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000/health >/dev/null && break
+            sleep 2
+          done
+          API_URL=http://localhost:3000 node scripts/check-api-auth.mjs || { cat api.log; exit 1; }

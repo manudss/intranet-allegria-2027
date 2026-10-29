@@ -12,6 +12,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { PublicParticipantRegistrationResult } from '@mej-allegria/shared';
 import { PublicRegistrationsService } from './public-registrations.service';
+import { Public } from '../auth/public.decorator';
 import { CreatePublicParticipantRegistrationDto } from './public-participant-registration.dto';
 
 /**
@@ -24,6 +25,7 @@ import { CreatePublicParticipantRegistrationDto } from './public-participant-reg
  * doivent être validées manuellement par un staff avant tout traitement.
  */
 @ApiTags('Inscriptions publiques')
+@Public()
 @Controller('public/participant-registrations')
 @UseGuards(ThrottlerGuard)
 @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))

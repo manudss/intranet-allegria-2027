@@ -5,6 +5,7 @@ import {
   AssignmentStatus,
   Group,
   HostFamily,
+  HostingGroup,
   HostFamilyStatus,
   MejAgeGroup,
   Participant,
@@ -515,6 +516,7 @@ async function run(): Promise<void> {
           "teams",
           "participants",
           "host_families",
+          "hosting_groups",
           "volunteers",
           "groups",
           "roles",
@@ -537,6 +539,7 @@ async function run(): Promise<void> {
     const volunteerRepository = dataSource.getRepository(Volunteer);
     const participantRepository = dataSource.getRepository(Participant);
     const teamRepository = dataSource.getRepository(Team);
+    const hostingGroupRepository = dataSource.getRepository(HostingGroup);
     const teamParticipantRepository = dataSource.getRepository(TeamParticipant);
     const volunteerTeamRepository = dataSource.getRepository(VolunteerTeam);
     const volunteerTeamMembershipRepository = dataSource.getRepository(VolunteerTeamMembership);
@@ -850,6 +853,20 @@ async function run(): Promise<void> {
       participantSaveCursor += count;
     }
 
+    // Groupes d'hébergement fictifs : quelques équipes et familles restent volontairement
+    // sans groupe (1 sur 7) pour pouvoir démontrer l'affectation dans l'interface.
+    const totalTeamCount = teamCountsPerGroup.reduce((sum, count) => sum + count, 0);
+    const hostingGroups = await hostingGroupRepository.save(
+      Array.from({ length: Math.max(3, Math.ceil(totalTeamCount / 5)) }, (_, index) =>
+        hostingGroupRepository.create({
+          name: `Groupe d'hébergement ${String.fromCharCode(65 + (index % 26))}${index >= 26 ? Math.floor(index / 26) : ''}`,
+          notes: null,
+        }),
+      ),
+    );
+    const hostingGroupFor = (index: number): HostingGroup | null =>
+      index % 7 === 6 ? null : hostingGroups[index % hostingGroups.length];
+
     const teamsToCreate: Team[] = [];
     const teamsByGroup = new Map<number, Team[]>();
     let globalTeamIndex = 0;
@@ -876,6 +893,7 @@ async function run(): Promise<void> {
           primaryAnimator: primary,
           secondaryAnimator: secondary,
           maxSize,
+          hostingGroup: hostingGroupFor(globalTeamIndex),
           notes: chance(0.07) ? 'Equipe repere pour accueil familles.' : null,
         });
 
@@ -1091,6 +1109,7 @@ async function run(): Promise<void> {
           maxAnimators: chance(0.6) ? faker.number.int({ min: 1, max: 2 }) : null,
           parish: chance(0.7) ? `Paroisse ${faker.person.lastName()}` : null,
           notes: chance(0.1) ? 'Animaux de compagnie presents.' : null,
+          hostingGroup: hostingGroupFor(i),
           status: pick(hostFamilyStatuses),
         }),
       );
@@ -1102,13 +1121,40 @@ async function run(): Promise<void> {
       hostFamilies.map((family) => [family.id, family.maxCapacity]),
     );
 
+    const hostingGroupOfTeam = new Map<number, number | null>(
+      teams.map((team) => [team.id, team.hostingGroup?.id ?? null]),
+    );
+    const hostingGroupOfParticipant = new Map<number, number | null>(
+      teamParticipantsToCreate.map((tp) => [
+        tp.participant.id,
+        hostingGroupOfTeam.get(tp.team.id) ?? null,
+      ]),
+    );
+    const familiesByHostingGroup = new Map<number, HostFamily[]>();
+    for (const family of hostFamilies) {
+      const hostingGroupId = family.hostingGroup?.id;
+      if (hostingGroupId) {
+        familiesByHostingGroup.set(hostingGroupId, [
+          ...(familiesByHostingGroup.get(hostingGroupId) ?? []),
+          family,
+        ]);
+      }
+    }
+
     const assignmentsToCreate: ParticipantHostFamilyAssignment[] = [];
     for (const participant of participants) {
       if (!chance(profile.participantAssignmentRate)) {
         continue;
       }
 
-      const family = pick(hostFamilies);
+      // Les affectations fictives restent cohérentes : famille du groupe d'hébergement de l'équipe.
+      const candidateFamilies = familiesByHostingGroup.get(
+        hostingGroupOfParticipant.get(participant.id) ?? -1,
+      );
+      if (!candidateFamilies?.length) {
+        continue;
+      }
+      const family = pick(candidateFamilies);
       const status = pick(assignmentStatuses);
       const remaining = familyRemainingCapacity.get(family.id) ?? 0;
 

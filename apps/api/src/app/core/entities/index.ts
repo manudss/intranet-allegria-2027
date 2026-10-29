@@ -3,6 +3,7 @@ export { HostFamilyStatus } from './host-family-status.enum';
 export { MejAgeGroup } from './mej-age-group.enum';
 export { PersonType } from './person-type.enum';
 export { Group } from './group.entity';
+export { HostingGroup } from './hosting-group.entity';
 export { HostFamily } from './host-family.entity';
 export { ParticipantHostFamilyAssignment } from './participant-host-family-assignment.entity';
 export { ParticipantHealth } from './participant-health.entity';

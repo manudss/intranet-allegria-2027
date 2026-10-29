@@ -1,4 +1,5 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { HostingGroup } from './hosting-group.entity';
 import { ParticipantHostFamilyAssignment } from './participant-host-family-assignment.entity';
 import { HostFamilyStatus } from './host-family-status.enum';
 
@@ -54,6 +55,13 @@ export class HostFamily {
 
   @Column({ type: 'enum', enum: HostFamilyStatus, default: HostFamilyStatus.DRAFT })
   status!: HostFamilyStatus;
+
+  @ManyToOne(() => HostingGroup, (hostingGroup) => hostingGroup.hostFamilies, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'hosting_group_id' })
+  hostingGroup!: HostingGroup | null;
 
   @OneToMany(() => ParticipantHostFamilyAssignment, (assignment) => assignment.hostFamily)
   assignments!: ParticipantHostFamilyAssignment[];

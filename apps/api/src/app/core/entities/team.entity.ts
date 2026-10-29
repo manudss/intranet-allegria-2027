@@ -1,5 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Group } from './group.entity';
+import { HostingGroup } from './hosting-group.entity';
 import { TeamParticipant } from './team-participant.entity';
 import { Volunteer } from './volunteer.entity';
 
@@ -28,6 +29,13 @@ export class Team {
   })
   @JoinColumn({ name: 'secondary_animator_id' })
   secondaryAnimator!: Volunteer | null;
+
+  @ManyToOne(() => HostingGroup, (hostingGroup) => hostingGroup.teams, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'hosting_group_id' })
+  hostingGroup!: HostingGroup | null;
 
   @Column({ type: 'int', default: 10 })
   maxSize!: number;

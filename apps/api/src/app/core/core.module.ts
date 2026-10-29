@@ -3,6 +3,7 @@ import { AuthModule } from './auth/auth.module';
 import { AssignmentsModule } from './assignments/assignments.module';
 import { GroupsModule } from './groups/groups.module';
 import { HostFamiliesModule } from './host-families/host-families.module';
+import { HostingPlacementModule } from './hosting-placement/hosting-placement.module';
 import { ParticipantHealthModule } from './participant-health/participant-health.module';
 import { ParticipantsModule } from './participants/participants.module';
 import { VolunteerSkillsModule } from './volunteer-skills/volunteer-skills.module';
@@ -31,6 +32,7 @@ import { PublicRegistrationsModule } from './public-registrations/public-registr
     VolunteerSkillsModule,
     HostFamiliesModule,
     AssignmentsModule,
+    HostingPlacementModule,
     ParticipantHealthModule,
     OperationalDashboardModule,
     PublicRegistrationsModule,

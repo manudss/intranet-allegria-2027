@@ -62,6 +62,8 @@ async function ensure() {
   const siteUrl = guess(names.site);
 
   let api = await findService(names.api);
+  const existing = new Set();
+  if (api) existing.add(api.id);
   if (!api) {
     const r = await render('POST', '/services', {
       ...common, type: 'web_service', name: names.api,
@@ -87,6 +89,7 @@ async function ensure() {
 
   const staticSvc = async (name, buildCommand, publishPath, envVars) => {
     let s = await findService(name);
+    if (s) existing.add(s.id);
     if (!s) {
       const r = await render('POST', '/services', {
         ...common, type: 'static_site', name, envVars,
@@ -100,6 +103,11 @@ async function ensure() {
     [{ key: 'WEB_API_URL', value: apiUrl }, { key: 'NODE_VERSION', value: '24' }]);
   const site = await staticSvc(names.site, 'npm ci --include=dev && npm run build:site', 'dist/apps/site/browser',
     [{ key: 'NODE_VERSION', value: '24' }]);
+
+  // PR update: do not rely on Render's GitHub webhook; explicitly deploy the newest commit of the branch.
+  for (const id of existing) {
+    await render('POST', `/services/${id}/deploys`, { clearCache: 'do_not_clear' });
+  }
 
   // Real URLs can differ from the guess (name collision suffix): fix CORS if so.
   const realWeb = urlOf(web, webUrl), realSite = urlOf(site, siteUrl);

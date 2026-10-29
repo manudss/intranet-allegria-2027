@@ -54,3 +54,5 @@ Toute route exige un token Bearer sauf celles marquées `@Public()` : `GET /`, `
 et les trois `POST /public/*` d'inscription (limitées par `ThrottlerGuard`). La liste est figée par
 `public-routes.spec.ts`. Ce guard authentifie seulement : les contrôles de rôles (`@Roles`) restent à compléter
 route par route.
+
+> Preview smoke test: this line only exists to trigger a PR preview.

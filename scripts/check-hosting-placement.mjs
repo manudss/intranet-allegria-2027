@@ -81,6 +81,28 @@ await call('PUT', `/hosting/teams/${team.id}/group`, { hostingGroupId: null }, a
 for (const f of fams.slice(0, 3)) await call('PUT', `/hosting/families/${f.id}/group`, { hostingGroupId: null }, adm);
 await call('DELETE', `/hosting/groups/${gid}`, undefined, adm);
 
+// ── Hebergement collectif: capacite respectee en placement manuel et automatique ──
+{
+  const tag2 = `C${Date.now()}`;
+  const [, cg] = await call('POST', '/hosting/groups', { name: `Collectif ${tag2}`, kind: 'OTHER' }, adm);
+  const [, internat] = await call('POST', '/host-families', { familyName: `Internat ${tag2}`, address: '1 rue du Test', postalCode: '69000', city: 'Lyon', maxCapacity: 3, status: 'VALIDATED', accommodationType: 'COLLECTIVE' }, adm);
+  await call('PUT', `/hosting/families/${internat.id}/group`, { hostingGroupId: cg.id }, adm);
+  await call('PUT', `/hosting/teams/${team.id}/group`, { hostingGroupId: cg.id }, adm);
+  const codes2 = [];
+  for (const m of tmembers.slice(0, 4)) codes2.push((await place(m.participantId, internat.id, STAY))[0]);
+  check('collectif manuel: 3 places acceptees puis refus au-dela de la capacite', codes2.slice(0, 3).every((c) => c === 200 || c === 201) && codes2[3] === 409, codes2);
+  for (const m of tmembers.slice(0, 4)) await call('DELETE', `/hosting/placements/${m.participantId}`, undefined, adm);
+  const [as2, ap2] = await call('POST', `/hosting/groups/${cg.id}/auto-place`, { ...STAY, apply: true, rules: RULES }, adm);
+  const [, b5] = await call('GET', '/hosting/board', undefined, adm);
+  const occ2 = b5.members.filter((m) => m.hostFamilyId === internat.id).length;
+  check('collectif auto: occupe jusqu a la capacite sans la depasser', as2 < 300 && occ2 === 3, { as2, occ2 });
+  for (const m of b5.members) if (m.teamId === team.id && m.hostFamilyId) await call('DELETE', `/hosting/placements/${m.participantId}`, undefined, adm);
+  await call('PUT', `/hosting/teams/${team.id}/group`, { hostingGroupId: null }, adm);
+  await call('PUT', `/hosting/families/${internat.id}/group`, { hostingGroupId: null }, adm);
+  await call('DELETE', `/host-families/${internat.id}`, undefined, adm);
+  await call('DELETE', `/hosting/groups/${cg.id}`, undefined, adm);
+}
+
 // ── Groupes par zone/paroisse, regroupement en lot, hebergements collectifs ──
 {
   const tag = `T${Date.now()}`;

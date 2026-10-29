@@ -10,7 +10,7 @@
       (click)="selectFamily.emit(item.family.id)"
     >
       <header>
-        <strong>{{ selectMode() ? (checkedIds().has(item.family.id) ? '☑ ' : '☐ ') : '' }}{{ item.collective ? '🏫 ' : '' }}{{ item.family.familyName }}</strong>
+        <strong>{{ selectMode() ? (checkedIds().has(item.family.id) ? '☑ ' : '☐ ') : '' }}{{ item.family.familyName }}</strong>
         <span size="s" tuiBadge [appearance]="badgeAppearance(item.capacityState)">
           {{ capacityLabel(item.capacityState) }}
         </span>

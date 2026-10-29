@@ -118,7 +118,7 @@
               @for (family of familiesIn(id === NONE ? null : id); track family.id) {
                 <article class="card family" cdkDrag [cdkDragData]="{ kind: 'family', id: family.id }">
                   <div class="card-main">
-                    <b>{{ family.accommodationType === 'COLLECTIVE' ? '🏫 ' : '' }}{{ family.familyName }}</b>
+                    <b>{{ family.accommodationType === 'COLLECTIVE' ? '[Collectif] ' : '' }}{{ family.familyName }}</b>
                     <small>
                       {{ family.accommodationType === 'COLLECTIVE' ? 'collectif · ' : '' }}{{ family.city }} · {{ family.maxCapacity }} place(s)
                       @if (family.status !== 'VALIDATED') { · <em>{{ family.status === 'DRAFT' ? 'non validée' : 'inactive' }}</em> }
@@ -282,7 +282,7 @@
             @for (row of groupFamilies(); track row.family.id) {
               <article class="family-box" [class.full]="row.load.full" [class.inactive]="row.family.status === 'INACTIVE'">
                 <header>
-                  <b>{{ row.family.accommodationType === 'COLLECTIVE' ? '🏫 ' : '' }}{{ row.family.familyName }}</b>
+                  <b>{{ row.family.accommodationType === 'COLLECTIVE' ? '[Collectif] ' : '' }}{{ row.family.familyName }}</b>
                   <small>
                     {{ row.family.accommodationType === 'COLLECTIVE' ? 'hébergement collectif · ' : '' }}{{ row.family.city }}
                     @if (row.family.status !== 'VALIDATED') { · <em>{{ row.family.status === 'DRAFT' ? 'non validée' : 'inactive' }}</em> }

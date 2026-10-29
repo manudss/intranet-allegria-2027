@@ -212,7 +212,7 @@ export function createHouseIcon(
     .join(' ');
   return L.divIcon({
     className: 'host-family-marker',
-    html: `<div class="${classes}" style="background:${tone};border-color:${ring}"><span aria-hidden="true">${options.collective ? '🏫' : '🏠'}</span>${options.checked ? '<i class="host-family-marker__check" aria-hidden="true">✓</i>' : ''}</div>`,
+    html: `<div class="${classes}" style="background:${tone};border-color:${ring}"><span aria-hidden="true">${options.collective ? '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M3 21V9l9-6 9 6v12h-7v-6h-4v6zM11 8h2v3h-2zM6 11h3v3H6zm9 0h3v3h-3z"/></svg>' : '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 3 2 12h3v8h5v-5h4v5h5v-8h3z"/></svg>'}</span>${options.checked ? '<i class="host-family-marker__check" aria-hidden="true">✓</i>' : ''}</div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size - 2],
     popupAnchor: [0, -size + 8],

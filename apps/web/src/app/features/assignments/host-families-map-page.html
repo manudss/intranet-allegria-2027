@@ -106,8 +106,8 @@
         <button type="button" class="legend-chip" [attr.aria-pressed]="groupFilter().includes(0)" (click)="toggleGroupFilter(0)">
           <span class="legend-dot" style="background: #6b7280"></span> Sans groupe · {{ ungroupedCount() }}
         </button>
-        <button type="button" class="legend-chip" [attr.aria-pressed]="typeFilter() === 'FAMILY'" (click)="setTypeFilter('FAMILY')">🏠 Familles</button>
-        <button type="button" class="legend-chip" [attr.aria-pressed]="typeFilter() === 'COLLECTIVE'" (click)="setTypeFilter('COLLECTIVE')">🏫 Hébergements collectifs</button>
+        <button type="button" class="legend-chip" [attr.aria-pressed]="typeFilter() === 'FAMILY'" (click)="setTypeFilter('FAMILY')"><span class="legend-dot" style="background:#6b7280"></span> Familles</button>
+        <button type="button" class="legend-chip" [attr.aria-pressed]="typeFilter() === 'COLLECTIVE'" (click)="setTypeFilter('COLLECTIVE')"><span class="legend-dot legend-square" style="background:#6b7280"></span> Hébergements collectifs</button>
       </div>
       <p class="muted">Couleur du contour = groupe. Cliquer un groupe filtre la carte et la liste.</p>
       <div class="select-bar">
@@ -120,8 +120,8 @@
       </div>
       @if (selectMode()) {
         <div class="select-bar" data-testid="select-bar">
-          <span><strong>{{ checkedCount() }}</strong> sélectionné(s)</span>
-          <button type="button" tuiButton size="s" appearance="flat" (click)="checkAllShown()">Tout sélectionner ({{ filteredFamilies().length }})</button>
+          <span data-testid="checked-count"><strong>{{ checkedCount() }}</strong> sélectionné(s)@if (hiddenCheckedCount()) { <em>dont {{ hiddenCheckedCount() }} hors de la vue actuelle (filtres)</em> }</span>
+          <button type="button" tuiButton size="s" appearance="flat" (click)="checkAllShown()">Tout sélectionner ({{ filteredFamilies().length }} affichées sur {{ families().length }})</button>
           <button type="button" tuiButton size="s" appearance="flat" (click)="clearChecked()">Vider</button>
           <select aria-label="Groupe cible" data-testid="target-group" (change)="targetGroupId.set(+$any($event.target).value || null)">
             <option value="0" [selected]="targetGroupId() === null">— groupe —</option>
@@ -129,7 +129,7 @@
               <option [value]="g.id" [selected]="targetGroupId() === g.id">{{ g.name }}</option>
             }
           </select>
-          <button type="button" tuiButton size="s" data-testid="assign" [disabled]="busy() || !checkedCount() || targetGroupId() === null" (click)="assignChecked(targetGroupId())">Affecter</button>
+          <button type="button" tuiButton size="s" data-testid="assign" [disabled]="busy() || !checkedCount() || targetGroupId() === null" (click)="assignChecked(targetGroupId())">Affecter ({{ checkedCount() }})</button>
           <button type="button" tuiButton size="s" appearance="secondary" [disabled]="busy() || !checkedCount()" (click)="assignChecked(null)">Retirer du groupe</button>
         </div>
         <div class="select-bar">

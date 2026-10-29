@@ -82,6 +82,12 @@
   font-size: 0.95rem;
   position: relative;
 }
+.legend-square {
+  border-radius: 2px;
+}
+.host-family-marker__dot svg {
+  display: block;
+}
 .host-family-marker__dot--collective {
   inline-size: 2.6rem;
   block-size: 2.6rem;

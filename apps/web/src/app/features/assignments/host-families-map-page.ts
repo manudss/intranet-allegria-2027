@@ -164,6 +164,13 @@ export class HostFamiliesMapPageComponent implements OnInit {
   });
   readonly ungroupedCount = computed(() => this.families().filter((f) => f.hostingGroupId == null).length);
   readonly checkedCount = computed(() => this.checkedIds().size);
+  readonly hiddenCheckedCount = computed(() => {
+    const shown = new Set(this.filteredFamilies().map((i) => i.family.id));
+    return [...this.checkedIds()].filter((id) => !shown.has(id)).length;
+  });
+  private confirmBulk(count: number, action: string): boolean {
+    return count < 20 || window.confirm(`${action} ${count} familles ? Cette action touche beaucoup de familles (dont certaines peuvent être hors de la vue).`);
+  }
 
 
   readonly mapOptions: L.MapOptions = {
@@ -314,7 +321,7 @@ export class HostFamiliesMapPageComponent implements OnInit {
 
   assignChecked(groupId: number | null): void {
     const ids = [...this.checkedIds()];
-    if (!ids.length || this.busy()) return;
+    if (!ids.length || this.busy() || !this.confirmBulk(ids.length, groupId === null ? 'Retirer du groupe' : 'Affecter au groupe')) return;
     this.busy.set(true);
     this.hostingApi.setFamiliesGroup(ids, groupId).subscribe({
       next: (r) => this.afterBulk(groupId === null ? `${r.updated} famille(s) retirée(s) de leur groupe.` : `${r.updated} famille(s) affectée(s) au groupe.`),
@@ -325,7 +332,7 @@ export class HostFamiliesMapPageComponent implements OnInit {
   createGroupAndAssign(): void {
     const name = this.newGroupName().trim();
     const ids = [...this.checkedIds()];
-    if (!name || !ids.length || this.busy()) return;
+    if (!name || !ids.length || this.busy() || !this.confirmBulk(ids.length, 'Créer le groupe et y affecter')) return;
     this.busy.set(true);
     this.hostingApi.createGroup(name, { kind: this.newGroupKind() }).subscribe({
       next: (g) =>

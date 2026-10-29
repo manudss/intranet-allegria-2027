@@ -199,8 +199,14 @@ export class HostingPlacementService {
     for (const f of free) byParish.set(f.parish!.trim(), [...(byParish.get(f.parish!.trim()) ?? []), f]);
     const out: { id: number; name: string; created: boolean; families: number }[] = [];
     for (const [parish, list] of byParish) {
-      const existing = await this.groups.findOneBy({ name: parish });
-      const group = existing ?? (await this.groups.save(this.groups.create({ name: parish, notes: null, kind: HostingGroupKind.PARISH, color: null })));
+      // On ne réutilise qu'un groupe de type paroisse du même nom : un groupe zone/autre homonyme n'est jamais fusionné.
+      const existing = await this.groups.findOneBy({ name: parish, kind: HostingGroupKind.PARISH });
+      const sameName = existing ? null : await this.groups.findOneBy({ name: parish });
+      const group =
+        existing ??
+        (await this.groups.save(
+          this.groups.create({ name: sameName ? `${parish} (paroisse)` : parish, notes: null, kind: HostingGroupKind.PARISH, color: null }),
+        ));
       await this.setFamiliesGroup({ familyIds: list.map((f) => f.id), hostingGroupId: group.id });
       out.push({ id: group.id, name: group.name, created: !existing, families: list.length });
     }

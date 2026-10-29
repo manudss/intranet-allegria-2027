@@ -67,8 +67,9 @@ describe('groupes d hebergement sur la carte', () => {
   it('marqueur: collectif distinct et coche visible', () => {
     const house = createHouseIcon('AVAILABLE', false, { groupColor: '#111111' }).options.html as string;
     const school = createHouseIcon('AVAILABLE', false, { groupColor: '#111111', collective: true, checked: true }).options.html as string;
-    expect(house).toContain('🏠');
-    expect(school).toContain('🏫');
+    expect(house).toContain('<svg');
+    expect(house).not.toEqual(school);
+    expect(school).toContain('<svg');
     expect(school).toContain('host-family-marker__check');
     expect(house).toContain('border-color:#111111');
   });

@@ -11,10 +11,16 @@ for (const k of ['NEON_API_KEY', 'NEON_PROJECT_ID', 'NEON_BRANCH_ID', 'NEON_DB_U
 if (!/^br-[a-z0-9-]+$/.test(e.NEON_BRANCH_ID)) throw new Error('branch id rejected');
 const u = new URL(e.NEON_DB_URL_DIRECT);
 const role = decodeURIComponent(u.username);
-const res = await fetch(
-  `https://console.neon.tech/api/v2/projects/${encodeURIComponent(e.NEON_PROJECT_ID)}/branches/${e.NEON_BRANCH_ID}/roles/${encodeURIComponent(role)}/reset_password`,
-  { method: 'POST', headers: { Authorization: `Bearer ${e.NEON_API_KEY}`, Accept: 'application/json' } },
-);
+// Right after branch creation Neon answers 423 (operations in progress): retry for up to ~2 min.
+let res;
+for (let i = 0; i < 24; i++) {
+  res = await fetch(
+    `https://console.neon.tech/api/v2/projects/${encodeURIComponent(e.NEON_PROJECT_ID)}/branches/${e.NEON_BRANCH_ID}/roles/${encodeURIComponent(role)}/reset_password`,
+    { method: 'POST', headers: { Authorization: `Bearer ${e.NEON_API_KEY}`, Accept: 'application/json' } },
+  );
+  if (res.status !== 423 && res.status !== 409) break;
+  await new Promise((r) => setTimeout(r, 5000));
+}
 if (!res.ok) throw new Error(`reset_password failed: ${res.status}`);
 const password = (await res.json()).role?.password;
 if (!password) throw new Error('no password returned');

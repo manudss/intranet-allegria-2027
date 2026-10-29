@@ -22,22 +22,31 @@ Les comptes de test (`admin@allegria.local`, etc.) sont publics dans le dépôt 
 
 Les previews natives de Render copient le plan du service de base (Starter = payant) ; les environnements de
 preview complets exigent le plan Pro. La voie gratuite : un service web Render en plan **Free**, branche `main`,
-Previews = Automatic, qui sert l'API et le front ensemble :
+Previews = Automatic (onglet Previews du service). Chaque PR vers cette branche obtient une preview Render.
 
-| Réglage                                | Valeur                                                                          |
-| -------------------------------------- | ------------------------------------------------------------------------------- |
-| Build                                  | `npm ci && WEB_API_URL= npm run build`                                          |
-| Start                                  | `npm run db:migrate && WEB_STATIC_DIR=dist/apps/web/browser npm run start:prod` |
-| Health check                           | `/health`                                                                       |
-| `DATABASE_URL` / `DATABASE_URL_DIRECT` | chaîne de la branche Neon `preview/main` (fictive uniquement)                   |
-| `CORS_ORIGIN`                          | l'URL du service                                                                |
-| `DB_SSL`                               | `true`                                                                          |
+Une preview Render ne peut pas recevoir une `DATABASE_URL` différente par PR depuis le dashboard. C'est donc
+`scripts/preview-start.mjs` qui, au démarrage de chaque déploiement (service de base ou preview de PR) :
 
-`WEB_STATIC_DIR` fait servir `dist/apps/web/browser` par l'API (fallback SPA, `/api` et `/health` inchangés).
-Sans cette variable (production), le comportement est identique à avant.
+1. lit `RENDER_GIT_BRANCH` (fournie par Render) ;
+2. crée (ou réutilise) la branche Neon `preview/render-<branche>` issue de `preview/main` (fictive), avec
+   expiration automatique (14 jours par défaut, max 30) ;
+3. refuse de continuer si le parent n'est pas `preview/main` ou si c'est la branche par défaut (`production`) ;
+4. lance les migrations sur cette branche isolée, puis l'API (avec `DATABASE_URL` spécifique, sans `NEON_API_KEY`).
 
-Limites : instance gratuite (veille après 15 min, 750 h et 500 min de build partagées par tout le workspace),
-base partagée entre previews (une migration de PR agit sur `preview/main`, qui se reseede au prochain push sur `main`).
+| Réglage      | Valeur                                                                                           |
+| ------------ | ------------------------------------------------------------------------------------------------ |
+| Build        | `npm ci && WEB_API_URL= npm run build`                                                           |
+| Start        | `WEB_STATIC_DIR=dist/apps/web/browser node scripts/preview-start.mjs`                            |
+| Health check | `/health`                                                                                        |
+| Variables    | `NEON_API_KEY` (secret, clé dédiée révocable), `NEON_PROJECT_ID`, `CORS_ORIGIN` (URL du service) |
+
+Ne pas définir `NODE_ENV=production` côté Render (le build a besoin des devDependencies). `WEB_STATIC_DIR` fait servir
+`dist/apps/web/browser` par l'API (fallback SPA, `/api` et `/health` inchangés) ; sans cette variable (production),
+le comportement est identique à avant.
+
+Limites : instance gratuite (veille après 15 min, 750 h et 500 min de build partagées par tout le workspace) ;
+10 branches Neon max sur le plan gratuit (les branches expirent seules) ; `NEON_API_KEY` est visible du code de chaque
+PR pendant le build, donc réserver ce dépôt privé à des auteurs de confiance.
 
 ## Authentification de l'API
 

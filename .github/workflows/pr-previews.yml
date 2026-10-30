@@ -1,15 +1,33 @@
 name: PR Previews
 
 # SECURITY MODEL
-# - pull_request_target: this file and scripts/render-pr-previews.mjs are read from the BASE branch,
-#   a PR cannot change them to read the secrets.
-# - The PR code is NEVER checked out nor executed here. Only the base branch is checked out.
-# - Untrusted metadata (head branch name) only goes through env vars, never inside shell text.
-# - PRs from forks are ignored.
+# - pull_request_target: this file and scripts/render-pr-previews.mjs are read from the BASE branch.
+#   issue_comment and workflow_dispatch runs also execute the DEFAULT branch version:
+#   a PR can never change this code to read the secrets.
+# - The PR code is NEVER checked out nor executed here. Only trusted branch code is checked out.
+# - The head branch/sha a deploy builds are read back from the GitHub API by the script,
+#   never taken from event metadata. PRs from forks are refused.
+# - `/preview` only works from a comment by an OWNER/MEMBER/COLLABORATOR.
 # - Render builds the PR code itself, with only its own DATABASE_URL (no infra secret).
+#
+# COST MODEL (free tiers only) - DEPLOY ON DEMAND
+# - A push on a PR branch starts NO Render build. Each build costs part of the 500 free
+#   pipeline minutes/month shared by the workspace, and this repo builds 3 services per
+#   preview (api, admin, site); exhaustion blocks every build until the monthly reset.
+# - The previews build only on explicit demand: a `/preview` comment on the PR, or
+#   Actions > PR Previews > Run workflow. Services are created on the first demand and
+#   deleted when the PR closes. The free Neon branch per PR is still prepared on open.
 on:
   pull_request_target:
     types: [opened, reopened, synchronize, closed]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: PR number whose previews should be (re)deployed
+        required: true
+        type: number
 
 permissions:
   contents: read
@@ -17,13 +35,13 @@ permissions:
   issues: write
 
 concurrency:
-  group: pr-previews-${{ github.event.pull_request.number }}
+  group: pr-previews-${{ github.event.pull_request.number || github.event.issue.number || inputs.pr }}
   cancel-in-progress: false
 
 jobs:
   ensure:
-    name: Create or update previews
-    if: github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    name: Neon branch + preview status comment (no deploy)
+    if: github.event_name == 'pull_request_target' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - name: Check out BASE branch only
@@ -32,7 +50,7 @@ jobs:
           ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
 
-      - name: Safety expiry for the Neon branch (30 days)
+      - name: Safety expiry for the Neon branch (14 days)
         run: echo "EXPIRES_AT=$(date -u --date '+14 days' +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
 
       - name: Neon branch for this PR (from fictitious preview/main)
@@ -50,7 +68,47 @@ jobs:
         with:
           node-version: 24
 
-      - name: Give the PR branch its own DB password (not the production one)
+      - name: Maintain the preview status comment (no build)
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          NEON_BRANCH_NAME: preview/pr-${{ github.event.pull_request.number }}
+        run: node scripts/render-pr-previews.mjs ensure
+
+  refresh-comment:
+    name: Deploy the previews on demand (/preview comment)
+    if: >-
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/preview') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the default branch (trusted code)
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Safety expiry for the Neon branch (14 days)
+        run: echo "EXPIRES_AT=$(date -u --date '+14 days' +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
+
+      - name: Neon branch for this PR (existing branch is reused)
+        id: neon
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          parent_branch: preview/main
+          branch_name: preview/pr-${{ github.event.issue.number }}
+          expires_at: ${{ env.EXPIRES_AT }}
+
+      - name: Fresh DB credentials for the PR Neon branch
         id: creds
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
@@ -60,22 +118,71 @@ jobs:
           NEON_DB_URL_DIRECT: ${{ steps.neon.outputs.db_url }}
         run: node scripts/neon-branch-credentials.mjs
 
-      - name: Create or update Render services
+      - name: Deploy the previews on the latest PR commit
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_OWNER_ID: ${{ vars.RENDER_OWNER_ID }}
           RENDER_ENVIRONMENT_ID: ${{ vars.RENDER_ENVIRONMENT_ID }}
           GITHUB_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.issue.number }}
           NEON_DB_URL: ${{ steps.creds.outputs.db_url_pooled }}
           NEON_DB_URL_DIRECT: ${{ steps.creds.outputs.db_url }}
-          NEON_BRANCH_NAME: preview/pr-${{ github.event.pull_request.number }}
-        run: node scripts/render-pr-previews.mjs ensure
+          NEON_BRANCH_NAME: preview/pr-${{ github.event.issue.number }}
+        run: node scripts/render-pr-previews.mjs refresh
+
+  refresh-manual:
+    name: Deploy the previews on demand (manual dispatch)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the default branch (trusted code)
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Safety expiry for the Neon branch (14 days)
+        run: echo "EXPIRES_AT=$(date -u --date '+14 days' +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
+
+      - name: Neon branch for this PR (existing branch is reused)
+        id: neon
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          parent_branch: preview/main
+          branch_name: preview/pr-${{ inputs.pr }}
+          expires_at: ${{ env.EXPIRES_AT }}
+
+      - name: Fresh DB credentials for the PR Neon branch
+        id: creds
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          NEON_BRANCH_ID: ${{ steps.neon.outputs.branch_id }}
+          NEON_DB_URL: ${{ steps.neon.outputs.db_url_pooled }}
+          NEON_DB_URL_DIRECT: ${{ steps.neon.outputs.db_url }}
+        run: node scripts/neon-branch-credentials.mjs
+
+      - name: Deploy the previews on the latest PR commit
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_OWNER_ID: ${{ vars.RENDER_OWNER_ID }}
+          RENDER_ENVIRONMENT_ID: ${{ vars.RENDER_ENVIRONMENT_ID }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr }}
+          NEON_DB_URL: ${{ steps.creds.outputs.db_url_pooled }}
+          NEON_DB_URL_DIRECT: ${{ steps.creds.outputs.db_url }}
+          NEON_BRANCH_NAME: preview/pr-${{ inputs.pr }}
+        run: node scripts/render-pr-previews.mjs refresh
 
   cleanup:
     name: Delete previews and Neon branch
-    if: github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request_target' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - name: Check out BASE branch only
@@ -94,7 +201,6 @@ jobs:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_HEAD_BRANCH: closed
         run: node scripts/render-pr-previews.mjs cleanup
 
       - name: Delete Neon branch

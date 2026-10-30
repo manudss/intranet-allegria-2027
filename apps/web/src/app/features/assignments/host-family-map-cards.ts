@@ -16,6 +16,13 @@ export class HostFamilyMapCardsComponent {
   readonly checkedIds = input<ReadonlySet<number>>(new Set());
   readonly selectMode = input(false);
   readonly selectFamily = output<number>();
+  /** Groupes proposés pour changer le groupe directement depuis la carte. */
+  readonly groups = input<readonly { id: number; name: string }[] | null>(null);
+  readonly groupChange = output<{ familyId: number; groupId: number | null }>();
+
+  onGroupPick(familyId: number, value: string): void {
+    this.groupChange.emit({ familyId, groupId: Number(value) || null });
+  }
 
   capacityLabel(state: HostFamilyMapItem['capacityState']): string {
     if (state === 'FULL') return 'Pleine';

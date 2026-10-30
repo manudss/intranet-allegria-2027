@@ -386,6 +386,15 @@ export class HostFamiliesMapPageComponent implements OnInit {
     });
   }
 
+  changeFamilyGroup(familyId: number, groupId: number | null): void {
+    if (this.busy()) return;
+    this.busy.set(true);
+    this.hostingApi.setFamilyGroup(familyId, groupId).subscribe({
+      next: () => this.afterBulk(groupId === null ? 'Lieu retiré de son groupe.' : 'Groupe du lieu modifié.'),
+      error: (e) => this.bulkError(e),
+    });
+  }
+
   onCardSelected(familyId: number): void {
     if (this.selectMode()) {
       this.toggleChecked(familyId);

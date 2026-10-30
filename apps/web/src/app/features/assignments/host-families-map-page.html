@@ -165,6 +165,8 @@
           [selectedFamilyId]="selectedFamilyId()"
           [checkedIds]="checkedIds()"
           [selectMode]="selectMode()"
+          [groups]="hostingGroups()"
+          (groupChange)="changeFamilyGroup($event.familyId, $event.groupId)"
           (selectFamily)="onCardSelected($event)"
         />
       </aside>
@@ -183,6 +185,8 @@
     <app-host-family-map-cards
       [families]="filteredFamilies()"
       [selectedFamilyId]="selectedFamilyId()"
+      [groups]="hostingGroups()"
+      (groupChange)="changeFamilyGroup($event.familyId, $event.groupId)"
       (selectFamily)="onCardSelected($event); mobileCardsOpened.set(false)"
     />
   </tui-drawer>

@@ -46,3 +46,21 @@
   margin: 0.2rem 0;
   color: var(--tui-text-secondary);
 }
+
+.card-wrap {
+  display: grid;
+  gap: 0.3rem;
+}
+.group-pick {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.4rem;
+  font-size: 0.85rem;
+  color: var(--tui-text-secondary);
+}
+.group-pick select {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+}

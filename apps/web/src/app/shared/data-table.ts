@@ -135,6 +135,10 @@ export class DataTableComponent<T extends { readonly id: number }> implements On
   readonly columns = input.required<readonly DataTableColumn<T>[]>();
   readonly lineActions = input<readonly DataTableAction<T>[]>([]);
   readonly rowSelected = output<T>();
+  /** Colonne de cases à cocher (sélection multiple) pour les actions groupées. */
+  readonly selectable = input(false);
+  readonly checkedIds = input<ReadonlySet<number>>(new Set());
+  readonly checkedChange = output<number[]>();
   readonly actionSelected = output<DataTableActionEvent<T>>();
 
   readonly orderedColumns = signal<readonly DataTableColumn<T>[]>([]);
@@ -182,7 +186,15 @@ export class DataTableComponent<T extends { readonly id: number }> implements On
     );
   });
   readonly columnKeys = () => this.enabledColumns().map(({ key }) => key);
-  readonly tableColumnKeys = () => [...this.columnKeys(), 'actions'];
+  readonly tableColumnKeys = () => [
+    ...(this.selectable() ? ['select'] : []),
+    ...this.columnKeys(),
+    'actions',
+  ];
+  readonly allShownChecked = computed(() => {
+    const rows = this.filteredRows();
+    return rows.length > 0 && rows.every((r) => this.checkedIds().has(r.id));
+  });
   readonly tableActions = computed<readonly DataTableAction<T>[]>(() => [
     { id: 'details', label: 'Détails', icon: '@tui.eye' },
     ...this.lineActions(),
@@ -286,6 +298,22 @@ export class DataTableComponent<T extends { readonly id: number }> implements On
     } else {
       this.actionSelected.emit({ action, row });
     }
+  }
+
+  toggleChecked(id: number, checked: boolean): void {
+    const next = new Set(this.checkedIds());
+    if (checked) next.add(id);
+    else next.delete(id);
+    this.checkedChange.emit([...next]);
+  }
+
+  toggleAllShown(checked: boolean): void {
+    const next = new Set(this.checkedIds());
+    for (const r of this.filteredRows()) {
+      if (checked) next.add(r.id);
+      else next.delete(r.id);
+    }
+    this.checkedChange.emit([...next]);
   }
 
   clearFilters(): void {

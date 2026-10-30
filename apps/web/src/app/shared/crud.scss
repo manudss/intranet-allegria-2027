@@ -99,3 +99,22 @@ dd {
     height: calc(100vh - 13rem);
   }
 }
+
+.select-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+.select-bar input,
+.select-bar select {
+  min-width: 0;
+  max-width: 100%;
+}
+.feedback {
+  margin: 0.25rem 0;
+}
+.feedback.error {
+  color: var(--tui-status-negative);
+}

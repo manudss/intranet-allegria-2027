@@ -10,10 +10,41 @@
           id="rechercher-une-famille"
         />
       </tui-textfield>
+      <div class="select-bar" data-testid="select-bar">
+        <span data-testid="checked-count"><strong>{{ checkedIds().size }}</strong> sélectionné(s)</span>
+        <button type="button" tuiButton size="s" appearance="flat" [disabled]="!checkedIds().size" (click)="clearChecked()">Vider</button>
+        <select aria-label="Groupe cible" data-testid="target-group" (change)="targetGroupId.set(+$any($event.target).value || null)">
+          <option value="0" [selected]="targetGroupId() === null">— groupe —</option>
+          @for (g of groups(); track g.id) {
+            <option [value]="g.id" [selected]="targetGroupId() === g.id">{{ g.name }}</option>
+          }
+        </select>
+        <button type="button" tuiButton size="s" data-testid="assign" [disabled]="busy() || !checkedIds().size || targetGroupId() === null" (click)="assignChecked(targetGroupId())">Affecter ({{ checkedIds().size }})</button>
+        <button type="button" tuiButton size="s" appearance="secondary" data-testid="unassign" [disabled]="busy() || !checkedIds().size" (click)="assignChecked(null)">Retirer du groupe</button>
+      </div>
+      <div class="select-bar">
+        <input aria-label="Nom du nouveau groupe" data-testid="new-group-name" placeholder="Nouveau groupe (ex. Nord, Paroisse X)" [value]="newGroupName()" (input)="newGroupName.set($any($event.target).value)" />
+        <select aria-label="Type de groupe" (change)="newGroupKind.set($any($event.target).value)">
+          <option value="ZONE" [selected]="newGroupKind() === 'ZONE'">Zone géographique</option>
+          <option value="PARISH" [selected]="newGroupKind() === 'PARISH'">Paroisse</option>
+          <option value="OTHER" [selected]="newGroupKind() === 'OTHER'">Autre</option>
+        </select>
+        <button type="button" tuiButton size="s" data-testid="create-assign" [disabled]="busy() || !checkedIds().size || !newGroupName().trim()" (click)="createGroupAndAssign()">Créer et affecter</button>
+      </div>
+      @if (feedback(); as f) {
+        <p class="feedback" [class.error]="f.error" role="status" data-testid="feedback">{{ f.text }}</p>
+      }
       @if (loading()) {
         <tui-loader />
       } @else {
-        <app-data-table [rows]="filtered()" [columns]="tableColumns" (rowSelected)="open($event)" />
+        <app-data-table
+          [rows]="filtered()"
+          [columns]="tableColumns"
+          [selectable]="true"
+          [checkedIds]="checkedIds()"
+          (checkedChange)="setChecked($event)"
+          (rowSelected)="open($event)"
+        />
       }
     </app-page-layout>
     @if (opened()) {
@@ -28,7 +59,14 @@
             <dt>Type</dt>
             <dd>{{ selected()?.accommodationType === 'COLLECTIVE' ? 'Hébergement collectif' : 'Famille d\'accueil' }}</dd>
             <dt>Groupe</dt>
-            <dd>{{ groupNameOf(selected()) }}</dd>
+            <dd>
+              <select aria-label="Groupe de l'hébergement" data-testid="detail-group" [disabled]="busy()" (change)="changeSelectedGroup($any($event.target).value)">
+                <option value="0" [selected]="selected()?.hostingGroupId == null">Aucun groupe</option>
+                @for (g of groups(); track g.id) {
+                  <option [value]="g.id" [selected]="selected()?.hostingGroupId === g.id">{{ g.name }}</option>
+                }
+              </select>
+            </dd>
             <dt>Capacité</dt>
             <dd>{{ selected()?.maxCapacity }} dont {{ selected()?.maxUnder18 }} mineurs</dd>
             <dt>Contact</dt>
@@ -68,6 +106,14 @@
               <select aria-label="Type d'hébergement" (change)="setType($any($event.target).value)">
                 <option value="FAMILY" [selected]="model().accommodationType !== 'COLLECTIVE'">Famille d'accueil</option>
                 <option value="COLLECTIVE" [selected]="model().accommodationType === 'COLLECTIVE'">Hébergement collectif (internat...)</option>
+              </select>
+            </label>
+            <label class="wide">Groupe
+              <select aria-label="Groupe" data-testid="form-group" (change)="formGroupId.set(+$any($event.target).value || null)">
+                <option value="0" [selected]="formGroupId() === null">Aucun groupe</option>
+                @for (g of groups(); track g.id) {
+                  <option [value]="g.id" [selected]="formGroupId() === g.id">{{ g.name }}</option>
+                }
               </select>
             </label>
             <tui-textfield iconStart="@tui.users">

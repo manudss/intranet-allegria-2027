@@ -35,47 +35,54 @@
       <aside class="group-list" aria-label="Groupes d’hébergement" data-testid="group-list">
         <h3>Groupes ({{ groups().length }})</h3>
         <form class="new-group" (submit)="$event.preventDefault(); createGroup()">
-          <input
-            type="text"
-            name="newGroup"
-            placeholder="Nouveau groupe (ex. Croix-Rousse)"
-            aria-label="Nom du nouveau groupe"
-            [value]="newGroupName()"
-            (input)="newGroupName.set($any($event.target).value)"
-          />
+          <tui-textfield>
+            <label tuiLabel for="placement-new-group">Nouveau groupe</label>
+            <input
+              tuiInput
+              id="placement-new-group"
+              name="newGroup"
+              placeholder="ex. Croix-Rousse"
+              aria-label="Nom du nouveau groupe"
+              [ngModel]="newGroupName()"
+              (ngModelChange)="newGroupName.set($event)"
+            />
+          </tui-textfield>
           <button tuiButton type="submit" size="s" [disabled]="!newGroupName().trim() || busy()">Ajouter</button>
         </form>
-        <input
-          type="search"
-          class="gl-search"
-          placeholder="Rechercher un groupe"
-          aria-label="Rechercher un groupe"
-          [value]="groupSearch()"
-          (input)="groupSearch.set($any($event.target).value)"
-        />
+        <tui-textfield>
+          <label tuiLabel for="placement-group-search">Rechercher un groupe</label>
+          <input
+            tuiInput
+            id="placement-group-search"
+            aria-label="Rechercher un groupe"
+            [ngModel]="groupSearch()"
+            (ngModelChange)="groupSearch.set($event)"
+          />
+        </tui-textfield>
         <div class="gl-filters" role="group" aria-label="Filtrer par remplissage">
           @for (f of fillFilters; track f.id) {
             <button
+              tuiChip
               type="button"
-              class="chip"
-              [class.on]="fillFilter() === f.id"
+              size="s"
+              [appearance]="fillFilter() === f.id ? 'primary' : 'neutral'"
               [attr.aria-pressed]="fillFilter() === f.id"
               [attr.data-testid]="'fill-filter-' + f.id"
               (click)="fillFilter.set(f.id)"
             >
-              {{ f.label }} <small>{{ fillCounts()[f.id] }}</small>
+              {{ f.label }} ({{ fillCounts()[f.id] }})
             </button>
           }
         </div>
         <div class="gl-bulk">
-          <button tuiButton type="button" size="xs" appearance="secondary" (click)="showListed(true)">Afficher la liste</button>
-          <button tuiButton type="button" size="xs" appearance="secondary" (click)="showListed(false)">Masquer la liste</button>
+          <button tuiButton type="button" size="xs" appearance="secondary" (click)="showListed(true)">Afficher les colonnes listées</button>
+          <button tuiButton type="button" size="xs" appearance="secondary" (click)="showListed(false)">Masquer les colonnes listées</button>
         </div>
         <p class="muted">{{ visibleColumnIds().length }} colonne(s) affichée(s) sur {{ columnIds().length }}</p>
         <ul class="gl-items">
           <li class="gl-item">
             <label>
-              <input type="checkbox" [ngModel]="isShown(NONE)" (ngModelChange)="setShown(NONE, $event)" />
+              <input tuiCheckbox type="checkbox" size="s" [ngModel]="isShown(NONE)" (ngModelChange)="setShown(NONE, $event)" aria-label="Afficher la colonne Non affectés" />
               <b>Non affectés</b>
             </label>
             <small>{{ stats(null).people }} personne(s) · {{ stats(null).teams }} équipe(s)</small>
@@ -84,7 +91,9 @@
             <li class="gl-item" [attr.data-testid]="'group-row-' + row.group.id" [attr.data-state]="row.fill.state">
               <label>
                 <input
+                  tuiCheckbox
                   type="checkbox"
+                  size="s"
                   [ngModel]="isShown(row.group.id)"
                   (ngModelChange)="setShown(row.group.id, $event)"
                   [attr.aria-label]="'Afficher la colonne ' + row.group.name"
@@ -160,15 +169,13 @@
                     <b>{{ team.name }}</b>
                     <small>{{ team.memberCount }} personne(s){{ team.groupName ? ' · ' + team.groupName : '' }}</small>
                   </div>
-                  <label class="mobile-select">
-                    <span class="sr">Groupe de {{ team.name }}</span>
-                    <select [value]="team.hostingGroupId ?? 0" (change)="onGroupSelect('team', team.id, $event)">
-                      <option [value]="0" [selected]="team.hostingGroupId === null">Non affectée</option>
-                      @for (g of groups(); track g.id) {
-                        <option [value]="g.id" [selected]="team.hostingGroupId === g.id">{{ g.name }}</option>
-                      }
-                    </select>
-                  </label>
+                  <app-select-field
+                    class="mobile-select"
+                    [label]="'Groupe de ' + team.name"
+                    [options]="groupOptions()"
+                    [value]="team.hostingGroupId ?? 0"
+                    (valueChange)="moveToGroup('team', team.id, $event || null)"
+                  />
                 </article>
               } @empty {
                 <p class="empty">Déposez des équipes ici</p>
@@ -194,15 +201,13 @@
                       @if (needsReview(family)) { · <em class="review">à relire</em> }
                     </small>
                   </div>
-                  <label class="mobile-select">
-                    <span class="sr">Groupe de {{ family.familyName }}</span>
-                    <select [value]="family.hostingGroupId ?? 0" (change)="onGroupSelect('family', family.id, $event)">
-                      <option [value]="0" [selected]="family.hostingGroupId === null">Non affectée</option>
-                      @for (g of groups(); track g.id) {
-                        <option [value]="g.id" [selected]="family.hostingGroupId === g.id">{{ g.name }}</option>
-                      }
-                    </select>
-                  </label>
+                  <app-select-field
+                    class="mobile-select"
+                    [label]="'Groupe de ' + family.familyName"
+                    [options]="groupOptions()"
+                    [value]="family.hostingGroupId ?? 0"
+                    (valueChange)="moveToGroup('family', family.id, $event || null)"
+                  />
                 </article>
               } @empty {
                 <p class="empty">Déposez des familles ici</p>
@@ -214,14 +219,12 @@
       </div>
     } @else {
       <div class="toolbar">
-        <label>
-          Groupe d’hébergement
-          <select aria-label="Groupe d’hébergement" [value]="selectedGroupId() ?? 0" (change)="onSelectGroup($event)">
-            @for (g of groups(); track g.id) {
-              <option [value]="g.id" [selected]="selectedGroupId() === g.id">{{ g.name }}</option>
-            }
-          </select>
-        </label>
+        <app-select-field
+          label="Groupe d’hébergement"
+          [options]="realGroupOptions()"
+          [value]="selectedGroupId()"
+          (valueChange)="selectGroup($event)"
+        />
         <span class="muted">{{ pool().length }} à placer · {{ groupFamilies().length }} famille(s)</span>
       </div>
 
@@ -258,21 +261,18 @@
           </div>
           <fieldset class="rules">
             <legend>Règles à confirmer avec l’organisation (choix obligatoire)</legend>
-            <label>Les animateurs comptent dans la capacité des familles ?
-              <select aria-label="Animateurs dans la capacité" [value]="countAnimators() === null ? '' : countAnimators() ? 'yes' : 'no'" (change)="onAnimatorRule($event)">
-                <option value="" [selected]="countAnimators() === null">— choisir —</option>
-                <option value="yes" [selected]="countAnimators() === true">Oui : jeunes et animateurs comptent ensemble</option>
-                <option value="no" [selected]="countAnimators() === false">Non : seuls les jeunes comptent</option>
-              </select>
-            </label>
-            <label>Mixité filles/garçons dans une famille
-              <select aria-label="Mixité filles garçons" [value]="sexMixing() ?? ''" (change)="onMixingRule($event)">
-                <option value="" [selected]="sexMixing() === null">— choisir —</option>
-                <option value="ignore" [selected]="sexMixing() === 'ignore'">Aucune règle</option>
-                <option value="avoid" [selected]="sexMixing() === 'avoid'">Éviter si possible</option>
-                <option value="forbid" [selected]="sexMixing() === 'forbid'">Interdire</option>
-              </select>
-            </label>
+            <app-select-field
+              label="Les animateurs comptent dans la capacité des familles ?"
+              [options]="animatorOptions"
+              [value]="countAnimators() === null ? '' : countAnimators() ? 'yes' : 'no'"
+              (valueChange)="setAnimatorRule($event)"
+            />
+            <app-select-field
+              label="Mixité filles/garçons dans une famille"
+              [options]="mixingOptions"
+              [value]="sexMixing() ?? ''"
+              (valueChange)="setMixingRule($event)"
+            />
             @if (!rulesChosen()) {
               <small class="muted">Choisissez les deux règles pour calculer une proposition. Rien n’est supposé à votre place.</small>
             }

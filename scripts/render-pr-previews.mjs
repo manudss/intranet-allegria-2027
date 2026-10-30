@@ -1,10 +1,26 @@
 #!/usr/bin/env node
+import { pathToFileURL } from 'node:url';
 // Orchestrates the 3 per-PR Render services (api, web admin, public site) from a TRUSTED
-// GitHub Actions workflow (pull_request_target, base-branch code only, never PR code).
-// Untrusted values (branch name) only travel through env vars and are validated here.
-// Usage: node scripts/render-pr-previews.mjs ensure|cleanup
-// Env: RENDER_API_KEY, RENDER_OWNER_ID, GITHUB_TOKEN, GITHUB_REPOSITORY, PR_NUMBER, PR_HEAD_BRANCH,
-//      NEON_DB_URL, NEON_DB_URL_DIRECT, NEON_BRANCH_NAME (ensure only), DRY_RUN=1 to print the plan only.
+// GitHub Actions workflow (pull_request_target, or issue_comment / workflow_dispatch which
+// run the DEFAULT branch version of this file: never PR code).
+//
+// DEPLOY ON DEMAND (since 2026-10-30): a push on a PR branch NEVER starts a Render build.
+// Each build costs part of the 500 free pipeline minutes/month shared by the workspace (and
+// this repo builds 3 services per preview), so the previews only build when someone wants
+// to test the branch:
+//   - ensure   (PR opened / updated): no build, no service creation, no env change. Only
+//              maintains the status comment on the PR. The workflow still prepares the free
+//              Neon branch for the PR.
+//   - refresh  (`/preview` PR comment from OWNER/MEMBER/COLLABORATOR, or the manual Actions
+//              dispatch): creates the services if needed, rotates the DB creds and deploys
+//              the latest commit of the PR branch. The head branch/sha are read back from
+//              the GitHub API here, never taken from event or env metadata.
+//   - cleanup  (PR closed): deletes the 3 services (the workflow deletes the Neon branch).
+// Untrusted values (branch name) are validated before use.
+// Usage: node scripts/render-pr-previews.mjs ensure|refresh|cleanup
+// Env: RENDER_API_KEY, GITHUB_TOKEN, GITHUB_REPOSITORY, PR_NUMBER,
+//      RENDER_OWNER_ID + RENDER_ENVIRONMENT_ID + NEON_DB_URL + NEON_DB_URL_DIRECT (refresh only),
+//      NEON_BRANCH_NAME (comment text only), DRY_RUN=1 to print the plan only.
 const MODE = process.argv[2];
 const e = process.env;
 const DRY = e.DRY_RUN === '1';
@@ -12,8 +28,6 @@ const pr = Number(e.PR_NUMBER);
 if (!Number.isInteger(pr) || pr <= 0) throw new Error('PR_NUMBER invalid');
 const repoFull = e.GITHUB_REPOSITORY ?? '';
 if (!/^[\w.-]+\/[\w.-]+$/.test(repoFull)) throw new Error('GITHUB_REPOSITORY invalid');
-const branch = e.PR_HEAD_BRANCH ?? '';
-if (MODE === 'ensure' && !/^[\w./-]{1,200}$/.test(branch)) throw new Error('PR_HEAD_BRANCH rejected');
 
 const RENDER = 'https://api.render.com/v1';
 const names = { api: `al-pr${pr}-api`, web: `al-pr${pr}-web`, site: `al-pr${pr}-site` };
@@ -42,6 +56,7 @@ async function gh(method, path, body) {
     headers: { Authorization: `Bearer ${e.GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
   });
+  if (res.status === 404) return null;
   if (!res.ok) throw new Error(`GH ${method} ${path} -> ${res.status}`);
   return res.status === 204 ? null : res.json();
 }
@@ -53,18 +68,87 @@ async function upsertComment(markdown) {
   else await gh('POST', `/issues/${pr}/comments`, { body });
 }
 const urlOf = (s, fallback) => s?.serviceDetails?.url ?? fallback;
+const guess = (n) => `https://${n}.onrender.com`;
 
+function header() {
+  return `### Previews Render pour la PR #${pr}`;
+}
+function linksTable(apiUrl, webUrl, siteUrl) {
+  return [
+    '| Composant | Lien |', '|---|---|',
+    `| Site public | ${siteUrl} |`,
+    `| Front d'administration | ${webUrl} |`,
+    `| API | ${apiUrl}/health |`,
+  ].join('\n');
+}
+const HOWTO = "Pour deployer ou mettre a jour les previews avec le dernier commit : commente `/preview` sur cette PR (ou onglet **Actions > PR Previews > Run workflow** avec le numero de la PR).";
+
+// ensure: PR opened/updated. Never builds; only keeps the status comment accurate.
 async function ensure() {
+  const found = {};
+  for (const [k, n] of Object.entries(names)) found[k] = await findService(n);
+  const any = Object.values(found).some(Boolean);
+  if (!any) {
+    await upsertComment([
+      header(),
+      '**Previews a la demande** : les pushes ne lancent plus de build Render (chaque build consomme une part des 500 minutes de pipeline gratuites partagees du mois, et cette PR en construit 3 : api, admin, site).',
+      '',
+      HOWTO,
+      '',
+      `Base de donnees Neon prete pour cette PR : \`${e.NEON_BRANCH_NAME ?? `preview/pr-${pr}`}\` (fictive, derivee de \`preview/main\`).`,
+      'Les services Render sont crees au premier `/preview` et supprimes a la fermeture de la PR.',
+    ].join('\n'));
+    console.log('no preview services: status comment only, no build.');
+    return;
+  }
+  const apiUrl = urlOf(found.api, guess(names.api));
+  const webUrl = urlOf(found.web, guess(names.web));
+  const siteUrl = urlOf(found.site, guess(names.site));
+  await upsertComment([
+    header(),
+    linksTable(apiUrl, webUrl, siteUrl),
+    '',
+    'Les pushes ne redeploient plus automatiquement. ' + HOWTO,
+    'Plan gratuit : le premier appel peut etre lent. Les services sont supprimes a la fermeture de la PR.',
+  ].join('\n'));
+  console.log('previews exist: status comment refreshed, no build.');
+}
+
+// refresh: explicit request to (re)deploy the latest commit of the PR branch.
+async function refresh() {
+  // Read the head back from the API: never trust event/env metadata for what gets built.
+  const d = await gh('GET', `/pulls/${pr}`);
+  if (!d || d.state !== 'open') throw new Error(`PR #${pr} is not open`);
+  if (d.head?.repo?.full_name !== repoFull) throw new Error('fork PR: refused');
+  const branch = d.head?.ref ?? '';
+  const sha = d.head?.sha ?? '';
+  if (!/^[\w./-]{1,200}$/.test(branch)) throw new Error('head branch rejected');
+  if (!/^[0-9a-f]{40}$/.test(sha)) throw new Error('head sha rejected');
+
   const repo = `https://github.com/${repoFull}`;
   if (!e.RENDER_ENVIRONMENT_ID) throw new Error('RENDER_ENVIRONMENT_ID is required (Allegria-demo project, dev environment)');
-  const common = { ownerId: e.RENDER_OWNER_ID, environmentId: e.RENDER_ENVIRONMENT_ID, repo, branch, autoDeploy: 'no' }; // deploys are triggered only by this trusted workflow (see end of ensure), not by Render's GitHub webhook
-  const guess = (n) => `https://${n}.onrender.com`;
-  const webUrl = guess(names.web);
-  const siteUrl = guess(names.site);
+  const common = { ownerId: e.RENDER_OWNER_ID, environmentId: e.RENDER_ENVIRONMENT_ID, repo, branch, autoDeploy: 'no' }; // deploys are triggered only by this trusted workflow, not by Render's GitHub webhook
 
+  // PUT only the env vars whose value actually changed; Render redeploys a service by
+  // itself when an env var changes, so a change means we skip the explicit deploy.
+  const syncEnv = async (id, desired) => {
+    const vars = await render('GET', `/services/${id}/env-vars`);
+    const cur = {};
+    for (const x of Array.isArray(vars) ? vars : []) { const v = x.envVar ?? x; cur[v.key] = v.value; }
+    let changed = false;
+    for (const { key, value } of desired) {
+      if (cur[key] !== value) { await render('PUT', `/services/${id}/env-vars/${key}`, { value }); changed = true; }
+    }
+    return changed;
+  };
+  const explicitDeploy = async (id) => {
+    const dep = await render('POST', `/services/${id}/deploys`, { clearCache: 'do_not_clear' });
+    console.log(`deploy requested for ${id}: ${dep?.id ?? 'n/a'} (${dep?.commit?.id?.slice(0, 7) ?? 'latest'})`);
+  };
+
+  // api
   let api = await findService(names.api);
-  const existing = new Set();
-  if (api) existing.add(api.id);
+  let apiCreated = false;
   if (!api) {
     const r = await render('POST', '/services', {
       ...common, type: 'web_service', name: names.api,
@@ -72,7 +156,7 @@ async function ensure() {
         { key: 'DATABASE_URL', value: e.NEON_DB_URL },
         { key: 'DATABASE_URL_DIRECT', value: e.NEON_DB_URL_DIRECT },
         { key: 'DB_SSL', value: 'true' },
-        { key: 'CORS_ORIGIN', value: `${webUrl},${siteUrl}` },
+        { key: 'CORS_ORIGIN', value: `${guess(names.web)},${guess(names.site)}` },
         { key: 'NODE_VERSION', value: '24' },
       ],
       serviceDetails: {
@@ -81,48 +165,57 @@ async function ensure() {
       },
     });
     api = r.service ?? r;
-  } else {
-    // Existing service (PR update): the trusted workflow rotates the DB password at each run.
-    await render('PUT', `/services/${api.id}/env-vars/DATABASE_URL`, { value: e.NEON_DB_URL });
-    await render('PUT', `/services/${api.id}/env-vars/DATABASE_URL_DIRECT`, { value: e.NEON_DB_URL_DIRECT });
+    apiCreated = true;
   }
   const apiUrl = urlOf(api, guess(names.api));
 
+  // static sites
   const staticSvc = async (name, buildCommand, publishPath, envVars) => {
     let s = await findService(name);
-    if (s) existing.add(s.id);
-    if (!s) {
-      const r = await render('POST', '/services', {
-        ...common, type: 'static_site', name, envVars,
-        serviceDetails: { buildCommand, publishPath, routes: [{ type: 'rewrite', source: '/*', destination: '/index.html' }] },
-      });
-      s = r.service ?? r;
-    }
-    return s;
+    if (s) return { s, created: false };
+    const r = await render('POST', '/services', {
+      ...common, type: 'static_site', name, envVars,
+      serviceDetails: { buildCommand, publishPath, routes: [{ type: 'rewrite', source: '/*', destination: '/index.html' }] },
+    });
+    return { s: r.service ?? r, created: true };
   };
   const web = await staticSvc(names.web, 'npm ci --include=dev && npm run build:web', 'dist/apps/web/browser',
     [{ key: 'WEB_API_URL', value: apiUrl }, { key: 'NODE_VERSION', value: '24' }]);
   const site = await staticSvc(names.site, 'npm ci --include=dev && npm run build:site', 'dist/apps/site/browser',
     [{ key: 'NODE_VERSION', value: '24' }]);
 
-  // PR update: do not rely on Render's GitHub webhook; explicitly deploy the newest commit of the branch.
-  for (const id of existing) {
-    const d = await render('POST', `/services/${id}/deploys`, { clearCache: 'do_not_clear' });
-    console.log(`deploy requested for ${id}: ${d?.id ?? 'n/a'} (${d?.commit?.id?.slice(0, 7) ?? 'latest'})`);
-  }
+  // Real URLs can differ from the guess (name collision suffix): keep CORS exact.
+  const realWeb = urlOf(web.s, guess(names.web));
+  const realSite = urlOf(site.s, guess(names.site));
 
-  // Real URLs can differ from the guess (name collision suffix): fix CORS if so.
-  const realWeb = urlOf(web, webUrl), realSite = urlOf(site, siteUrl);
-  if (realWeb !== webUrl || realSite !== siteUrl) {
-    await render('PUT', `/services/${api.id}/env-vars/CORS_ORIGIN`, { value: `${realWeb},${realSite}` });
+  // Existing services: rotate the DB creds (they change at every run) and deploy the
+  // newest commit, exactly one build per service (env change redeploys by itself).
+  if (apiCreated) {
+    if (realWeb !== guess(names.web) || realSite !== guess(names.site)) {
+      await render('PUT', `/services/${api.id}/env-vars/CORS_ORIGIN`, { value: `${realWeb},${realSite}` });
+    }
+  } else {
+    const envDeployed = await syncEnv(api.id, [
+      { key: 'DATABASE_URL', value: e.NEON_DB_URL },
+      { key: 'DATABASE_URL_DIRECT', value: e.NEON_DB_URL_DIRECT },
+      { key: 'CORS_ORIGIN', value: `${realWeb},${realSite}` },
+    ]);
+    if (!envDeployed) await explicitDeploy(api.id);
   }
+  if (!web.created) {
+    const envDeployed = await syncEnv(web.s.id, [{ key: 'WEB_API_URL', value: apiUrl }]);
+    if (!envDeployed) await explicitDeploy(web.s.id);
+  }
+  if (!site.created) await explicitDeploy(site.s.id);
+
   await upsertComment([
-    `### Previews Render pour la PR #${pr}`,
-    '| Composant | Lien |', '|---|---|',
-    `| Site public | ${realSite} |`, `| Front d'administration | ${realWeb} |`, `| API | ${apiUrl}/health |`,
+    header(),
+    `Previews demandees : deploiement du dernier commit \`${sha.slice(0, 7)}\` lance.`,
     '',
-    `Base de donnees Neon isolee pour cette PR : \`${e.NEON_BRANCH_NAME ?? 'n/a'}\` (fictive, derivee de \`preview/main\`).`,
-    'Les services Render sont en plan gratuit (le premier appel peut etre lent). Ils sont supprimes a la fermeture de la PR.',
+    linksTable(apiUrl, realWeb, realSite),
+    '',
+    `Base de donnees Neon isolee pour cette PR : \`${e.NEON_BRANCH_NAME ?? `preview/pr-${pr}`}\` (fictive, derivee de \`preview/main\`).`,
+    'Les services Render sont en plan gratuit (le premier appel peut etre lent). Chaque `/preview` relance les builds (minutes de pipeline gratuites). Ils sont supprimes a la fermeture de la PR.',
   ].join('\n'));
 }
 
@@ -134,6 +227,12 @@ async function cleanup() {
   await upsertComment(`### Previews Render pour la PR #${pr}\nPR fermee : les 3 services de preview ont ete supprimes.`);
 }
 
-if (MODE === 'ensure') await ensure();
-else if (MODE === 'cleanup') await cleanup();
-else throw new Error('usage: ensure|cleanup');
+export { ensure, refresh, cleanup };
+
+const invokedAsScript = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (invokedAsScript) {
+  if (MODE === 'ensure') await ensure();
+  else if (MODE === 'refresh') await refresh();
+  else if (MODE === 'cleanup') await cleanup();
+  else throw new Error('usage: ensure|refresh|cleanup');
+}

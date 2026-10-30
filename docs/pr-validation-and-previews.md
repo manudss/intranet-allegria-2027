@@ -18,35 +18,38 @@ Sur chaque PR et chaque push, `.github/workflows/ci.yml` lance :
 (test `seed-coverage.spec.ts`) puis insère des données générées avec faker. Ne jamais y mettre de vraies données.
 Les comptes de test (`admin@allegria.local`, etc.) sont publics dans le dépôt : à n'utiliser que sur ces bases fictives.
 
-## Preview de PR sur Render (gratuit)
+## Preview de PR sur Render (gratuit) — déploiement à la demande
 
-Les previews natives de Render copient le plan du service de base (Starter = payant) ; les environnements de
-preview complets exigent le plan Pro. La voie gratuite : un service web Render en plan **Free**, branche `main`,
-Previews = Automatic (onglet Previews du service). Chaque PR vers cette branche obtient une preview Render.
+**Un push sur une branche de PR ne lance plus aucun build Render.** Chaque build consomme une
+part des 500 minutes de pipeline gratuites/mois partagées par tout le workspace (et ce dépôt
+construit 3 services par preview : api, admin, site). L'épuisement du quota bloque tous les
+builds jusqu'à la remise à zéro mensuelle (observé le 2026-10-30). Les previews ne se
+construisent donc que lorsqu'on veut réellement tester la branche :
 
-Une preview Render ne peut pas recevoir une `DATABASE_URL` différente par PR depuis le dashboard. C'est donc
-`scripts/preview-start.mjs` qui, au démarrage de chaque déploiement (service de base ou preview de PR) :
+- commenter `/preview` sur la PR (réservé au propriétaire, membres et collaborateurs), ou
+- **Actions > PR Previews > Run workflow** avec le numéro de la PR.
 
-1. lit `RENDER_GIT_BRANCH` (fournie par Render) ;
-2. crée (ou réutilise) la branche Neon `preview/render-<branche>` issue de `preview/main` (fictive), avec
-   expiration automatique (14 jours par défaut, max 30) ;
-3. refuse de continuer si le parent n'est pas `preview/main` ou si c'est la branche par défaut (`production`) ;
-4. lance les migrations sur cette branche isolée, puis l'API (avec `DATABASE_URL` spécifique, sans `NEON_API_KEY`).
+`pr-previews.yml` (workflow de confiance, code lu depuis la branche de base/par défaut,
+jamais depuis la PR) orchestre tout via `scripts/render-pr-previews.mjs` :
 
-| Réglage      | Valeur                                                                                           |
-| ------------ | ------------------------------------------------------------------------------------------------ |
-| Build        | `npm ci && WEB_API_URL= npm run build`                                                           |
-| Start        | `WEB_STATIC_DIR=dist/apps/web/browser node scripts/preview-start.mjs`                            |
-| Health check | `/health`                                                                                        |
-| Variables    | `NEON_API_KEY` (secret, clé dédiée révocable), `NEON_PROJECT_ID`, `CORS_ORIGIN` (URL du service) |
+- **PR ouverte / mise à jour** (job `ensure`) : aucune création de service, aucun build.
+  La branche Neon fictive `preview/pr-<N>` (parent `preview/main`, expiration 14 jours) est
+  préparée, et le commentaire de statut sur la PR est mis à jour (liens et mode d'emploi).
+- **`/preview` ou dispatch manuel** (jobs `refresh-*`) : création des 3 services gratuits
+  au premier appel (`al-pr<N>-api` web_service Node, `al-pr<N>-web` et `al-pr<N>-site`
+  static sites, Francfort), rotation du mot de passe DB propre à la branche Neon, puis
+  déploiement du dernier commit — exactement un build par service (un changement de variable
+  d'environnement redéploie de lui-même, le script ne relance pas un build explicite dans
+  ce cas). La branche/sha déployés sont relus via l'API GitHub, jamais depuis les métadonnées
+  d'événement ; les PR de forks sont refusées. `autoDeploy` reste désactivé sur les services :
+  le workflow est l'unique déclencheur de build.
+- **PR fermée** (job `cleanup`) : suppression des 3 services et de la branche Neon.
 
-Ne pas définir `NODE_ENV=production` côté Render (le build a besoin des devDependencies). `WEB_STATIC_DIR` fait servir
-`dist/apps/web/browser` par l'API (fallback SPA, `/api` et `/health` inchangés) ; sans cette variable (production),
-le comportement est identique à avant.
+Les anciennes previews natives du dashboard Render (section précédente de ce doc,
+`scripts/preview-start.mjs`) ne sont plus le mécanisme actif.
 
-Limites : instance gratuite (veille après 15 min, 750 h et 500 min de build partagées par tout le workspace) ;
-10 branches Neon max sur le plan gratuit (les branches expirent seules) ; `NEON_API_KEY` est visible du code de chaque
-PR pendant le build, donc réserver ce dépôt privé à des auteurs de confiance.
+Limites : instance gratuite (veille après 15 min, 750 h et 500 min de build partagées par
+tout le workspace) ; 10 branches Neon max sur le plan gratuit (les branches expirent seules).
 
 ## Authentification de l'API
 

@@ -152,6 +152,10 @@ const PERSON_TYPE_APPEARANCE: Record<PersonType, string> = {
     .family-card:hover {
       box-shadow: var(--tui-shadow-small);
     }
+    .group-error {
+      margin: 0.5rem 0 0;
+      color: var(--tui-text-negative);
+    }
     .chips {
       display: flex;
       flex-wrap: wrap;
@@ -389,14 +393,19 @@ export class HostFamilyAssignmentsSelectorComponent {
           <dd>{{ current.maxUnder18 }} mineurs · {{ current.maxAnimators ?? 0 }} animateurs</dd>
           <dt>Groupe</dt>
           <dd>
-            <app-select-field
-              label="Groupe de l'hébergement"
-              icon="@tui.users"
-              testId="detail-group"
-              [options]="groupOptions()"
-              [value]="current.hostingGroupId ?? 0"
-              (valueChange)="groupChange.emit($event || null)"
-            />
+            @for (version of [groupVersion()]; track version) {
+              <app-select-field
+                label="Groupe de l'hébergement"
+                icon="@tui.users"
+                testId="detail-group"
+                [options]="groupOptions()"
+                [value]="current.hostingGroupId ?? 0"
+                (valueChange)="groupChange.emit($event || null)"
+              />
+            }
+            @if (groupError()) {
+              <p class="group-error" role="alert" data-testid="detail-group-error">{{ groupError() }}</p>
+            }
           </dd>
         </dl>
         <div class="chips">
@@ -493,6 +502,9 @@ export class HostFamilyDetailDrawerComponent {
   readonly drawerClosed = output<void>();
   readonly changed = output<void>();
   readonly groupChange = output<number | null>();
+  readonly groupError = input<string | null>(null);
+  /** Change à chaque échec : recrée le select pour qu'il montre la valeur réellement enregistrée. */
+  readonly groupVersion = input(0);
   readonly groupOptions = computed<SelectOption<number>[]>(() => [
     { value: 0, label: 'Aucun groupe' },
     ...this.groups().map((g) => ({ value: g.id, label: g.name })),
@@ -524,6 +536,8 @@ export class AssignmentsPage implements OnInit {
   readonly checkedIds = signal<ReadonlySet<number>>(new Set());
   readonly families = signal<HostFamily[]>([]);
   readonly selectedFamily = signal<HostFamily | null>(null);
+  readonly groupError = signal<string | null>(null);
+  readonly groupVersion = signal(0);
   readonly selectedFamilyAssignments = signal<ParticipantHostFamilyAssignment[] | null>(null);
   readonly loading = signal(true);
   view = 0;
@@ -809,9 +823,21 @@ export class AssignmentsPage implements OnInit {
   changeFamilyGroup(groupId: number | null): void {
     const family = this.selectedFamily();
     if (!family) return;
-    this.hostingApi.setFamilyGroup(family.id, groupId).subscribe(() => this.reloadFamilies());
+    this.groupError.set(null);
+    this.hostingApi.setFamilyGroup(family.id, groupId).subscribe({
+      next: () => this.reloadFamilies(),
+      error: (e: { error?: { message?: string | string[] } }) => {
+        const msg = e?.error?.message;
+        this.groupError.set(
+          `Groupe non modifié : ${Array.isArray(msg) ? msg.join(', ') : (msg ?? 'le serveur a refusé le changement.')}`,
+        );
+        this.groupVersion.update((v) => v + 1);
+        this.reloadFamilies();
+      },
+    });
   }
   select(family: HostFamily): void {
+    this.groupError.set(null);
     this.selectedFamily.set(family);
     this.reloadAssignments();
   }

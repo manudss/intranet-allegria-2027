@@ -42,6 +42,8 @@
         [family]="selectedFamily()"
         [assignments]="selectedFamilyAssignments()"
         [groups]="groups()"
+        [groupError]="groupError()"
+        [groupVersion]="groupVersion()"
         (groupChange)="changeFamilyGroup($event)"
         (drawerClosed)="closeDrawer()"
         (changed)="reloadAssignments()"

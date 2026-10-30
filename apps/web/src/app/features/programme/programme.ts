@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { forkJoin } from 'rxjs';
+import { TuiDataListWrapper } from '@taiga-ui/kit';
 import { AuthService } from '../../core/auth.service';
 import {
   ProgramChangeLogAction,
@@ -97,7 +98,7 @@ interface OverviewDay {
 @Component({
   selector: 'app-programme',
   standalone: true,
-  imports: [...SHARED_IMPORTS],
+  imports: [...SHARED_IMPORTS, TuiDataListWrapper],
   templateUrl: './programme.html',
   styleUrl: './programme.scss',
 })
@@ -129,7 +130,7 @@ export class ProgrammePage {
     return Array.from(locations).sort((a, b) => a.localeCompare(b, 'fr'));
   });
 
-  readonly location = signal('Grand Chapiteau');
+  readonly location = signal('Grande salle');
 
   readonly chain = computed<ProgramSequence[]>(() =>
     buildChain(this.allSequences(), this.eventDate(), this.location()),
@@ -207,6 +208,10 @@ export class ProgrammePage {
   readonly overviewLoading = signal(false);
 
   readonly teams = signal<VolunteerTeam[]>([]);
+  readonly teamItems = computed(() => [null, ...this.teams().map((team) => team.id)]);
+
+  stringifyTeam = (id: number | null): string =>
+    id === null ? 'Aucune' : (this.teams().find((team) => team.id === id)?.name ?? `Équipe ${id}`);
   private teamsLoaded = false;
 
   readonly missions = signal<VolunteerMission[]>([]);
@@ -638,7 +643,7 @@ export class ProgrammePage {
               dayIndex,
               locations: Array.from(byLocation.entries()).map(([name, sequences]) => ({
                 name,
-                isBranch: sequences.every((s) => s.anchorSequenceId !== null),
+                isBranch: sequences.some((s) => s.anchorSequenceId !== null),
                 sequences: [...sequences].sort((a, b) => a.startTime.localeCompare(b.startTime)),
               })),
             };

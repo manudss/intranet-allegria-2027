@@ -11,7 +11,7 @@ import { ProgramRecalcService } from './program-recalc.service';
 import { ProgramService } from './program.service';
 
 const DATE = '2027-10-31';
-const LOCATION = 'Grand Chapiteau';
+const LOCATION = 'Grande salle';
 const USER = { id: 7, email: 'coord@allegria.local', roles: ['COORDINATOR'] };
 
 function row(id: number, startTime: string, previousSequenceId: number | null, min: number) {

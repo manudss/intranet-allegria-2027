@@ -4,7 +4,7 @@ import { ProgramRecalcService } from './program-recalc.service';
 import { ProgramSequenceData } from './program-recalc.types';
 
 const EVENT_DATE = '2027-10-31';
-const LOCATION = 'Grand Chapiteau';
+const LOCATION = 'Grande salle';
 
 const DRAFT = {
   eventDate: EVENT_DATE,

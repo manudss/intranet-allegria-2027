@@ -93,11 +93,11 @@
     </div>
 
     @if (locationsForDay().length > 1) {
-      <select [ngModel]="location()" (ngModelChange)="setLocation($event)">
-        @for (loc of locationsForDay(); track loc) {
-          <option [value]="loc">{{ loc }}</option>
-        }
-      </select>
+      <tui-textfield iconStart="@tui.map-pin" tuiChevron class="location-select">
+        <label tuiLabel for="programme-lieu">Lieu</label>
+        <input tuiSelect id="programme-lieu" [ngModel]="location()" (ngModelChange)="setLocation($event)" />
+        <tui-data-list-wrapper *tuiDropdown [items]="locationsForDay()" />
+      </tui-textfield>
     }
   </div>
 
@@ -283,15 +283,17 @@
             Titre
             <input type="text" maxlength="200" [ngModel]="editDraft().title" (ngModelChange)="updateEditDraft({ title: $event })" />
           </label>
-          <label>
-            Équipe responsable
-            <select [ngModel]="editDraft().volunteerTeamId" (ngModelChange)="updateEditDraft({ volunteerTeamId: $event === null ? null : +$event })">
-              <option [ngValue]="null">— Aucune —</option>
-              @for (team of teams(); track team.id) {
-                <option [ngValue]="team.id">{{ team.name }}</option>
-              }
-            </select>
-          </label>
+          <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyTeam">
+            <label tuiLabel for="programme-equipe">Équipe responsable</label>
+            <input
+              tuiSelect
+              id="programme-equipe"
+              placeholder="Aucune"
+              [ngModel]="editDraft().volunteerTeamId"
+              (ngModelChange)="updateEditDraft({ volunteerTeamId: $event ?? null })"
+            />
+            <tui-data-list-wrapper *tuiDropdown [items]="teamItems()" />
+          </tui-textfield>
           <label>
             Notes
             <textarea [ngModel]="editDraft().notes" (ngModelChange)="updateEditDraft({ notes: $event })"></textarea>

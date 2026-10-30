@@ -40,7 +40,7 @@ export class CreateSequenceDto extends InsertSequenceDto {
   @ApiProperty({ example: '2027-10-31' })
   eventDate!: string;
 
-  @ApiProperty({ example: 'Grand Chapiteau' })
+  @ApiProperty({ example: 'Grande salle' })
   location!: string;
 
   @ApiProperty({ example: '09:00', description: 'Format HH:mm' })

@@ -18,7 +18,7 @@ function seq(
   return {
     id,
     eventDate: DAY,
-    location: 'Grand Chapiteau',
+    location: 'Grande salle',
     title: `Séquence ${id}`,
     startTime,
     durationMinutes: 60,
@@ -114,7 +114,7 @@ describe('ProgrammePage', () => {
       draft: { title: 'Pause', durationMinutes: 10, volunteerTeamId: null, notes: null },
       newSequence: {
         eventDate: DAY,
-        location: 'Grand Chapiteau',
+        location: 'Grande salle',
         title: 'Pause',
         startTime: '09:55',
         endTime: '10:05',
@@ -344,7 +344,7 @@ describe('ProgrammePage', () => {
 
     const day2 = component.overview()[1];
     expect(day2.locations.map((l) => [l.name, l.isBranch])).toEqual([
-      ['Grand Chapiteau', false],
+      ['Grande salle', false],
       ['Salle A', true],
     ]);
     http.verify();

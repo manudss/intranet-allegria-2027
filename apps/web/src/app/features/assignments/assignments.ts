@@ -451,6 +451,10 @@ export class HostFamilyAssignmentsSelectorComponent {
       z-index: 1;
       background: var(--tui-background-base);
     }
+    /* le bandeau de l'appli (56px) recouvre le haut du tiroir : le titre démarre en dessous */
+    header {
+      padding-block-start: 3.75rem;
+    }
     .chips {
       display: flex;
       flex-wrap: wrap;

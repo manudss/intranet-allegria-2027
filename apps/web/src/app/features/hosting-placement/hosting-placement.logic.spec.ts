@@ -49,4 +49,16 @@ describe('groupFill', () => {
   it('sans place et avec des personnes : manque de places', () => {
     expect(groupFill(st(2, 0))).toMatchObject({ state: 'over', percent: 0, missing: 2 });
   });
+  it('classe 40 groupes selon la règle existante, sans seuil inventé', () => {
+    // 40 groupes, 4 vides puis 20 personnes ; places = 0, 10, 20, 30 en rotation
+    const seatsBy = [0, 10, 20, 30];
+    const fills = Array.from({ length: 40 }, (_, i) => groupFill(st(i % 10 === 0 ? 0 : 20, seatsBy[i % 4])));
+    const count = (s: string) => fills.filter((f) => f.state === s).length;
+    expect(count('empty') + count('under') + count('full') + count('over')).toBe(40);
+    expect(count('empty')).toBe(4);
+    expect(count('over')).toBe(18);
+    expect(count('full')).toBe(8);
+    expect(count('under')).toBe(10);
+    expect(fills.filter((f) => f.state === 'under').every((f) => f.free > 0)).toBe(true);
+  });
 });

@@ -60,7 +60,7 @@ describe('HostFamilyCardsComponent', () => {
     await fixture.whenStable();
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('[data-testid="card-group-name"]')?.textContent).toContain('Lyon nord');
-    el.querySelector('[data-testid="card-check-1"]')?.dispatchEvent(new Event('change'));
+    (el.querySelector('[data-testid="card-check-1"]') as HTMLInputElement).click();
     expect(emitted).toEqual([[1]]);
   });
 });

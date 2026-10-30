@@ -8,7 +8,7 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TuiButton, TuiCheckbox, TuiInput } from '@taiga-ui/core';
 import {
@@ -82,7 +82,7 @@ const PERSON_TYPE_APPEARANCE: Record<PersonType, string> = {
 
 @Component({
   selector: 'app-host-family-cards',
-  imports: [TuiChip, TuiBadge, TuiCheckbox],
+  imports: [FormsModule, TuiChip, TuiBadge, TuiCheckbox],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div class="cards">
     @for (family of families(); track family.id) {
@@ -93,8 +93,8 @@ const PERSON_TYPE_APPEARANCE: Record<PersonType, string> = {
             type="checkbox"
             size="s"
             [attr.data-testid]="'card-check-' + family.id"
-            [checked]="checkedIds().has(family.id)"
-            (change)="toggle(family.id)"
+            [ngModel]="checkedIds().has(family.id)"
+            (ngModelChange)="toggle(family.id)"
           />
         </label>
         <button class="family-card" type="button" (click)="selectFamily.emit(family)">

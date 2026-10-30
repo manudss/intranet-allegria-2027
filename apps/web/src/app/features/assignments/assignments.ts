@@ -87,16 +87,16 @@ const PERSON_TYPE_APPEARANCE: Record<PersonType, string> = {
   template: `<div class="cards">
     @for (family of families(); track family.id) {
       <div class="card-wrap">
-        <input
-          tuiCheckbox
-          type="checkbox"
-          size="s"
-          class="card-check"
-          [attr.aria-label]="'Sélectionner ' + family.familyName"
-          [attr.data-testid]="'card-check-' + family.id"
-          [checked]="checkedIds().has(family.id)"
-          (change)="toggle(family.id)"
-        />
+        <label class="card-check" [attr.aria-label]="'Sélectionner ' + family.familyName">
+          <input
+            tuiCheckbox
+            type="checkbox"
+            size="s"
+            [attr.data-testid]="'card-check-' + family.id"
+            [checked]="checkedIds().has(family.id)"
+            (change)="toggle(family.id)"
+          />
+        </label>
         <button class="family-card" type="button" (click)="selectFamily.emit(family)">
           <strong>{{ family.familyName }}</strong
           ><span>{{ family.city }} · {{ family.parish || 'Sans paroisse' }}</span>
@@ -129,9 +129,14 @@ const PERSON_TYPE_APPEARANCE: Record<PersonType, string> = {
     }
     .card-check {
       position: absolute;
-      inset-block-start: 0.75rem;
-      inset-inline-end: 0.75rem;
+      inset-block-start: 0.25rem;
+      inset-inline-end: 0.25rem;
       z-index: 1;
+      display: grid;
+      place-items: center;
+      inline-size: 2.5rem;
+      block-size: 2.5rem;
+      cursor: pointer;
     }
     .family-card {
       display: flex;
@@ -452,7 +457,7 @@ export class HostFamilyAssignmentsSelectorComponent {
       background: var(--tui-background-base);
     }
     /* le bandeau de l'appli (56px) recouvre le haut du tiroir : le titre démarre en dessous */
-    header {
+    :host tui-drawer header {
       padding-block-start: 3.75rem;
     }
     .chips {

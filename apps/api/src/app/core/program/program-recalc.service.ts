@@ -1,22 +1,15 @@
-import { Injectable } from '@angular/core';
+import { Injectable } from '@nestjs/common';
+import { ProgramSequenceStatus } from '../entities';
+import { computeEndTime, minutesToTime, timeToMinutes } from './program-time.util';
 import {
   ProgramInsertPreview,
   ProgramResizePreview,
-  ProgramSequence,
+  ProgramSequenceData,
   ProgramSequenceDiff,
   ProgramSequenceDraft,
-  ProgramSequenceStatus,
-} from '../../models/models';
-import { computeEndTime, minutesToTime, timeToMinutes } from './schedule-time.util';
+} from './program-recalc.types';
 
-let mockIdCounter = 0;
-
-function nextMockId(prefix: string): string {
-  mockIdCounter += 1;
-  return `${prefix}-${mockIdCounter}`;
-}
-
-function diffOf(before: ProgramSequence, after: ProgramSequence): ProgramSequenceDiff {
+function diffOf(before: ProgramSequenceData, after: ProgramSequenceData): ProgramSequenceDiff {
   return {
     sequenceId: before.id,
     title: before.title,
@@ -33,7 +26,11 @@ function diffOf(before: ProgramSequence, after: ProgramSequence): ProgramSequenc
   };
 }
 
-function withDuration(sequence: ProgramSequence, startTime: string, durationMinutes: number): ProgramSequence {
+function withDuration(
+  sequence: ProgramSequenceData,
+  startTime: string,
+  durationMinutes: number,
+): ProgramSequenceData {
   return {
     ...sequence,
     startTime,
@@ -42,28 +39,34 @@ function withDuration(sequence: ProgramSequence, startTime: string, durationMinu
   };
 }
 
-function slackOf(sequence: ProgramSequence): number {
+function slackOf(sequence: ProgramSequenceData): number {
   const floor = sequence.minDurationMinutes ?? 0;
   return Math.max(0, sequence.durationMinutes - floor);
 }
 
 /**
  * Moteur de recalcul du programme (chaîne de séquences). Service pur, sans
- * dépendance HTTP, pour pouvoir être testé unitairement et servir de
- * spécification exécutable au futur ProgramRecalcService NestJS (phase 1).
+ * dépendance HTTP ni base de données : port fidèle de ScheduleEngineService
+ * (apps/web), validé en phase 0.
  */
-@Injectable({ providedIn: 'root' })
-export class ScheduleEngineService {
+@Injectable()
+export class ProgramRecalcService {
   /** Reconstruit la chaîne ordonnée d'un jour/lieu à partir des pointeurs previousSequenceId. */
-  buildChain(sequences: ProgramSequence[], eventDate: string, location: string): ProgramSequence[] {
+  buildChain(
+    sequences: ProgramSequenceData[],
+    eventDate: string,
+    location: string,
+  ): ProgramSequenceData[] {
     const scoped = sequences.filter((s) => s.eventDate === eventDate && s.location === location);
     const byId = new Map(scoped.map((s) => [s.id, s]));
-    const head = scoped.find((s) => s.previousSequenceId === null || !byId.has(s.previousSequenceId));
+    const head = scoped.find(
+      (s) => s.previousSequenceId === null || !byId.has(s.previousSequenceId),
+    );
     if (!head) {
       return [];
     }
 
-    const chain: ProgramSequence[] = [head];
+    const chain: ProgramSequenceData[] = [head];
     let current = head;
     // Garde-fou anti-boucle infinie en cas de données corrompues.
     for (let i = 0; i < scoped.length; i++) {
@@ -82,8 +85,8 @@ export class ScheduleEngineService {
    * statut "impossible" nécessitant une décision manuelle.
    */
   previewInsert(
-    chain: ProgramSequence[],
-    afterSequenceId: string,
+    chain: ProgramSequenceData[],
+    afterSequenceId: number,
     draft: ProgramSequenceDraft,
   ): ProgramInsertPreview {
     const index = chain.findIndex((s) => s.id === afterSequenceId);
@@ -98,7 +101,7 @@ export class ScheduleEngineService {
     const previousAvailable = previous.status !== ProgramSequenceStatus.FROZEN;
     const nextAvailable = !!next && next.status !== ProgramSequenceStatus.FROZEN;
     const previousSlack = previousAvailable ? slackOf(previous) : 0;
-    const nextSlack = nextAvailable ? slackOf(next as ProgramSequence) : 0;
+    const nextSlack = nextAvailable ? slackOf(next as ProgramSequenceData) : 0;
 
     const halfUp = Math.ceil(duration / 2);
     const halfDown = duration - halfUp;
@@ -138,39 +141,34 @@ export class ScheduleEngineService {
         newStartTime = updatedPrevious.endTime;
       }
       if (takenFromNext > 0 && next) {
-        const updatedNext = withDuration(next, next.startTime, next.durationMinutes - takenFromNext);
+        const updatedNext = withDuration(
+          next,
+          next.startTime,
+          next.durationMinutes - takenFromNext,
+        );
         affected.push(diffOf(next, updatedNext));
       }
     }
-
-    const newSequence: ProgramSequence = {
-      id: nextMockId('seq'),
-      eventDate: draft.eventDate,
-      location: draft.location,
-      title: draft.title,
-      startTime: newStartTime,
-      durationMinutes: duration,
-      endTime: computeEndTime(newStartTime, duration),
-      status: ProgramSequenceStatus.MOBILE,
-      minDurationMinutes: draft.minDurationMinutes ?? null,
-      minMarginMinutes: draft.minMarginMinutes ?? null,
-      previousSequenceId: previous.id,
-      anchorSequenceId: null,
-      volunteerTeamId: draft.volunteerTeamId,
-      volunteerTeamName: null,
-      missionIds: [],
-      documentLinks: [],
-      notes: draft.notes,
-      frozenByUserId: null,
-      frozenByUserName: null,
-      frozenAt: null,
-    };
 
     return {
       kind: 'insert',
       afterSequenceId,
       draft,
-      newSequence,
+      newSequence: {
+        eventDate: draft.eventDate,
+        location: draft.location,
+        title: draft.title,
+        startTime: newStartTime,
+        durationMinutes: duration,
+        endTime: computeEndTime(newStartTime, duration),
+        status: ProgramSequenceStatus.MOBILE,
+        minDurationMinutes: draft.minDurationMinutes ?? null,
+        minMarginMinutes: draft.minMarginMinutes ?? null,
+        previousSequenceId: previous.id,
+        anchorSequenceId: null,
+        volunteerTeamId: draft.volunteerTeamId,
+        notes: draft.notes,
+      },
       affected,
       outcome,
       message,
@@ -185,8 +183,8 @@ export class ScheduleEngineService {
    * programme ; s'arrête au premier créneau figé rencontré.
    */
   previewResize(
-    chain: ProgramSequence[],
-    sequenceId: string,
+    chain: ProgramSequenceData[],
+    sequenceId: number,
     newDurationMinutes: number,
   ): ProgramResizePreview {
     const index = chain.findIndex((s) => s.id === sequenceId);
@@ -217,7 +215,7 @@ export class ScheduleEngineService {
   }
 
   private previewEnlarge(
-    chain: ProgramSequence[],
+    chain: ProgramSequenceData[],
     index: number,
     delta: number,
     newDurationMinutes: number,
@@ -225,7 +223,7 @@ export class ScheduleEngineService {
     const target = chain[index];
     const affected: ProgramSequenceDiff[] = [];
     let remaining = delta;
-    let stoppedAtFrozenId: string | null = null;
+    let stoppedAtFrozenId: number | null = null;
 
     for (let i = index + 1; i < chain.length && remaining > 0; i++) {
       const sequence = chain[i];
@@ -248,7 +246,7 @@ export class ScheduleEngineService {
     if (remaining === 0) {
       outcome = 'ok';
       message = `Agrandissement de ${delta} min absorbé sur les créneaux flexibles suivants.`;
-    } else if (stoppedAtFrozenId) {
+    } else if (stoppedAtFrozenId !== null) {
       outcome = affected.length > 0 ? 'partial' : 'impossible';
       message = `Agrandissement bloqué par un créneau figé après absorption partielle de ${delta - remaining} min sur ${delta} min. Décision manuelle requise.`;
     } else {
@@ -270,7 +268,7 @@ export class ScheduleEngineService {
   }
 
   private previewReduce(
-    chain: ProgramSequence[],
+    chain: ProgramSequenceData[],
     index: number,
     delta: number,
     newDurationMinutes: number,
@@ -278,7 +276,7 @@ export class ScheduleEngineService {
     const target = chain[index];
     const shiftEarlier = Math.abs(delta);
     const affected: ProgramSequenceDiff[] = [];
-    let stoppedAtFrozenId: string | null = null;
+    let stoppedAtFrozenId: number | null = null;
 
     for (let i = index + 1; i < chain.length; i++) {
       const sequence = chain[i];
@@ -291,11 +289,11 @@ export class ScheduleEngineService {
       affected.push(diffOf(sequence, updated));
     }
 
-    const marginMinutes = stoppedAtFrozenId ? null : shiftEarlier;
-    const outcome: ProgramResizePreview['outcome'] = 'ok';
-    const message = stoppedAtFrozenId
-      ? `Réduction de ${shiftEarlier} min appliquée jusqu'au créneau figé ; la suite reste inchangée.`
-      : `Réduction de ${shiftEarlier} min : la suite est avancée, ${shiftEarlier} min de marge libre en fin de programme.`;
+    const marginMinutes = stoppedAtFrozenId !== null ? null : shiftEarlier;
+    const message =
+      stoppedAtFrozenId !== null
+        ? `Réduction de ${shiftEarlier} min appliquée jusqu'au créneau figé ; la suite reste inchangée.`
+        : `Réduction de ${shiftEarlier} min : la suite est avancée, ${shiftEarlier} min de marge libre en fin de programme.`;
 
     return {
       kind: 'resize',
@@ -305,80 +303,46 @@ export class ScheduleEngineService {
       affected,
       stoppedAtFrozenId,
       marginMinutes,
-      outcome,
+      outcome: 'ok',
       message,
     };
   }
 
-  /** Applique un aperçu d'insertion sur la chaîne et renvoie la nouvelle chaîne complète. */
-  applyInsert(chain: ProgramSequence[], preview: ProgramInsertPreview): ProgramSequence[] {
-    const byId = new Map(chain.map((s) => [s.id, s]));
-    for (const diff of preview.affected) {
-      const sequence = byId.get(diff.sequenceId);
-      if (sequence) {
-        byId.set(diff.sequenceId, withDuration(sequence, diff.after.startTime, diff.after.durationMinutes));
-      }
-    }
-
-    const result: ProgramSequence[] = [];
-    for (const sequence of chain) {
-      result.push(byId.get(sequence.id) as ProgramSequence);
-      if (sequence.id === preview.afterSequenceId) {
-        result.push(preview.newSequence);
-      }
-    }
-
-    // Reconnecte la séquence suivante à la nouvelle séquence insérée.
-    const insertedIndex = result.findIndex((s) => s.id === preview.newSequence.id);
-    const following = result[insertedIndex + 1];
-    if (following) {
-      result[insertedIndex + 1] = { ...following, previousSequenceId: preview.newSequence.id };
-    }
-
-    return result;
+  /**
+   * Applique un aperçu d'insertion. La nouvelle séquence n'a pas encore d'id
+   * (attribué à la persistance) : l'appelant la crée, puis reconnecte
+   * `followingSequenceId` à elle via previousSequenceId.
+   */
+  applyInsert(
+    chain: ProgramSequenceData[],
+    preview: ProgramInsertPreview,
+  ): { updated: ProgramSequenceData[]; followingSequenceId: number | null } {
+    const updated = this.applyDiffs(chain, preview.affected);
+    const afterIndex = chain.findIndex((s) => s.id === preview.afterSequenceId);
+    const following = chain[afterIndex + 1] ?? null;
+    return { updated, followingSequenceId: following?.id ?? null };
   }
 
-  /** Applique un aperçu de redimensionnement sur la chaîne et renvoie la nouvelle chaîne complète. */
-  applyResize(chain: ProgramSequence[], preview: ProgramResizePreview): ProgramSequence[] {
+  /** Applique un aperçu de redimensionnement et renvoie la chaîne résultante. */
+  applyResize(chain: ProgramSequenceData[], preview: ProgramResizePreview): ProgramSequenceData[] {
     const target = chain.find((s) => s.id === preview.sequenceId);
     if (!target) {
       return chain;
     }
-
-    const byId = new Map(chain.map((s) => [s.id, s]));
-    byId.set(
-      preview.sequenceId,
-      withDuration(target, target.startTime, preview.newDurationMinutes),
+    const resized = chain.map((s) =>
+      s.id === target.id ? withDuration(s, s.startTime, preview.newDurationMinutes) : s,
     );
-    for (const diff of preview.affected) {
-      const sequence = byId.get(diff.sequenceId);
-      if (sequence) {
-        byId.set(diff.sequenceId, withDuration(sequence, diff.after.startTime, diff.after.durationMinutes));
-      }
-    }
-
-    return chain.map((s) => byId.get(s.id) as ProgramSequence);
+    return this.applyDiffs(resized, preview.affected);
   }
 
-  /** Fige une séquence (action réservée coordination, horodatée et tracée). */
-  freeze(sequence: ProgramSequence, userId: number, userName: string): ProgramSequence {
-    return {
-      ...sequence,
-      status: ProgramSequenceStatus.FROZEN,
-      frozenByUserId: userId,
-      frozenByUserName: userName,
-      frozenAt: new Date().toISOString(),
-    };
-  }
-
-  /** Défige une séquence. */
-  unfreeze(sequence: ProgramSequence): ProgramSequence {
-    return {
-      ...sequence,
-      status: ProgramSequenceStatus.MOBILE,
-      frozenByUserId: null,
-      frozenByUserName: null,
-      frozenAt: null,
-    };
+  private applyDiffs(
+    chain: ProgramSequenceData[],
+    diffs: ProgramSequenceDiff[],
+  ): ProgramSequenceData[] {
+    const diffById = new Map(diffs.map((d) => [d.sequenceId, d]));
+    return chain.map((s) => {
+      const diff = diffById.get(s.id);
+      return diff ? withDuration(s, diff.after.startTime, diff.after.durationMinutes) : s;
+    });
   }
 }

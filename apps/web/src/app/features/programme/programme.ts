@@ -1,16 +1,21 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
+import { forkJoin } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import {
   ProgramChangeLogAction,
   ProgramChangeLogEntry,
+  ProgramDocumentLink,
   ProgramPreview,
   ProgramSequence,
   ProgramSequenceDraft,
   ProgramSequenceStatus,
+  VolunteerMission,
+  VolunteerTeam,
 } from '../../models/models';
+import { ProgramApiService, VolunteerMissionsApiService, VolunteerTeamsApiService } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
-import { PlanningMockDataService, PROGRAM_EVENT_DAYS } from './planning-mock-data.service';
-import { ScheduleEngineService } from './schedule-engine.service';
+import { buildChain, PROGRAM_EVENT_DAYS } from './schedule-chain.util';
 import { minutesToTime, timeToMinutes } from './schedule-time.util';
 
 /** Nombre de catégories de couleur disponibles pour les blocs du calendrier. */
@@ -34,8 +39,15 @@ function hashString(value: string): number {
 }
 
 interface DragState {
-  sequenceId: string;
-  previousId: string;
+  sequenceId: number;
+  previousId: number;
+  baseDuration: number;
+  startClientY: number;
+  deltaMinutes: number;
+}
+
+interface ResizeDragState {
+  sequenceId: number;
   baseDuration: number;
   startClientY: number;
   deltaMinutes: number;
@@ -43,9 +55,7 @@ interface DragState {
 
 type ActionMessage = { appearance: 'positive' | 'negative' | 'warning'; text: string };
 
-const EMPTY_DRAFT = (eventDate: string, location: string): ProgramSequenceDraft => ({
-  eventDate,
-  location,
+const EMPTY_DRAFT = (): ProgramSequenceDraft => ({
   title: '',
   durationMinutes: 30,
   volunteerTeamId: null,
@@ -59,7 +69,30 @@ const CHANGE_LOG_LABELS: Record<ProgramChangeLogAction, string> = {
   FREEZE: 'Figement',
   UNFREEZE: 'Défigement',
   DELETE: 'Suppression',
+  UPDATE: 'Modification',
 };
+
+interface EditDraft {
+  title: string;
+  notes: string;
+  volunteerTeamId: number | null;
+  missionIds: number[];
+  documentLinks: ProgramDocumentLink[];
+}
+
+interface CreateDraft {
+  location: string;
+  title: string;
+  startTime: string;
+  durationMinutes: number;
+}
+
+/** Vue d'ensemble en lecture seule : un jour = des lieux = des séquences ordonnées par heure. */
+interface OverviewDay {
+  date: string;
+  dayIndex: number;
+  locations: { name: string; isBranch: boolean; sequences: ProgramSequence[] }[];
+}
 
 @Component({
   selector: 'app-programme',
@@ -69,8 +102,9 @@ const CHANGE_LOG_LABELS: Record<ProgramChangeLogAction, string> = {
   styleUrl: './programme.scss',
 })
 export class ProgrammePage {
-  private readonly mockData = inject(PlanningMockDataService);
-  private readonly engine = inject(ScheduleEngineService);
+  private readonly api = inject(ProgramApiService);
+  private readonly teamsApi = inject(VolunteerTeamsApiService);
+  private readonly missionsApi = inject(VolunteerMissionsApiService);
   private readonly auth = inject(AuthService);
 
   readonly ProgramSequenceStatus = ProgramSequenceStatus;
@@ -80,23 +114,25 @@ export class ProgrammePage {
   readonly dayIndex = signal(1); // J2 par défaut (chaîne d'exemple du squelette métier)
   readonly eventDate = computed(() => this.days[this.dayIndex()]);
 
-  readonly allSequences = this.mockData.sequences;
-  readonly changeLog = this.mockData.changeLog;
+  readonly allSequences = signal<ProgramSequence[]>([]);
+  readonly changeLog = signal<ProgramChangeLogEntry[]>([]);
+  readonly loading = signal(false);
 
+  /** Tous les lieux du jour, branches parallèles comprises (chacun a sa propre chaîne éditable). */
   readonly locationsForDay = computed(() => {
     const date = this.eventDate();
     const locations = new Set(
       this.allSequences()
-        .filter((sequence) => sequence.eventDate === date && !sequence.anchorSequenceId)
+        .filter((sequence) => sequence.eventDate === date)
         .map((sequence) => sequence.location),
     );
-    return Array.from(locations);
+    return Array.from(locations).sort((a, b) => a.localeCompare(b, 'fr'));
   });
 
   readonly location = signal('Grand Chapiteau');
 
   readonly chain = computed<ProgramSequence[]>(() =>
-    this.engine.buildChain(this.allSequences(), this.eventDate(), this.location()),
+    buildChain(this.allSequences(), this.eventDate(), this.location()),
   );
 
   /** Minute du jour (depuis minuit) à laquelle démarre la 1re séquence. */
@@ -136,8 +172,9 @@ export class ProgrammePage {
   });
 
   readonly dragState = signal<DragState | null>(null);
+  readonly resizeDragState = signal<ResizeDragState | null>(null);
 
-  branchesFor(sequenceId: string): ProgramSequence[] {
+  branchesFor(sequenceId: number): ProgramSequence[] {
     return this.allSequences().filter((s) => s.anchorSequenceId === sequenceId);
   }
 
@@ -159,15 +196,62 @@ export class ProgrammePage {
   readonly actionMessage = signal<ActionMessage | null>(null);
   readonly changeLogOpen = signal(false);
 
-  readonly insertAfterId = signal<string | null>(null);
-  readonly insertDraft = signal<ProgramSequenceDraft>(EMPTY_DRAFT(this.eventDate(), this.location()));
+  readonly insertAfterId = signal<number | null>(null);
+  readonly insertDraft = signal<ProgramSequenceDraft>(EMPTY_DRAFT());
 
-  readonly resizeSequenceId = signal<string | null>(null);
+  readonly resizeSequenceId = signal<number | null>(null);
   readonly resizeDuration = signal<number | null>(null);
+
+  readonly viewMode = signal<'day' | 'overview'>('day');
+  readonly overview = signal<OverviewDay[]>([]);
+  readonly overviewLoading = signal(false);
+
+  readonly teams = signal<VolunteerTeam[]>([]);
+  private teamsLoaded = false;
+
+  readonly missions = signal<VolunteerMission[]>([]);
+  readonly missionFilter = signal('');
+  private missionsLoaded = false;
+
+  /** Missions proposées dans le formulaire : filtrées par texte, les missions déjà liées restent visibles. */
+  readonly filteredMissions = computed(() => {
+    const term = this.missionFilter().trim().toLocaleLowerCase('fr');
+    const selected = new Set(this.editDraft().missionIds);
+    return this.missions().filter(
+      (mission) =>
+        selected.has(mission.id) ||
+        !term ||
+        `${mission.title} ${mission.location ?? ''}`.toLocaleLowerCase('fr').includes(term),
+    );
+  });
+
+  readonly editSequenceId = signal<number | null>(null);
+  readonly editDraft = signal<EditDraft>({
+    title: '',
+    notes: '',
+    volunteerTeamId: null,
+    missionIds: [],
+    documentLinks: [],
+  });
+
+  readonly createOpen = signal(false);
+  readonly deleteTargetId = signal<number | null>(null);
+  readonly closeGap = signal(false);
+  readonly createDraft = signal<CreateDraft>({
+    location: '',
+    title: '',
+    startTime: '09:00',
+    durationMinutes: 30,
+  });
+
+  constructor() {
+    this.loadDay();
+  }
 
   setDay(index: number): void {
     this.dayIndex.set(index);
     this.closeForms();
+    this.loadDay();
   }
 
   setLocation(location: string): void {
@@ -182,7 +266,9 @@ export class ProgrammePage {
 
   /** Hauteur (px) du bloc d'une séquence, avec un plancher pour rester lisible/cliquable. */
   blockHeight(sequence: ProgramSequence): number {
-    return Math.max(sequence.durationMinutes * this.pxPerMinute, MIN_BLOCK_HEIGHT_PX);
+    const resize = this.resizeDragState();
+    const delta = resize?.sequenceId === sequence.id ? resize.deltaMinutes : 0;
+    return Math.max((sequence.durationMinutes + delta) * this.pxPerMinute, MIN_BLOCK_HEIGHT_PX);
   }
 
   /**
@@ -222,12 +308,50 @@ export class ProgrammePage {
   }
 
   onDragMove(event: PointerEvent): void {
+    const resize = this.resizeDragState();
+    if (resize) {
+      this.resizeDragState.set({ ...resize, deltaMinutes: this.snappedDelta(event, resize.startClientY) });
+      return;
+    }
     const state = this.dragState();
     if (!state) return;
-    const deltaPx = event.clientY - state.startClientY;
-    const rawMinutes = deltaPx / this.pxPerMinute;
-    const snapped = Math.round(rawMinutes / DRAG_SNAP_MINUTES) * DRAG_SNAP_MINUTES;
-    this.dragState.set({ ...state, deltaMinutes: snapped });
+    this.dragState.set({ ...state, deltaMinutes: this.snappedDelta(event, state.startClientY) });
+  }
+
+  private snappedDelta(event: PointerEvent, startClientY: number): number {
+    const rawMinutes = (event.clientY - startClientY) / this.pxPerMinute;
+    return Math.round(rawMinutes / DRAG_SNAP_MINUTES) * DRAG_SNAP_MINUTES;
+  }
+
+  /**
+   * Redimensionnement à la souris par la poignée basse d'un bloc : la durée change, la fin glisse
+   * et la suite de la chaîne est recalculée côté serveur. Comme pour le drag, seul un aperçu
+   * (avant/après) est demandé : rien n'est appliqué sans confirmation.
+   */
+  startResize(event: PointerEvent, sequence: ProgramSequence): void {
+    event.stopPropagation(); // ne pas déclencher le drag du bloc
+    if (!this.canEdit() || sequence.status === ProgramSequenceStatus.FROZEN) return;
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    this.resizeDragState.set({
+      sequenceId: sequence.id,
+      baseDuration: sequence.durationMinutes,
+      startClientY: event.clientY,
+      deltaMinutes: 0,
+    });
+    event.preventDefault();
+  }
+
+  endResize(): void {
+    const state = this.resizeDragState();
+    this.resizeDragState.set(null);
+    if (!state || state.deltaMinutes === 0) return;
+    const newDuration = state.baseDuration + state.deltaMinutes;
+    if (newDuration < DRAG_SNAP_MINUTES) return;
+
+    this.insertAfterId.set(null);
+    this.resizeSequenceId.set(state.sequenceId);
+    this.resizeDuration.set(newDuration);
+    this.previewResizeAction();
   }
 
   /** Décalage visuel (transform) appliqué pendant le drag, nul pour les autres blocs. */
@@ -255,10 +379,12 @@ export class ProgrammePage {
     this.previewResizeAction();
   }
 
-  openInsertForm(afterSequenceId: string): void {
+  openInsertForm(afterSequenceId: number): void {
+    this.editSequenceId.set(null);
+    this.createOpen.set(false);
     this.resizeSequenceId.set(null);
     this.insertAfterId.set(afterSequenceId);
-    this.insertDraft.set(EMPTY_DRAFT(this.eventDate(), this.location()));
+    this.insertDraft.set(EMPTY_DRAFT());
     this.preview.set(null);
   }
 
@@ -269,11 +395,15 @@ export class ProgrammePage {
   previewInsertAction(): void {
     const afterId = this.insertAfterId();
     if (!afterId) return;
-    const result = this.engine.previewInsert(this.chain(), afterId, this.insertDraft());
-    this.preview.set(result);
+    this.api.previewInsert(afterId, this.insertDraft()).subscribe({
+      next: (result) => this.preview.set(result),
+      error: (error: HttpErrorResponse) => this.showError(error),
+    });
   }
 
   openResizeForm(sequence: ProgramSequence): void {
+    this.editSequenceId.set(null);
+    this.createOpen.set(false);
     this.insertAfterId.set(null);
     this.resizeSequenceId.set(sequence.id);
     this.resizeDuration.set(sequence.durationMinutes);
@@ -284,29 +414,39 @@ export class ProgrammePage {
     const sequenceId = this.resizeSequenceId();
     const duration = this.resizeDuration();
     if (!sequenceId || duration == null) return;
-    const result = this.engine.previewResize(this.chain(), sequenceId, duration);
-    this.preview.set(result);
+    this.api.previewResize(sequenceId, duration).subscribe({
+      next: (result) => this.preview.set(result),
+      error: (error: HttpErrorResponse) => this.showError(error),
+    });
   }
 
   confirmPreview(): void {
     const current = this.preview();
     if (!current || current.outcome === 'impossible') return;
 
-    const updatedChain =
+    const request =
       current.kind === 'insert'
-        ? this.engine.applyInsert(this.chain(), current)
-        : this.engine.applyResize(this.chain(), current);
+        ? this.api.applyInsert(current.afterSequenceId, current.draft, current.version)
+        : this.api.applyResize(current.sequenceId, current.newDurationMinutes, current.version);
 
-    this.commitChain(updatedChain);
-
-    const affectedIds =
-      current.kind === 'insert'
-        ? [current.newSequence.id, ...current.affected.map((d) => d.sequenceId)]
-        : [current.sequenceId, ...current.affected.map((d) => d.sequenceId)];
-
-    this.appendChangeLog(current.kind === 'insert' ? 'INSERT' : 'RESIZE', affectedIds, current.message);
-    this.actionMessage.set({ appearance: 'positive', text: 'Modification appliquée et journalisée.' });
-    this.closeForms();
+    request.subscribe({
+      next: () => {
+        this.actionMessage.set({
+          appearance: 'positive',
+          text: 'Modification appliquée et journalisée.',
+        });
+        this.closeForms();
+        this.loadDay();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.showError(error);
+        // Chaîne modifiée entre-temps (409) : l'aperçu est périmé, on recharge l'état réel.
+        if (error.status === 409) {
+          this.closeForms();
+          this.loadDay();
+        }
+      },
+    });
   }
 
   cancelPreview(): void {
@@ -315,52 +455,280 @@ export class ProgrammePage {
 
   toggleFreeze(sequence: ProgramSequence): void {
     if (!this.canEdit()) return;
-    const user = this.auth.currentUser();
-    const updated =
+    const request =
       sequence.status === ProgramSequenceStatus.FROZEN
-        ? this.engine.unfreeze(sequence)
-        : this.engine.freeze(sequence, user?.id ?? 0, user?.email ?? 'Coordination');
+        ? this.api.unfreeze(sequence.id)
+        : this.api.freeze(sequence.id);
 
-    this.mockData.setSequences(
-      this.allSequences().map((s) => (s.id === sequence.id ? updated : s)),
-    );
-
-    this.appendChangeLog(
-      updated.status === ProgramSequenceStatus.FROZEN ? 'FREEZE' : 'UNFREEZE',
-      [sequence.id],
-      updated.status === ProgramSequenceStatus.FROZEN ? `« ${sequence.title} » figé.` : `« ${sequence.title} » défigé.`,
-    );
+    request.subscribe({
+      next: () => this.loadDay(),
+      error: (error: HttpErrorResponse) => this.showError(error),
+    });
   }
 
   toggleChangeLog(): void {
+    this.viewMode.set('day');
     this.changeLogOpen.update((value) => !value);
+    if (this.changeLogOpen()) this.loadChangeLog();
+  }
+
+  // ─── Création / édition / suppression ──────────────────────────────
+
+  openCreateForm(): void {
+    this.closeForms();
+    const startTime = this.chain().length ? this.chain()[0].startTime : '09:00';
+    this.createDraft.set({
+      location: this.chain().length ? '' : this.location(),
+      title: '',
+      startTime,
+      durationMinutes: 30,
+    });
+    this.createOpen.set(true);
+  }
+
+  updateCreateDraft(patch: Partial<CreateDraft>): void {
+    this.createDraft.update((draft) => ({ ...draft, ...patch }));
+  }
+
+  submitCreate(): void {
+    const draft = this.createDraft();
+    this.api
+      .createSequence({
+        eventDate: this.eventDate(),
+        location: draft.location.trim(),
+        title: draft.title,
+        startTime: draft.startTime,
+        durationMinutes: draft.durationMinutes,
+      })
+      .subscribe({
+        next: (created) => {
+          this.actionMessage.set({ appearance: 'positive', text: 'Séquence créée.' });
+          this.closeForms();
+          this.location.set(created.location);
+          this.loadDay();
+        },
+        error: (error: HttpErrorResponse) => this.showError(error),
+      });
+  }
+
+  openEditForm(sequence: ProgramSequence): void {
+    this.closeForms();
+    this.loadTeamsOnce();
+    this.loadMissionsOnce();
+    this.missionFilter.set('');
+    this.editDraft.set({
+      title: sequence.title,
+      notes: sequence.notes ?? '',
+      volunteerTeamId: sequence.volunteerTeamId,
+      missionIds: [...sequence.missionIds],
+      documentLinks: sequence.documentLinks.map((link) => ({ ...link })),
+    });
+    this.editSequenceId.set(sequence.id);
+  }
+
+  toggleMission(missionId: number): void {
+    const current = this.editDraft().missionIds;
+    this.updateEditDraft({
+      missionIds: current.includes(missionId)
+        ? current.filter((id) => id !== missionId)
+        : [...current, missionId],
+    });
+  }
+
+  updateEditDraft(patch: Partial<EditDraft>): void {
+    this.editDraft.update((draft) => ({ ...draft, ...patch }));
+  }
+
+  addDocumentLink(): void {
+    this.updateEditDraft({
+      documentLinks: [...this.editDraft().documentLinks, { label: '', url: '' }],
+    });
+  }
+
+  updateDocumentLink(index: number, patch: Partial<ProgramDocumentLink>): void {
+    this.updateEditDraft({
+      documentLinks: this.editDraft().documentLinks.map((link, i) =>
+        i === index ? { ...link, ...patch } : link,
+      ),
+    });
+  }
+
+  removeDocumentLink(index: number): void {
+    this.updateEditDraft({
+      documentLinks: this.editDraft().documentLinks.filter((_, i) => i !== index),
+    });
+  }
+
+  submitEdit(): void {
+    const id = this.editSequenceId();
+    if (!id) return;
+    const draft = this.editDraft();
+    this.api
+      .updateSequence(id, {
+        title: draft.title,
+        notes: draft.notes,
+        volunteerTeamId: draft.volunteerTeamId,
+        missionIds: draft.missionIds,
+        documentLinks: draft.documentLinks,
+      })
+      .subscribe({
+        next: () => {
+          this.actionMessage.set({ appearance: 'positive', text: 'Séquence mise à jour.' });
+          this.closeForms();
+          this.loadDay();
+        },
+        error: (error: HttpErrorResponse) => this.showError(error),
+      });
+  }
+
+  deleteSequence(sequence: ProgramSequence): void {
+    if (!this.canEdit() || sequence.status === ProgramSequenceStatus.FROZEN) return;
+    this.closeForms();
+    this.closeGap.set(false);
+    this.deleteTargetId.set(sequence.id);
+  }
+
+  /** Séquences qui seraient avancées si l'on comble le trou après la suppression. */
+  readonly deleteHasFollowing = computed(() => {
+    const id = this.deleteTargetId();
+    return id !== null && this.chain().some((sequence) => sequence.previousSequenceId === id);
+  });
+
+  readonly deleteTarget = computed(
+    () => this.chain().find((sequence) => sequence.id === this.deleteTargetId()) ?? null,
+  );
+
+  confirmDelete(): void {
+    const id = this.deleteTargetId();
+    if (!id) return;
+    this.api.deleteSequence(id, this.closeGap()).subscribe({
+      next: (result) => {
+        this.actionMessage.set({
+          appearance: 'positive',
+          text: result.shiftedMinutes
+            ? `Séquence supprimée ; séquences suivantes avancées de ${result.shiftedMinutes} min.`
+            : 'Séquence supprimée.',
+        });
+        this.closeForms();
+        this.loadDay();
+      },
+      error: (error: HttpErrorResponse) => this.showError(error),
+    });
+  }
+
+  // ─── Vue d'ensemble 4 jours (lecture seule) ────────────────────────
+
+  showOverview(): void {
+    this.viewMode.set('overview');
+    this.closeForms();
+    this.overviewLoading.set(true);
+    forkJoin(this.days.map((date) => this.api.getDay(date))).subscribe({
+      next: (daysData) => {
+        this.overview.set(
+          daysData.map((day, dayIndex) => {
+            const byLocation = new Map<string, ProgramSequence[]>();
+            for (const sequence of day.sequences) {
+              byLocation.set(sequence.location, [
+                ...(byLocation.get(sequence.location) ?? []),
+                sequence,
+              ]);
+            }
+            return {
+              date: day.date,
+              dayIndex,
+              locations: Array.from(byLocation.entries()).map(([name, sequences]) => ({
+                name,
+                isBranch: sequences.every((s) => s.anchorSequenceId !== null),
+                sequences: [...sequences].sort((a, b) => a.startTime.localeCompare(b.startTime)),
+              })),
+            };
+          }),
+        );
+        this.overviewLoading.set(false);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.overviewLoading.set(false);
+        this.showError(error);
+      },
+    });
+  }
+
+  /** Quitte la vue d'ensemble vers l'éditeur du jour/lieu choisi. */
+  openDay(dayIndex: number, location: string): void {
+    this.viewMode.set('day');
+    this.dayIndex.set(dayIndex);
+    this.location.set(location);
+    this.closeForms();
+    this.loadDay();
+  }
+
+  showDayView(): void {
+    this.viewMode.set('day');
+  }
+
+  private loadTeamsOnce(): void {
+    if (this.teamsLoaded) return;
+    this.teamsLoaded = true;
+    this.teamsApi.list().subscribe({
+      next: (teams) => this.teams.set(teams.filter((team) => team.isActive)),
+      error: () => (this.teamsLoaded = false),
+    });
+  }
+
+  private loadMissionsOnce(): void {
+    if (this.missionsLoaded) return;
+    this.missionsLoaded = true;
+    this.missionsApi.list().subscribe({
+      next: (missions) =>
+        this.missions.set([...missions].sort((a, b) => a.title.localeCompare(b.title, 'fr'))),
+      error: () => (this.missionsLoaded = false),
+    });
   }
 
   private closeForms(): void {
     this.insertAfterId.set(null);
     this.resizeSequenceId.set(null);
+    this.editSequenceId.set(null);
+    this.createOpen.set(false);
+    this.deleteTargetId.set(null);
     this.preview.set(null);
   }
 
-  private commitChain(updatedChain: ProgramSequence[]): void {
-    const byId = new Map(updatedChain.map((s) => [s.id, s]));
-    const existingIds = new Set(this.allSequences().map((s) => s.id));
-    const merged = this.allSequences().map((s) => byId.get(s.id) ?? s);
-    const newOnes = updatedChain.filter((s) => !existingIds.has(s.id));
-    this.mockData.setSequences([...merged, ...newOnes]);
+  /** Recharge les séquences du jour affiché (source de vérité = serveur). */
+  private loadDay(): void {
+    const date = this.eventDate();
+    this.loading.set(true);
+    this.api.getDay(date).subscribe({
+      next: (day) => {
+        // Ignore une réponse tardive si l'utilisateur a changé de jour entre-temps.
+        if (day.date !== this.eventDate()) return;
+        this.allSequences.set(day.sequences);
+        this.loading.set(false);
+        const locations = this.locationsForDay();
+        if (locations.length && !locations.includes(this.location())) {
+          this.location.set(locations[0]);
+        }
+        if (this.changeLogOpen()) this.loadChangeLog();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.loading.set(false);
+        this.showError(error);
+      },
+    });
   }
 
-  private appendChangeLog(action: ProgramChangeLogAction, affectedSequenceIds: string[], comment: string): void {
-    const user = this.auth.currentUser();
-    const entry: ProgramChangeLogEntry = {
-      id: `log-${Date.now()}`,
-      action,
-      authorUserId: user?.id ?? null,
-      authorName: user?.email ?? 'Coordination',
-      createdAt: new Date().toISOString(),
-      affectedSequenceIds,
-      comment,
-    };
-    this.mockData.appendChangeLogEntry(entry);
+  private loadChangeLog(): void {
+    this.api.getChangeLog(this.eventDate()).subscribe({
+      next: (entries) => this.changeLog.set(entries),
+      error: (error: HttpErrorResponse) => this.showError(error),
+    });
+  }
+
+  private showError(error: HttpErrorResponse): void {
+    const message = error.error?.message;
+    const text = Array.isArray(message)
+      ? message.join(' ')
+      : (message ?? 'Une erreur est survenue. Réessayez.');
+    this.actionMessage.set({ appearance: 'negative', text });
   }
 }

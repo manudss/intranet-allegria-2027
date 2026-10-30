@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { fakerFR as faker } from '@faker-js/faker';
+import type { DataSource } from 'typeorm';
 import { hashPassword } from '../../app/core/auth/password.util';
 import {
   AssignmentStatus,
@@ -27,6 +28,8 @@ import {
   VolunteerSkill,
   VolunteerSkillType,
   VolunteerTag,
+  ProgramSequence,
+  ProgramSequenceStatus,
   VolunteerTeam,
   VolunteerTeamMembership,
 } from '../../app/core/entities';
@@ -110,7 +113,6 @@ const GATHERING_POINT = { latitude: 45.439695, longitude: 4.387178 } as const;
 
 const PROJECT_START = new Date('2027-10-30T08:00:00.000Z');
 const PROJECT_END = new Date('2027-11-02T23:30:00.000Z');
-
 
 /** Rayon maximal (km) autour du point de rassemblement pour les familles d'accueil. */
 const HOST_FAMILY_RADIUS_KM = 100;
@@ -288,7 +290,7 @@ const roleLabels: Record<string, string> = {
 const operationalTeamCatalog = [
   { kind: 'Accueil', zone: 'Hall principal', shortCode: 'ACC' },
   { kind: 'Accueil', zone: 'Accueil familles', shortCode: 'FAM' },
-  { kind: 'Sécurité', zone: 'Contrôle d\'accès', shortCode: 'SEC' },
+  { kind: 'Sécurité', zone: "Contrôle d'accès", shortCode: 'SEC' },
   { kind: 'Sécurité', zone: 'Surveillance entrée', shortCode: 'ENT' },
   { kind: 'Cuisine', zone: 'Préparation repas', shortCode: 'CUS' },
   { kind: 'Cuisine', zone: 'Service restauration', shortCode: 'RES' },
@@ -300,24 +302,29 @@ const operationalTeamCatalog = [
   { kind: 'Santé', zone: 'Observation médicale', shortCode: 'OBS' },
 ] as const;
 
-const missionTemplatesByTeamKind: Record<string, { title: string; description: string; shiftNotes: string[] }> = {
+const missionTemplatesByTeamKind: Record<
+  string,
+  { title: string; description: string; shiftNotes: string[] }
+> = {
   Accueil: {
     title: 'Accueil et orientation des familles',
-    description: 'Accueil des participants et des familles, orientation vers les postes et suivi des arrivées.',
+    description:
+      'Accueil des participants et des familles, orientation vers les postes et suivi des arrivées.',
     shiftNotes: [
-      'Accueillir les arrivées et remettre les badges d\'identification.',
-      'Orienter les familles vers le point d\'information et la zone de repos.',
+      "Accueillir les arrivées et remettre les badges d'identification.",
+      "Orienter les familles vers le point d'information et la zone de repos.",
       'Gérer les attentes et préparer les dossiers de visite rapide.',
-      'Contrôler la file d\'accueil et expliquer les consignes du site.',
+      "Contrôler la file d'accueil et expliquer les consignes du site.",
     ],
   },
   Sécurité: {
-    title: 'Surveillance du périmètre et contrôle d\'accès',
-    description: 'Vérification des badges, vigilance aux accès et sécurisation des zones de circulation.',
+    title: "Surveillance du périmètre et contrôle d'accès",
+    description:
+      'Vérification des badges, vigilance aux accès et sécurisation des zones de circulation.',
     shiftNotes: [
-      'Surveiller les badges à l\'entrée et contrôler les accès au site.',
-      'Repérer les flux de circulation et sécuriser les points d\'arrêt.',
-      'Faire le point sur la présence et les besoins d\'assistance en poste.',
+      "Surveiller les badges à l'entrée et contrôler les accès au site.",
+      "Repérer les flux de circulation et sécuriser les points d'arrêt.",
+      "Faire le point sur la présence et les besoins d'assistance en poste.",
       'Signer le registre de contrôle et remonter les anomalies de sécurité.',
     ],
   },
@@ -333,19 +340,20 @@ const missionTemplatesByTeamKind: Record<string, { title: string; description: s
   },
   Animation: {
     title: 'Animation et atelier du public',
-    description: 'Pilotage des ateliers, animation des temps collectifs et accompagnement des groupes.',
+    description:
+      'Pilotage des ateliers, animation des temps collectifs et accompagnement des groupes.',
     shiftNotes: [
       'Présenter le prochain atelier et expliquer le déroulé aux participants.',
-      'Préparer le matériel d\'animation en amont et accueillir les groupes.',
-      'Suivre le rythme de l\'atelier et ajuster l\'ambiance selon les besoins.',
+      "Préparer le matériel d'animation en amont et accueillir les groupes.",
+      "Suivre le rythme de l'atelier et ajuster l'ambiance selon les besoins.",
       'Encadrer les temps de pause et rappeler les consignes de sécurité.',
     ],
   },
   Logistique: {
-    title: 'Rangement et support de l\'atelier',
+    title: "Rangement et support de l'atelier",
     description: 'Gestion du matériel, rangement et appui aux équipes sur les espaces de travail.',
     shiftNotes: [
-      'Ranger le matériel après l\'atelier peinture et remettre les tables en ordre.',
+      "Ranger le matériel après l'atelier peinture et remettre les tables en ordre.",
       'Vérifier les stocks de papier, pinceaux et peintures avant la prochaine session.',
       'Aider au transport des caisses vers les espaces de stockage du site.',
       'Nettoyer les zones de travail et préparer le kit de la prochaine rotation.',
@@ -480,6 +488,105 @@ const teamNameFrom = (group: Group, groupTeamIndex: number, globalTeamIndex: num
   const serial = String(globalTeamIndex + 1).padStart(3, '0');
   return `${dioceseCode}-${adjective}-${noun}-${serial}`;
 };
+
+interface ProgramSeedItem {
+  title: string;
+  startTime: string;
+  durationMinutes: number;
+  minDurationMinutes: number;
+  frozen?: boolean;
+  notes?: string;
+}
+
+const addMinutes = (time: string, minutes: number): string => {
+  const total = Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5)) + minutes;
+  return `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+};
+
+/** Chaîne d'exemple du J2 (Grand Chapiteau) + deux branches parallèles rattachées aux ateliers. */
+async function seedProgram(
+  source: DataSource,
+  users: User[],
+  volunteerTeams: VolunteerTeam[],
+): Promise<void> {
+  const repository = source.getRepository(ProgramSequence);
+  const eventDate = '2027-10-31';
+  const coordinator = users.find((user) => user.email === 'coordination@allegria.local');
+  const items: ProgramSeedItem[] = [
+    {
+      title: 'Réveil & petit-déjeuner',
+      startTime: '07:00',
+      durationMinutes: 60,
+      minDurationMinutes: 30,
+    },
+    { title: "Topo d'ouverture", startTime: '08:00', durationMinutes: 30, minDurationMinutes: 15 },
+    {
+      title: 'Temps fort liturgique',
+      startTime: '08:30',
+      durationMinutes: 90,
+      minDurationMinutes: 60,
+      frozen: true,
+      notes: 'Horaire validé avec le diocèse : ne pas décaler.',
+    },
+    {
+      title: 'Ateliers thématiques par branche',
+      startTime: '10:00',
+      durationMinutes: 120,
+      minDurationMinutes: 60,
+    },
+    { title: 'Repas', startTime: '12:00', durationMinutes: 75, minDurationMinutes: 45 },
+    {
+      title: 'Grand jeu inter-groupes',
+      startTime: '13:15',
+      durationMinutes: 105,
+      minDurationMinutes: 60,
+    },
+    { title: 'Veillée', startTime: '19:00', durationMinutes: 90, minDurationMinutes: 60 },
+  ];
+
+  const saved: ProgramSequence[] = [];
+  for (const [index, item] of items.entries()) {
+    saved.push(
+      await repository.save(
+        repository.create({
+          eventDate,
+          location: 'Grand Chapiteau',
+          title: item.title,
+          startTime: item.startTime,
+          durationMinutes: item.durationMinutes,
+          endTime: addMinutes(item.startTime, item.durationMinutes),
+          status: item.frozen ? ProgramSequenceStatus.FROZEN : ProgramSequenceStatus.MOBILE,
+          minDurationMinutes: item.minDurationMinutes,
+          previousSequenceId: saved.at(-1)?.id ?? null,
+          volunteerTeamId: volunteerTeams.length
+            ? volunteerTeams[index % volunteerTeams.length].id
+            : null,
+          notes: item.notes ?? null,
+          frozenByUserId: item.frozen ? (coordinator?.id ?? null) : null,
+          frozenAt: item.frozen ? new Date() : null,
+        }),
+      ),
+    );
+  }
+
+  const ateliers = saved[3];
+  for (const [location, title] of [
+    ['Salle A', 'Atelier Chant'],
+    ['Salle B', 'Atelier Artisanat'],
+  ]) {
+    await repository.save(
+      repository.create({
+        eventDate,
+        location,
+        title,
+        startTime: ateliers.startTime,
+        durationMinutes: ateliers.durationMinutes,
+        endTime: ateliers.endTime,
+        anchorSequenceId: ateliers.id,
+      }),
+    );
+  }
+}
 
 async function run(): Promise<void> {
   const profileName = parseProfile();
@@ -989,14 +1096,19 @@ async function run(): Promise<void> {
       volunteerMissionsToCreate.push(mission);
     }
 
-    const savedVolunteerMissions = await volunteerMissionRepository.save(volunteerMissionsToCreate, {
-      chunk: 500,
-    });
+    const savedVolunteerMissions = await volunteerMissionRepository.save(
+      volunteerMissionsToCreate,
+      {
+        chunk: 500,
+      },
+    );
 
     for (const mission of savedVolunteerMissions) {
       const shiftCount = Math.max(1, Math.min(profile.volunteerShiftsPerMission, 4));
       const missionKind = resolveTeamKind(mission.volunteerTeam?.name ?? 'Mission · Zone 1');
-      const missionNotes = missionTemplatesByTeamKind[missionKind]?.shiftNotes ?? missionTemplatesByTeamKind['Accueil'].shiftNotes;
+      const missionNotes =
+        missionTemplatesByTeamKind[missionKind]?.shiftNotes ??
+        missionTemplatesByTeamKind['Accueil'].shiftNotes;
 
       for (let shiftIndex = 0; shiftIndex < shiftCount; shiftIndex += 1) {
         const asUtcDay = dateBetween(PROJECT_START, PROJECT_END);
@@ -1034,7 +1146,9 @@ async function run(): Promise<void> {
     });
 
     for (const shift of savedVolunteerShifts) {
-      const eligibleVolunteers = faker.helpers.shuffle(volunteers).filter((volunteer) => volunteer.id !== null);
+      const eligibleVolunteers = faker.helpers
+        .shuffle(volunteers)
+        .filter((volunteer) => volunteer.id !== null);
       const targetAssignments = Math.max(
         1,
         Math.min(shift.capacity ?? 6, faker.number.int({ min: 2, max: 6 })),
@@ -1066,7 +1180,9 @@ async function run(): Promise<void> {
       }
     }
 
-    await volunteerShiftAssignmentRepository.save(volunteerShiftAssignmentsToCreate, { chunk: 1000 });
+    await volunteerShiftAssignmentRepository.save(volunteerShiftAssignmentsToCreate, {
+      chunk: 1000,
+    });
 
     const hostFamiliesToCreate: HostFamily[] = [];
     for (let i = 0; i < profile.hostFamilies; i += 1) {
@@ -1192,6 +1308,8 @@ async function run(): Promise<void> {
     }
 
     await participantHealthRepository.save(participantHealthToCreate, { chunk: 1000 });
+
+    await seedProgram(dataSource, users, savedVolunteerTeams);
 
     console.log('Seed termine.');
     console.log(`Profil: ${profileName}`);

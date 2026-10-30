@@ -11,12 +11,41 @@ Fait :
 - Correction d'un bug critique de rendu `tui-timeline` (texte pivoté/superposé, conteneur effondré) signalé par l'utilisateur, comparé à l'exemple officiel Taiga UI. Détails techniques capitalisés ci-dessous car réutilisables pour la Phase 4 (drag-and-drop) et pour toute évolution de la frise.
 - Vérifications passées après le correctif : `nx build web` OK (seulement warnings préexistants bundle/leaflet), `nx test web` 56/56 OK, `nx lint web` 0 erreur (9 warnings `no-non-null-assertion` préexistants dans les specs).
 
-Reste à faire (ordre des todos SQL, dépendances déjà enregistrées) :
-1. `p1-entities` — Entités TypeORM ProgramSequence/ProgramChangeLog + enums dans apps/api/src/app/core/entities/, export index.ts, portage des règles validées en phase 0.
-2. `p1-migration` — Générer + exécuter la migration TypeORM correspondante (synchronize reste false).
-3. `p1-recalc-service` — Porter ScheduleEngineService en ProgramRecalcService NestJS (mêmes règles), tests Vitest portés côté apps/api.
-4. `p2-api-module` — Contrôleur program (GET days/:date, insert preview/apply, resize preview/apply, freeze/unfreeze, change-log), DTOs, guard rôle COORDINATOR/ADMIN, enregistrement dans CoreModule, tests.
-5. `p2-fe-integration` — Remplacer planning-mock-data.service par ProgramApiService (HTTP réel) dans les composants existants, sans réécrire l'UI ; tests avec HttpTestingController.
+- Phase 1 entièrement implémentée (2026-10-13) :
+  - Entités `ProgramSequence` / `ProgramChangeLog` + enums `ProgramSequenceStatus` / `ProgramChangeLogAction` dans core/entities (exportées via index.ts). IDs en `int` serial (cohérent avec le reste de l'API) ; le front mocké utilise des ids string → à adapter en Phase 2 (`p2-fe-integration`). `ProgramChangeLog` porte en plus une colonne `eventDate` (filtre du journal par jour).
+  - Migration `1789200000000-CreateProgram.ts` écrite à la main et exécutée (la génération automatique embarquait de la dérive préexistante : renommage d'index/FK de volunteer_audit_logs, participants, volunteer_applications — non traitée ici, à nettoyer séparément). Note : le script `npm run migration:generate` est figé sur le nom `InitSchema` ; utiliser `npm run typeorm -- migration:generate <chemin>`.
+  - `ProgramRecalcService` (apps/api/src/app/core/program/) : port fidèle du moteur front (buildChain, previewInsert, previewResize, applyInsert, applyResize), indépendant de TypeORM via `ProgramSequenceData`. 10 tests Vitest portés (program-recalc.service.spec.ts). `nx test api` 157/157, `nx lint api` et tsc OK.
+  - Écarts volontaires vs moteur front : `applyInsert` renvoie `{ updated, followingSequenceId }` (la nouvelle séquence n'a pas d'id avant persistance ; l'appelant la crée puis reconnecte la suivante) ; `freeze`/`unfreeze` ne sont pas dans le moteur mais seront dans le service d'API (auteur + horodatage persistés). `ProgramRecalcService` n'est pas encore déclaré dans un module (fait en Phase 2).
+
+- Phase 2 entièrement implémentée (2026-10-13) :
+  - API : `ProgramModule` (enregistré dans CoreModule) — `ProgramController` / `ProgramService` / DTOs (`program.types.ts`) dans apps/api/src/app/core/program/. Routes : GET `/api/program/days/:date`, POST `sequences/:id/insert-after/preview|apply`, PATCH `sequences/:id/resize/preview|apply`, PATCH `sequences/:id/freeze|unfreeze`, GET `change-log?date=`. Mutations réservées ADMIN/COORDINATOR (guard `@Roles`), lecture pour ADMIN/COORDINATOR/HEALTH/ANIMATOR/LOGISTICS/VIEWER.
+  - Protection contre la modification concurrente : l'aperçu renvoie une `version` (empreinte de la chaîne) ; l'application la relit sous verrou `pessimistic_write` dans une transaction, recalcule l'aperçu côté serveur (le client n'envoie jamais un diff à appliquer) et répond 409 si la version diffère. Application refusée (400) si outcome `impossible` ou `partial`. Redimensionner une séquence figée → 409.
+  - Auteur + horodatage du figement et journal (`ProgramChangeLog` avec snapshots avant/après) sont déjà persistés réellement (une partie de la Phase 3 est donc faite côté serveur).
+  - Validation manuelle dans le service (durée entier 1..1440, titre obligatoire, date YYYY-MM-DD), comme le reste de l'API (pas de class-validator).
+  - Tests : 12 tests service (DataSource factice en mémoire), 8 tests contrôleur (rôles) ; `nx test api` 177/177. Vérifié aussi en réel via curl (login coordination/santé, aperçu, application, 409 sur version périmée, 403 pour santé sur mutation, journal).
+  - Front : `ProgramApiService` dans api.services.ts ; modèles passés en ids `number`, previews avec `version` ; le composant `programme.ts` charge le jour via l'API et recharge après chaque mutation (le serveur est la source de vérité). UI/HTML/SCSS inchangés (seulement libellés).
+  - Supprimés : `planning-mock-data.service.ts`, `schedule-engine.service.ts` et son spec (règles et 10 cas portés côté API ; ils restent récupérables via git). Remplacés par `schedule-chain.util.ts` (`buildChain` + `PROGRAM_EVENT_DAYS`). Le décalage d'un jour signalé (J1 = 10-29) venait de `toISOString()` sur une date locale : corrigé (calcul en UTC), J1 = 2027-10-30 = `ALLEGRIA_2027_EVENT_DATES.startDate`.
+  - Seed : `seed.ts` crée désormais la chaîne J2 d'exemple (Grand Chapiteau + Salle A/B, un créneau figé) le 2027-10-31. Attention : le seed fait un TRUNCATE complet de la base de dev.
+  - `nx test web` 51/51 (7 tests composant avec HttpTestingController + 3 tests util), `nx lint web` OK, `nx build web` OK.
+  - Limites connues : il n'existe pas encore d'API pour créer la première séquence d'un jour/lieu vide ni supprimer/éditer une séquence (titre, lieu, équipe, liens) — à traiter en Phase 3 (édition des champs, liens documentaires). Les noms d'équipe (`volunteerTeamName`) viennent de la relation `volunteerTeam` mais le seed ne les renseigne pas.
+  - Toujours à faire visuellement : confirmation en navigateur par l'utilisateur (rendu non vérifiable dans cet environnement).
+
+- Phase 3 implémentée (2026-10-29) :
+  - Constat avant reprise : Phases 0–2 terminées (non commitées). L'UI est en réalité un calendrier à grille horaire (blocs `sequence-block`, pas `tui-timeline`) avec glisser-déposer vertical déjà branché (déplacer un bloc = aperçu de redimensionnement du prédécesseur, jamais d'application directe) : l'essentiel de la Phase 4 existe donc déjà. Figement/défigement persistant, journal et vérification serveur des rôles étaient déjà faits en Phase 2.
+  - API : `POST /api/program/sequences` (1re séquence d'un jour/lieu vide, ou tête de branche via `anchorSequenceId` ; 409 si le lieu contient déjà des séquences), `PATCH /sequences/:id` (titre, notes, équipe, durées/marges min, missions, liens documentaires — URLs http(s) uniquement, 20 max), `DELETE /sequences/:id` (séquence mobile uniquement, suivante reconnectée, 409 si figée ou si des branches y sont rattachées ; les horaires suivants ne sont PAS recalculés). Toutes réservées ADMIN/COORDINATOR et journalisées (nouvelle action `UPDATE` + migration `1789300000000-AddProgramChangeLogUpdateAction`).
+  - Front : formulaires « Premier créneau / Nouveau lieu », « Modifier » (titre, équipe, notes, liens documentaires) et « Supprimer » ; filtre de lieu alimenté par les vraies données (branches comprises) ; **vue d'ensemble 4 jours en lecture seule** (jours → lieux → séquences, bouton « Ouvrir » vers l'éditeur).
+  - Tests : `nx test api` 184/184 (+ création, édition, suppression, rôles), `nx test web` 55/55, `nx lint api|web` OK, `nx build web` OK.
+  - La migration `1789300000000` n'a pas pu être exécutée (PostgreSQL arrêté) : lancer `npm run db:up` puis `npm run migration:run`.
+
+Reste à faire :
+- Exécuter la migration `1789300000000` et valider manuellement en navigateur (rendu non vérifiable ici).
+- Renseigner `volunteerTeamId` dans le seed : FAIT (2026-10-30, équipes réparties en rotation sur la chaîne J2 ; à vérifier au prochain `npm run seed:api`).
+- Édition des horaires de début d'une tête de chaîne et des missions liées (`missionIds` accepté par l'API, pas encore d'UI).
+- Suppression : option de refermer l'écart horaire (aujourd'hui l'écart reste visible).
+- Phase 4 restante (optionnel) : resize des blocs à la souris (le déplacement vertical existe déjà), réordonnancement par glisser-déposer entre séquences.
+- Nettoyage : supprimer les logs à la racine (`build_site*.log`, `lint_site*.log`, `test_site*.log`) avant commit.
+
+Anciennes entrées (obsolètes) :
 6. `p3-advanced` — Figement/défigement persistant réel (auteur + horodatage), journal réel, liens documentaires configurables, filtres connectés aux données réelles, frise 4 jours en lecture seule, vérification serveur du rôle sur les mutations.
 7. `p4-dragdrop` (optionnel, post-MVP) — Activer resizable/draggable sur tui-timeline, intercepter valueChange pour déclencher preview/apply au lieu d'une mutation directe.
 

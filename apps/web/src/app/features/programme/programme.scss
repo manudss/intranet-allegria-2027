@@ -159,6 +159,16 @@
     border-inline-start-color: var(--tui-status-warning);
   }
 
+  // Poignée de redimensionnement à la souris (l'alternative clavier est le bouton « Redimensionner »).
+  .resize-handle {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0;
+    block-size: 0.5rem;
+    cursor: ns-resize;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.18));
+  }
+
   // Palette de couleurs par catégorie (heuristique, en attendant un vrai champ "type" de séquence).
   &.cat-0 { background: #e0f2fe; border-inline-start-color: #38bdf8; }
   &.cat-1 { background: #fce7f3; border-inline-start-color: #ec4899; }
@@ -253,11 +263,81 @@
   }
 
   input,
-  textarea {
+  textarea,
+  select {
     padding: 0.375rem 0.5rem;
     border-radius: 0.5rem;
     border: 1px solid var(--tui-border-normal);
     font: inherit;
+  }
+
+  .document-links,
+  .mission-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    border: 1px solid var(--tui-border-normal);
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  .mission-picker ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 12rem;
+    overflow-y: auto;
+  }
+
+  .checkbox-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .document-link-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+
+    input {
+      flex: 1 1 8rem;
+    }
+  }
+}
+
+.overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1rem;
+}
+
+.overview-day {
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: var(--tui-background-neutral-1);
+  border: 1px solid var(--tui-border-normal);
+
+  h3,
+  h4 {
+    margin: 0 0 0.5rem;
+  }
+
+  h4 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+  }
+
+  ul {
+    margin: 0 0 0.75rem;
+    padding-left: 1.1rem;
+    font-size: 0.85rem;
+  }
+
+  li.frozen {
+    color: var(--tui-status-warning);
   }
 }
 

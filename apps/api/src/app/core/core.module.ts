@@ -15,6 +15,7 @@ import { VolunteerShiftAssignmentsModule } from './volunteer-shift-assignments/v
 import { VolunteerAuditLogsModule } from './volunteer-audit-logs/volunteer-audit-logs.module';
 import { OperationalDashboardModule } from './operational-dashboard/operational-dashboard.module';
 import { PublicRegistrationsModule } from './public-registrations/public-registrations.module';
+import { ProgramModule } from './program/program.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { PublicRegistrationsModule } from './public-registrations/public-registr
     ParticipantHealthModule,
     OperationalDashboardModule,
     PublicRegistrationsModule,
+    ProgramModule,
   ],
 })
 export class CoreModule {}

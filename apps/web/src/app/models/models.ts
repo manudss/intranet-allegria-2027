@@ -507,7 +507,7 @@ export interface DashboardTodoMission {
   shiftCount: number;
 }
 
-// ─── Module Programme (planification en chaîne des séquences) — Phase 0 (mock) ──
+// ─── Module Programme (planification en chaîne des séquences) ──
 
 export enum ProgramSequenceStatus {
   MOBILE = 'MOBILE',
@@ -520,7 +520,7 @@ export interface ProgramDocumentLink {
 }
 
 export interface ProgramSequence {
-  id: string;
+  id: number;
   eventDate: string;
   location: string;
   title: string;
@@ -533,9 +533,9 @@ export interface ProgramSequence {
   minDurationMinutes: number | null;
   minMarginMinutes: number | null;
   /** Prédécesseur dans la chaîne principale du lieu/jour ; null = tête de chaîne */
-  previousSequenceId: string | null;
+  previousSequenceId: number | null;
   /** Repère commun utilisé pour rattacher des branches parallèles */
-  anchorSequenceId: string | null;
+  anchorSequenceId: number | null;
   volunteerTeamId: number | null;
   volunteerTeamName: string | null;
   missionIds: number[];
@@ -546,21 +546,23 @@ export interface ProgramSequence {
   frozenAt: string | null;
 }
 
-export type ProgramSequenceDraft = Pick<
-  ProgramSequence,
-  | 'eventDate'
-  | 'location'
-  | 'title'
-  | 'durationMinutes'
-  | 'volunteerTeamId'
-  | 'notes'
-> & {
+export interface ProgramDay {
+  date: string;
+  sequences: ProgramSequence[];
+}
+
+/** Corps des requêtes d'insertion (aperçu et application). */
+export interface ProgramSequenceDraft {
+  title: string;
+  durationMinutes: number;
+  volunteerTeamId: number | null;
+  notes: string | null;
   minDurationMinutes?: number | null;
   minMarginMinutes?: number | null;
-};
+}
 
 export interface ProgramSequenceDiff {
-  sequenceId: string;
+  sequenceId: number;
   title: string;
   before: { startTime: string; endTime: string; durationMinutes: number };
   after: { startTime: string; endTime: string; durationMinutes: number };
@@ -570,43 +572,69 @@ export type ProgramRecalcOutcome = 'ok' | 'partial' | 'impossible';
 
 export interface ProgramInsertPreview {
   kind: 'insert';
-  afterSequenceId: string;
+  afterSequenceId: number;
   draft: ProgramSequenceDraft;
-  newSequence: ProgramSequence;
+  /** Séquence à créer (sans id : attribué à l'application par le serveur). */
+  newSequence: Pick<
+    ProgramSequence,
+    'eventDate' | 'location' | 'title' | 'startTime' | 'endTime' | 'durationMinutes'
+  >;
   affected: ProgramSequenceDiff[];
   outcome: ProgramRecalcOutcome;
   message: string;
+  /** Empreinte de la chaîne, à renvoyer à l'application pour détecter une modification concurrente. */
+  version: string;
 }
 
 export interface ProgramResizePreview {
   kind: 'resize';
-  sequenceId: string;
+  sequenceId: number;
   previousDurationMinutes: number;
   newDurationMinutes: number;
   affected: ProgramSequenceDiff[];
-  stoppedAtFrozenId: string | null;
+  stoppedAtFrozenId: number | null;
   marginMinutes: number | null;
   outcome: ProgramRecalcOutcome;
   message: string;
+  version: string;
 }
 
 export type ProgramPreview = ProgramInsertPreview | ProgramResizePreview;
 
 export type ProgramChangeLogAction =
-  | 'INSERT'
-  | 'RESIZE'
-  | 'MOVE'
-  | 'FREEZE'
-  | 'UNFREEZE'
-  | 'DELETE';
+  'INSERT' | 'RESIZE' | 'MOVE' | 'FREEZE' | 'UNFREEZE' | 'DELETE' | 'UPDATE';
+
+/** Création de la première séquence d'un jour/lieu (ou tête d'une branche rattachée à un repère). */
+export interface ProgramSequenceCreatePayload {
+  eventDate: string;
+  location: string;
+  title: string;
+  startTime: string;
+  durationMinutes: number;
+  volunteerTeamId?: number | null;
+  notes?: string | null;
+  anchorSequenceId?: number | null;
+}
+
+/** Champs descriptifs modifiables d'une séquence (les horaires passent par insert/resize). */
+export interface ProgramSequenceUpdatePayload {
+  title?: string;
+  notes?: string | null;
+  volunteerTeamId?: number | null;
+  minDurationMinutes?: number | null;
+  minMarginMinutes?: number | null;
+  missionIds?: number[];
+  documentLinks?: ProgramDocumentLink[];
+}
 
 export interface ProgramChangeLogEntry {
-  id: string;
+  id: number;
   action: ProgramChangeLogAction;
-  authorUserId: number | null;
-  authorName: string;
+  eventDate: string;
+  authorUserId: number;
+  authorUserName: string | null;
   createdAt: string;
-  affectedSequenceIds: string[];
+  affectedSequenceIds: number[];
   comment: string | null;
 }
 

@@ -1,12 +1,24 @@
 <app-page-layout
   title="Planning & Ordonnancement"
-  description="Planification en chaîne des séquences du programme (prototype — données mockées)"
+  description="Planification en chaîne des séquences du programme"
 >
   <div actions class="header-actions">
+    @if (viewMode() === 'day') {
+      <button tuiButton appearance="secondary" type="button" iconStart="@tui.layout-grid" (click)="showOverview()">
+        Vue d'ensemble
+      </button>
+    } @else {
+      <button tuiButton appearance="secondary" type="button" iconStart="@tui.calendar" (click)="showDayView()">
+        Éditeur de jour
+      </button>
+    }
     <button tuiButton appearance="secondary" type="button" iconStart="@tui.file-text" (click)="toggleChangeLog()">
       Journal des modifications
     </button>
-    @if (canEdit()) {
+    @if (canEdit() && viewMode() === 'day') {
+      <button tuiButton appearance="secondary" type="button" iconStart="@tui.map-pin" (click)="openCreateForm()">
+        {{ chain().length ? 'Nouveau lieu' : 'Premier créneau' }}
+      </button>
       <button
         tuiButton
         appearance="primary"
@@ -26,6 +38,45 @@
     </div>
   }
 
+  @if (viewMode() === 'overview') {
+    <section class="overview" aria-label="Vue d'ensemble des 4 jours">
+      @if (overviewLoading()) {
+        <p class="empty-state">Chargement…</p>
+      }
+      @for (day of overview(); track day.date) {
+        <article class="overview-day">
+          <h3>J{{ day.dayIndex + 1 }} · {{ day.date }}</h3>
+          @if (!day.locations.length) {
+            <p class="empty-state">Aucune séquence.</p>
+          }
+          @for (loc of day.locations; track loc.name) {
+            <div class="overview-location">
+              <h4>
+                {{ loc.name }}
+                @if (loc.isBranch) {
+                  <span tuiBadge appearance="neutral">Branche</span>
+                }
+                <button tuiButton appearance="flat" size="xs" type="button" (click)="openDay(day.dayIndex, loc.name)">
+                  Ouvrir
+                </button>
+              </h4>
+              <ul>
+                @for (sequence of loc.sequences; track sequence.id) {
+                  <li [class.frozen]="sequence.status === ProgramSequenceStatus.FROZEN">
+                    <strong>{{ sequence.startTime }} – {{ sequence.endTime }}</strong>
+                    {{ sequence.title }}
+                    @if (sequence.status === ProgramSequenceStatus.FROZEN) {
+                      <span tuiBadge appearance="warning">Figé</span>
+                    }
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+        </article>
+      }
+    </section>
+  } @else {
   <div class="toolbar">
     <div class="day-tabs">
       @for (day of days; track day; let i = $index) {
@@ -84,8 +135,8 @@
           <div
             class="calendar-events"
             (pointermove)="onDragMove($event)"
-            (pointerup)="endDrag()"
-            (pointercancel)="endDrag()"
+            (pointerup)="endDrag(); endResize()"
+            (pointercancel)="endDrag(); endResize()"
           >
             @for (mark of hourMarks(); track mark.label) {
               <div class="hour-line" [style.top.px]="mark.topPx"></div>
@@ -156,7 +207,23 @@
                     <button tuiButton appearance="flat" size="xs" type="button" (click)="toggleFreeze(sequence)">
                       {{ sequence.status === ProgramSequenceStatus.FROZEN ? 'Défiger' : 'Figer' }}
                     </button>
+                    <button tuiButton appearance="flat" size="xs" type="button" (click)="openEditForm(sequence)">
+                      Modifier
+                    </button>
+                    <button
+                      tuiButton
+                      appearance="flat"
+                      size="xs"
+                      type="button"
+                      [disabled]="sequence.status === ProgramSequenceStatus.FROZEN"
+                      (click)="deleteSequence(sequence)"
+                    >
+                      Supprimer
+                    </button>
                   </footer>
+                }
+                @if (canEdit() && sequence.status !== ProgramSequenceStatus.FROZEN) {
+                  <div class="resize-handle" aria-hidden="true" (pointerdown)="startResize($event, sequence)"></div>
                 }
               </div>
             }
@@ -170,6 +237,97 @@
     </div>
 
     <aside class="preview-panel">
+      @if (createOpen()) {
+        <div class="form-card">
+          <h4>{{ chain().length ? 'Nouveau lieu' : 'Premier créneau' }}</h4>
+          <label>
+            Lieu
+            <input type="text" maxlength="150" [ngModel]="createDraft().location" (ngModelChange)="updateCreateDraft({ location: $event })" />
+          </label>
+          <label>
+            Titre
+            <input type="text" maxlength="200" [ngModel]="createDraft().title" (ngModelChange)="updateCreateDraft({ title: $event })" />
+          </label>
+          <label>
+            Heure de début
+            <input type="time" [ngModel]="createDraft().startTime" (ngModelChange)="updateCreateDraft({ startTime: $event })" />
+          </label>
+          <label>
+            Durée (minutes)
+            <input type="number" min="1" [ngModel]="createDraft().durationMinutes" (ngModelChange)="updateCreateDraft({ durationMinutes: +$event })" />
+          </label>
+          <button tuiButton appearance="primary" type="button" (click)="submitCreate()">Créer</button>
+          <button tuiButton appearance="secondary" type="button" (click)="cancelPreview()">Annuler</button>
+        </div>
+      }
+
+      @if (deleteTarget(); as target) {
+        <div class="form-card">
+          <h4>Supprimer « {{ target.title }} »</h4>
+          @if (deleteHasFollowing()) {
+            <label class="checkbox-row">
+              <input type="checkbox" [checked]="closeGap()" (change)="closeGap.set(!closeGap())" />
+              Avancer les séquences suivantes pour combler le trou
+            </label>
+            <small>Sinon, leurs horaires restent inchangés.</small>
+          }
+          <button tuiButton appearance="primary" type="button" (click)="confirmDelete()">Supprimer</button>
+          <button tuiButton appearance="secondary" type="button" (click)="cancelPreview()">Annuler</button>
+        </div>
+      }
+
+      @if (editSequenceId()) {
+        <div class="form-card">
+          <h4>Modifier la séquence</h4>
+          <label>
+            Titre
+            <input type="text" maxlength="200" [ngModel]="editDraft().title" (ngModelChange)="updateEditDraft({ title: $event })" />
+          </label>
+          <label>
+            Équipe responsable
+            <select [ngModel]="editDraft().volunteerTeamId" (ngModelChange)="updateEditDraft({ volunteerTeamId: $event === null ? null : +$event })">
+              <option [ngValue]="null">— Aucune —</option>
+              @for (team of teams(); track team.id) {
+                <option [ngValue]="team.id">{{ team.name }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            Notes
+            <textarea [ngModel]="editDraft().notes" (ngModelChange)="updateEditDraft({ notes: $event })"></textarea>
+          </label>
+          <fieldset class="mission-picker">
+            <legend>Missions bénévoles liées</legend>
+            <input type="search" aria-label="Filtrer les missions" placeholder="Filtrer…" [ngModel]="missionFilter()" (ngModelChange)="missionFilter.set($event)" />
+            <ul>
+              @for (mission of filteredMissions(); track mission.id) {
+                <li>
+                  <label>
+                    <input type="checkbox" [checked]="editDraft().missionIds.includes(mission.id)" (change)="toggleMission(mission.id)" />
+                    {{ mission.title }}@if (mission.location) { <small> — {{ mission.location }}</small> }
+                  </label>
+                </li>
+              } @empty {
+                <li class="empty-state">Aucune mission.</li>
+              }
+            </ul>
+            <small>{{ editDraft().missionIds.length }} mission(s) liée(s)</small>
+          </fieldset>
+          <fieldset class="document-links">
+            <legend>Documents (liens vers l'espace partagé)</legend>
+            @for (link of editDraft().documentLinks; track $index) {
+              <div class="document-link-row">
+                <input type="text" aria-label="Libellé du lien" placeholder="Libellé" maxlength="100" [ngModel]="link.label" (ngModelChange)="updateDocumentLink($index, { label: $event })" />
+                <input type="url" aria-label="URL du lien" placeholder="https://…" [ngModel]="link.url" (ngModelChange)="updateDocumentLink($index, { url: $event })" />
+                <button tuiButton appearance="flat" size="xs" type="button" (click)="removeDocumentLink($index)">Retirer</button>
+              </div>
+            }
+            <button tuiButton appearance="secondary" size="s" type="button" (click)="addDocumentLink()">Ajouter un lien</button>
+          </fieldset>
+          <button tuiButton appearance="primary" type="button" (click)="submitEdit()">Enregistrer</button>
+          <button tuiButton appearance="secondary" type="button" (click)="cancelPreview()">Annuler</button>
+        </div>
+      }
       @if (insertAfterId()) {
         <div class="form-card">
           <h4>Nouveau créneau</h4>
@@ -271,7 +429,7 @@
             @for (entry of changeLog(); track entry.id) {
               <li>
                 <strong>{{ changeLogLabels[entry.action] }}</strong>
-                — {{ entry.authorName }} —
+                — {{ entry.authorUserName ?? 'Coordination' }} —
                 <span>{{ entry.comment }}</span>
               </li>
             }
@@ -280,4 +438,5 @@
       }
     </aside>
   </div>
+  }
 </app-page-layout>

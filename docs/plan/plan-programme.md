@@ -37,12 +37,18 @@ Fait :
   - Tests : `nx test api` 184/184 (+ création, édition, suppression, rôles), `nx test web` 55/55, `nx lint api|web` OK, `nx build web` OK.
   - La migration `1789300000000` n'a pas pu être exécutée (PostgreSQL arrêté) : lancer `npm run db:up` puis `npm run migration:run`.
 
+- Phase 3 compléments (2026-10-30) :
+  - Missions liées : sélecteur dans « Modifier » (liste filtrable de `/api/volunteer-missions`, cases à cocher, chargée à l'ouverture du formulaire) → envoyé en `missionIds`.
+  - Suppression : formulaire dédié avec case « Avancer les séquences suivantes pour combler le trou » → `DELETE /sequences/:id?closeGap=true`. Le serveur décale toute la queue de la chaîne (jusqu'au décalage = début de la suivante − fin du prédécesseur), refuse en 409 si une séquence figée suit, journalise le décalage, renvoie `shiftedMinutes`. Les branches parallèles ne sont pas décalées.
+  - Phase 4 : poignée de redimensionnement à la souris en bas de chaque bloc mobile (calage 5 min, aperçu avant/après puis confirmation, jamais d'application directe ; alternative clavier = bouton « Redimensionner »).
+  - Tests : `nx test api` OK (+ closeGap), `nx test web` 57/57, lint (0 erreur) et build web OK.
+
 Reste à faire :
-- Exécuter la migration `1789300000000` et valider manuellement en navigateur (rendu non vérifiable ici).
+- Exécuter la migration `1789300000000` et valider manuellement en navigateur (rendu non vérifiable ici, notamment la poignée de redimensionnement).
 - Renseigner `volunteerTeamId` dans le seed : FAIT (2026-10-30, équipes réparties en rotation sur la chaîne J2 ; à vérifier au prochain `npm run seed:api`).
-- Édition des horaires de début d'une tête de chaîne et des missions liées (`missionIds` accepté par l'API, pas encore d'UI).
-- Suppression : option de refermer l'écart horaire (aujourd'hui l'écart reste visible).
-- Phase 4 restante (optionnel) : resize des blocs à la souris (le déplacement vertical existe déjà), réordonnancement par glisser-déposer entre séquences.
+- Édition de l'heure de début d'une tête de chaîne.
+- Afficher les missions liées sur les blocs du calendrier (aujourd'hui seulement dans le formulaire).
+- Phase 4 restante (optionnel) : réordonnancement par glisser-déposer entre séquences.
 - Nettoyage : supprimer les logs à la racine (`build_site*.log`, `lint_site*.log`, `test_site*.log`) avant commit.
 
 Anciennes entrées (obsolètes) :

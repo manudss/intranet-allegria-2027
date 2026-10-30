@@ -14,3 +14,6 @@
 .feedback.error {
   color: var(--tui-status-negative);
 }
+app-select-field {
+  min-inline-size: 16rem;
+}

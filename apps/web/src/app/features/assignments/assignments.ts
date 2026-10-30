@@ -773,7 +773,11 @@ export class AssignmentsPage implements OnInit {
   }
   private reloadGroups(): void {
     this.hostingApi.listGroups().subscribe({
-      next: (groups) => this.groups.set(groups),
+      next: (groups) => {
+        this.groups.set(groups);
+        // la colonne Groupe dépend des noms de groupes : on redonne les lignes au tableau
+        this.families.update((rows) => [...rows]);
+      },
       error: () => undefined,
     });
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { familyLoad, groupStats, isMinorAt, unplacedMembers } from './hosting-placement.logic';
+import { familyLoad, groupFill, groupStats, isMinorAt, unplacedMembers } from './hosting-placement.logic';
 import { Board } from './hosting-placement.models';
 
 const board: Board = {
@@ -35,5 +35,18 @@ describe('hosting placement logic', () => {
   });
   it('liste les personnes sans famille d’un groupe', () => {
     expect(unplacedMembers(board, 1).map((m) => m.participantId)).toEqual([2, 3]);
+  });
+});
+
+describe('groupFill', () => {
+  const st = (people: number, seats: number) => ({ teams: 0, families: 0, people, placed: 0, seats });
+  it('classe vide, places libres, complet et manque de places', () => {
+    expect(groupFill(st(0, 5)).state).toBe('empty');
+    expect(groupFill(st(3, 5))).toMatchObject({ state: 'under', free: 2, percent: 60 });
+    expect(groupFill(st(5, 5)).state).toBe('full');
+    expect(groupFill(st(7, 5))).toMatchObject({ state: 'over', missing: 2 });
+  });
+  it('sans place et avec des personnes : manque de places', () => {
+    expect(groupFill(st(2, 0))).toMatchObject({ state: 'over', percent: 0, missing: 2 });
   });
 });

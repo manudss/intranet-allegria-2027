@@ -31,20 +31,89 @@
       <p class="hint">
         Glissez une équipe ou une famille dans un groupe. Sur téléphone, utilisez le menu « Groupe » de chaque carte.
       </p>
-      <form class="new-group" (submit)="$event.preventDefault(); createGroup()">
+      <div class="groups-layout">
+      <aside class="group-list" aria-label="Groupes d’hébergement" data-testid="group-list">
+        <h3>Groupes ({{ groups().length }})</h3>
+        <form class="new-group" (submit)="$event.preventDefault(); createGroup()">
+          <input
+            type="text"
+            name="newGroup"
+            placeholder="Nouveau groupe (ex. Croix-Rousse)"
+            aria-label="Nom du nouveau groupe"
+            [value]="newGroupName()"
+            (input)="newGroupName.set($any($event.target).value)"
+          />
+          <button tuiButton type="submit" size="s" [disabled]="!newGroupName().trim() || busy()">Ajouter</button>
+        </form>
         <input
-          type="text"
-          name="newGroup"
-          placeholder="Nom d’un nouveau groupe (ex. Croix-Rousse)"
-          aria-label="Nom du nouveau groupe"
-          [value]="newGroupName()"
-          (input)="newGroupName.set($any($event.target).value)"
+          type="search"
+          class="gl-search"
+          placeholder="Rechercher un groupe"
+          aria-label="Rechercher un groupe"
+          [value]="groupSearch()"
+          (input)="groupSearch.set($any($event.target).value)"
         />
-        <button tuiButton type="submit" size="s" [disabled]="!newGroupName().trim() || busy()">Créer le groupe</button>
-      </form>
+        <div class="gl-filters" role="group" aria-label="Filtrer par remplissage">
+          @for (f of fillFilters; track f.id) {
+            <button
+              type="button"
+              class="chip"
+              [class.on]="fillFilter() === f.id"
+              [attr.aria-pressed]="fillFilter() === f.id"
+              [attr.data-testid]="'fill-filter-' + f.id"
+              (click)="fillFilter.set(f.id)"
+            >
+              {{ f.label }} <small>{{ fillCounts()[f.id] }}</small>
+            </button>
+          }
+        </div>
+        <div class="gl-bulk">
+          <button tuiButton type="button" size="xs" appearance="secondary" (click)="showListed(true)">Afficher la liste</button>
+          <button tuiButton type="button" size="xs" appearance="secondary" (click)="showListed(false)">Masquer la liste</button>
+        </div>
+        <p class="muted">{{ visibleColumnIds().length }} colonne(s) affichée(s) sur {{ columnIds().length }}</p>
+        <ul class="gl-items">
+          <li class="gl-item">
+            <label>
+              <input type="checkbox" [ngModel]="isShown(NONE)" (ngModelChange)="setShown(NONE, $event)" />
+              <b>Non affectés</b>
+            </label>
+            <small>{{ stats(null).people }} personne(s) · {{ stats(null).teams }} équipe(s)</small>
+          </li>
+          @for (row of filteredGroupRows(); track row.group.id) {
+            <li class="gl-item" [attr.data-testid]="'group-row-' + row.group.id" [attr.data-state]="row.fill.state">
+              <label>
+                <input
+                  type="checkbox"
+                  [ngModel]="isShown(row.group.id)"
+                  (ngModelChange)="setShown(row.group.id, $event)"
+                  [attr.aria-label]="'Afficher la colonne ' + row.group.name"
+                />
+                @if (row.group.color) { <span class="gdot" [style.background]="row.group.color"></span> }
+                <b>{{ row.group.name }}</b>
+              </label>
+              <div class="gauge-line">
+                <span>{{ row.fill.people }}/{{ row.fill.seats }} place(s)
+                  @if (row.fill.state === 'over') { · manque {{ row.fill.missing }} }
+                  @else if (row.fill.state === 'under') { · {{ row.fill.free }} libre(s) }
+                </span>
+                <span class="badge" [class.ok]="row.fill.state === 'full' || row.fill.state === 'under'" [class.bad]="row.fill.state === 'over'" [class.neutral]="row.fill.state === 'empty'">{{ fillLabels[row.fill.state] }}</span>
+              </div>
+              <div class="gauge" aria-hidden="true"><div [style.width.%]="percent(row.fill.people, row.fill.seats || 1)" [class.over]="row.fill.state === 'over'"></div></div>
+              <div class="column-actions">
+                <button tuiButton type="button" size="xs" appearance="flat" (click)="showOnly(row.group.id)">Seul</button>
+                <button tuiButton type="button" size="xs" appearance="flat" (click)="deleteGroup(row.group.id)" [attr.aria-label]="'Supprimer le groupe ' + row.group.name">Supprimer</button>
+              </div>
+            </li>
+          } @empty {
+            <li class="empty">Aucun groupe pour ce filtre.</li>
+          }
+        </ul>
+      </aside>
 
       <div class="columns">
-        @for (id of columnIds(); track id) {
+        @for (id of visibleColumnIds(); track id) {
+          @let g = groupById(id);
           @let st = stats(id === NONE ? null : id);
           <section class="column" [class.none]="id === NONE" [attr.data-testid]="'column-' + id">
             <header>
@@ -52,9 +121,9 @@
                 <h3>Non affectés</h3>
               } @else {
                 <h3>
-                  @if (groups()[$index - 1].color) { <span class="gdot" [style.background]="groups()[$index - 1].color"></span> }
-                  {{ groups()[$index - 1].name }}
-                  @if (kindLabel(groups()[$index - 1].kind)) { <small class="kind">{{ kindLabel(groups()[$index - 1].kind) }}</small> }
+                  @if (g?.color) { <span class="gdot" [style.background]="g?.color"></span> }
+                  {{ g?.name }}
+                  @if (kindLabel(g?.kind)) { <small class="kind">{{ kindLabel(g?.kind) }}</small> }
                 </h3>
               }
               <div class="gauge-line">
@@ -141,6 +210,7 @@
             </div>
           </section>
         }
+      </div>
       </div>
     } @else {
       <div class="toolbar">

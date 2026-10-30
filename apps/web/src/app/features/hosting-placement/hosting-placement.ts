@@ -1,6 +1,7 @@
 import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { ALLEGRIA_2027_EVENT_DATES } from '../../shared/event-date-selector/event-date.config';
@@ -9,7 +10,10 @@ import { HostingPlacementApiService } from './hosting-placement.api';
 import {
   REASON_LABELS,
   familiesOfGroup,
+  FILL_LABELS,
+  GroupFillState,
   familyLoad,
+  groupFill,
   groupStats,
   isMinorAt,
   needsReview,
@@ -30,11 +34,13 @@ type Notice = { kind: 'error' | 'info' | 'warning'; text: string };
 
 /** Identifiant de liste "Non affectés" (aucun groupe). */
 const NONE = 0;
+const HIDDEN_KEY = 'allegria.placement.hiddenColumns';
+export type FillFilter = 'all' | GroupFillState;
 
 @Component({
   selector: 'app-hosting-placement',
   standalone: true,
-  imports: [...SHARED_IMPORTS, CdkDropList, CdkDrag, RouterLink],
+  imports: [...SHARED_IMPORTS, FormsModule, CdkDropList, CdkDrag, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './hosting-placement.html',
   styleUrl: './hosting-placement.scss',
@@ -65,13 +71,52 @@ export class HostingPlacementPage implements OnInit {
   protected readonly needsReview = needsReview;
 
   protected readonly groups = computed(() => this.board()?.hostingGroups ?? []);
+  protected readonly fillLabels = FILL_LABELS;
+  protected readonly fillFilters: { id: FillFilter; label: string }[] = [
+    { id: 'all', label: 'Tous' },
+    { id: 'empty', label: 'Vides' },
+    { id: 'under', label: 'Places libres' },
+    { id: 'full', label: 'Complets' },
+    { id: 'over', label: 'Trop pleins' },
+  ];
+  protected readonly fillFilter = signal<FillFilter>('all');
+  protected readonly groupSearch = signal('');
+  /** Colonnes masquées dans la vue de placement (mémorisées dans le navigateur). */
+  protected readonly hiddenIds = signal<ReadonlySet<number>>(this.loadHidden());
+
+  /** Une ligne par groupe, avec disponibilité et état de remplissage. */
+  protected readonly groupRows = computed(() => {
+    const b = this.board();
+    if (!b) return [];
+    return this.groups().map((group) => {
+      const stats = groupStats(b, group.id);
+      return { group, stats, fill: groupFill(stats) };
+    });
+  });
+  protected readonly fillCounts = computed(() => {
+    const counts: Record<FillFilter, number> = { all: 0, empty: 0, under: 0, full: 0, over: 0 };
+    for (const row of this.groupRows()) {
+      counts.all += 1;
+      counts[row.fill.state] += 1;
+    }
+    return counts;
+  });
+  protected readonly filteredGroupRows = computed(() => {
+    const filter = this.fillFilter();
+    const q = this.groupSearch().trim().toLowerCase();
+    return this.groupRows().filter(
+      (r) => (filter === 'all' || r.fill.state === filter) && (!q || r.group.name.toLowerCase().includes(q)),
+    );
+  });
   protected readonly columnIds = computed(() => [NONE, ...this.groups().map((g) => g.id)]);
-  protected readonly teamListIds = computed(() => this.columnIds().map((id) => `teams-${id}`));
+  protected readonly visibleColumnIds = computed(() => this.columnIds().filter((id) => !this.hiddenIds().has(id)));
+  protected readonly hiddenCount = computed(() => this.columnIds().filter((id) => this.hiddenIds().has(id)).length);
+  protected readonly teamListIds = computed(() => this.visibleColumnIds().map((id) => `teams-${id}`));
   protected readonly poolConnections = computed(() => [
     'pool',
     ...this.groupFamilies().map((row) => `family-${row.family.id}`),
   ]);
-  protected readonly familyListIds = computed(() => this.columnIds().map((id) => `families-${id}`));
+  protected readonly familyListIds = computed(() => this.visibleColumnIds().map((id) => `families-${id}`));
 
   protected readonly summary = computed(() => {
     const b = this.board();
@@ -166,6 +211,51 @@ export class HostingPlacementPage implements OnInit {
 
   ngOnInit(): void {
     this.reload();
+  }
+
+  protected groupById(id: number) {
+    return this.groups().find((g) => g.id === id) ?? null;
+  }
+
+  protected isShown(id: number): boolean {
+    return !this.hiddenIds().has(id);
+  }
+
+  protected setShown(id: number, shown: boolean): void {
+    this.setHidden((set) => (shown ? set.delete(id) : set.add(id)));
+  }
+
+  /** Affiche ou masque d'un coup les groupes actuellement listés (après filtre). */
+  protected showListed(shown: boolean): void {
+    const ids = this.filteredGroupRows().map((r) => r.group.id);
+    this.setHidden((set) => ids.forEach((id) => (shown ? set.delete(id) : set.add(id))));
+  }
+
+  protected showOnly(id: number): void {
+    this.setHidden((set) => {
+      set.clear();
+      this.columnIds().filter((c) => c !== id).forEach((c) => set.add(c));
+    });
+  }
+
+  private setHidden(mutate: (set: Set<number>) => void): void {
+    const next = new Set(this.hiddenIds());
+    mutate(next);
+    this.hiddenIds.set(next);
+    try {
+      localStorage.setItem(HIDDEN_KEY, JSON.stringify([...next]));
+    } catch {
+      /* stockage indisponible : la préférence reste valable pour la session */
+    }
+  }
+
+  private loadHidden(): ReadonlySet<number> {
+    try {
+      const raw = JSON.parse(localStorage.getItem(HIDDEN_KEY) ?? '[]');
+      return new Set(Array.isArray(raw) ? raw.filter((x): x is number => typeof x === 'number') : []);
+    } catch {
+      return new Set();
+    }
   }
 
   protected kindLabel(kind: string | undefined): string {

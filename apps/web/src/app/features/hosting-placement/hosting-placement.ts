@@ -5,7 +5,10 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { ALLEGRIA_2027_EVENT_DATES } from '../../shared/event-date-selector/event-date.config';
+import { SelectFieldComponent, SelectOption } from '../../shared/select-field.component';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
+import { TuiCheckbox, TuiInput } from '@taiga-ui/core';
+import { TuiChip } from '@taiga-ui/kit';
 import { HostingPlacementApiService } from './hosting-placement.api';
 import {
   REASON_LABELS,
@@ -40,7 +43,7 @@ export type FillFilter = 'all' | GroupFillState;
 @Component({
   selector: 'app-hosting-placement',
   standalone: true,
-  imports: [...SHARED_IMPORTS, FormsModule, CdkDropList, CdkDrag, RouterLink],
+  imports: [...SHARED_IMPORTS, FormsModule, ...TuiInput, TuiCheckbox, TuiChip, SelectFieldComponent, CdkDropList, CdkDrag, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './hosting-placement.html',
   styleUrl: './hosting-placement.scss',
@@ -72,6 +75,24 @@ export class HostingPlacementPage implements OnInit {
 
   protected readonly groups = computed(() => this.board()?.hostingGroups ?? []);
   protected readonly fillLabels = FILL_LABELS;
+  protected readonly animatorOptions: SelectOption<string>[] = [
+    { value: '', label: '— choisir —' },
+    { value: 'yes', label: 'Oui : jeunes et animateurs comptent ensemble' },
+    { value: 'no', label: 'Non : seuls les jeunes comptent' },
+  ];
+  protected readonly mixingOptions: SelectOption<string>[] = [
+    { value: '', label: '— choisir —' },
+    { value: 'ignore', label: 'Aucune règle' },
+    { value: 'avoid', label: 'Éviter si possible' },
+    { value: 'forbid', label: 'Interdire' },
+  ];
+  protected readonly groupOptions = computed<SelectOption<number>[]>(() => [
+    { value: 0, label: 'Non affectée' },
+    ...this.groups().map((g) => ({ value: g.id, label: g.name })),
+  ]);
+  protected readonly realGroupOptions = computed<SelectOption<number>[]>(() =>
+    this.groups().map((g) => ({ value: g.id, label: g.name })),
+  );
   protected readonly fillFilters: { id: FillFilter; label: string }[] = [
     { id: 'all', label: 'Tous' },
     { id: 'empty', label: 'Vides' },
@@ -361,10 +382,6 @@ export class HostingPlacementPage implements OnInit {
     }
   }
 
-  protected onGroupSelect(kind: 'team' | 'family', id: number, event: Event): void {
-    const value = Number((event.target as HTMLSelectElement).value);
-    this.moveToGroup(kind, id, value === NONE ? null : value);
-  }
 
   // ── Étape 2 : placement dans les familles ──────────────────────────────────
 
@@ -375,8 +392,8 @@ export class HostingPlacementPage implements OnInit {
     this.step.set(2);
   }
 
-  protected onSelectGroup(event: Event): void {
-    this.selectedGroupId.set(Number((event.target as HTMLSelectElement).value));
+  protected selectGroup(id: number | null): void {
+    this.selectedGroupId.set(id);
     this.selectedMemberId.set(null);
     this.preview.set(null);
   }
@@ -459,15 +476,13 @@ export class HostingPlacementPage implements OnInit {
     };
   }
 
-  protected onAnimatorRule(event: Event): void {
-    const value = ((event.target as HTMLSelectElement)).value;
-    this.countAnimators.set(value === '' ? null : value === 'yes');
+  protected setAnimatorRule(value: string | null): void {
+    this.countAnimators.set(!value ? null : value === 'yes');
     this.preview.set(null);
   }
 
-  protected onMixingRule(event: Event): void {
-    const value = ((event.target as HTMLSelectElement)).value;
-    this.sexMixing.set(value === '' ? null : (value as SexMixingRule));
+  protected setMixingRule(value: string | null): void {
+    this.sexMixing.set(!value ? null : (value as SexMixingRule));
     this.preview.set(null);
   }
 

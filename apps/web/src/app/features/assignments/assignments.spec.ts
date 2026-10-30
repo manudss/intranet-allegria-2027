@@ -4,7 +4,8 @@ import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { HostFamily } from '../../models/models';
 import { HostFamiliesApiService } from '../../services/api.services';
-import { AssignmentsPage } from './assignments';
+import { HostingPlacementApiService } from '../hosting-placement/hosting-placement.api';
+import { AssignmentsPage, HostFamilyCardsComponent } from './assignments';
 
 const family: HostFamily = {
   id: 1,
@@ -31,7 +32,11 @@ describe('AssignmentsPage', () => {
     const api = { list: vi.fn(() => of([family])), getAssignments: vi.fn(() => of([])) };
     await TestBed.configureTestingModule({
       imports: [AssignmentsPage],
-      providers: [{ provide: HostFamiliesApiService, useValue: api }, provideRouter([])],
+      providers: [
+        { provide: HostFamiliesApiService, useValue: api },
+        { provide: HostingPlacementApiService, useValue: { listGroups: vi.fn(() => of([])) } },
+        provideRouter([]),
+      ],
     }).compileComponents();
     const fixture = TestBed.createComponent(AssignmentsPage);
     fixture.componentInstance.ngOnInit();
@@ -41,5 +46,21 @@ describe('AssignmentsPage', () => {
     fixture.componentInstance.select(family);
     expect(fixture.componentInstance.selectedFamily()).toBe(family);
     expect(api.getAssignments).toHaveBeenCalledWith(1);
+  });
+});
+
+describe('HostFamilyCardsComponent', () => {
+  it('affiche le groupe et coche une carte', async () => {
+    await TestBed.configureTestingModule({ imports: [HostFamilyCardsComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(HostFamilyCardsComponent);
+    fixture.componentRef.setInput('families', [{ ...family, hostingGroupId: 3 }]);
+    fixture.componentRef.setInput('groupNames', new Map([[3, 'Lyon nord']]));
+    const emitted: number[][] = [];
+    fixture.componentInstance.checkedChange.subscribe((ids) => emitted.push(ids));
+    await fixture.whenStable();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-testid="card-group-name"]')?.textContent).toContain('Lyon nord');
+    el.querySelector('[data-testid="card-check-1"]')?.dispatchEvent(new Event('change'));
+    expect(emitted).toEqual([[1]]);
   });
 });

@@ -8,22 +8,41 @@
         <button tuiTab routerLink="/hebergement/carte">🗺 Carte</button>
         <button tuiTab routerLink="/hebergement/placement">🏠 Placement</button>
       </tui-tabs>
+      @if (view < 2) {
+        <app-group-bulk-bar
+          [groups]="groups()"
+          [checkedIds]="checkedIds()"
+          (cleared)="clearChecked()"
+          (changed)="reloadFamilies()"
+        />
+      }
       @if (loading()) {
         <tui-loader />
       } @else if (view === 0) {
         <app-data-table
           [rows]="families()"
           [columns]="tableColumns"
+          [selectable]="true"
+          [checkedIds]="checkedIds()"
+          (checkedChange)="setChecked($event)"
           (rowSelected)="select($event)"
         />
       } @else {
-        <app-host-family-cards [families]="families()" (selectFamily)="select($event)" />
+        <app-host-family-cards
+          [families]="families()"
+          [groupNames]="groupNames()"
+          [checkedIds]="checkedIds()"
+          (checkedChange)="setChecked($event)"
+          (selectFamily)="select($event)"
+        />
       }
     </app-page-layout>
     @if (selectedFamily()) {
       <app-host-family-detail-drawer
         [family]="selectedFamily()"
         [assignments]="selectedFamilyAssignments()"
+        [groups]="groups()"
+        (groupChange)="changeFamilyGroup($event)"
         (drawerClosed)="closeDrawer()"
         (changed)="reloadAssignments()"
       />

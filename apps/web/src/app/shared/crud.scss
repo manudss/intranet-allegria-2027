@@ -82,6 +82,21 @@ dt {
 }
 dd {
   margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+dd select {
+  width: 100%;
+  max-width: 100%;
+}
+@media (max-width: 640px) {
+  dl {
+    grid-template-columns: 1fr;
+    gap: 0.15rem 0;
+  }
+  dt {
+    margin-top: 0.5rem;
+  }
 }
 .check {
   display: flex !important;

@@ -458,7 +458,7 @@ export class HostFamilyAssignmentsSelectorComponent {
     }
     /* le bandeau de l'appli (56px) recouvre le haut du tiroir : le titre démarre en dessous */
     :host ::ng-deep tui-drawer header {
-      padding-block-start: 3.75rem;
+      padding-block-start: 3.75rem !important;
     }
     .chips {
       display: flex;

@@ -45,7 +45,7 @@
           [attr.data-testid]="'card-group-' + item.family.id"
           (change)="onGroupPick(item.family.id, $any($event.target).value)"
         >
-          <option value="0" [selected]="item.family.hostingGroupId == null">Aucun groupe</option>
+          <option value="0" [selected]="!item.family.hostingGroupId">Aucun groupe</option>
           @for (g of gs; track g.id) {
             <option [value]="g.id" [selected]="item.family.hostingGroupId === g.id">{{ g.name }}</option>
           }

@@ -61,7 +61,7 @@
             <dt>Groupe</dt>
             <dd>
               <select aria-label="Groupe de l'hébergement" data-testid="detail-group" [disabled]="busy()" (change)="changeSelectedGroup($any($event.target).value)">
-                <option value="0" [selected]="selected()?.hostingGroupId == null">Aucun groupe</option>
+                <option value="0" [selected]="!selected()?.hostingGroupId">Aucun groupe</option>
                 @for (g of groups(); track g.id) {
                   <option [value]="g.id" [selected]="selected()?.hostingGroupId === g.id">{{ g.name }}</option>
                 }

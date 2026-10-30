@@ -89,7 +89,7 @@
 .groups-layout { display: grid; grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr); gap: 1rem; align-items: start; }
 .group-list { background: #fff; border: 1px solid #e0e3ee; border-radius: .8rem; padding: .75rem; position: sticky; top: .5rem; max-height: calc(100vh - 6rem); overflow: auto; display: grid; gap: .5rem; }
 .group-list h3 { margin: 0; font-size: 1rem; }
-.group-list .new-group { margin: 0; flex-wrap: nowrap; }
+.group-list .new-group { margin: 0; flex-wrap: nowrap; flex-direction: column; align-items: stretch; }
 .group-list .new-group input, .gl-search { flex: 1 1 auto; min-width: 0; padding: .45rem .6rem; border: 1px solid #c9ccd6; border-radius: .5rem; font: inherit; min-height: 2.25rem; }
 .gl-filters { display: flex; flex-wrap: wrap; gap: .3rem; }
 .chip { border: 1px solid #c9ccd6; background: #fff; border-radius: 1rem; padding: .15rem .6rem; font: inherit; font-size: .8rem; cursor: pointer; }

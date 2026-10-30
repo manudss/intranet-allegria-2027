@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { HostFamilyStatus } from '../entities';
+import { AccommodationType, HostFamilyStatus } from '../entities';
 
 export class CreateHostFamilyDto {
   @ApiProperty({ example: 'Famille Bernard' })
@@ -19,6 +19,9 @@ export class CreateHostFamilyDto {
 
   @ApiPropertyOptional({ example: 'bernard@example.org' })
   email?: string | null;
+
+  @ApiPropertyOptional({ enum: AccommodationType, default: AccommodationType.FAMILY, description: 'FAMILY = famille d\'accueil, COLLECTIVE = hébergement collectif (internat...)' })
+  accommodationType?: AccommodationType;
 
   @ApiProperty({ example: 6, minimum: 1 })
   maxCapacity!: number;

@@ -1,8 +1,11 @@
 export { AssignmentStatus } from './assignment-status.enum';
+export { AccommodationType } from './accommodation-type.enum';
+export { HostingGroupKind } from './hosting-group-kind.enum';
 export { HostFamilyStatus } from './host-family-status.enum';
 export { MejAgeGroup } from './mej-age-group.enum';
 export { PersonType } from './person-type.enum';
 export { Group } from './group.entity';
+export { HostingGroup } from './hosting-group.entity';
 export { HostFamily } from './host-family.entity';
 export { ParticipantHostFamilyAssignment } from './participant-host-family-assignment.entity';
 export { ParticipantHealth } from './participant-health.entity';

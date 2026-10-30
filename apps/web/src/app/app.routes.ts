@@ -100,6 +100,14 @@ export const appRoutes: Route[] = [
           ),
       },
       {
+        path: 'hebergement/placement',
+        title: 'Hebergement - Placement',
+        loadComponent: () =>
+          import('./features/hosting-placement/hosting-placement').then(
+            (m) => m.HostingPlacementPage,
+          ),
+      },
+      {
         path: 'hebergement',
         title: 'Hebergement',
         loadComponent: () =>

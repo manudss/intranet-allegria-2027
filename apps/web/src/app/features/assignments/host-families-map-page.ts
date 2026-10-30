@@ -20,6 +20,8 @@ import { TuiButton, TuiInput, TuiLabel } from '@taiga-ui/core';
 import { TuiChip, TuiDataListWrapper, TuiDrawer, TuiSelect } from '@taiga-ui/kit';
 import { HostFamily, HostFamilyStatus, ParticipantHostFamilyAssignment } from '../../models/models';
 import { AssignmentsApiService, HostFamiliesApiService } from '../../services/api.services';
+import { HostingPlacementApiService } from '../hosting-placement/hosting-placement.api';
+import { HostingGroupKind, HostingGroupSummary } from '../hosting-placement/hosting-placement.models';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { HostFamilyMapCardsComponent } from './host-family-map-cards';
 import {
@@ -29,10 +31,13 @@ import {
   HostFamilyMapItem,
   Sector,
   buildHostFamilyMapItems,
+  groupColor,
   createHouseIcon,
   createMarkerClusterOptions,
   filterHostFamilyMapItems,
 } from './host-families-map.utils';
+
+const esc = (v: string): string => v.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
 
 @Component({
   selector: 'app-host-families-map-page',
@@ -73,6 +78,7 @@ import {
 export class HostFamiliesMapPageComponent implements OnInit {
   private readonly hostFamiliesApi = inject(HostFamiliesApiService);
   private readonly assignmentsApi = inject(AssignmentsApiService);
+  private readonly hostingApi = inject(HostingPlacementApiService);
   private map: L.Map | null = null;
   private boundsFitted = false;
   private lastMarkers: L.Marker[] = [];
@@ -136,6 +142,37 @@ export class HostFamiliesMapPageComponent implements OnInit {
   readonly assignments = signal<ParticipantHostFamilyAssignment[]>([]);
   readonly markerClusterData = signal<L.Marker[]>([]);
 
+  // ── Groupes d'hébergement sur la carte ─────────────────────────────────────
+  readonly hostingGroups = signal<HostingGroupSummary[]>([]);
+  readonly groupFilter = signal<number[]>([]); // 0 = sans groupe
+  readonly typeFilter = signal<'FAMILY' | 'COLLECTIVE' | null>(null);
+  readonly selectMode = signal(false);
+  readonly checkedIds = signal<ReadonlySet<number>>(new Set());
+  readonly targetGroupId = signal<number | null>(null);
+  readonly newGroupName = signal('');
+  readonly newGroupKind = signal<HostingGroupKind>('ZONE');
+  readonly busy = signal(false);
+  readonly feedback = signal<{ text: string; error: boolean } | null>(null);
+  readonly groupColor = groupColor;
+  readonly legend = computed(() => {
+    const families = this.families();
+    return this.hostingGroups().map((g) => ({
+      ...g,
+      shown: families.filter((f) => f.hostingGroupId === g.id).length,
+      tone: groupColor(g),
+    }));
+  });
+  readonly ungroupedCount = computed(() => this.families().filter((f) => f.hostingGroupId == null).length);
+  readonly checkedCount = computed(() => this.checkedIds().size);
+  readonly hiddenCheckedCount = computed(() => {
+    const shown = new Set(this.filteredFamilies().map((i) => i.family.id));
+    return [...this.checkedIds()].filter((id) => !shown.has(id)).length;
+  });
+  private confirmBulk(count: number, action: string): boolean {
+    return count < 20 || window.confirm(`${action} ${count} familles ? Cette action touche beaucoup de familles (dont certaines peuvent être hors de la vue).`);
+  }
+
+
   readonly mapOptions: L.MapOptions = {
     center: this.referencePoint,
     zoom: 9,
@@ -154,12 +191,18 @@ export class HostFamiliesMapPageComponent implements OnInit {
     maxDistanceKm: null,
     hasAnimators: null,
     search: '',
+    groupIds: [],
+    accommodation: null,
   });
   readonly allItems = computed<readonly HostFamilyMapItem[]>(() =>
-    buildHostFamilyMapItems(this.families(), this.assignments(), this.referencePoint),
+    buildHostFamilyMapItems(this.families(), this.assignments(), this.referencePoint, this.hostingGroups()),
   );
   readonly filteredFamilies = computed<HostFamilyMapItem[]>(() =>
-    filterHostFamilyMapItems(this.allItems(), this.activeFilters()),
+    filterHostFamilyMapItems(this.allItems(), {
+      ...this.activeFilters(),
+      groupIds: this.groupFilter(),
+      accommodation: this.typeFilter(),
+    }),
   );
   readonly sectorSummary = computed(() => {
     const map = new Map<Sector, { families: number; available: number }>();
@@ -199,7 +242,7 @@ export class HostFamiliesMapPageComponent implements OnInit {
     effect(() => {
       const selectedId = this.selectedFamilyId();
       const items = this.filteredFamilies();
-      this.rebuildMarkers(items, selectedId);
+      this.rebuildMarkers(items, selectedId, this.checkedIds());
     });
 
     // After the first DOM paint, ensure Leaflet has correct container dimensions
@@ -218,6 +261,105 @@ export class HostFamiliesMapPageComponent implements OnInit {
         this.families.set(families);
         this.assignments.set(assignments);
       });
+    this.reloadGroups();
+  }
+
+  private reloadGroups(): void {
+    this.hostingApi.listGroups().subscribe({
+      next: (groups) => this.hostingGroups.set(groups),
+      error: () => this.feedback.set({ text: 'Groupes indisponibles (droits ou réseau).', error: true }),
+    });
+  }
+
+  private reloadAll(): void {
+    this.hostFamiliesApi.list().subscribe((families) => this.families.set(families));
+    this.reloadGroups();
+  }
+
+  toggleGroupFilter(id: number): void {
+    const current = this.groupFilter();
+    this.groupFilter.set(current.includes(id) ? current.filter((x) => x !== id) : [...current, id]);
+  }
+
+  setTypeFilter(value: 'FAMILY' | 'COLLECTIVE'): void {
+    this.typeFilter.set(this.typeFilter() === value ? null : value);
+  }
+
+  toggleSelectMode(): void {
+    this.selectMode.update((v) => !v);
+    if (!this.selectMode()) this.checkedIds.set(new Set());
+    this.feedback.set(null);
+  }
+
+  toggleChecked(familyId: number): void {
+    const next = new Set(this.checkedIds());
+    if (next.has(familyId)) next.delete(familyId);
+    else next.add(familyId);
+    this.checkedIds.set(next);
+  }
+
+  checkAllShown(): void {
+    this.checkedIds.set(new Set(this.filteredFamilies().map((i) => i.family.id)));
+  }
+
+  clearChecked(): void {
+    this.checkedIds.set(new Set());
+  }
+
+  private afterBulk(text: string): void {
+    this.busy.set(false);
+    this.feedback.set({ text, error: false });
+    this.checkedIds.set(new Set());
+    this.reloadAll();
+  }
+
+  private bulkError(err: { error?: { message?: string | string[] } }): void {
+    this.busy.set(false);
+    const m = err?.error?.message;
+    this.feedback.set({ text: Array.isArray(m) ? m.join(', ') : (m ?? 'Action impossible.'), error: true });
+  }
+
+  assignChecked(groupId: number | null): void {
+    const ids = [...this.checkedIds()];
+    if (!ids.length || this.busy() || !this.confirmBulk(ids.length, groupId === null ? 'Retirer du groupe' : 'Affecter au groupe')) return;
+    this.busy.set(true);
+    this.hostingApi.setFamiliesGroup(ids, groupId).subscribe({
+      next: (r) => this.afterBulk(groupId === null ? `${r.updated} famille(s) retirée(s) de leur groupe.` : `${r.updated} famille(s) affectée(s) au groupe.`),
+      error: (e) => this.bulkError(e),
+    });
+  }
+
+  createGroupAndAssign(): void {
+    const name = this.newGroupName().trim();
+    const ids = [...this.checkedIds()];
+    if (!name || !ids.length || this.busy() || !this.confirmBulk(ids.length, 'Créer le groupe et y affecter')) return;
+    this.busy.set(true);
+    this.hostingApi.createGroup(name, { kind: this.newGroupKind() }).subscribe({
+      next: (g) =>
+        this.hostingApi.setFamiliesGroup(ids, g.id).subscribe({
+          next: (r) => {
+            this.newGroupName.set('');
+            this.afterBulk(`Groupe « ${g.name} » créé avec ${r.updated} famille(s).`);
+          },
+          error: (e) => {
+            this.reloadGroups();
+            this.bulkError(e);
+          },
+        }),
+      error: (e) => this.bulkError(e),
+    });
+  }
+
+  groupByParish(): void {
+    if (this.busy()) return;
+    this.busy.set(true);
+    this.hostingApi.groupFromParishes().subscribe({
+      next: (r) => {
+        const n = r.groups.reduce((sum, g) => sum + g.families, 0);
+        this.afterBulk(r.groups.length ? `${r.groups.length} groupe(s) par paroisse, ${n} famille(s) rangée(s). Les familles déjà groupées n'ont pas bougé.` : 'Aucune famille sans groupe n\'a de paroisse renseignée.');
+      },
+      error: (e) => this.bulkError(e),
+    });
   }
 
   isSectorSelected(sector: Sector): boolean {
@@ -245,12 +387,20 @@ export class HostFamiliesMapPageComponent implements OnInit {
   }
 
   onCardSelected(familyId: number): void {
+    if (this.selectMode()) {
+      this.toggleChecked(familyId);
+      return;
+    }
     this.selectedFamilyId.set(familyId);
     this.panToFamily(familyId, true);
     this.scrollCardIntoView(familyId);
   }
 
   onMarkerSelected(familyId: number): void {
+    if (this.selectMode()) {
+      this.toggleChecked(familyId);
+      return;
+    }
     this.selectedFamilyId.set(familyId);
     this.scrollCardIntoView(familyId);
   }
@@ -258,6 +408,7 @@ export class HostFamiliesMapPageComponent implements OnInit {
   private rebuildMarkers(
     items: readonly HostFamilyMapItem[],
     selectedFamilyId: number | null,
+    checked: ReadonlySet<number> = new Set(),
   ): void {
     this.markerByFamilyId.clear();
     const markers = items
@@ -269,11 +420,15 @@ export class HostFamiliesMapPageComponent implements OnInit {
           throw new Error(`Missing coordinates for family #${item.family.id}`);
         }
         const marker = L.marker([latitude, longitude], {
-          icon: createHouseIcon(item.capacityState, item.family.id === selectedFamilyId),
+          icon: createHouseIcon(item.capacityState, item.family.id === selectedFamilyId, {
+            groupColor: item.group || item.family.hostingGroupId == null ? groupColor(item.group) : null,
+            collective: item.collective,
+            checked: checked.has(item.family.id),
+          }),
         });
         marker.on('click', () => this.onMarkerSelected(item.family.id));
         marker.bindPopup(
-          `<strong>${item.family.familyName}</strong><br>${item.family.city}<br>${item.assignmentsCount}/${item.family.maxCapacity} places`,
+          `<strong>${esc(item.family.familyName)}</strong>${item.collective ? ' (hébergement collectif)' : ''}<br>${esc(item.family.city)}<br>${item.assignmentsCount}/${item.family.maxCapacity} places<br>Groupe : ${item.group ? esc(item.group.name) : 'aucun'}`,
         );
         this.markerByFamilyId.set(item.family.id, marker);
         return marker;

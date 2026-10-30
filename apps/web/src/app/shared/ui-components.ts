@@ -37,6 +37,7 @@ import { TuiTitle } from "@taiga-ui/core";
         min-inline-size: 0;
         align-items: center;
         justify-content: space-between;
+        flex-wrap: wrap;
         gap: 1rem;
       }
 

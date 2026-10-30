@@ -1,0 +1,421 @@
+<app-page-layout
+  title="Hébergement – Placement"
+  description="Équipes de rassemblement → groupes d’hébergement → familles"
+>
+  <div actions>
+    <a tuiButton appearance="secondary" size="s" routerLink="/hebergement">Familles et affectations</a>
+  </div>
+
+  @if (loading()) {
+    <tui-loader />
+  } @else if (board(); as b) {
+    <nav class="steps" aria-label="Étapes">
+      <button type="button" class="step" [class.active]="step() === 1" (click)="step.set(1)">
+        <b>1</b> Groupes d’hébergement
+        <small>{{ summary()?.teamsWithout }} équipe(s) et {{ summary()?.familiesWithout }} famille(s) à affecter</small>
+      </button>
+      <button type="button" class="step" [class.active]="step() === 2" (click)="step.set(2)">
+        <b>2</b> Placement dans les familles
+        <small>{{ summary()?.toPlace }} personne(s) sans famille</small>
+      </button>
+    </nav>
+
+    @if (notice(); as n) {
+      <div class="notice" [class.error]="n.kind === 'error'" [class.warning]="n.kind === 'warning'" role="status" aria-live="polite">
+        {{ n.text }}
+        <button type="button" class="link" (click)="notice.set(null)" aria-label="Fermer le message">✕</button>
+      </div>
+    }
+
+    @if (step() === 1) {
+      <p class="hint">
+        Glissez une équipe ou une famille dans un groupe. Sur téléphone, utilisez le menu « Groupe » de chaque carte.
+      </p>
+      <div class="groups-layout">
+      <aside class="group-list" aria-label="Groupes d’hébergement" data-testid="group-list">
+        <h3>Groupes ({{ groups().length }})</h3>
+        <form class="new-group" (submit)="$event.preventDefault(); createGroup()">
+          <tui-textfield>
+            <label tuiLabel for="placement-new-group">Nouveau groupe</label>
+            <input
+              tuiInput
+              id="placement-new-group"
+              name="newGroup"
+              placeholder="ex. Croix-Rousse"
+              aria-label="Nom du nouveau groupe"
+              [ngModel]="newGroupName()"
+              (ngModelChange)="newGroupName.set($event)"
+            />
+          </tui-textfield>
+          <button tuiButton type="submit" size="s" [disabled]="!newGroupName().trim() || busy()">Ajouter</button>
+        </form>
+        <tui-textfield>
+          <label tuiLabel for="placement-group-search">Rechercher un groupe</label>
+          <input
+            tuiInput
+            id="placement-group-search"
+            aria-label="Rechercher un groupe"
+            [ngModel]="groupSearch()"
+            (ngModelChange)="groupSearch.set($event)"
+          />
+        </tui-textfield>
+        <div class="gl-filters" role="group" aria-label="Filtrer par remplissage">
+          @for (f of fillFilters; track f.id) {
+            <button
+              tuiChip
+              type="button"
+              size="s"
+              [appearance]="fillFilter() === f.id ? 'primary' : 'neutral'"
+              [attr.aria-pressed]="fillFilter() === f.id"
+              [attr.data-testid]="'fill-filter-' + f.id"
+              (click)="fillFilter.set(f.id)"
+            >
+              {{ f.label }} ({{ fillCounts()[f.id] }})
+            </button>
+          }
+        </div>
+        <div class="gl-bulk">
+          <button tuiButton type="button" size="xs" appearance="secondary" (click)="showListed(true)">Afficher les colonnes listées</button>
+          <button tuiButton type="button" size="xs" appearance="secondary" (click)="showListed(false)">Masquer les colonnes listées</button>
+        </div>
+        <p class="muted">{{ visibleColumnIds().length }} colonne(s) affichée(s) sur {{ columnIds().length }}</p>
+        <ul class="gl-items">
+          <li class="gl-item">
+            <label>
+              <input tuiCheckbox type="checkbox" size="s" [ngModel]="isShown(NONE)" (ngModelChange)="setShown(NONE, $event)" aria-label="Afficher la colonne Non affectés" />
+              <b>Non affectés</b>
+            </label>
+            <small>{{ stats(null).people }} personne(s) · {{ stats(null).teams }} équipe(s)</small>
+          </li>
+          @for (row of filteredGroupRows(); track row.group.id) {
+            <li class="gl-item" [attr.data-testid]="'group-row-' + row.group.id" [attr.data-state]="row.fill.state">
+              <label>
+                <input
+                  tuiCheckbox
+                  type="checkbox"
+                  size="s"
+                  [ngModel]="isShown(row.group.id)"
+                  (ngModelChange)="setShown(row.group.id, $event)"
+                  [attr.aria-label]="'Afficher la colonne ' + row.group.name"
+                />
+                @if (row.group.color) { <span class="gdot" [style.background]="row.group.color"></span> }
+                <b>{{ row.group.name }}</b>
+              </label>
+              <div class="gauge-line">
+                <span>{{ row.fill.people }}/{{ row.fill.seats }} place(s)
+                  @if (row.fill.state === 'over') { · manque {{ row.fill.missing }} }
+                  @else if (row.fill.state === 'under') { · {{ row.fill.free }} libre(s) }
+                </span>
+                <span class="badge" [class.ok]="row.fill.state === 'full' || row.fill.state === 'under'" [class.bad]="row.fill.state === 'over'" [class.neutral]="row.fill.state === 'empty'">{{ fillLabels[row.fill.state] }}</span>
+              </div>
+              <div class="gauge" aria-hidden="true"><div [style.width.%]="percent(row.fill.people, row.fill.seats || 1)" [class.over]="row.fill.state === 'over'"></div></div>
+              <div class="column-actions">
+                <button tuiButton type="button" size="xs" appearance="flat" (click)="showOnly(row.group.id)">Seul</button>
+                <button tuiButton type="button" size="xs" appearance="flat" (click)="deleteGroup(row.group.id)" [attr.aria-label]="'Supprimer le groupe ' + row.group.name">Supprimer</button>
+              </div>
+            </li>
+          } @empty {
+            <li class="empty">Aucun groupe pour ce filtre.</li>
+          }
+        </ul>
+      </aside>
+
+      <div class="columns">
+        @for (id of visibleColumnIds(); track id) {
+          @let g = groupById(id);
+          @let st = stats(id === NONE ? null : id);
+          <section class="column" [class.none]="id === NONE" [attr.data-testid]="'column-' + id">
+            <header>
+              @if (id === NONE) {
+                <h3>Non affectés</h3>
+              } @else {
+                <h3>
+                  @if (g?.color) { <span class="gdot" [style.background]="g?.color"></span> }
+                  {{ g?.name }}
+                  @if (kindLabel(g?.kind)) { <small class="kind">{{ kindLabel(g?.kind) }}</small> }
+                </h3>
+              }
+              <div class="gauge-line">
+                <span>{{ st.people }} personne(s) · {{ st.seats }} place(s)</span>
+                @if (id !== NONE) {
+                  <span class="badge" [class.bad]="st.people > st.seats" [class.ok]="st.people <= st.seats">
+                    {{ st.people > st.seats ? 'Manque ' + (st.people - st.seats) : 'OK' }}
+                  </span>
+                }
+              </div>
+              @if (id !== NONE) {
+                <div class="gauge" aria-hidden="true">
+                  <div [style.width.%]="percent(st.people, st.seats || 1)" [class.over]="st.people > st.seats"></div>
+                </div>
+                <div class="column-actions">
+                  <button tuiButton type="button" size="xs" appearance="secondary" (click)="openGroup(id)">Placer les jeunes</button>
+                  <button tuiButton type="button" size="xs" appearance="flat" (click)="deleteGroup(id)" aria-label="Supprimer le groupe">Supprimer</button>
+                </div>
+              }
+            </header>
+
+            <h4>Équipes ({{ st.teams }})</h4>
+            <div
+              cdkDropList
+              class="drop"
+              [id]="'teams-' + id"
+              [cdkDropListData]="id"
+              [cdkDropListConnectedTo]="teamListIds()"
+              (cdkDropListDropped)="dropOnColumn($event, 'team')"
+            >
+              @for (team of teamsIn(id === NONE ? null : id); track team.id) {
+                <article class="card team" cdkDrag [cdkDragData]="{ kind: 'team', id: team.id }">
+                  <div class="card-main">
+                    <b>{{ team.name }}</b>
+                    <small>{{ team.memberCount }} personne(s){{ team.groupName ? ' · ' + team.groupName : '' }}</small>
+                  </div>
+                  <app-select-field
+                    class="mobile-select"
+                    [label]="'Groupe de ' + team.name"
+                    [options]="groupOptions()"
+                    [value]="team.hostingGroupId ?? 0"
+                    (valueChange)="moveToGroup('team', team.id, $event || null)"
+                  />
+                </article>
+              } @empty {
+                <p class="empty">Déposez des équipes ici</p>
+              }
+            </div>
+
+            <h4>Familles ({{ st.families }})</h4>
+            <div
+              cdkDropList
+              class="drop"
+              [id]="'families-' + id"
+              [cdkDropListData]="id"
+              [cdkDropListConnectedTo]="familyListIds()"
+              (cdkDropListDropped)="dropOnColumn($event, 'family')"
+            >
+              @for (family of familiesIn(id === NONE ? null : id); track family.id) {
+                <article class="card family" cdkDrag [cdkDragData]="{ kind: 'family', id: family.id }">
+                  <div class="card-main">
+                    <b>{{ family.accommodationType === 'COLLECTIVE' ? '[Collectif] ' : '' }}{{ family.familyName }}</b>
+                    <small>
+                      {{ family.accommodationType === 'COLLECTIVE' ? 'collectif · ' : '' }}{{ family.city }} · {{ family.maxCapacity }} place(s)
+                      @if (family.status !== 'VALIDATED') { · <em>{{ family.status === 'DRAFT' ? 'non validée' : 'inactive' }}</em> }
+                      @if (needsReview(family)) { · <em class="review">à relire</em> }
+                    </small>
+                  </div>
+                  <app-select-field
+                    class="mobile-select"
+                    [label]="'Groupe de ' + family.familyName"
+                    [options]="groupOptions()"
+                    [value]="family.hostingGroupId ?? 0"
+                    (valueChange)="moveToGroup('family', family.id, $event || null)"
+                  />
+                </article>
+              } @empty {
+                <p class="empty">Déposez des familles ici</p>
+              }
+            </div>
+          </section>
+        }
+      </div>
+      </div>
+    } @else {
+      <div class="toolbar">
+        <app-select-field
+          label="Groupe d’hébergement"
+          [options]="realGroupOptions()"
+          [value]="selectedGroupId()"
+          (valueChange)="selectGroup($event)"
+        />
+        <span class="muted">{{ pool().length }} à placer · {{ groupFamilies().length }} famille(s)</span>
+      </div>
+
+      @if (groupConflicts().length) {
+        <div class="notice warning" role="alert">
+          <b>{{ groupConflicts().length }} placement(s) de ce groupe ne respectent pas équipe → groupe → famille.</b>
+          Ils n’ont pas été déplacés : à corriger à la main.
+          <ul>
+            @for (c of groupConflicts().slice(0, 5); track $index) {
+              <li>{{ c.name }} chez {{ c.family }} : {{ c.reason }}</li>
+            }
+            @if (groupConflicts().length > 5) { <li>… et {{ groupConflicts().length - 5 }} autre(s)</li> }
+          </ul>
+        </div>
+      }
+      @if (uninitialisedCount() > 0) {
+        <p class="muted">
+          {{ uninitialisedCount() }} placement(s) d’origine concernent des équipes ou familles pas encore rattachées à un groupe :
+          rattachez-les à l’étape 1, rien n’est déplacé. {{ otherGroupConflicts() }} autre(s) incohérence(s) dans les autres groupes.
+        </p>
+      }
+
+      <details class="auto">
+        <summary>Placement automatique</summary>
+        <div class="auto-body">
+          <div class="dates">
+            <label>Arrivée
+              <input type="date" [value]="arrivalDate()" (input)="arrivalDate.set($any($event.target).value)" />
+            </label>
+            <label>Départ
+              <input type="date" [value]="departureDate()" (input)="departureDate.set($any($event.target).value)" />
+            </label>
+            <small class="muted">Dates de l’événement configurées dans l’application. Les familles déjà occupées sur ces dates sont prises en compte.</small>
+          </div>
+          <fieldset class="rules">
+            <legend>Règles à confirmer avec l’organisation (choix obligatoire)</legend>
+            <app-select-field
+              label="Les animateurs comptent dans la capacité des familles ?"
+              [options]="animatorOptions"
+              [value]="countAnimators() === null ? '' : countAnimators() ? 'yes' : 'no'"
+              (valueChange)="setAnimatorRule($event)"
+            />
+            <app-select-field
+              label="Mixité filles/garçons dans une famille"
+              [options]="mixingOptions"
+              [value]="sexMixing() ?? ''"
+              (valueChange)="setMixingRule($event)"
+            />
+            @if (!rulesChosen()) {
+              <small class="muted">Choisissez les deux règles pour calculer une proposition. Rien n’est supposé à votre place.</small>
+            }
+            <small class="muted">Les contraintes et étiquettes libres des familles ne sont pas interprétées : les familles concernées sont marquées « à relire ».</small>
+          </fieldset>
+          <div class="auto-actions">
+            <button tuiButton type="button" size="m" [disabled]="busy() || pool().length === 0 || !rulesChosen()" (click)="computeProposal()">
+              Calculer une proposition
+            </button>
+            @if (preview(); as p) {
+              <button tuiButton type="button" size="m" appearance="primary" [disabled]="busy() || p.proposals.length === 0 || !rulesChosen()" (click)="applyProposal()">
+                Appliquer ({{ p.proposals.length }})
+              </button>
+              <button tuiButton type="button" size="m" appearance="secondary" (click)="cancelProposal()">Annuler</button>
+            }
+          </div>
+          @if (preview(); as p) {
+            @if (unplacedPreview().length) {
+              <div class="notice warning">
+                <b>{{ unplacedPreview().length }} personne(s) sans solution :</b>
+                <ul>
+                  @for (u of unplacedPreview().slice(0, 6); track $index) { <li>{{ u.name }} : {{ u.reason }}</li> }
+                </ul>
+              </div>
+            }
+            @if (p.proposals.some((x) => x.needsReview)) {
+              <div class="notice warning">Certaines propositions vont vers des familles « à relire » (contraintes ou étiquettes libres).</div>
+            }
+          }
+        </div>
+      </details>
+
+      <div class="place-layout">
+        <section class="pool-col">
+          <h3>À placer ({{ pool().length }})</h3>
+          <div
+            cdkDropList
+            class="pool drop"
+            id="pool"
+            [cdkDropListData]="NONE"
+            [cdkDropListConnectedTo]="poolConnections()"
+            (cdkDropListDropped)="dropMember($event)"
+          >
+            @for (g of poolByTeam(); track g.teamId) {
+              <h4>{{ g.teamName }}</h4>
+              @for (m of g.members; track m.participantId) {
+                <button
+                  type="button"
+                  class="chip"
+                  cdkDrag
+                  [cdkDragData]="{ participantId: m.participantId }"
+                  [class.selected]="selectedMemberId() === m.participantId"
+                  [class.proposed]="proposedIds().has(m.participantId)"
+                  [attr.aria-pressed]="selectedMemberId() === m.participantId"
+                  (click)="toggleMember(m)"
+                >
+                  {{ memberName(m) }}
+                  <span class="tags">{{ sexLabel(m) }}@if (isMinor(m)) { · −18 }@if (m.type === 'ANIMATEUR') { · anim. }</span>
+                </button>
+              }
+            } @empty {
+              <p class="empty">Tout le monde est placé.</p>
+            }
+          </div>
+        </section>
+
+        <section class="families-col">
+          @if (selectedMember(); as sm) {
+            <div class="selection" role="status">
+              <b>{{ memberName(sm) }}</b> sélectionné(e) : touchez « Placer ici » sur une famille.
+              @if (sm.hostFamilyId !== null) {
+                <button tuiButton type="button" size="xs" appearance="secondary" (click)="unplace(sm.participantId)">Retirer de sa famille</button>
+              }
+            </div>
+          }
+          <div class="families">
+            @for (row of groupFamilies(); track row.family.id) {
+              <article class="family-box" [class.full]="row.load.full" [class.inactive]="row.family.status === 'INACTIVE'">
+                <header>
+                  <b>{{ row.family.accommodationType === 'COLLECTIVE' ? '[Collectif] ' : '' }}{{ row.family.familyName }}</b>
+                  <small>
+                    {{ row.family.accommodationType === 'COLLECTIVE' ? 'hébergement collectif · ' : '' }}{{ row.family.city }}
+                    @if (row.family.status !== 'VALIDATED') { · <em>{{ row.family.status === 'DRAFT' ? 'non validée' : 'inactive' }}</em> }
+                    @if (needsReview(row.family)) { · <em class="review">à relire</em> }
+                  </small>
+                  <div class="gauge" aria-hidden="true">
+                    <div [style.width.%]="percent(row.load.used + row.ghosts.length, row.family.maxCapacity)" [class.over]="row.load.used + row.ghosts.length > row.family.maxCapacity"></div>
+                  </div>
+                  <small>
+                    {{ row.load.used }}/{{ row.family.maxCapacity }} place(s)
+                    · mineurs {{ row.load.minors }}/{{ row.family.maxUnder18 }}
+                    @if (row.family.maxAnimators !== null) { · anim. {{ row.load.animators }}/{{ row.family.maxAnimators }} }
+                    @if (row.ghosts.length) { · <em>+{{ row.ghosts.length }} proposé(s)</em> }
+                  </small>
+                </header>
+                <div
+                  cdkDropList
+                  class="drop members"
+                  [id]="'family-' + row.family.id"
+                  [cdkDropListData]="row.family.id"
+                  [cdkDropListConnectedTo]="poolConnections()"
+                  (cdkDropListDropped)="dropMember($event)"
+                >
+                  @for (m of row.load.occupants; track m.participantId) {
+                    <button
+                      type="button"
+                      class="chip"
+                      cdkDrag
+                      [cdkDragData]="{ participantId: m.participantId }"
+                      [class.selected]="selectedMemberId() === m.participantId"
+                      [class.pending]="m.assignmentStatus === 'PENDING'"
+                      (click)="toggleMember(m)"
+                    >
+                      {{ memberName(m) }}
+                      <span class="tags">{{ sexLabel(m) }}@if (isMinor(m)) { · −18 }@if (m.type === 'ANIMATEUR') { · anim. }@if (m.assignmentStatus === 'PENDING') { · à confirmer }</span>
+                    </button>
+                  }
+                  @for (m of row.ghosts; track m.participantId) {
+                    <span class="chip ghost">{{ memberName(m) }} <span class="tags">proposé</span></span>
+                  }
+                  @if (!row.load.occupants.length && !row.ghosts.length) {
+                    <p class="empty">Aucun jeune</p>
+                  }
+                </div>
+                <footer>
+                  <button
+                    tuiButton
+                    type="button"
+                    size="xs"
+                    appearance="secondary"
+                    [disabled]="busy() || selectedMemberId() === null || selectedMember()?.hostFamilyId === row.family.id"
+                    (click)="placeSelectedIn(row.family)"
+                  >
+                    Placer ici
+                  </button>
+                </footer>
+              </article>
+            } @empty {
+              <p class="empty">Ce groupe n’a pas encore de famille : affectez-en à l’étape 1.</p>
+            }
+          </div>
+        </section>
+      </div>
+    }
+  }
+</app-page-layout>

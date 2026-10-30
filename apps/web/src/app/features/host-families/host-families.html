@@ -25,6 +25,10 @@
           <dl>
             <dt>Adresse</dt>
             <dd>{{ selected()?.address }}, {{ selected()?.postalCode }} {{ selected()?.city }}</dd>
+            <dt>Type</dt>
+            <dd>{{ selected()?.accommodationType === 'COLLECTIVE' ? 'Hébergement collectif' : 'Famille d\'accueil' }}</dd>
+            <dt>Groupe</dt>
+            <dd>{{ groupNameOf(selected()) }}</dd>
             <dt>Capacité</dt>
             <dd>{{ selected()?.maxCapacity }} dont {{ selected()?.maxUnder18 }} mineurs</dd>
             <dt>Contact</dt>
@@ -60,6 +64,12 @@
               <label for="telephone-2" tuiLabel>Téléphone</label
               ><input tuiInput [formField]="familyForm.phone" id="telephone-2" />
             </tui-textfield>
+            <label class="wide">Type d'hébergement
+              <select aria-label="Type d'hébergement" (change)="setType($any($event.target).value)">
+                <option value="FAMILY" [selected]="model().accommodationType !== 'COLLECTIVE'">Famille d'accueil</option>
+                <option value="COLLECTIVE" [selected]="model().accommodationType === 'COLLECTIVE'">Hébergement collectif (internat...)</option>
+              </select>
+            </label>
             <tui-textfield iconStart="@tui.users">
               <label for="capacite-totale" tuiLabel>Capacité totale</label
               ><input

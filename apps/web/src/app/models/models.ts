@@ -245,6 +245,8 @@ export interface HostFamily {
   constraints: string[] | null;
   tags: string[] | null;
   status: HostFamilyStatus;
+  accommodationType?: 'FAMILY' | 'COLLECTIVE';
+  hostingGroupId?: number | null;
 }
 export interface ParticipantHostFamilyAssignment {
   id: number;
@@ -370,6 +372,7 @@ export type HostFamilyPayload = Pick<
   | 'constraints'
   | 'tags'
   | 'status'
+  | 'accommodationType'
 > & { phone: string; email: string; parish: string; notes: string };
 export type AssignmentPayload = Pick<
   ParticipantHostFamilyAssignment,

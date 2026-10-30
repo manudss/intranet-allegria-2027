@@ -5,7 +5,22 @@ import { HostFamily, HostFamilyStatus, ParticipantHostFamilyAssignment } from '.
 export type Sector = 'Nord' | 'Sud' | 'Est' | 'Ouest' | 'Centre';
 export type CapacityState = 'AVAILABLE' | 'FULL' | 'UNDER_USED';
 
+export interface MapGroupInfo {
+  readonly id: number;
+  readonly name: string;
+  readonly color?: string | null;
+  readonly kind: string;
+}
+
+export const NO_GROUP_COLOR = '#6b7280';
+/** Palette de repli quand un groupe n'a pas de couleur configurée (stable par id). */
+const FALLBACK_COLORS = ['#2f7d6d', '#c2410c', '#1d4ed8', '#a21caf', '#b45309', '#0f766e', '#be123c', '#4d7c0f'];
+export const groupColor = (group: MapGroupInfo | null): string =>
+  group ? (group.color ?? FALLBACK_COLORS[group.id % FALLBACK_COLORS.length]) : NO_GROUP_COLOR;
+
 export interface HostFamilyMapItem {
+  readonly group: MapGroupInfo | null;
+  readonly collective: boolean;
   readonly family: HostFamily;
   readonly assignmentsCount: number;
   readonly under18Count: number;
@@ -23,6 +38,10 @@ export interface HostFamilyMapFilters {
   readonly maxDistanceKm: number | null;
   readonly hasAnimators: boolean | null;
   readonly search: string;
+  /** ids de groupes retenus ; 0 = « sans groupe ». Vide = tous. */
+  readonly groupIds?: readonly number[];
+  /** null = tous, 'FAMILY' ou 'COLLECTIVE'. */
+  readonly accommodation?: 'FAMILY' | 'COLLECTIVE' | null;
 }
 
 /** Point de rassemblement 2027 : Saint-Etienne (45° 26′ 05″ N, 4° 23′ 25″ E). */
@@ -82,7 +101,9 @@ export function buildHostFamilyMapItems(
   families: readonly HostFamily[],
   assignments: readonly ParticipantHostFamilyAssignment[],
   referencePoint: L.LatLngExpression,
+  groups: readonly MapGroupInfo[] = [],
 ): HostFamilyMapItem[] {
+  const groupById = new Map(groups.map((g) => [g.id, g]));
   const byFamily = assignments.reduce<Map<number, ParticipantHostFamilyAssignment[]>>(
     (acc, assignment) => {
       const familyId = assignment.hostFamily.id;
@@ -111,6 +132,8 @@ export function buildHostFamilyMapItems(
     const capacityRatio = family.maxCapacity > 0 ? assignmentsCount / family.maxCapacity : 1;
     return {
       family,
+      group: family.hostingGroupId != null ? (groupById.get(family.hostingGroupId) ?? null) : null,
+      collective: family.accommodationType === 'COLLECTIVE',
       assignmentsCount,
       under18Count,
       animatorsCount,
@@ -139,6 +162,11 @@ export function filterHostFamilyMapItems(
     if (filters.sectors.length && !filters.sectors.includes(item.sector)) return false;
     if (filters.status && item.family.status !== filters.status) return false;
     if (filters.capacityState && item.capacityState !== filters.capacityState) return false;
+    if (filters.groupIds?.length) {
+      const gid = item.family.hostingGroupId ?? 0;
+      if (!filters.groupIds.includes(gid)) return false;
+    }
+    if (filters.accommodation && (item.collective ? 'COLLECTIVE' : 'FAMILY') !== filters.accommodation) return false;
     if (filters.maxDistanceKm != null) {
       if (item.distanceKm == null || item.distanceKm > filters.maxDistanceKm) return false;
     }
@@ -160,14 +188,34 @@ export function filterHostFamilyMapItems(
   });
 }
 
-export function createHouseIcon(capacityState: CapacityState, isSelected: boolean): L.DivIcon {
+export interface HouseIconOptions {
+  readonly groupColor?: string | null;
+  readonly collective?: boolean;
+  readonly checked?: boolean;
+}
+
+export function createHouseIcon(
+  capacityState: CapacityState,
+  isSelected: boolean,
+  options: HouseIconOptions = {},
+): L.DivIcon {
   const tone = COLOR_BY_CAPACITY[capacityState];
+  const ring = options.groupColor ?? NO_GROUP_COLOR;
+  const size = options.collective ? 46 : 38;
+  const classes = [
+    'host-family-marker__dot',
+    isSelected ? 'host-family-marker__dot--selected' : '',
+    options.collective ? 'host-family-marker__dot--collective' : '',
+    options.checked ? 'host-family-marker__dot--checked' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
   return L.divIcon({
     className: 'host-family-marker',
-    html: `<div class="host-family-marker__dot${isSelected ? ' host-family-marker__dot--selected' : ''}" style="background:${tone}"><span aria-hidden="true">🏠</span></div>`,
-    iconSize: [38, 38],
-    iconAnchor: [19, 36],
-    popupAnchor: [0, -30],
+    html: `<div class="${classes}" style="background:${tone};border-color:${ring}"><span aria-hidden="true">${options.collective ? '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M3 21V9l9-6 9 6v12h-7v-6h-4v6zM11 8h2v3h-2zM6 11h3v3H6zm9 0h3v3h-3z"/></svg>' : '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 3 2 12h3v8h5v-5h4v5h5v-8h3z"/></svg>'}</span>${options.checked ? '<i class="host-family-marker__check" aria-hidden="true">✓</i>' : ''}</div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size - 2],
+    popupAnchor: [0, -size + 8],
   });
 }
 

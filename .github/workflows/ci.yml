@@ -99,3 +99,12 @@ jobs:
             sleep 2
           done
           API_URL=http://localhost:3000 node scripts/check-api-auth.mjs || { cat api.log; exit 1; }
+
+      - name: Check hosting placement (real database, fictitious data)
+        run: |
+          node dist/apps/api/main.js > api.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000/health >/dev/null && break
+            sleep 2
+          done
+          API_URL=http://localhost:3000 node scripts/check-hosting-placement.mjs || { cat api.log; exit 1; }

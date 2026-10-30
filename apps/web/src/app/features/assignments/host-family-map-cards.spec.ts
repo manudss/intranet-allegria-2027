@@ -19,8 +19,8 @@ describe('HostFamilyMapCardsComponent', () => {
     const component = TestBed.createComponent(HostFamilyMapCardsComponent).componentInstance;
     const events: { familyId: number; groupId: number | null }[] = [];
     component.groupChange.subscribe((e) => events.push(e));
-    component.onGroupPick(7, '3');
-    component.onGroupPick(7, '0');
+    component.onGroupPick(7, 3);
+    component.onGroupPick(7, 0);
     expect(events).toEqual([
       { familyId: 7, groupId: 3 },
       { familyId: 7, groupId: null },

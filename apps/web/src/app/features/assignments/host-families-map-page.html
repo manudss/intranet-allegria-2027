@@ -123,22 +123,36 @@
           <span data-testid="checked-count"><strong>{{ checkedCount() }}</strong> sélectionné(s)@if (hiddenCheckedCount()) { <em>dont {{ hiddenCheckedCount() }} hors de la vue actuelle (filtres)</em> }</span>
           <button type="button" tuiButton size="s" appearance="flat" (click)="checkAllShown()">Tout sélectionner ({{ filteredFamilies().length }} affichées sur {{ families().length }})</button>
           <button type="button" tuiButton size="s" appearance="flat" (click)="clearChecked()">Vider</button>
-          <select aria-label="Groupe cible" data-testid="target-group" (change)="targetGroupId.set(+$any($event.target).value || null)">
-            <option value="0" [selected]="targetGroupId() === null">— groupe —</option>
-            @for (g of hostingGroups(); track g.id) {
-              <option [value]="g.id" [selected]="targetGroupId() === g.id">{{ g.name }}</option>
-            }
-          </select>
+          <app-select-field
+            label="Groupe cible"
+            placeholder="Choisir un groupe"
+            icon="@tui.users"
+            testId="target-group"
+            [options]="groupOptions()"
+            [value]="targetGroupId()"
+            (valueChange)="targetGroupId.set($event)"
+          />
           <button type="button" tuiButton size="s" data-testid="assign" [disabled]="busy() || !checkedCount() || targetGroupId() === null" (click)="assignChecked(targetGroupId())">Affecter ({{ checkedCount() }})</button>
           <button type="button" tuiButton size="s" appearance="secondary" [disabled]="busy() || !checkedCount()" (click)="assignChecked(null)">Retirer du groupe</button>
         </div>
         <div class="select-bar">
-          <input aria-label="Nom du nouveau groupe" data-testid="new-group-name" placeholder="Nouveau groupe (ex. Nord, Paroisse X)" [value]="newGroupName()" (input)="newGroupName.set($any($event.target).value)" />
-          <select aria-label="Type de groupe" (change)="newGroupKind.set($any($event.target).value)">
-            <option value="ZONE" [selected]="newGroupKind() === 'ZONE'">Zone géographique</option>
-            <option value="PARISH" [selected]="newGroupKind() === 'PARISH'">Paroisse</option>
-            <option value="OTHER" [selected]="newGroupKind() === 'OTHER'">Autre</option>
-          </select>
+          <tui-textfield class="group-name">
+            <label tuiLabel for="map-new-group-name">Nouveau groupe</label>
+            <input
+              tuiInput
+              id="map-new-group-name"
+              data-testid="new-group-name"
+              placeholder="ex. Nord, Paroisse X"
+              [ngModel]="newGroupName()"
+              (ngModelChange)="newGroupName.set($event)"
+            />
+          </tui-textfield>
+          <app-select-field
+            label="Type de groupe"
+            [options]="kindOptions"
+            [value]="newGroupKind()"
+            (valueChange)="newGroupKind.set($event ?? 'ZONE')"
+          />
           <button type="button" tuiButton size="s" data-testid="create-assign" [disabled]="busy() || !checkedCount() || !newGroupName().trim()" (click)="createGroupAndAssign()">Créer et affecter</button>
         </div>
         <p class="muted">Cliquez sur les maisons de la carte ou sur les cartes de la liste pour les cocher.</p>

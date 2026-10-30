@@ -1,11 +1,12 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { TuiBadge, TuiChip } from '@taiga-ui/kit';
+import { SelectFieldComponent, SelectOption } from '../../shared/select-field.component';
 import { HostFamilyMapItem, groupColor } from './host-families-map.utils';
 
 @Component({
   selector: 'app-host-family-map-cards',
   standalone: true,
-  imports: [TuiBadge, TuiChip],
+  imports: [TuiBadge, TuiChip, SelectFieldComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './host-family-map-cards.html',
   styleUrls: ['./host-family-map-cards.scss'],
@@ -20,8 +21,13 @@ export class HostFamilyMapCardsComponent {
   readonly groups = input<readonly { id: number; name: string }[] | null>(null);
   readonly groupChange = output<{ familyId: number; groupId: number | null }>();
 
-  onGroupPick(familyId: number, value: string): void {
-    this.groupChange.emit({ familyId, groupId: Number(value) || null });
+  readonly groupOptions = computed<SelectOption<number>[]>(() => [
+    { value: 0, label: 'Aucun groupe' },
+    ...(this.groups() ?? []).map((g) => ({ value: g.id, label: g.name })),
+  ]);
+
+  onGroupPick(familyId: number, value: number | null): void {
+    this.groupChange.emit({ familyId, groupId: value || null });
   }
 
   capacityLabel(state: HostFamilyMapItem['capacityState']): string {

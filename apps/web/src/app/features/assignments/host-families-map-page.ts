@@ -22,6 +22,7 @@ import { HostFamily, HostFamilyStatus, ParticipantHostFamilyAssignment } from '.
 import { AssignmentsApiService, HostFamiliesApiService } from '../../services/api.services';
 import { HostingPlacementApiService } from '../hosting-placement/hosting-placement.api';
 import { HostingGroupKind, HostingGroupSummary } from '../hosting-placement/hosting-placement.models';
+import { SelectFieldComponent, SelectOption } from '../../shared/select-field.component';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { HostFamilyMapCardsComponent } from './host-family-map-cards';
 import {
@@ -56,6 +57,7 @@ const esc = (v: string): string => v.replace(/[&<>"']/g, (c) => ({ '&': '&amp;',
     TuiSelect,
     ...TuiInput,
     HostFamilyMapCardsComponent,
+    SelectFieldComponent,
   ],
   // Suppress the benign ResizeObserver notification error that Leaflet triggers in zoneless Angular
   providers: [
@@ -151,6 +153,14 @@ export class HostFamiliesMapPageComponent implements OnInit {
   readonly targetGroupId = signal<number | null>(null);
   readonly newGroupName = signal('');
   readonly newGroupKind = signal<HostingGroupKind>('ZONE');
+  readonly kindOptions: readonly SelectOption<HostingGroupKind>[] = [
+    { value: 'ZONE', label: 'Zone géographique' },
+    { value: 'PARISH', label: 'Paroisse' },
+    { value: 'OTHER', label: 'Autre' },
+  ];
+  readonly groupOptions = computed<SelectOption<number>[]>(() =>
+    this.hostingGroups().map((g) => ({ value: g.id, label: g.name })),
+  );
   readonly busy = signal(false);
   readonly feedback = signal<{ text: string; error: boolean } | null>(null);
   readonly groupColor = groupColor;

@@ -38,19 +38,15 @@
       </div>
     </button>
     @if (groups(); as gs) {
-      <label class="group-pick">
-        Groupe
-        <select
-          [attr.aria-label]="'Groupe de ' + item.family.familyName"
-          [attr.data-testid]="'card-group-' + item.family.id"
-          (change)="onGroupPick(item.family.id, $any($event.target).value)"
-        >
-          <option value="0" [selected]="!item.family.hostingGroupId">Aucun groupe</option>
-          @for (g of gs; track g.id) {
-            <option [value]="g.id" [selected]="item.family.hostingGroupId === g.id">{{ g.name }}</option>
-          }
-        </select>
-      </label>
+      <app-select-field
+        class="group-pick"
+        label="Groupe"
+        icon="@tui.users"
+        [testId]="'card-group-' + item.family.id"
+        [options]="groupOptions()"
+        [value]="item.family.hostingGroupId ?? 0"
+        (valueChange)="onGroupPick(item.family.id, $event)"
+      />
     }
     </div>
   } @empty {

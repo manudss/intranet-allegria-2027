@@ -5,8 +5,10 @@ import { HostFamily, HostFamilyPayload, HostFamilyStatus } from '../../models/mo
 import { HostFamiliesApiService } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { HostingPlacementApiService } from '../hosting-placement/hosting-placement.api';
-import { HostingGroupKind, HostingGroupSummary } from '../hosting-placement/hosting-placement.models';
+import { HostingGroupSummary } from '../hosting-placement/hosting-placement.models';
 import { DataTableColumn } from '../../shared/data-table';
+import { GroupBulkBarComponent } from '../../shared/group-bulk-bar.component';
+import { SelectFieldComponent, SelectOption } from '../../shared/select-field.component';
 
 const STATUS_LABELS: Record<HostFamilyStatus, string> = {
   DRAFT: 'Brouillon',
@@ -42,7 +44,7 @@ const blank = (): HostFamilyPayload => ({
 @Component({
   selector: 'app-host-families',
   standalone: true,
-  imports: [...SHARED_IMPORTS],
+  imports: [...SHARED_IMPORTS, GroupBulkBarComponent, SelectFieldComponent],
   templateUrl: './host-families.html',
   styleUrl: '../../shared/crud.scss',
 })
@@ -205,9 +207,6 @@ export class HostFamiliesPage implements OnInit {
   protected groupNames = signal(new Map<number, string>());
   protected groups = signal<HostingGroupSummary[]>([]);
   protected checkedIds = signal<ReadonlySet<number>>(new Set());
-  protected targetGroupId = signal<number | null>(null);
-  protected newGroupName = signal('');
-  protected newGroupKind = signal<HostingGroupKind>('ZONE');
   protected busy = signal(false);
   protected feedback = signal<{ text: string; error: boolean } | null>(null);
   /** Groupe choisi dans le formulaire (création / modification). */
@@ -282,46 +281,26 @@ export class HostFamiliesPage implements OnInit {
     this.done(Array.isArray(m) ? m.join(', ') : (m ?? 'Action impossible.'), true);
   }
 
-  private confirmBulk(count: number, label: string): boolean {
-    return count < 20 || confirm(`${label} : ${count} lieux concernés. Continuer ?`);
+  protected onBulkChanged(): void {
+    this.checkedIds.set(new Set());
+    this.reloadAll();
   }
 
-  protected assignChecked(groupId: number | null): void {
-    const ids = [...this.checkedIds()];
-    if (!ids.length || this.busy() || !this.confirmBulk(ids.length, groupId === null ? 'Retirer du groupe' : 'Affecter au groupe')) return;
-    this.busy.set(true);
-    this.hostingApi.setFamiliesGroup(ids, groupId).subscribe({
-      next: (r) => this.done(groupId === null ? `${r.updated} lieu(x) retiré(s) de leur groupe.` : `${r.updated} lieu(x) affecté(s) au groupe.`),
-      error: (e) => this.fail(e),
-    });
-  }
+  protected readonly typeOptions: readonly SelectOption<'FAMILY' | 'COLLECTIVE'>[] = [
+    { value: 'FAMILY', label: "Famille d'accueil" },
+    { value: 'COLLECTIVE', label: 'Hébergement collectif (internat...)' },
+  ];
 
-  protected createGroupAndAssign(): void {
-    const name = this.newGroupName().trim();
-    const ids = [...this.checkedIds()];
-    if (!name || !ids.length || this.busy() || !this.confirmBulk(ids.length, 'Créer le groupe et y affecter')) return;
-    this.busy.set(true);
-    this.hostingApi.createGroup(name, { kind: this.newGroupKind() }).subscribe({
-      next: (g) =>
-        this.hostingApi.setFamiliesGroup(ids, g.id).subscribe({
-          next: (r) => {
-            this.newGroupName.set('');
-            this.done(`Groupe « ${g.name} » créé avec ${r.updated} lieu(x).`);
-          },
-          error: (e) => {
-            this.reloadGroups();
-            this.fail(e);
-          },
-        }),
-      error: (e) => this.fail(e),
-    });
-  }
+  protected readonly groupOptionsWithNone = computed<SelectOption<number>[]>(() => [
+    { value: 0, label: 'Aucun groupe' },
+    ...this.groups().map((g) => ({ value: g.id, label: g.name })),
+  ]);
 
   /** Changement direct du groupe depuis le détail d'un hébergement. */
-  protected changeSelectedGroup(value: string): void {
+  protected changeSelectedGroup(value: number | null): void {
     const fam = this.selected();
     if (!fam || this.busy()) return;
-    const groupId = Number(value) || null;
+    const groupId = value || null;
     this.busy.set(true);
     this.hostingApi.setFamilyGroup(fam.id, groupId).subscribe({
       next: () => this.done(groupId === null ? 'Lieu retiré de son groupe.' : 'Groupe du lieu modifié.'),
@@ -334,7 +313,7 @@ export class HostFamiliesPage implements OnInit {
     return typeof id === 'number' ? (this.groupNames().get(id) ?? '—') : '—';
   }
 
-  protected setType(value: string): void {
+  protected setType(value: string | null): void {
     const type = value === 'COLLECTIVE' ? 'COLLECTIVE' : 'FAMILY';
     this.model.update((m) => ({ ...m, accommodationType: type }));
   }

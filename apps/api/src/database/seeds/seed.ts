@@ -769,11 +769,11 @@ async function seedProgram(
     }
 
     for (const branch of day.branches) {
-      let previous: ProgramSequence | null = null;
+      let previousId: number | null = null;
       for (const entry of branch.items) {
         const slot = saved[entry.slot];
         const durationMinutes = entry.durationMinutes ?? slot.durationMinutes;
-        previous = await repository.save(
+        const created: ProgramSequence = await repository.save(
           repository.create({
             eventDate: day.eventDate,
             location: branch.location,
@@ -783,11 +783,12 @@ async function seedProgram(
             endTime: addMinutes(slot.startTime, durationMinutes),
             minDurationMinutes: Math.min(15, durationMinutes),
             // Seule la tête de branche est rattachée à la chaîne principale.
-            anchorSequenceId: previous ? null : slot.id,
-            previousSequenceId: previous?.id ?? null,
+            anchorSequenceId: previousId === null ? slot.id : null,
+            previousSequenceId: previousId,
             volunteerTeamId: nextTeamId(),
           }),
         );
+        previousId = created.id;
       }
     }
   }

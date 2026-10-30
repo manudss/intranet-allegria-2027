@@ -32,6 +32,17 @@
   <table tuiTable size="l" [columns]="tableColumnKeys()">
     <thead>
       <tr tuiThGroup>
+        @if (selectable()) {
+          <th *tuiHead="'select'" tuiTh [sorter]="null" [sticky]="true" [minWidth]="56">
+            <input
+              type="checkbox"
+              aria-label="Sélectionner toutes les lignes affichées"
+              data-testid="check-all"
+              [checked]="allShownChecked()"
+              (change)="toggleAllShown($any($event.target).checked)"
+            />
+          </th>
+        }
         @for (column of enabledColumns(); track column.key) {
           <th
             *tuiHead="column.key"
@@ -170,6 +181,19 @@
           (keydown.enter)="rowSelected.emit(row)"
           (keydown.space)="selectFromKeyboard($event, row)"
         >
+          @if (selectable()) {
+            <td *tuiCell="'select'" tuiTd (click)="$event.stopPropagation()">
+              <input
+                type="checkbox"
+                aria-label="Sélectionner la ligne"
+                data-testid="check-row"
+                [checked]="checkedIds().has(row.id)"
+                (change)="toggleChecked(row.id, $any($event.target).checked)"
+                (keydown.enter)="$event.stopPropagation()"
+                (keydown.space)="$event.stopPropagation()"
+              />
+            </td>
+          }
           @for (column of enabledColumns(); track column.key) {
             <td *tuiCell="column.key" tuiTd>
               <ng-template #cellContent>

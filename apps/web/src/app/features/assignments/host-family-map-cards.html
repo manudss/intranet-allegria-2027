@@ -1,5 +1,6 @@
 <div class="cards">
   @for (item of families(); track item.family.id) {
+    <div class="card-wrap">
     <button
       type="button"
       class="family-card"
@@ -36,6 +37,18 @@
         }
       </div>
     </button>
+    @if (groups(); as gs) {
+      <app-select-field
+        class="group-pick"
+        label="Groupe"
+        icon="@tui.users"
+        [testId]="'card-group-' + item.family.id"
+        [options]="groupOptions()"
+        [value]="item.family.hostingGroupId ?? 0"
+        (valueChange)="onGroupPick(item.family.id, $event)"
+      />
+    }
+    </div>
   } @empty {
     <p class="empty">Aucune famille ne correspond aux filtres.</p>
   }

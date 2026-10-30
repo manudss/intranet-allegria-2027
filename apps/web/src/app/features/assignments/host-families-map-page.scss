@@ -60,11 +60,17 @@
   display: none;
 }
 .mobile-drawer-header {
+  /* le bandeau de l'appli (56px) recouvre le haut du tiroir : on demarre en dessous */
+  margin-top: 3.75rem;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
   margin-bottom: 0.8rem;
+}
+.mobile-drawer-header h2 {
+  margin: 0;
 }
 .host-family-marker {
   background: transparent;

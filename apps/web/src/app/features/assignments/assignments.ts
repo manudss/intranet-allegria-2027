@@ -2,15 +2,17 @@ import {
   ChangeDetectionStrategy,
   Component,
   OnInit,
+  computed,
   inject,
   input,
   output,
   signal,
 } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TuiButton, TuiCheckbox, TuiInput } from '@taiga-ui/core';
 import {
+  TuiBadge,
   TuiChevron,
   TuiChip,
   TuiDataListWrapper,
@@ -36,7 +38,11 @@ import {
 import { DataTableColumn } from '../../shared/data-table';
 import { ALLEGRIA_2027_EVENT_DATES } from '../../shared/event-date-selector/event-date.config';
 import { EventDateSelectorComponent } from '../../shared/event-date-selector/event-date-selector.component';
+import { GroupBulkBarComponent } from '../../shared/group-bulk-bar.component';
+import { SelectFieldComponent, SelectOption } from '../../shared/select-field.component';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
+import { HostingPlacementApiService } from '../hosting-placement/hosting-placement.api';
+import { HostingGroupSummary } from '../hosting-placement/hosting-placement.models';
 
 const STATUS_LABELS: Record<HostFamilyStatus, string> = {
   DRAFT: 'Brouillon',
@@ -76,20 +82,37 @@ const PERSON_TYPE_APPEARANCE: Record<PersonType, string> = {
 
 @Component({
   selector: 'app-host-family-cards',
-  imports: [TuiChip],
+  imports: [FormsModule, TuiChip, TuiBadge, TuiCheckbox],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div class="cards">
     @for (family of families(); track family.id) {
-      <button class="family-card" type="button" (click)="selectFamily.emit(family)">
-        <strong>{{ family.familyName }}</strong
-        ><span>{{ family.city }} · {{ family.parish || 'Sans paroisse' }}</span>
-        <span>Capacité : {{ family.maxCapacity }} places</span>
-        <span class="chips">
-          @for (tag of family.tags || []; track tag) {
-            <span tuiChip>{{ tag }}</span>
-          }
-        </span>
-      </button>
+      <div class="card-wrap">
+        <label class="card-check" [attr.aria-label]="'Sélectionner ' + family.familyName">
+          <input
+            tuiCheckbox
+            type="checkbox"
+            size="s"
+            [attr.data-testid]="'card-check-' + family.id"
+            [ngModel]="checkedIds().has(family.id)"
+            (ngModelChange)="toggle(family.id)"
+          />
+        </label>
+        <button class="family-card" type="button" (click)="selectFamily.emit(family)">
+          <strong>{{ family.familyName }}</strong
+          ><span>{{ family.city }} · {{ family.parish || 'Sans paroisse' }}</span>
+          <span>Capacité : {{ family.maxCapacity }} places</span>
+          <span class="group" data-testid="card-group-name">
+            <span tuiBadge size="s" [appearance]="family.hostingGroupId ? 'info' : 'neutral'">{{
+              groupName(family)
+            }}</span>
+          </span>
+          <span class="chips">
+            @for (tag of family.tags || []; track tag) {
+              <span tuiChip>{{ tag }}</span>
+            }
+          </span>
+        </button>
+      </div>
     } @empty {
       <p>Aucune famille enregistrée.</p>
     }
@@ -99,6 +122,21 @@ const PERSON_TYPE_APPEARANCE: Record<PersonType, string> = {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
       gap: 1rem;
+    }
+    .card-wrap {
+      position: relative;
+      display: grid;
+    }
+    .card-check {
+      position: absolute;
+      inset-block-start: 0.25rem;
+      inset-inline-end: 0.25rem;
+      z-index: 1;
+      display: grid;
+      place-items: center;
+      inline-size: 2.5rem;
+      block-size: 2.5rem;
+      cursor: pointer;
     }
     .family-card {
       display: flex;
@@ -114,6 +152,10 @@ const PERSON_TYPE_APPEARANCE: Record<PersonType, string> = {
     .family-card:hover {
       box-shadow: var(--tui-shadow-small);
     }
+    .group-error {
+      margin: 0.5rem 0 0;
+      color: var(--tui-text-negative);
+    }
     .chips {
       display: flex;
       flex-wrap: wrap;
@@ -123,7 +165,21 @@ const PERSON_TYPE_APPEARANCE: Record<PersonType, string> = {
 })
 export class HostFamilyCardsComponent {
   readonly families = input.required<readonly HostFamily[]>();
+  readonly groupNames = input<ReadonlyMap<number, string>>(new Map());
+  readonly checkedIds = input<ReadonlySet<number>>(new Set());
   readonly selectFamily = output<HostFamily>();
+  readonly checkedChange = output<number[]>();
+
+  groupName(family: HostFamily): string {
+    const id = family.hostingGroupId;
+    return id != null ? (this.groupNames().get(id) ?? 'Groupe') : 'Sans groupe';
+  }
+
+  toggle(id: number): void {
+    const next = new Set(this.checkedIds());
+    if (!next.delete(id)) next.add(id);
+    this.checkedChange.emit([...next]);
+  }
 }
 
 @Component({
@@ -305,7 +361,14 @@ export class HostFamilyAssignmentsSelectorComponent {
 
 @Component({
   selector: 'app-host-family-detail-drawer',
-  imports: [TuiButton, TuiChip, TuiDrawer, TuiTabs, HostFamilyAssignmentsSelectorComponent],
+  imports: [
+    TuiButton,
+    TuiChip,
+    TuiDrawer,
+    TuiTabs,
+    HostFamilyAssignmentsSelectorComponent,
+    SelectFieldComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `@if (family(); as current) {
     <tui-drawer direction="end" [overlay]="true">
@@ -328,6 +391,22 @@ export class HostFamilyAssignmentsSelectorComponent {
           <dd>{{ current.phone }} · {{ current.email }}</dd>
           <dt>Capacités</dt>
           <dd>{{ current.maxUnder18 }} mineurs · {{ current.maxAnimators ?? 0 }} animateurs</dd>
+          <dt>Groupe</dt>
+          <dd>
+            @for (version of [groupVersion()]; track version) {
+              <app-select-field
+                label="Groupe de l'hébergement"
+                icon="@tui.users"
+                testId="detail-group"
+                [options]="groupOptions()"
+                [value]="current.hostingGroupId ?? 0"
+                (valueChange)="groupChange.emit($event || null)"
+              />
+            }
+            @if (groupError()) {
+              <p class="group-error" role="alert" data-testid="detail-group-error">{{ groupError() }}</p>
+            }
+          </dd>
         </dl>
         <div class="chips">
           @for (tag of current.tags || []; track tag) {
@@ -386,6 +465,10 @@ export class HostFamilyAssignmentsSelectorComponent {
       z-index: 1;
       background: var(--tui-background-base);
     }
+    /* le bandeau de l'appli (56px) recouvre le haut du tiroir : le titre démarre en dessous */
+    :host ::ng-deep tui-drawer header {
+      padding-block-start: 3.75rem !important;
+    }
     .chips {
       display: flex;
       flex-wrap: wrap;
@@ -415,8 +498,17 @@ export class HostFamilyDetailDrawerComponent {
   private readonly assignmentsApi = inject(AssignmentsApiService);
   readonly family = input<HostFamily | null>(null);
   readonly assignments = input<ParticipantHostFamilyAssignment[] | null>(null);
+  readonly groups = input<readonly HostingGroupSummary[]>([]);
   readonly drawerClosed = output<void>();
   readonly changed = output<void>();
+  readonly groupChange = output<number | null>();
+  readonly groupError = input<string | null>(null);
+  /** Change à chaque échec : recrée le select pour qu'il montre la valeur réellement enregistrée. */
+  readonly groupVersion = input(0);
+  readonly groupOptions = computed<SelectOption<number>[]>(() => [
+    { value: 0, label: 'Aucun groupe' },
+    ...this.groups().map((g) => ({ value: g.id, label: g.name })),
+  ]);
   tab = 0;
   remove(id: number): void {
     this.assignmentsApi.delete(id).subscribe(() => this.changed.emit());
@@ -431,14 +523,21 @@ export class HostFamilyDetailDrawerComponent {
     TuiTabs,
     HostFamilyCardsComponent,
     HostFamilyDetailDrawerComponent,
+    GroupBulkBarComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './assignments.html',
 })
 export class AssignmentsPage implements OnInit {
   private readonly api = inject(HostFamiliesApiService);
+  private readonly hostingApi = inject(HostingPlacementApiService);
+  readonly groups = signal<HostingGroupSummary[]>([]);
+  readonly groupNames = computed(() => new Map(this.groups().map((g) => [g.id, g.name])));
+  readonly checkedIds = signal<ReadonlySet<number>>(new Set());
   readonly families = signal<HostFamily[]>([]);
   readonly selectedFamily = signal<HostFamily | null>(null);
+  readonly groupError = signal<string | null>(null);
+  readonly groupVersion = signal(0);
   readonly selectedFamilyAssignments = signal<ParticipantHostFamilyAssignment[] | null>(null);
   readonly loading = signal(true);
   view = 0;
@@ -462,6 +561,17 @@ export class AssignmentsPage implements OnInit {
         appearance: (family) => STATUS_APPEARANCE[family.status],
       },
       size: 'small',
+    },
+    {
+      key: 'hostingGroup',
+      label: 'Groupe',
+      type: 'list',
+      value: (family) =>
+        family.hostingGroupId != null
+          ? (this.groupNames().get(family.hostingGroupId) ?? 'Groupe')
+          : 'Sans groupe',
+      presentation: { type: 'chip', autoColor: true, icon: () => '@tui.users' },
+      size: 'medium',
     },
     {
       key: 'city',
@@ -682,8 +792,52 @@ export class AssignmentsPage implements OnInit {
       .list()
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe((families) => this.families.set(families));
+    this.reloadGroups();
+  }
+  private reloadGroups(): void {
+    this.hostingApi.listGroups().subscribe({
+      next: (groups) => {
+        this.groups.set(groups);
+        // la colonne Groupe dépend des noms de groupes : on redonne les lignes au tableau
+        this.families.update((rows) => [...rows]);
+      },
+      error: () => undefined,
+    });
+  }
+  setChecked(ids: number[]): void {
+    this.checkedIds.set(new Set(ids));
+  }
+  clearChecked(): void {
+    this.checkedIds.set(new Set());
+  }
+  /** Recharge familles et groupes après une affectation (en masse ou depuis le détail). */
+  reloadFamilies(): void {
+    this.clearChecked();
+    this.reloadGroups();
+    this.api.list().subscribe((families) => {
+      this.families.set(families);
+      const current = this.selectedFamily();
+      if (current) this.selectedFamily.set(families.find((f) => f.id === current.id) ?? null);
+    });
+  }
+  changeFamilyGroup(groupId: number | null): void {
+    const family = this.selectedFamily();
+    if (!family) return;
+    this.groupError.set(null);
+    this.hostingApi.setFamilyGroup(family.id, groupId).subscribe({
+      next: () => this.reloadFamilies(),
+      error: (e: { error?: { message?: string | string[] } }) => {
+        const msg = e?.error?.message;
+        this.groupError.set(
+          `Groupe non modifié : ${Array.isArray(msg) ? msg.join(', ') : (msg ?? 'le serveur a refusé le changement.')}`,
+        );
+        this.groupVersion.update((v) => v + 1);
+        this.reloadFamilies();
+      },
+    });
   }
   select(family: HostFamily): void {
+    this.groupError.set(null);
     this.selectedFamily.set(family);
     this.reloadAssignments();
   }

@@ -10,10 +10,26 @@
           id="rechercher-une-famille"
         />
       </tui-textfield>
+      <app-group-bulk-bar
+        [groups]="groups()"
+        [checkedIds]="checkedIds()"
+        (cleared)="clearChecked()"
+        (changed)="onBulkChanged()"
+      />
+      @if (feedback(); as f) {
+        <p class="feedback" [class.error]="f.error" role="status" data-testid="feedback">{{ f.text }}</p>
+      }
       @if (loading()) {
         <tui-loader />
       } @else {
-        <app-data-table [rows]="filtered()" [columns]="tableColumns" (rowSelected)="open($event)" />
+        <app-data-table
+          [rows]="filtered()"
+          [columns]="tableColumns"
+          [selectable]="true"
+          [checkedIds]="checkedIds()"
+          (checkedChange)="setChecked($event)"
+          (rowSelected)="open($event)"
+        />
       }
     </app-page-layout>
     @if (opened()) {
@@ -28,7 +44,17 @@
             <dt>Type</dt>
             <dd>{{ selected()?.accommodationType === 'COLLECTIVE' ? 'Hébergement collectif' : 'Famille d\'accueil' }}</dd>
             <dt>Groupe</dt>
-            <dd>{{ groupNameOf(selected()) }}</dd>
+            <dd>
+              <app-select-field
+                label="Groupe de l'hébergement"
+                icon="@tui.users"
+                testId="detail-group"
+                [options]="groupOptionsWithNone()"
+                [value]="selected()?.hostingGroupId ?? 0"
+                [disabled]="busy()"
+                (valueChange)="changeSelectedGroup($event)"
+              />
+            </dd>
             <dt>Capacité</dt>
             <dd>{{ selected()?.maxCapacity }} dont {{ selected()?.maxUnder18 }} mineurs</dd>
             <dt>Contact</dt>
@@ -64,12 +90,23 @@
               <label for="telephone-2" tuiLabel>Téléphone</label
               ><input tuiInput [formField]="familyForm.phone" id="telephone-2" />
             </tui-textfield>
-            <label class="wide">Type d'hébergement
-              <select aria-label="Type d'hébergement" (change)="setType($any($event.target).value)">
-                <option value="FAMILY" [selected]="model().accommodationType !== 'COLLECTIVE'">Famille d'accueil</option>
-                <option value="COLLECTIVE" [selected]="model().accommodationType === 'COLLECTIVE'">Hébergement collectif (internat...)</option>
-              </select>
-            </label>
+            <app-select-field
+              class="wide"
+              label="Type d'hébergement"
+              icon="@tui.home"
+              [options]="typeOptions"
+              [value]="model().accommodationType === 'COLLECTIVE' ? 'COLLECTIVE' : 'FAMILY'"
+              (valueChange)="setType($event)"
+            />
+            <app-select-field
+              class="wide"
+              label="Groupe"
+              icon="@tui.users"
+              testId="form-group"
+              [options]="groupOptionsWithNone()"
+              [value]="formGroupId() ?? 0"
+              (valueChange)="formGroupId.set($event || null)"
+            />
             <tui-textfield iconStart="@tui.users">
               <label for="capacite-totale" tuiLabel>Capacité totale</label
               ><input

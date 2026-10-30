@@ -46,3 +46,12 @@
   margin: 0.2rem 0;
   color: var(--tui-text-secondary);
 }
+
+.card-wrap {
+  display: grid;
+  gap: 0.3rem;
+}
+.group-pick {
+  display: block;
+  padding: 0 0.4rem;
+}

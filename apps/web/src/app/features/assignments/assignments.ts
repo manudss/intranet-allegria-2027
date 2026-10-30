@@ -457,7 +457,7 @@ export class HostFamilyAssignmentsSelectorComponent {
       background: var(--tui-background-base);
     }
     /* le bandeau de l'appli (56px) recouvre le haut du tiroir : le titre démarre en dessous */
-    :host tui-drawer header {
+    header {
       padding-block-start: 3.75rem;
     }
     .chips {

@@ -76,3 +76,44 @@ export const REASON_LABELS: Record<string, string> = {
 
 export const needsReview = (family: BoardFamily): boolean =>
   family.constraints.length + family.tags.length > 0;
+
+/**
+ * État de remplissage d'un groupe, calculé avec les mêmes règles que la colonne :
+ * personnes = membres des équipes du groupe, places = capacité des familles validées.
+ * Aucun seuil inventé : seule la comparaison personnes / places compte.
+ *  - empty : aucune personne à héberger
+ *  - over  : plus de personnes que de places (badge « Manque n »)
+ *  - full  : autant de personnes que de places
+ *  - under : des places restent libres
+ */
+export type GroupFillState = 'empty' | 'under' | 'full' | 'over';
+
+export interface GroupFill {
+  state: GroupFillState;
+  people: number;
+  seats: number;
+  free: number;
+  missing: number;
+  percent: number;
+}
+
+export function groupFill(stats: GroupStats): GroupFill {
+  const { people, seats } = stats;
+  const state: GroupFillState =
+    people === 0 ? 'empty' : people > seats ? 'over' : people === seats ? 'full' : 'under';
+  return {
+    state,
+    people,
+    seats,
+    free: Math.max(0, seats - people),
+    missing: Math.max(0, people - seats),
+    percent: seats <= 0 ? 0 : Math.round((people / seats) * 100),
+  };
+}
+
+export const FILL_LABELS: Record<GroupFillState, string> = {
+  empty: 'Vide',
+  under: 'Places libres',
+  full: 'Complet',
+  over: 'Manque de places',
+};

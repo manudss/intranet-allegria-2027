@@ -676,28 +676,6 @@ export class ProgrammePage {
     this.recentTimer = setTimeout(() => this.recentlyChanged.set(new Set()), 12000);
   }
 
-  /** Réinitialise le jour affiché avec le programme de démonstration (admin, après confirmation). */
-  readonly demoResetOpen = signal(false);
-  readonly canResetDemo = computed(() => this.auth.hasAnyRole(['ADMIN']));
-
-  confirmDemoReset(): void {
-    this.api.resetDayToDemo(this.eventDate()).subscribe({
-      next: (result) => {
-        this.demoResetOpen.set(false);
-        this.actionMessage.set({
-          appearance: 'positive',
-          text: `Programme de démonstration chargé : ${result.sequences} séquences.`,
-        });
-        this.location.set(MAIN_LOCATION);
-        this.loadDay();
-      },
-      error: (error: HttpErrorResponse) => {
-        this.demoResetOpen.set(false);
-        this.showError(error);
-      },
-    });
-  }
-
   toggleFreeze(sequence: ProgramSequence): void {
     if (!this.canEdit()) return;
     const request =
@@ -950,7 +928,6 @@ export class ProgrammePage {
     this.editSequenceId.set(null);
     this.createOpen.set(false);
     this.deleteTargetId.set(null);
-    this.demoResetOpen.set(false);
     this.preview.set(null);
   }
 

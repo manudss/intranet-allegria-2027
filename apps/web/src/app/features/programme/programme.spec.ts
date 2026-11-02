@@ -504,14 +504,13 @@ describe('ProgrammePage', () => {
     http.verify();
   });
 
-  it('recharge la démo d’un jour via l’API (admin)', () => {
-    const { component, http, flushDay } = setup(['ADMIN']);
-    flushDay();
-    component.demoResetOpen.set(true);
-    component.confirmDemoReset();
-    http.expectOne(`/api/program/days/${DAY}/demo-reset`).flush({ date: DAY, sequences: 12 });
-    flushDay();
-    expect(component.demoResetOpen()).toBe(false);
-    http.verify();
+  it('n’affiche aucun bouton de démonstration, même pour un admin et un jour vide', () => {
+    const { http, fixture } = setup(['ADMIN']);
+    http.expectOne(`/api/program/days/${DAY}`).flush({ date: DAY, sequences: [] });
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Aucune séquence pour ce jour.');
+    expect(text.toLowerCase()).not.toContain('démo');
+    expect(fixture.nativeElement.querySelector('.demo-reset')).toBeNull();
   });
 });

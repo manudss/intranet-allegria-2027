@@ -250,20 +250,6 @@
         </div>
       }
 
-      @if (canResetDemo()) {
-        <div class="demo-reset">
-          @if (demoResetOpen()) {
-            <span>Remplacer tout le programme de {{ eventDate() }} par la démonstration fictive ?</span>
-            <button tuiButton appearance="primary" size="xs" type="button" (click)="confirmDemoReset()">Oui, remplacer</button>
-            <button tuiButton appearance="secondary" size="xs" type="button" (click)="demoResetOpen.set(false)">Annuler</button>
-          } @else {
-            <button tuiButton appearance="flat" size="xs" type="button" iconStart="@tui.refresh-cw" (click)="demoResetOpen.set(true)">
-              {{ columns().length ? 'Recharger la démo de ce jour' : 'Charger la démo de ce jour' }}
-            </button>
-          }
-        </div>
-      }
-
       @if (chain().length) {
         <section class="sequence-list" aria-label="Détails et actions des séquences">
           <h3>Détails et actions</h3>

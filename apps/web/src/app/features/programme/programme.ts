@@ -9,6 +9,7 @@ import {
   ProgramDocumentLink,
   ProgramPreview,
   ProgramSequence,
+  ProgramSequenceDiff,
   ProgramSequenceDraft,
   ProgramSequenceStatus,
   VolunteerMission,
@@ -88,6 +89,28 @@ interface CreateDraft {
   durationMinutes: number;
 }
 
+interface BlockView {
+  key: string;
+  /** null pour un créneau en cours de création (aperçu d'insertion). */
+  sequence: ProgramSequence | null;
+  title: string;
+  startTime: string;
+  endTime: string;
+  topPx: number;
+  heightPx: number;
+  change: 'none' | 'changed' | 'blocked' | 'new';
+  ghost: { topPx: number; heightPx: number; label: string } | null;
+  justChanged: boolean;
+  frozen: boolean;
+  category: number;
+}
+
+interface CalendarColumn {
+  name: string;
+  selected: boolean;
+  blocks: BlockView[];
+}
+
 /** Vue d'ensemble en lecture seule : un jour = des lieux = des séquences ordonnées par heure. */
 interface OverviewDay {
   date: string;
@@ -112,7 +135,7 @@ export class ProgrammePage {
   readonly changeLogLabels = CHANGE_LOG_LABELS;
   readonly days = PROGRAM_EVENT_DAYS;
 
-  readonly dayIndex = signal(1); // J2 par défaut (chaîne d'exemple du squelette métier)
+  readonly dayIndex = signal(0); // J1 par défaut
   readonly eventDate = computed(() => this.days[this.dayIndex()]);
 
   readonly allSequences = signal<ProgramSequence[]>([]);
@@ -136,41 +159,172 @@ export class ProgrammePage {
     buildChain(this.allSequences(), this.eventDate(), this.location()),
   );
 
-  /** Minute du jour (depuis minuit) à laquelle démarre la 1re séquence. */
-  private readonly dayWindowStart = computed(() => {
-    const chain = this.chain();
-    return chain.length ? Math.min(...chain.map((s) => timeToMinutes(s.startTime))) : 0;
+  /** Séquences du jour affiché, tous lieux confondus. */
+  private readonly daySequences = computed(() =>
+    this.allSequences().filter((sequence) => sequence.eventDate === this.eventDate()),
+  );
+
+  /**
+   * Horaires « après » annoncés par l'aperçu en cours (clé = id de séquence). Tant que l'aperçu
+   * n'est ni confirmé ni annulé, le calendrier les affiche à la place des horaires actuels.
+   */
+  private readonly projectedTimes = computed(() => {
+    const current = this.preview();
+    const map = new Map<number, ProgramSequenceDiff['after']>();
+    if (!current) return map;
+    for (const diff of current.affected) map.set(diff.sequenceId, diff.after);
+    return map;
   });
 
-  /** Origine de la grille calendrier : heure pleine arrondie en dessous de la 1re séquence. */
-  readonly gridStartMinutes = computed(() => Math.floor(this.dayWindowStart() / 60) * 60);
-
-  /** Fin de la grille calendrier : heure pleine arrondie au-dessus de la dernière séquence. */
-  readonly gridEndMinutes = computed(() => {
-    const chain = this.chain();
-    const rawEnd = chain.length
-      ? Math.max(...chain.map((s) => timeToMinutes(s.endTime)))
-      : this.gridStartMinutes() + 60;
-    return Math.ceil(rawEnd / 60) * 60;
+  /** Plage horaire de la grille : couvre tous les lieux, les horaires projetés et un éventuel nouveau créneau. */
+  private readonly timeRange = computed(() => {
+    const projected = this.projectedTimes();
+    const starts: number[] = [];
+    const ends: number[] = [];
+    for (const sequence of this.daySequences()) {
+      const after = projected.get(sequence.id);
+      starts.push(timeToMinutes(sequence.startTime));
+      ends.push(timeToMinutes(sequence.endTime));
+      if (after) {
+        starts.push(timeToMinutes(after.startTime));
+        ends.push(timeToMinutes(after.endTime));
+      }
+    }
+    const current = this.preview();
+    if (current?.kind === 'insert') {
+      starts.push(timeToMinutes(current.newSequence.startTime));
+      ends.push(timeToMinutes(current.newSequence.endTime));
+    }
+    if (!starts.length) return { start: 8 * 60, end: 20 * 60 };
+    return {
+      start: Math.floor(Math.min(...starts) / 60) * 60,
+      end: Math.max(Math.ceil(Math.max(...ends) / 60) * 60, Math.floor(Math.min(...starts) / 60) * 60 + 60),
+    };
   });
+
+  /** Origine de la grille calendrier : heure pleine arrondie en dessous du 1er créneau du jour. */
+  readonly gridStartMinutes = computed(() => this.timeRange().start);
+
+  /** Fin de la grille calendrier : heure pleine arrondie au-dessus du dernier créneau du jour. */
+  readonly gridEndMinutes = computed(() => this.timeRange().end);
 
   readonly pxPerMinute = PX_PER_MINUTE;
 
   /** Hauteur totale (px) de la grille calendrier, échelle minute -> pixel fixe. */
-  readonly calendarHeightPx = computed(() =>
-    Math.max(420, (this.gridEndMinutes() - this.gridStartMinutes()) * this.pxPerMinute),
+  readonly calendarHeightPx = computed(
+    () => (this.gridEndMinutes() - this.gridStartMinutes()) * this.pxPerMinute,
   );
 
   /** Repères horaires affichés sur l'axe de gauche (toutes les heures). */
   readonly hourMarks = computed(() => {
     const start = this.gridStartMinutes();
     const end = this.gridEndMinutes();
-    const marks: { label: string; topPx: number }[] = [];
-    for (let minute = start; minute <= end; minute += 60) {
-      marks.push({ label: minutesToTime(minute), topPx: (minute - start) * this.pxPerMinute });
+    const marks: { label: string; topPx: number; half: boolean }[] = [];
+    for (let minute = start; minute <= end; minute += 30) {
+      marks.push({
+        label: minutesToTime(minute),
+        topPx: (minute - start) * this.pxPerMinute,
+        half: minute % 60 !== 0,
+      });
     }
     return marks;
   });
+
+  /** Créneaux touchés par la dernière modification confirmée : mis en évidence quelques secondes. */
+  readonly recentlyChanged = signal<ReadonlySet<number>>(new Set());
+  private recentTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Colonnes du calendrier (un lieu = une colonne, comme les agendas partagés). Chaque bloc est
+   * positionné à son horaire projeté si un aperçu est en cours, avec l'ancien emplacement en
+   * fantôme : l'écran montre ce qui va changer au lieu de rester à l'état initial.
+   */
+  readonly columns = computed<CalendarColumn[]>(() => {
+    const start = this.gridStartMinutes();
+    const px = this.pxPerMinute;
+    const projected = this.projectedTimes();
+    const current = this.preview();
+    const blocked = current?.outcome === 'impossible';
+    const recent = this.recentlyChanged();
+    const date = this.eventDate();
+    const sequences = this.allSequences();
+
+    return this.locationsForDay().map((name) => {
+      const blocks: BlockView[] = buildChain(sequences, date, name).map((sequence) => {
+        const after = projected.get(sequence.id);
+        const startTime = after?.startTime ?? sequence.startTime;
+        const endTime = after?.endTime ?? sequence.endTime;
+        const duration = after?.durationMinutes ?? sequence.durationMinutes;
+        const changed =
+          !!after &&
+          (after.startTime !== sequence.startTime || after.durationMinutes !== sequence.durationMinutes);
+        const topPx = (timeToMinutes(startTime) - start) * px;
+        return {
+          key: `s${sequence.id}`,
+          sequence,
+          title: sequence.title,
+          startTime,
+          endTime,
+          topPx,
+          heightPx: Math.max(duration * px, MIN_BLOCK_HEIGHT_PX),
+          change: changed ? (blocked ? 'blocked' : 'changed') : 'none',
+          ghost: changed
+            ? {
+                topPx: (timeToMinutes(sequence.startTime) - start) * px,
+                heightPx: Math.max(sequence.durationMinutes * px, MIN_BLOCK_HEIGHT_PX),
+                label: `${sequence.startTime} – ${minutesToTime(timeToMinutes(sequence.startTime) + sequence.durationMinutes)}`,
+              }
+            : null,
+          justChanged: recent.has(sequence.id),
+          frozen: sequence.status === ProgramSequenceStatus.FROZEN,
+          category: this.categoryIndex(sequence),
+        } satisfies BlockView;
+      });
+
+      if (current?.kind === 'insert' && current.newSequence.location === name) {
+        const created = current.newSequence;
+        blocks.push({
+          key: 'new',
+          sequence: null,
+          title: created.title,
+          startTime: created.startTime,
+          endTime: created.endTime,
+          topPx: (timeToMinutes(created.startTime) - start) * px,
+          heightPx: Math.max(created.durationMinutes * px, MIN_BLOCK_HEIGHT_PX),
+          change: 'new',
+          ghost: null,
+          justChanged: false,
+          frozen: false,
+          category: 0,
+        });
+      }
+      return { name, selected: name === this.location(), blocks };
+    });
+  });
+
+  /** Nombre de créneaux que l'aperçu en cours déplace, redimensionne ou crée. */
+  readonly pendingChangeCount = computed(() => {
+    const current = this.preview();
+    if (!current) return 0;
+    const moved = current.affected.filter(
+      (diff) =>
+        diff.before.startTime !== diff.after.startTime ||
+        diff.before.durationMinutes !== diff.after.durationMinutes,
+    ).length;
+    return moved + (current.kind === 'insert' ? 1 : 0);
+  });
+
+  /** Un formulaire ou un aperçu est ouvert : sur mobile, le panneau passe au-dessus du calendrier. */
+  readonly panelActive = computed(
+    () =>
+      this.createOpen() ||
+      this.deleteTargetId() !== null ||
+      this.editSequenceId() !== null ||
+      this.insertAfterId() !== null ||
+      this.resizeSequenceId() !== null ||
+      this.preview() !== null ||
+      this.changeLogOpen(),
+  );
 
   readonly dragState = signal<DragState | null>(null);
   readonly resizeDragState = signal<ResizeDragState | null>(null);
@@ -264,16 +418,16 @@ export class ProgrammePage {
     this.closeForms();
   }
 
-  /** Position verticale (px) du bloc d'une séquence sur la grille calendrier. */
-  blockTop(sequence: ProgramSequence): number {
-    return (timeToMinutes(sequence.startTime) - this.gridStartMinutes()) * this.pxPerMinute;
+  /** Hauteur (px) d'un bloc pendant un redimensionnement à la souris (retour visuel immédiat). */
+  liveHeight(block: BlockView): number {
+    const resize = this.resizeDragState();
+    const delta = block.sequence && resize?.sequenceId === block.sequence.id ? resize.deltaMinutes : 0;
+    return Math.max(block.heightPx + delta * this.pxPerMinute, MIN_BLOCK_HEIGHT_PX);
   }
 
-  /** Hauteur (px) du bloc d'une séquence, avec un plancher pour rester lisible/cliquable. */
-  blockHeight(sequence: ProgramSequence): number {
-    const resize = this.resizeDragState();
-    const delta = resize?.sequenceId === sequence.id ? resize.deltaMinutes : 0;
-    return Math.max((sequence.durationMinutes + delta) * this.pxPerMinute, MIN_BLOCK_HEIGHT_PX);
+  /** Sélectionne la colonne (le lieu) touchée par l'utilisateur. */
+  selectLocation(name: string): void {
+    if (name !== this.location()) this.location.set(name);
   }
 
   /**
@@ -285,7 +439,7 @@ export class ProgrammePage {
   }
 
   private previousOf(sequence: ProgramSequence): ProgramSequence | null {
-    const chain = this.chain();
+    const chain = buildChain(this.allSequences(), sequence.eventDate, sequence.location);
     const index = chain.findIndex((s) => s.id === sequence.id);
     return index > 0 ? chain[index - 1] : null;
   }
@@ -297,7 +451,11 @@ export class ProgrammePage {
    * bloquant, cascade sur la suite flexible).
    */
   startDrag(event: PointerEvent, sequence: ProgramSequence): void {
+    // Au doigt, seule la poignée déplace le créneau : le reste du bloc laisse défiler la page.
+    const viaGrip = !!(event.target as HTMLElement).closest('.drag-grip');
+    if (event.pointerType !== 'mouse' && !viaGrip) return;
     if (!this.canEdit() || sequence.status === ProgramSequenceStatus.FROZEN) return;
+    this.selectLocation(sequence.location);
     const previous = this.previousOf(sequence);
     if (!previous) return; // tête de chaîne : pas de prédécesseur à redimensionner
 
@@ -336,6 +494,7 @@ export class ProgrammePage {
   startResize(event: PointerEvent, sequence: ProgramSequence): void {
     event.stopPropagation(); // ne pas déclencher le drag du bloc
     if (!this.canEdit() || sequence.status === ProgramSequenceStatus.FROZEN) return;
+    this.selectLocation(sequence.location);
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
     this.resizeDragState.set({
       sequenceId: sequence.id,
@@ -391,6 +550,7 @@ export class ProgrammePage {
     this.insertAfterId.set(afterSequenceId);
     this.insertDraft.set(EMPTY_DRAFT());
     this.preview.set(null);
+    this.revealPanel();
   }
 
   updateInsertDraft(patch: Partial<ProgramSequenceDraft>): void {
@@ -401,7 +561,7 @@ export class ProgrammePage {
     const afterId = this.insertAfterId();
     if (!afterId) return;
     this.api.previewInsert(afterId, this.insertDraft()).subscribe({
-      next: (result) => this.preview.set(result),
+      next: (result) => this.showPreview(result),
       error: (error: HttpErrorResponse) => this.showError(error),
     });
   }
@@ -413,6 +573,7 @@ export class ProgrammePage {
     this.resizeSequenceId.set(sequence.id);
     this.resizeDuration.set(sequence.durationMinutes);
     this.preview.set(null);
+    this.revealPanel();
   }
 
   previewResizeAction(): void {
@@ -420,7 +581,7 @@ export class ProgrammePage {
     const duration = this.resizeDuration();
     if (!sequenceId || duration == null) return;
     this.api.previewResize(sequenceId, duration).subscribe({
-      next: (result) => this.preview.set(result),
+      next: (result) => this.showPreview(result),
       error: (error: HttpErrorResponse) => this.showError(error),
     });
   }
@@ -434,13 +595,24 @@ export class ProgrammePage {
         ? this.api.applyInsert(current.afterSequenceId, current.draft, current.version)
         : this.api.applyResize(current.sequenceId, current.newDurationMinutes, current.version);
 
+    const touched = current.affected
+      .filter(
+        (diff) =>
+          diff.before.startTime !== diff.after.startTime ||
+          diff.before.durationMinutes !== diff.after.durationMinutes,
+      )
+      .map((diff) => diff.sequenceId);
+    if (current.kind === 'resize' && !touched.includes(current.sequenceId)) touched.push(current.sequenceId);
+    const count = this.pendingChangeCount();
+
     request.subscribe({
       next: () => {
         this.actionMessage.set({
           appearance: 'positive',
-          text: 'Modification appliquée et journalisée.',
+          text: `Modification appliquée et journalisée : ${count} créneau${count > 1 ? 'x' : ''} concerné${count > 1 ? 's' : ''} (surligné${count > 1 ? 's' : ''} dans le planning).`,
         });
         this.closeForms();
+        this.flashChanged(touched);
         this.loadDay();
       },
       error: (error: HttpErrorResponse) => {
@@ -456,6 +628,35 @@ export class ProgrammePage {
 
   cancelPreview(): void {
     this.closeForms();
+  }
+
+  /** Met en évidence quelques secondes les créneaux qui viennent d'être modifiés. */
+  private flashChanged(ids: number[]): void {
+    if (this.recentTimer) clearTimeout(this.recentTimer);
+    this.recentlyChanged.set(new Set(ids));
+    this.recentTimer = setTimeout(() => this.recentlyChanged.set(new Set()), 12000);
+  }
+
+  /** Réinitialise le jour affiché avec le programme de démonstration (admin, après confirmation). */
+  readonly demoResetOpen = signal(false);
+  readonly canResetDemo = computed(() => this.auth.hasAnyRole(['ADMIN']));
+
+  confirmDemoReset(): void {
+    this.api.resetDayToDemo(this.eventDate()).subscribe({
+      next: (result) => {
+        this.demoResetOpen.set(false);
+        this.actionMessage.set({
+          appearance: 'positive',
+          text: `Programme de démonstration chargé : ${result.sequences} séquences.`,
+        });
+        this.location.set('Grande salle');
+        this.loadDay();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.demoResetOpen.set(false);
+        this.showError(error);
+      },
+    });
   }
 
   toggleFreeze(sequence: ProgramSequence): void {
@@ -489,6 +690,7 @@ export class ProgrammePage {
       durationMinutes: 30,
     });
     this.createOpen.set(true);
+    this.revealPanel();
   }
 
   updateCreateDraft(patch: Partial<CreateDraft>): void {
@@ -529,6 +731,7 @@ export class ProgrammePage {
       documentLinks: sequence.documentLinks.map((link) => ({ ...link })),
     });
     this.editSequenceId.set(sequence.id);
+    this.revealPanel();
   }
 
   toggleMission(missionId: number): void {
@@ -690,12 +893,25 @@ export class ProgrammePage {
     });
   }
 
+  /** Affiche l'aperçu ; sur petit écran, ramène le panneau de validation à l'écran. */
+  private showPreview(result: ProgramPreview): void {
+    this.preview.set(result);
+    this.recentlyChanged.set(new Set());
+    this.revealPanel();
+  }
+
+  private revealPanel(): void {
+    if (typeof window === 'undefined' || !window.matchMedia?.('(max-width: 960px)').matches) return;
+    setTimeout(() => document.querySelector('.pending-bar, .preview-panel')?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' }), 0);
+  }
+
   private closeForms(): void {
     this.insertAfterId.set(null);
     this.resizeSequenceId.set(null);
     this.editSequenceId.set(null);
     this.createOpen.set(false);
     this.deleteTargetId.set(null);
+    this.demoResetOpen.set(false);
     this.preview.set(null);
   }
 

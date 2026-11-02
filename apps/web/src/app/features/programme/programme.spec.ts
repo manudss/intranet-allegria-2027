@@ -7,7 +7,7 @@ import { ProgramInsertPreview, ProgramSequence, ProgramSequenceStatus } from '..
 import { ProgrammePage } from './programme';
 import { PROGRAM_EVENT_DAYS } from './schedule-chain.util';
 
-const DAY = PROGRAM_EVENT_DAYS[1];
+const DAY = PROGRAM_EVENT_DAYS[0];
 
 function seq(
   id: number,
@@ -311,7 +311,8 @@ describe('ProgrammePage', () => {
 
     // 2 px par minute : +40 px = +20 min
     component.onDragMove({ clientY: 140 } as PointerEvent);
-    expect(component.blockHeight(component.chain()[1])).toBe((60 + 20) * 2);
+    const block = component.columns()[0].blocks.find((b) => b.sequence?.id === 2)!;
+    expect(component.liveHeight(block)).toBe((60 + 20) * 2);
     component.endResize();
 
     const req = http.expectOne('/api/program/sequences/2/resize/preview');
@@ -363,4 +364,90 @@ describe('ProgrammePage', () => {
     http.verify();
   });
 
+  it('affiche l’aperçu dans le calendrier : créneaux modifiés distincts, ancienne position en fantôme', () => {
+    const { component, http, flushDay } = setup(['COORDINATOR']);
+    flushDay();
+
+    component.resizeSequenceId.set(1);
+    component.resizeDuration.set(90);
+    component.previewResizeAction();
+    http.expectOne('/api/program/sequences/1/resize/preview').flush({
+      kind: 'resize',
+      sequenceId: 1,
+      previousDurationMinutes: 60,
+      newDurationMinutes: 90,
+      affected: [
+        {
+          sequenceId: 1,
+          title: 'Séquence 1',
+          before: { startTime: '08:00', endTime: '09:00', durationMinutes: 60 },
+          after: { startTime: '08:00', endTime: '09:30', durationMinutes: 90 },
+        },
+        {
+          sequenceId: 2,
+          title: 'Séquence 2',
+          before: { startTime: '09:00', endTime: '10:00', durationMinutes: 60 },
+          after: { startTime: '09:30', endTime: '10:30', durationMinutes: 60 },
+        },
+      ],
+      stoppedAtFrozenId: null,
+      marginMinutes: null,
+      outcome: 'ok',
+      message: 'ok',
+      version: 'v1',
+    });
+
+    const blocks = component.columns()[0].blocks;
+    const first = blocks.find((b) => b.sequence?.id === 1)!;
+    const second = blocks.find((b) => b.sequence?.id === 2)!;
+    const third = blocks.find((b) => b.sequence?.id === 3)!;
+    expect(first.change).toBe('changed');
+    expect(first.heightPx).toBe(90 * 2);
+    expect(second.change).toBe('changed');
+    expect(second.startTime).toBe('09:30');
+    expect(second.ghost?.label).toBe('09:00 – 10:00');
+    expect(third.change).toBe('none');
+    expect(component.pendingChangeCount()).toBe(2);
+
+    component.cancelPreview();
+    expect(component.columns()[0].blocks.every((b) => b.change === 'none' && !b.ghost)).toBe(true);
+    http.verify();
+  });
+
+  it('montre un créneau en cours d’insertion comme « nouveau » dans la bonne colonne', () => {
+    const { component, http, flushDay } = setup(['COORDINATOR']);
+    flushDay();
+    component.preview.set({
+      kind: 'insert',
+      afterSequenceId: 2,
+      draft: { title: 'Pause', durationMinutes: 15, volunteerTeamId: null, notes: null },
+      newSequence: {
+        eventDate: DAY,
+        location: 'Grande salle',
+        title: 'Pause',
+        startTime: '10:00',
+        endTime: '10:15',
+        durationMinutes: 15,
+      },
+      affected: [],
+      outcome: 'ok',
+      message: 'ok',
+      version: 'v1',
+    });
+    const grande = component.columns().find((c) => c.name === 'Grande salle')!;
+    expect(grande.blocks.find((b) => b.key === 'new')?.change).toBe('new');
+    expect(component.columns().find((c) => c.name === 'Salle A')!.blocks.some((b) => b.key === 'new')).toBe(false);
+    http.verify();
+  });
+
+  it('recharge la démo d’un jour via l’API (admin)', () => {
+    const { component, http, flushDay } = setup(['ADMIN']);
+    flushDay();
+    component.demoResetOpen.set(true);
+    component.confirmDemoReset();
+    http.expectOne(`/api/program/days/${DAY}/demo-reset`).flush({ date: DAY, sequences: 12 });
+    flushDay();
+    expect(component.demoResetOpen()).toBe(false);
+    http.verify();
+  });
 });

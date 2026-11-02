@@ -120,54 +120,148 @@
     </div>
   </div>
 
-  <div class="programme-layout">
+  <div class="programme-layout" [class.panel-active]="panelActive()">
     <div class="chain-column">
-      <div class="calendar-scroll">
-        <div class="calendar" [style.block-size.px]="calendarHeightPx()">
-          <div class="calendar-axis">
-            @for (mark of hourMarks(); track mark.label) {
-              <div class="hour-mark" [style.top.px]="mark.topPx">
-                <span>{{ mark.label }}</span>
-              </div>
-            }
+      @if (preview(); as pending) {
+        <div
+          class="pending-bar"
+          role="status"
+          [class.positive]="pending.outcome === 'ok'"
+          [class.warning]="pending.outcome === 'partial'"
+          [class.negative]="pending.outcome === 'impossible'"
+        >
+          <div class="pending-text">
+            <strong>Modification en attente de validation</strong>
+            <span>
+              {{ pendingChangeCount() }} créneau{{ pendingChangeCount() > 1 ? 'x' : '' }} touché{{ pendingChangeCount() > 1 ? 's' : '' }}
+              (en couleur ci-dessous, ancienne position en pointillés).
+            </span>
+            <span>{{ pending.message }}</span>
           </div>
-
-          <div
-            class="calendar-events"
-            (pointermove)="onDragMove($event)"
-            (pointerup)="endDrag(); endResize()"
-            (pointercancel)="endDrag(); endResize()"
-          >
-            @for (mark of hourMarks(); track mark.label) {
-              <div class="hour-line" [style.top.px]="mark.topPx"></div>
-            }
-
-            @for (sequence of chain(); track sequence.id) {
-              <div
-                class="sequence-block"
-                [class]="'cat-' + categoryIndex(sequence)"
-                [class.frozen]="sequence.status === ProgramSequenceStatus.FROZEN"
-                [class.dragging]="dragState()?.sequenceId === sequence.id"
-                [style.top.px]="blockTop(sequence)"
-                [style.height.px]="blockHeight(sequence)"
-                [style.transform]="dragTransform(sequence)"
-                (pointerdown)="startDrag($event, sequence)"
-              >
-                <header>
-                  <span class="sequence-time">{{ sequence.startTime }} – {{ sequence.endTime }}</span>
-                  <div tuiBadge [appearance]="sequence.status === ProgramSequenceStatus.FROZEN ? 'warning' : 'info'">
-                    {{ sequence.status === ProgramSequenceStatus.FROZEN ? 'Figé' : 'Mobile' }}
-                  </div>
-                </header>
-                <h3>{{ sequence.title }}</h3>
-                @if (canEdit() && sequence.status !== ProgramSequenceStatus.FROZEN) {
-                  <div class="resize-handle" aria-hidden="true" (pointerdown)="startResize($event, sequence)"></div>
-                }
-              </div>
-            }
+          <div class="pending-actions">
+            <button
+              tuiButton
+              appearance="primary"
+              size="s"
+              type="button"
+              [disabled]="pending.outcome === 'impossible'"
+              (click)="confirmPreview()"
+            >
+              Valider
+            </button>
+            <button tuiButton appearance="secondary" size="s" type="button" (click)="cancelPreview()">Annuler</button>
           </div>
         </div>
+      }
+
+      <div class="calendar-legend" aria-hidden="true">
+        <span class="legend-item"><i class="swatch swatch-changed"></i>Modifié (à valider)</span>
+        <span class="legend-item"><i class="swatch swatch-new"></i>Nouveau</span>
+        <span class="legend-item"><i class="swatch swatch-ghost"></i>Ancienne position</span>
+        <span class="legend-item"><i class="swatch swatch-frozen"></i>Figé</span>
       </div>
+
+      @if (loading() && !allSequences().length) {
+        <p class="empty-state">Chargement du planning…</p>
+      }
+
+      @if (columns().length) {
+        <div class="calendar-scroll">
+          <div class="calendar" [style.--calendar-height.px]="calendarHeightPx()">
+            <div class="calendar-axis">
+              <div class="axis-corner"></div>
+              <div class="axis-body">
+                @for (mark of hourMarks(); track mark.topPx) {
+                  <div class="hour-mark" [class.half]="mark.half" [style.top.px]="mark.topPx">
+                    <span>{{ mark.label }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div
+              class="calendar-columns"
+              (pointermove)="onDragMove($event)"
+              (pointerup)="endDrag(); endResize()"
+              (pointercancel)="endDrag(); endResize()"
+            >
+              @for (column of columns(); track column.name) {
+                <section class="calendar-column" [class.selected]="column.selected">
+                  <button type="button" class="column-header" (click)="selectLocation(column.name)">
+                    <tui-icon icon="@tui.map-pin" />
+                    {{ column.name }}
+                  </button>
+                  <div class="column-body">
+                    @for (mark of hourMarks(); track mark.topPx) {
+                      <div class="hour-line" [class.half]="mark.half" [style.top.px]="mark.topPx"></div>
+                    }
+
+                    @for (block of column.blocks; track block.key) {
+                      @if (block.ghost; as ghost) {
+                        <div
+                          class="sequence-ghost"
+                          aria-hidden="true"
+                          [style.top.px]="ghost.topPx"
+                          [style.height.px]="ghost.heightPx"
+                        >
+                          <span>Avant : {{ ghost.label }}</span>
+                        </div>
+                      }
+                      <div
+                        class="sequence-block"
+                        [class]="'cat-' + block.category"
+                        [class.frozen]="block.frozen"
+                        [class.changed]="block.change === 'changed'"
+                        [class.blocked]="block.change === 'blocked'"
+                        [class.is-new]="block.change === 'new'"
+                        [class.just-changed]="block.justChanged"
+                        [class.compact]="liveHeight(block) < 64"
+                        [class.dragging]="!!block.sequence && dragState()?.sequenceId === block.sequence.id"
+                        [style.top.px]="block.topPx"
+                        [style.height.px]="liveHeight(block)"
+                        [style.transform]="block.sequence ? dragTransform(block.sequence) : null"
+                        (pointerdown)="block.sequence && startDrag($event, block.sequence)"
+                      >
+                        <header>
+                          <span class="sequence-time">{{ block.startTime }} – {{ block.endTime }}</span>
+                          @if (block.change === 'new') {
+                            <span class="state-tag state-new">Nouveau</span>
+                          } @else if (block.change === 'changed' || block.change === 'blocked') {
+                            <span class="state-tag state-changed">Modifié</span>
+                          } @else if (block.justChanged) {
+                            <span class="state-tag state-done">Mis à jour</span>
+                          } @else if (block.frozen) {
+                            <span class="state-tag state-frozen">Figé</span>
+                          }
+                        </header>
+                        <h3>{{ block.title }}</h3>
+                        @if (block.sequence && canEdit() && !block.frozen) {
+                          <span class="drag-grip" aria-label="Déplacer le créneau" role="img">⠿</span>
+                          <div class="resize-handle" aria-hidden="true" (pointerdown)="startResize($event, block.sequence)"></div>
+                        }
+                      </div>
+                    }
+                  </div>
+                </section>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (canResetDemo()) {
+        <div class="demo-reset">
+          @if (demoResetOpen()) {
+            <span>Remplacer tout le programme de {{ eventDate() }} par la démonstration fictive ?</span>
+            <button tuiButton appearance="primary" size="xs" type="button" (click)="confirmDemoReset()">Oui, remplacer</button>
+            <button tuiButton appearance="secondary" size="xs" type="button" (click)="demoResetOpen.set(false)">Annuler</button>
+          } @else {
+            <button tuiButton appearance="flat" size="xs" type="button" iconStart="@tui.refresh-cw" (click)="demoResetOpen.set(true)">
+              {{ columns().length ? 'Recharger la démo de ce jour' : 'Charger la démo de ce jour' }}
+            </button>
+          }
+        </div>
+      }
 
       @if (chain().length) {
         <section class="sequence-list" aria-label="Détails et actions des séquences">
@@ -243,7 +337,7 @@
       }
 
       @if (!chain().length) {
-        <p class="empty-state">Aucune séquence pour ce jour / lieu.</p>
+        <p class="empty-state">Aucune séquence pour ce jour.</p>
       }
     </div>
 

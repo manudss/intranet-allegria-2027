@@ -133,6 +133,13 @@ export class ProgramController {
     return this.service.unfreeze(req.user, id);
   }
 
+  @ApiOperation({ summary: "Remplace le programme d'un jour par la démonstration fictive (admin)" })
+  @Roles('ADMIN')
+  @Post('days/:date/demo-reset')
+  resetDayToDemo(@Req() req: UserRequest, @Param('date') date: string) {
+    return this.service.resetDayToDemo(req.user, date);
+  }
+
   @ApiOperation({ summary: 'Journal des modifications du programme' })
   @Roles(...READ_ROLES)
   @Get('change-log')

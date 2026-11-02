@@ -544,6 +544,10 @@ export class ProgramApiService {
     return this.http.get<ProgramDay>(`${this.base}/days/${date}`);
   }
 
+  resetDayToDemo(date: string): Observable<{ date: string; sequences: number }> {
+    return this.http.post<{ date: string; sequences: number }>(`${this.base}/days/${date}/demo-reset`, {});
+  }
+
   previewInsert(
     afterSequenceId: number,
     draft: ProgramSequenceDraft,

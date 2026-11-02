@@ -13,8 +13,10 @@ import {
   ProgramDocumentLink,
   ProgramSequence,
   ProgramSequenceStatus,
+  VolunteerTeam,
 } from '../entities';
 import { ProgramRecalcService } from './program-recalc.service';
+import { insertProgramDemoDay, PROGRAM_SEED_DAYS } from './program-demo-seed';
 import { computeEndTime, minutesToTime, timeToMinutes } from './program-time.util';
 import {
   ProgramInsertPreview,
@@ -464,6 +466,40 @@ export class ProgramService {
             : `Suppression de « ${sequence.title} ».`,
       });
       return { deletedId: sequenceId, shiftedMinutes: shift };
+    });
+  }
+
+  /**
+   * Remplace le programme d'UN jour par le programme de démonstration fictif (action explicite
+   * de l'administration, jamais automatique). Les autres jours ne sont pas touchés.
+   */
+  async resetDayToDemo(
+    user: ProgramRequestUser,
+    date: string,
+  ): Promise<{ date: string; sequences: number }> {
+    this.assertDate(date);
+    const day = PROGRAM_SEED_DAYS.find((candidate) => candidate.eventDate === date);
+    if (!day) {
+      throw new BadRequestException("Aucun programme de démonstration n'existe pour ce jour.");
+    }
+    return this.dataSource.transaction(async (manager) => {
+      const removed = await manager.count(ProgramSequence, { where: { eventDate: date } });
+      await manager.delete(ProgramSequence, { eventDate: date });
+      const teams = await manager.find(VolunteerTeam, { where: { isActive: true }, order: { id: 'ASC' } });
+      const created = await insertProgramDemoDay(manager, day, {
+        teamIds: teams.map((team) => team.id),
+        coordinatorId: user.id,
+      });
+      await this.writeLog(manager, {
+        action: ProgramChangeLogAction.UPDATE,
+        user,
+        eventDate: date,
+        affectedSequenceIds: [],
+        before: { sequences: removed },
+        after: { sequences: created },
+        comment: `Programme du jour remplacé par la démonstration (${removed} séquence(s) retirée(s), ${created} créée(s)).`,
+      });
+      return { date, sequences: created };
     });
   }
 

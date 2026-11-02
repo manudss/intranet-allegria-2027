@@ -440,6 +440,38 @@ describe('ProgrammePage', () => {
     http.verify();
   });
 
+  it('aperçu de redimensionnement sans la cible dans affected : la cible est projetée et comptée', () => {
+    const { component, http, flushDay } = setup(['COORDINATOR']);
+    flushDay();
+    component.preview.set({
+      kind: 'resize',
+      sequenceId: 1,
+      previousDurationMinutes: 60,
+      newDurationMinutes: 75,
+      affected: [
+        {
+          sequenceId: 2,
+          title: 'Séquence 2',
+          before: { startTime: '09:00', endTime: '10:00', durationMinutes: 60 },
+          after: { startTime: '09:15', endTime: '10:00', durationMinutes: 45 },
+        },
+      ],
+      stoppedAtFrozenId: null,
+      marginMinutes: null,
+      outcome: 'ok',
+      message: 'ok',
+      version: 'v1',
+    });
+    const first = component.columns()[0].blocks.find((b) => b.sequence?.id === 1)!;
+    expect(first.change).toBe('changed');
+    expect(first.heightPx).toBe(75 * 2);
+    expect(first.ghost).not.toBeNull();
+    expect(component.pendingChangeCount()).toBe(2);
+    expect(component.previewDiffs().map((d) => d.sequenceId)).toEqual([1, 2]);
+    expect(component.detailTimes(component.chain().find((s) => s.id === 1)!).after).toBe('08:00 - 09:15');
+    http.verify();
+  });
+
   it('aperçu partiel : bloqué en rouge, validation refusée, détail avant/après explicite', () => {
     const { component, http, flushDay } = setup(['COORDINATOR']);
     flushDay();

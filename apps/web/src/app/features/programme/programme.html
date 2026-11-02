@@ -157,6 +157,9 @@
         <span class="legend-item"><i class="swatch swatch-new"></i>Nouveau</span>
         <span class="legend-item"><i class="swatch swatch-ghost"></i>Ancienne position</span>
         <span class="legend-item"><i class="swatch swatch-frozen"></i>Figé</span>
+        @if (preview() && preview()?.outcome !== 'ok') {
+          <span class="legend-item"><i class="swatch swatch-blocked"></i>Demande impossible</span>
+        }
       </div>
 
       @if (loading() && !allSequences().length) {
@@ -510,7 +513,7 @@
                   <td>{{ current.newSequence.startTime }} – {{ current.newSequence.endTime }}</td>
                 </tr>
               }
-              @for (diff of current.affected; track diff.sequenceId) {
+              @for (diff of previewDiffs(); track diff.sequenceId) {
                 <tr>
                   <td>{{ diff.title }}</td>
                   <td>{{ diff.before.startTime }} – {{ diff.before.endTime }} ({{ diff.before.durationMinutes }} min)</td>

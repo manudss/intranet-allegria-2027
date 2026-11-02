@@ -121,6 +121,7 @@ $new: #047857;
 
   &-changed { background: #fef3c7; border-color: $changed; }
   &-new { background: #d1fae5; border-color: $new; border-style: dashed; }
+  &-blocked { background: #fee2e2; border-color: #b91c1c; }
   &-ghost { background: transparent; border: 2px dashed #9ca3af; }
   &-frozen { background: #f3f4f6; border-color: #d97706; border-inline-start-width: 5px; }
 }

@@ -174,11 +174,31 @@ export class ProgrammePage {
    * n'est ni confirmé ni annulé, le calendrier les affiche à la place des horaires actuels.
    */
   private readonly projectedTimes = computed(() => {
-    const current = this.preview();
     const map = new Map<number, ProgramSequenceDiff['after']>();
-    if (!current) return map;
-    for (const diff of current.affected) map.set(diff.sequenceId, diff.after);
+    for (const diff of this.previewDiffs()) map.set(diff.sequenceId, diff.after);
     return map;
+  });
+
+  /**
+   * Changements de l'aperçu, cible comprise. L'API ne liste que les créneaux impactés : pour un
+   * redimensionnement, le créneau redimensionné lui-même est ajouté ici (avant -> après).
+   */
+  readonly previewDiffs = computed<ProgramSequenceDiff[]>(() => {
+    const current = this.preview();
+    if (!current) return [];
+    if (current.kind !== 'resize' || current.affected.some((d) => d.sequenceId === current.sequenceId)) {
+      return current.affected;
+    }
+    const target = this.allSequences().find((s) => s.id === current.sequenceId);
+    if (!target) return current.affected;
+    const endTime = minutesToTime(timeToMinutes(target.startTime) + current.newDurationMinutes);
+    const targetDiff: ProgramSequenceDiff = {
+      sequenceId: target.id,
+      title: target.title,
+      before: { startTime: target.startTime, endTime: target.endTime, durationMinutes: target.durationMinutes },
+      after: { startTime: target.startTime, endTime, durationMinutes: current.newDurationMinutes },
+    };
+    return [targetDiff, ...current.affected];
   });
 
   /** Plage horaire de la grille : couvre tous les lieux, les horaires projetés et un éventuel nouveau créneau. */
@@ -311,7 +331,7 @@ export class ProgrammePage {
   readonly pendingChangeCount = computed(() => {
     const current = this.preview();
     if (!current) return 0;
-    const moved = current.affected.filter(
+    const moved = this.previewDiffs().filter(
       (diff) =>
         diff.before.startTime !== diff.after.startTime ||
         diff.before.durationMinutes !== diff.after.durationMinutes,
@@ -614,7 +634,7 @@ export class ProgrammePage {
         ? this.api.applyInsert(current.afterSequenceId, current.draft, current.version)
         : this.api.applyResize(current.sequenceId, current.newDurationMinutes, current.version);
 
-    const touched = current.affected
+    const touched = this.previewDiffs()
       .filter(
         (diff) =>
           diff.before.startTime !== diff.after.startTime ||

@@ -202,12 +202,25 @@
     left: 0;
   }
 
+  .header-left {
+    min-width: 0;
+    flex: 1 1 auto;
+    gap: 0.5rem;
+  }
+
+  .header-titles {
+    min-width: 0;
+  }
+
   .header-title {
-    font-size: 0.9rem;
+    display: none;
   }
 
   .page-title {
-    font-size: 0.95rem;
+    font-size: 0.7rem;
+    line-height: 1.15;
+    white-space: normal;
+    overflow-wrap: break-word;
   }
 
   .header-right {

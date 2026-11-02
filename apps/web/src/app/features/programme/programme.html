@@ -1,0 +1,547 @@
+<app-page-layout
+  title="Planning & Ordonnancement"
+  description="Planification en chaîne des séquences du programme"
+>
+  <div actions class="header-actions">
+    @if (viewMode() === 'day') {
+      <button tuiButton appearance="secondary" type="button" iconStart="@tui.layout-grid" (click)="showOverview()">
+        Vue d'ensemble
+      </button>
+    } @else {
+      <button tuiButton appearance="secondary" type="button" iconStart="@tui.calendar" (click)="showDayView()">
+        Éditeur de jour
+      </button>
+    }
+    <button tuiButton appearance="secondary" type="button" iconStart="@tui.file-text" (click)="toggleChangeLog()">
+      Journal des modifications
+    </button>
+    @if (canEdit() && viewMode() === 'day') {
+      <button tuiButton appearance="secondary" type="button" iconStart="@tui.map-pin" (click)="openCreateForm()">
+        {{ chain().length ? 'Nouveau lieu' : 'Premier créneau' }}
+      </button>
+      <button
+        tuiButton
+        appearance="primary"
+        type="button"
+        iconStart="@tui.plus"
+        (click)="openInsertForm(chain()[chain().length - 1].id)"
+        [disabled]="!chain().length"
+      >
+        Nouveau créneau
+      </button>
+    }
+  </div>
+
+  @if (actionMessage(); as message) {
+    <div class="banner" [class.positive]="message.appearance === 'positive'" [class.negative]="message.appearance === 'negative'" [class.warning]="message.appearance === 'warning'">
+      {{ message.text }}
+    </div>
+  }
+
+  @if (viewMode() === 'overview') {
+    <section class="overview" aria-label="Vue d'ensemble des 4 jours">
+      @if (overviewLoading()) {
+        <p class="empty-state">Chargement…</p>
+      }
+      @for (day of overview(); track day.date) {
+        <article class="overview-day">
+          <h3>J{{ day.dayIndex + 1 }} · {{ day.date }}</h3>
+          @if (!day.locations.length) {
+            <p class="empty-state">Aucune séquence.</p>
+          }
+          @for (loc of day.locations; track loc.name) {
+            <div class="overview-location">
+              <h4>
+                {{ loc.name }}
+                @if (loc.isBranch) {
+                  <span tuiBadge appearance="neutral">Branche</span>
+                }
+                <button tuiButton appearance="flat" size="xs" type="button" (click)="openDay(day.dayIndex, loc.name)">
+                  Ouvrir
+                </button>
+              </h4>
+              <ul>
+                @for (sequence of loc.sequences; track sequence.id) {
+                  <li [class.frozen]="sequence.status === ProgramSequenceStatus.FROZEN">
+                    <strong>{{ sequence.startTime }} – {{ sequence.endTime }}</strong>
+                    {{ sequence.title }}
+                    @if (sequence.status === ProgramSequenceStatus.FROZEN) {
+                      <span tuiBadge appearance="warning">Figé</span>
+                    }
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+        </article>
+      }
+    </section>
+  } @else {
+  <div class="toolbar">
+    <div class="day-tabs">
+      @for (day of days; track day; let i = $index) {
+        <button
+          tuiButton
+          type="button"
+          size="s"
+          [appearance]="dayIndex() === i ? 'primary' : 'secondary'"
+          (click)="setDay(i)"
+        >
+          J{{ i + 1 }} · {{ day }}
+        </button>
+      }
+    </div>
+
+  </div>
+
+  <div class="kpis">
+    <div class="kpi-card">
+      <span class="kpi-value">{{ kpis().total }}</span>
+      <span class="kpi-label">Séquences</span>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-value">{{ kpis().mobile }}</span>
+      <span class="kpi-label">Mobiles</span>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-value">{{ kpis().frozen }}</span>
+      <span class="kpi-label">Figées</span>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-value">{{ kpis().branches }}</span>
+      <span class="kpi-label">Branches parallèles</span>
+    </div>
+  </div>
+
+  <div class="programme-layout" [class.panel-active]="panelActive()">
+    <div class="chain-column">
+      @if (preview(); as pending) {
+        <div
+          class="pending-bar"
+          role="status"
+          [class.positive]="pending.outcome === 'ok'"
+          [class.warning]="false"
+          [class.negative]="pending.outcome !== 'ok'"
+        >
+          <div class="pending-text">
+            <strong>
+              À valider : {{ pendingChangeCount() }} créneau{{ pendingChangeCount() > 1 ? 'x' : '' }} modifié{{ pendingChangeCount() > 1 ? 's' : '' }}
+            </strong>
+            <span class="pending-hint">
+              @if (pending.outcome === 'ok') {
+                En couleur dans le planning, ancienne position en pointillés.
+              } @else {
+                Validation impossible : modifiez la durée ou dégelez le créneau bloquant.
+              }
+            </span>
+            <span>{{ pending.message }}</span>
+          </div>
+          <div class="pending-actions">
+            <button
+              tuiButton
+              appearance="primary"
+              size="s"
+              type="button"
+              [disabled]="pending.outcome !== 'ok'"
+              (click)="confirmPreview()"
+            >
+              Valider
+            </button>
+            <button tuiButton appearance="secondary" size="s" type="button" (click)="cancelPreview()">Annuler</button>
+          </div>
+        </div>
+      }
+
+      <div class="calendar-legend" aria-hidden="true">
+        <span class="legend-item"><i class="swatch swatch-changed"></i>Modifié (à valider)</span>
+        <span class="legend-item"><i class="swatch swatch-new"></i>Nouveau</span>
+        <span class="legend-item"><i class="swatch swatch-ghost"></i>Ancienne position</span>
+        <span class="legend-item"><i class="swatch swatch-frozen"></i>Figé</span>
+        @if (preview() && preview()?.outcome !== 'ok') {
+          <span class="legend-item"><i class="swatch swatch-blocked"></i>Demande impossible</span>
+        }
+      </div>
+
+      @if (loading() && !allSequences().length) {
+        <p class="empty-state">Chargement du planning…</p>
+      }
+
+      @if (columns().length) {
+        <div class="calendar-scroll">
+          <div class="calendar" [style.--calendar-height.px]="calendarHeightPx()">
+            <div class="calendar-axis">
+              <div class="axis-corner"></div>
+              <div class="axis-body">
+                @for (mark of hourMarks(); track mark.topPx) {
+                  <div class="hour-mark" [class.half]="mark.half" [style.top.px]="mark.topPx">
+                    <span>{{ mark.label }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div
+              class="calendar-columns"
+              (pointermove)="onDragMove($event)"
+              (pointerup)="endDrag(); endResize()"
+              (pointercancel)="endDrag(); endResize()"
+            >
+              @for (column of columns(); track column.name) {
+                <section class="calendar-column" [class.selected]="column.selected">
+                  <button type="button" class="column-header" (click)="selectLocation(column.name)">
+                    <tui-icon icon="@tui.map-pin" />
+                    {{ column.name }}
+                  </button>
+                  <div class="column-body">
+                    @for (mark of hourMarks(); track mark.topPx) {
+                      <div class="hour-line" [class.half]="mark.half" [style.top.px]="mark.topPx"></div>
+                    }
+
+                    @for (block of column.blocks; track block.key) {
+                      @if (block.ghost; as ghost) {
+                        <div
+                          class="sequence-ghost"
+                          aria-hidden="true"
+                          [style.top.px]="ghost.topPx"
+                          [style.height.px]="ghost.heightPx"
+                        >
+                          <span>Avant : {{ ghost.label }}</span>
+                        </div>
+                      }
+                      <div
+                        class="sequence-block"
+                        [class]="'cat-' + block.category"
+                        [class.frozen]="block.frozen"
+                        [class.changed]="block.change === 'changed'"
+                        [class.blocked]="block.change === 'blocked'"
+                        [class.is-new]="block.change === 'new'"
+                        [class.just-changed]="block.justChanged"
+                        [class.compact]="liveHeight(block) < 64"
+                        [class.dragging]="!!block.sequence && dragState()?.sequenceId === block.sequence.id"
+                        [style.top.px]="block.topPx"
+                        [style.height.px]="liveHeight(block)"
+                        [style.transform]="block.sequence ? dragTransform(block.sequence) : null"
+                        (pointerdown)="block.sequence && startDrag($event, block.sequence)"
+                      >
+                        <header>
+                          <span class="sequence-time">{{ block.startTime }} – {{ block.endTime }}</span>
+                          @if (block.change === 'new') {
+                            <span class="state-tag state-new">Nouveau</span>
+                          } @else if (block.change === 'changed' || block.change === 'blocked') {
+                            <span class="state-tag state-changed">Modifié</span>
+                          } @else if (block.justChanged) {
+                            <span class="state-tag state-done">Mis à jour</span>
+                          } @else if (block.frozen) {
+                            <span class="state-tag state-frozen">Figé</span>
+                          }
+                        </header>
+                        <h3>{{ block.title }}</h3>
+                        @if (block.sequence && canEdit() && !block.frozen) {
+                          <span class="drag-grip" aria-label="Déplacer le créneau" role="img">⠿</span>
+                          <div class="resize-handle" aria-hidden="true" (pointerdown)="startResize($event, block.sequence)"></div>
+                        }
+                      </div>
+                    }
+                  </div>
+                </section>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (chain().length) {
+        <section class="sequence-list" aria-label="Détails et actions des séquences">
+          <h3>Détails et actions</h3>
+          @for (sequence of chain(); track sequence.id) {
+            <article class="sequence-detail" [attr.aria-label]="sequence.title">
+              <h4>
+                @if (detailTimes(sequence); as times) {
+                  @if (times.after) {
+                    <span class="time-before">{{ times.before }}</span>
+                    <span class="time-after" [class.blocked]="times.blocked">→ {{ times.after }}</span>
+                    <span class="time-tag">{{ times.blocked ? 'Impossible' : 'Modifié' }}</span>
+                  } @else {
+                    {{ times.before }}
+                  }
+                }
+                · {{ sequence.title }}
+              </h4>
+                <p class="sequence-meta">
+                  <tui-icon icon="@tui.map-pin" />
+                  {{ sequence.location }}
+                  @if (sequence.volunteerTeamName) {
+                    · <tui-icon icon="@tui.users" /> {{ sequence.volunteerTeamName }}
+                  }
+                </p>
+                @if (sequence.notes) {
+                  <p class="sequence-notes">{{ sequence.notes }}</p>
+                }
+                @if (sequence.documentLinks.length) {
+                  <ul class="sequence-documents">
+                    @for (doc of sequence.documentLinks; track doc.url) {
+                      <li><a [href]="doc.url" target="_blank" rel="noopener">{{ doc.label }}</a></li>
+                    }
+                  </ul>
+                }
+
+                @if (branchesFor(sequence.id).length) {
+                  <div class="parallel-branches">
+                    <div tuiBadge appearance="neutral">{{ branchesFor(sequence.id).length }} voies parallèles</div>
+                    <ul>
+                      @for (branch of branchesFor(sequence.id); track branch.id) {
+                        <li>{{ branch.location }} — {{ branch.title }}</li>
+                      }
+                    </ul>
+                  </div>
+                }
+
+                @if (canEdit()) {
+                  <footer class="sequence-actions">
+                    <button tuiButton appearance="flat" size="xs" type="button" (click)="openInsertForm(sequence.id)">
+                      Insérer après
+                    </button>
+                    <button
+                      tuiButton
+                      appearance="flat"
+                      size="xs"
+                      type="button"
+                      [disabled]="sequence.status === ProgramSequenceStatus.FROZEN"
+                      (click)="openResizeForm(sequence)"
+                    >
+                      Redimensionner
+                    </button>
+                    <button tuiButton appearance="flat" size="xs" type="button" (click)="toggleFreeze(sequence)">
+                      {{ sequence.status === ProgramSequenceStatus.FROZEN ? 'Défiger' : 'Figer' }}
+                    </button>
+                    <button tuiButton appearance="flat" size="xs" type="button" (click)="openEditForm(sequence)">
+                      Modifier
+                    </button>
+                    <button
+                      tuiButton
+                      appearance="flat"
+                      size="xs"
+                      type="button"
+                      [disabled]="sequence.status === ProgramSequenceStatus.FROZEN"
+                      (click)="deleteSequence(sequence)"
+                    >
+                      Supprimer
+                    </button>
+                  </footer>
+                }
+            </article>
+          }
+        </section>
+      }
+
+      @if (!chain().length) {
+        <p class="empty-state">Aucune séquence pour ce jour.</p>
+      }
+    </div>
+
+    <aside class="preview-panel">
+      @if (createOpen()) {
+        <div class="form-card">
+          <h4>{{ chain().length ? 'Nouveau lieu' : 'Premier créneau' }}</h4>
+          <label>
+            Lieu
+            <input type="text" maxlength="150" [ngModel]="createDraft().location" (ngModelChange)="updateCreateDraft({ location: $event })" />
+          </label>
+          <label>
+            Titre
+            <input type="text" maxlength="200" [ngModel]="createDraft().title" (ngModelChange)="updateCreateDraft({ title: $event })" />
+          </label>
+          <label>
+            Heure de début
+            <input type="time" [ngModel]="createDraft().startTime" (ngModelChange)="updateCreateDraft({ startTime: $event })" />
+          </label>
+          <label>
+            Durée (minutes)
+            <input type="number" min="1" [ngModel]="createDraft().durationMinutes" (ngModelChange)="updateCreateDraft({ durationMinutes: +$event })" />
+          </label>
+          <button tuiButton appearance="primary" type="button" (click)="submitCreate()">Créer</button>
+          <button tuiButton appearance="secondary" type="button" (click)="cancelPreview()">Annuler</button>
+        </div>
+      }
+
+      @if (deleteTarget(); as target) {
+        <div class="form-card">
+          <h4>Supprimer « {{ target.title }} »</h4>
+          @if (deleteHasFollowing()) {
+            <label class="checkbox-row">
+              <input type="checkbox" [checked]="closeGap()" (change)="closeGap.set(!closeGap())" />
+              Avancer les séquences suivantes pour combler le trou
+            </label>
+            <small>Sinon, leurs horaires restent inchangés.</small>
+          }
+          <button tuiButton appearance="primary" type="button" (click)="confirmDelete()">Supprimer</button>
+          <button tuiButton appearance="secondary" type="button" (click)="cancelPreview()">Annuler</button>
+        </div>
+      }
+
+      @if (editSequenceId()) {
+        <div class="form-card">
+          <h4>Modifier la séquence</h4>
+          <label>
+            Titre
+            <input type="text" maxlength="200" [ngModel]="editDraft().title" (ngModelChange)="updateEditDraft({ title: $event })" />
+          </label>
+          <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyTeam">
+            <label tuiLabel for="programme-equipe">Équipe responsable</label>
+            <input
+              tuiSelect
+              id="programme-equipe"
+              placeholder="Aucune"
+              [ngModel]="editDraft().volunteerTeamId"
+              (ngModelChange)="updateEditDraft({ volunteerTeamId: $event ?? null })"
+            />
+            <tui-data-list-wrapper *tuiDropdown [items]="teamItems()" />
+          </tui-textfield>
+          <label>
+            Notes
+            <textarea [ngModel]="editDraft().notes" (ngModelChange)="updateEditDraft({ notes: $event })"></textarea>
+          </label>
+          <fieldset class="mission-picker">
+            <legend>Missions bénévoles liées</legend>
+            <input type="search" aria-label="Filtrer les missions" placeholder="Filtrer…" [ngModel]="missionFilter()" (ngModelChange)="missionFilter.set($event)" />
+            <ul>
+              @for (mission of filteredMissions(); track mission.id) {
+                <li>
+                  <label>
+                    <input type="checkbox" [checked]="editDraft().missionIds.includes(mission.id)" (change)="toggleMission(mission.id)" />
+                    {{ mission.title }}@if (mission.location) { <small> — {{ mission.location }}</small> }
+                  </label>
+                </li>
+              } @empty {
+                <li class="empty-state">Aucune mission.</li>
+              }
+            </ul>
+            <small>{{ editDraft().missionIds.length }} mission(s) liée(s)</small>
+          </fieldset>
+          <fieldset class="document-links">
+            <legend>Documents (liens vers l'espace partagé)</legend>
+            @for (link of editDraft().documentLinks; track $index) {
+              <div class="document-link-row">
+                <input type="text" aria-label="Libellé du lien" placeholder="Libellé" maxlength="100" [ngModel]="link.label" (ngModelChange)="updateDocumentLink($index, { label: $event })" />
+                <input type="url" aria-label="URL du lien" placeholder="https://…" [ngModel]="link.url" (ngModelChange)="updateDocumentLink($index, { url: $event })" />
+                <button tuiButton appearance="flat" size="xs" type="button" (click)="removeDocumentLink($index)">Retirer</button>
+              </div>
+            }
+            <button tuiButton appearance="secondary" size="s" type="button" (click)="addDocumentLink()">Ajouter un lien</button>
+          </fieldset>
+          <button tuiButton appearance="primary" type="button" (click)="submitEdit()">Enregistrer</button>
+          <button tuiButton appearance="secondary" type="button" (click)="cancelPreview()">Annuler</button>
+        </div>
+      }
+      @if (insertAfterId()) {
+        <div class="form-card">
+          <h4>Nouveau créneau</h4>
+          <label>
+            Titre
+            <input type="text" [ngModel]="insertDraft().title" (ngModelChange)="updateInsertDraft({ title: $event })" />
+          </label>
+          <label>
+            Durée (minutes)
+            <input
+              type="number"
+              [ngModel]="insertDraft().durationMinutes"
+              (ngModelChange)="updateInsertDraft({ durationMinutes: +$event })"
+            />
+          </label>
+          <label>
+            Notes
+            <textarea [ngModel]="insertDraft().notes" (ngModelChange)="updateInsertDraft({ notes: $event })"></textarea>
+          </label>
+          <button tuiButton appearance="primary" type="button" (click)="previewInsertAction()">
+            Prévisualiser l'insertion
+          </button>
+        </div>
+      }
+
+      @if (resizeSequenceId()) {
+        <div class="form-card">
+          <h4>Redimensionner</h4>
+          <label>
+            Nouvelle durée (minutes)
+            <input type="number" [ngModel]="resizeDuration()" (ngModelChange)="resizeDuration.set(+$event)" />
+          </label>
+          <button tuiButton appearance="primary" type="button" (click)="previewResizeAction()">
+            Prévisualiser le redimensionnement
+          </button>
+        </div>
+      }
+
+      @if (preview(); as current) {
+        <div class="preview-card">
+          <h4>Aperçu — avant / après</h4>
+          <div
+            class="outcome-banner"
+            [class.positive]="current.outcome === 'ok'"
+            [class.warning]="current.outcome === 'partial'"
+            [class.negative]="current.outcome === 'impossible'"
+          >
+            {{ current.message }}
+          </div>
+
+          <table class="schedule-comparison-table">
+            <thead>
+              <tr>
+                <th>Séquence</th>
+                <th>Avant</th>
+                <th>Après</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (current.kind === 'insert') {
+                <tr>
+                  <td>{{ current.newSequence.title }} (nouveau)</td>
+                  <td>—</td>
+                  <td>{{ current.newSequence.startTime }} – {{ current.newSequence.endTime }}</td>
+                </tr>
+              }
+              @for (diff of previewDiffs(); track diff.sequenceId) {
+                <tr>
+                  <td>{{ diff.title }}</td>
+                  <td>{{ diff.before.startTime }} – {{ diff.before.endTime }} ({{ diff.before.durationMinutes }} min)</td>
+                  <td>{{ diff.after.startTime }} – {{ diff.after.endTime }} ({{ diff.after.durationMinutes }} min)</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+
+          <div class="preview-actions">
+            <button
+              tuiButton
+              appearance="primary"
+              type="button"
+              [disabled]="current.outcome !== 'ok'"
+              (click)="confirmPreview()"
+            >
+              Confirmer et appliquer
+            </button>
+            <button tuiButton appearance="secondary" type="button" (click)="cancelPreview()">Annuler</button>
+          </div>
+        </div>
+      }
+
+      @if (changeLogOpen()) {
+        <div class="changelog-card">
+          <h4>Journal des modifications</h4>
+          @if (!changeLog().length) {
+            <p class="empty-state">Aucune modification enregistrée.</p>
+          }
+          <ul>
+            @for (entry of changeLog(); track entry.id) {
+              <li>
+                <strong>{{ changeLogLabels[entry.action] }}</strong>
+                — {{ entry.authorUserName ?? 'Coordination' }} —
+                <span>{{ entry.comment }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    </aside>
+  </div>
+  }
+</app-page-layout>

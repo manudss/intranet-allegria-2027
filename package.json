@@ -12,7 +12,7 @@
     "build:site": "nx build site --configuration production",
     "build": "npm run build:web && npm run build:api",
     "start:prod": "node dist/apps/api/main.js",
-    "db:migrate": "npm run migration:run",
+    "db:migrate": "npm run migration:run && node scripts/seed-preview-program-if-enabled.mjs",
     "serve:web": "npm run web:config && nx serve web",
     "serve:api": "nx serve api",
     "serve:site": "nx serve site",
@@ -26,6 +26,7 @@
     "migration:revert": "npm run typeorm -- migration:revert",
     "seed:api": "tsx apps/api/src/database/seeds/seed.ts --profile=medium",
     "seed:api:small": "tsx apps/api/src/database/seeds/seed.ts --profile=small",
+    "seed:preview-program": "tsx apps/api/src/database/seeds/seed-preview-program.ts",
     "seed:api:large": "tsx apps/api/src/database/seeds/seed.ts --profile=large"
   },
   "private": true,

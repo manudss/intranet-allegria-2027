@@ -72,6 +72,8 @@ async function ensure() {
         { key: 'DATABASE_URL', value: e.NEON_DB_URL },
         { key: 'DATABASE_URL_DIRECT', value: e.NEON_DB_URL_DIRECT },
         { key: 'DB_SSL', value: 'true' },
+        // Base de preview propre a la PR uniquement : le build remplit (sans rien supprimer) les jours du programme vides.
+        { key: 'PREVIEW_SEED_PROGRAM', value: 'true' },
         { key: 'CORS_ORIGIN', value: `${webUrl},${siteUrl}` },
         { key: 'NODE_VERSION', value: '24' },
       ],
@@ -85,6 +87,7 @@ async function ensure() {
     // Existing service (PR update): the trusted workflow rotates the DB password at each run.
     await render('PUT', `/services/${api.id}/env-vars/DATABASE_URL`, { value: e.NEON_DB_URL });
     await render('PUT', `/services/${api.id}/env-vars/DATABASE_URL_DIRECT`, { value: e.NEON_DB_URL_DIRECT });
+    await render('PUT', `/services/${api.id}/env-vars/PREVIEW_SEED_PROGRAM`, { value: 'true' });
   }
   const apiUrl = urlOf(api, guess(names.api));
 

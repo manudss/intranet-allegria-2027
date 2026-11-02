@@ -86,10 +86,28 @@ jobs:
       - name: Build API
         run: npm run build:api
 
-      - name: Migrate and seed (fictitious data)
+      - name: Migrate (clean install has no data)
         run: |
-          npm run migration:run
-          npm run seed:api:small
+          npm run db:migrate
+          COUNT=$(PGPASSWORD=mej_password psql -h localhost -U mej_user -d mej_allegria -tA -c 'select count(*) from program_sequences')
+          echo "program_sequences after install: $COUNT"
+          [ "$COUNT" = "0" ]
+
+      - name: Preview program seed fills empty days only, idempotent
+        env:
+          PREVIEW_SEED_PROGRAM: 'true'
+        run: |
+          q() { PGPASSWORD=mej_password psql -h localhost -U mej_user -d mej_allegria -tA -c "$1"; }
+          npm run db:migrate
+          DAYS=$(q 'select count(distinct event_date) from program_sequences')
+          FIRST=$(q 'select count(*) from program_sequences')
+          echo "days=$DAYS sequences=$FIRST"
+          [ "$DAYS" = "4" ]
+          npm run db:migrate
+          [ "$(q 'select count(*) from program_sequences')" = "$FIRST" ]
+
+      - name: Seed (fictitious data)
+        run: npm run seed:api:small
 
       - name: Start API and check authentication
         run: |

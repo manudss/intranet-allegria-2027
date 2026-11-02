@@ -92,13 +92,6 @@
       }
     </div>
 
-    @if (locationsForDay().length > 1) {
-      <tui-textfield iconStart="@tui.map-pin" tuiChevron class="location-select">
-        <label tuiLabel for="programme-lieu">Lieu</label>
-        <input tuiSelect id="programme-lieu" [ngModel]="location()" (ngModelChange)="setLocation($event)" />
-        <tui-data-list-wrapper *tuiDropdown [items]="locationsForDay()" />
-      </tui-textfield>
-    }
   </div>
 
   <div class="kpis">
@@ -131,11 +124,10 @@
           [class.negative]="pending.outcome === 'impossible'"
         >
           <div class="pending-text">
-            <strong>Modification en attente de validation</strong>
-            <span>
-              {{ pendingChangeCount() }} créneau{{ pendingChangeCount() > 1 ? 'x' : '' }} touché{{ pendingChangeCount() > 1 ? 's' : '' }}
-              (en couleur ci-dessous, ancienne position en pointillés).
-            </span>
+            <strong>
+              À valider : {{ pendingChangeCount() }} créneau{{ pendingChangeCount() > 1 ? 'x' : '' }} modifié{{ pendingChangeCount() > 1 ? 's' : '' }}
+            </strong>
+            <span class="pending-hint">En couleur dans le planning, ancienne position en pointillés.</span>
             <span>{{ pending.message }}</span>
           </div>
           <div class="pending-actions">

@@ -156,6 +156,13 @@ $new: #047857;
   }
 
   .pending-actions { display: flex; gap: 0.5rem; }
+
+  @media (max-width: 600px) {
+    padding: 0.5rem 0.75rem;
+
+    .pending-hint { display: none; }
+    .pending-text { flex-basis: 100%; font-size: 0.8rem; }
+  }
 }
 
 .calendar-scroll {
@@ -640,7 +647,14 @@ $header-height: 2.5rem;
 
 .preview-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.form-card button[tuiButton],
+.preview-card button[tuiButton] {
+  white-space: normal;
+  text-align: center;
 }
 
 .changelog-card ul {

@@ -20,6 +20,8 @@ import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { buildChain, PROGRAM_EVENT_DAYS } from './schedule-chain.util';
 import { minutesToTime, timeToMinutes } from './schedule-time.util';
 
+const MAIN_LOCATION = 'Grande salle';
+
 /** Nombre de catégories de couleur disponibles pour les blocs du calendrier. */
 const CATEGORY_COUNT = 6;
 
@@ -150,10 +152,13 @@ export class ProgrammePage {
         .filter((sequence) => sequence.eventDate === date)
         .map((sequence) => sequence.location),
     );
-    return Array.from(locations).sort((a, b) => a.localeCompare(b, 'fr'));
+    // Le lieu principal d'abord, puis les lieux parallèles par ordre alphabétique.
+    return Array.from(locations).sort((a, b) =>
+      a === MAIN_LOCATION ? -1 : b === MAIN_LOCATION ? 1 : a.localeCompare(b, 'fr'),
+    );
   });
 
-  readonly location = signal('Grande salle');
+  readonly location = signal(MAIN_LOCATION);
 
   readonly chain = computed<ProgramSequence[]>(() =>
     buildChain(this.allSequences(), this.eventDate(), this.location()),
@@ -649,7 +654,7 @@ export class ProgrammePage {
           appearance: 'positive',
           text: `Programme de démonstration chargé : ${result.sequences} séquences.`,
         });
-        this.location.set('Grande salle');
+        this.location.set(MAIN_LOCATION);
         this.loadDay();
       },
       error: (error: HttpErrorResponse) => {

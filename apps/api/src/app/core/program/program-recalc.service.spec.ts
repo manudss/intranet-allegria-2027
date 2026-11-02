@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ProgramSequenceStatus } from '../entities';
 import { ProgramRecalcService } from './program-recalc.service';
+import { computeEndTime } from './program-time.util';
 import { ProgramSequenceData } from './program-recalc.types';
 
 const EVENT_DATE = '2027-10-31';
@@ -31,6 +32,7 @@ function seq(
     volunteerTeamId: null,
     notes: null,
     ...partial,
+    endTime: computeEndTime(partial.startTime, partial.durationMinutes),
   };
 }
 
@@ -186,4 +188,34 @@ describe('ProgramRecalcService', () => {
     expect(updated.find((s) => s.id === 1)!.durationMinutes).toBe(40);
     expect(updated.find((s) => s.id === 2)!.startTime).toBe('08:40');
   });
+  it('insertion 50/50 conserve la continuité et la fin du voisin suivant', () => {
+    const chain = buildSampleChain();
+    const preview = service.previewInsert(chain, 2, DRAFT);
+    const next = preview.affected.find((d) => d.sequenceId === 3)!;
+    expect(preview.newSequence.startTime).toBe('09:50');
+    expect(preview.newSequence.endTime).toBe('10:10');
+    expect(next.after.startTime).toBe(preview.newSequence.endTime);
+    expect(next.after.endTime).toBe('11:00');
+  });
+
+  it('insertion reportée sur le suivant repousse son début sans déplacer sa fin', () => {
+    const chain = buildSampleChain();
+    chain[1].status = ProgramSequenceStatus.FROZEN;
+    chain[2].minDurationMinutes = 20;
+    const preview = service.previewInsert(chain, 2, DRAFT);
+    expect(preview.outcome).toBe('ok');
+    expect(preview.newSequence.startTime).toBe('10:00');
+    expect(preview.newSequence.endTime).toBe('10:20');
+    expect(preview.affected[0].after.startTime).toBe('10:20');
+    expect(preview.affected[0].after.endTime).toBe('11:00');
+  });
+
+  it('refuse de réduire sous le minimum et accepte exactement le minimum', () => {
+    const chain = buildSampleChain();
+    const refused = service.previewResize(chain, 1, 5);
+    expect(refused.outcome).toBe('impossible');
+    expect(refused.affected).toEqual([]);
+    expect(service.previewResize(chain, 1, 20).outcome).toBe('ok');
+  });
+
 });

@@ -143,7 +143,7 @@ export class ProgramRecalcService {
       if (takenFromNext > 0 && next) {
         const updatedNext = withDuration(
           next,
-          next.startTime,
+          minutesToTime(timeToMinutes(next.startTime) + takenFromNext),
           next.durationMinutes - takenFromNext,
         );
         affected.push(diffOf(next, updatedNext));
@@ -193,6 +193,19 @@ export class ProgramRecalcService {
     }
 
     const target = chain[index];
+    if (newDurationMinutes < (target.minDurationMinutes ?? 1)) {
+      return {
+        kind: 'resize',
+        sequenceId,
+        previousDurationMinutes: target.durationMinutes,
+        newDurationMinutes,
+        affected: [],
+        stoppedAtFrozenId: null,
+        marginMinutes: null,
+        outcome: 'impossible',
+        message: `La durée minimale de cette séquence est de ${target.minDurationMinutes ?? 1} min.`,
+      };
+    }
     const delta = newDurationMinutes - target.durationMinutes;
 
     if (delta === 0) {

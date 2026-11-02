@@ -70,7 +70,7 @@ function setup(roles: string[]) {
   const flushDay = (sequences: ProgramSequence[] = SEQUENCES) =>
     http.expectOne(`/api/program/days/${DAY}`).flush({ date: DAY, sequences });
 
-  return { component, http, flushDay };
+  return { component, http, flushDay, fixture };
 }
 
 describe('ProgrammePage', () => {
@@ -349,4 +349,18 @@ describe('ProgrammePage', () => {
     ]);
     http.verify();
   });
+  it.each([5, 15, 30])('garde les actions hors du bloc pour une durée de %i min', (durationMinutes) => {
+    const { http, flushDay, fixture } = setup(['COORDINATOR']);
+    flushDay([seq(1, '09:00', null, { durationMinutes, endTime: '09:30' })]);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('.sequence-block button')).toBeNull();
+    const detail = root.querySelector('.sequence-detail')!;
+    expect([...detail.querySelectorAll('button')].map((b) => b.textContent?.trim())).toEqual([
+      'Insérer après', 'Redimensionner', 'Figer', 'Modifier', 'Supprimer',
+    ]);
+    expect(detail.closest('.calendar-scroll')).toBeNull();
+    http.verify();
+  });
+
 });

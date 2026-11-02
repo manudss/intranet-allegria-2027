@@ -303,4 +303,15 @@ describe('ProgramService', () => {
     expect(await service.getChangeLog({ date: DATE })).toHaveLength(1);
     expect(await service.getChangeLog({ date: '2027-11-01' })).toHaveLength(0);
   });
+  it('refuse preview/apply sous le minimum sans écriture ni journal', async () => {
+    const { service, state } = createFakeDataSource();
+    const { version } = await service.previewResize(1, { durationMinutes: 20 });
+    await expect(service.previewResize(1, { durationMinutes: 5 })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.applyResize(USER, 1, { durationMinutes: 5 }, version)).rejects.toBeInstanceOf(BadRequestException);
+    expect(state.sequences[0].durationMinutes).toBe(60);
+    expect(state.logs).toHaveLength(0);
+    await service.applyResize(USER, 1, { durationMinutes: 20 }, version);
+    expect(state.sequences[0].durationMinutes).toBe(20);
+  });
+
 });

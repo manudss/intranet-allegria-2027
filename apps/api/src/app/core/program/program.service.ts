@@ -555,6 +555,11 @@ export class ProgramService {
   ) {
     const target = await this.loadSequence(manager, sequenceId);
     this.assertDuration(dto.durationMinutes);
+    if (dto.durationMinutes < (target.minDurationMinutes ?? 1)) {
+      throw new BadRequestException(
+        `La durée minimale de cette séquence est de ${target.minDurationMinutes ?? 1} min.`,
+      );
+    }
     if (target.status === ProgramSequenceStatus.FROZEN) {
       throw new ConflictException('Une séquence figée ne peut pas être redimensionnée.');
     }

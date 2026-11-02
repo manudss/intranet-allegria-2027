@@ -392,3 +392,38 @@
   color: var(--tui-text-secondary);
   font-style: italic;
 }
+
+// Les détails et commandes ne dépendent jamais de la hauteur temporelle d'un bloc.
+.sequence-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-block-start: 1rem;
+  min-inline-size: 0;
+}
+
+.sequence-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--tui-border-normal);
+  border-radius: 0.75rem;
+  background: var(--tui-background-neutral-1);
+  overflow-wrap: anywhere;
+
+  h4 { margin: 0; }
+}
+
+// Le sous-en-tête partagé doit empiler les actions sur cette page dense en mobile.
+@media (max-width: 600px) {
+  :host ::ng-deep app-page-layout .page-layout > header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-actions {
+    min-inline-size: 0;
+
+    button { max-inline-size: 100%; }
+  }
+}

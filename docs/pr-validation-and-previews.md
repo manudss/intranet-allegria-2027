@@ -16,25 +16,11 @@ Sur chaque PR et chaque push, `.github/workflows/ci.yml` lance :
 `neon-db.yml` crée une branche Neon par PR. Elle dérive désormais de `preview/main`, jamais de `production`.
 `preview/main` est reseedée à chaque push sur `main` : le seed vide **toutes** les tables
 (test `seed-coverage.spec.ts`) puis insère des données générées avec faker. Ne jamais y mettre de vraies données.
-Le programme (Planning & Ordonnancement) est rempli pour les 4 jours (J1 à J4, 2027-10-30 à 2027-11-02) par
+Le programme (Planning & Ordonnancement) est rempli par ce seed pour les 4 jours (J1 à J4, 2027-10-30 à 2027-11-02), via
 `program-demo-seed.ts` (testé par `program-demo-seed.spec.ts`). Il n'existe ni bouton de démonstration dans l'application
-ni migration qui insère des données : l'application s'installe sans aucune donnée (planning vide).
-
-Deux scripts seulement peuplent une base fictive :
-
-1. le seed complet (`npm run seed:api*`, workflow `neon-db.yml` sur `main` ou en dispatch `seed=true`) : il **vide** toutes
-   les tables de `preview/main` puis les remplit, programme compris. Une fois ce code sur `main`, `preview/main` est
-   peuplée et toutes les branches de PR créées ensuite en héritent ;
-2. `npm run seed:preview-program` (`seed-preview-program.ts`), pour la base Neon propre à une PR : ajoute le programme
-   fictif des jours qui n'ont **aucune** séquence, ne modifie ni ne supprime rien (un jour déjà saisi à la main reste
-   intact), est idempotent, et ne fait rien sans `PREVIEW_SEED_PROGRAM=true`. Cette variable est posée uniquement par
-   `scripts/render-pr-previews.mjs` sur l'API de preview ; `npm run db:migrate` (build Render) appelle le script via
-   `scripts/seed-preview-program-if-enabled.mjs`, donc production et installation neuve ne sont pas concernées.
-   La CI vérifie sur un vrai Postgres : installation = 0 séquence, avec le flag = 4 jours remplis, relance = rien de plus.
-
-Aucun reset d'un jour ou d'une base n'est automatisé : un jour contenant déjà des données n'est jamais remplacé par ces
-scripts. `render-pr-previews.mjs` étant lu depuis la branche de base (voir « SECURITY MODEL » de `pr-previews.yml`), la
-pose de `PREVIEW_SEED_PROGRAM` n'est effective qu'une fois ce fichier présent sur `main`.
+ni migration qui insère des données : l'application s'installe sans aucune donnée (migrations seules, planning vide), et
+seuls les scripts de seed (`npm run seed:api*`, workflow `neon-db.yml` sur `main` ou en dispatch avec `seed=true`) peuplent
+une base fictive. Un seed relancé vide les tables : à ne lancer que sur une base de preview.
 Les comptes de test (`admin@allegria.local`, etc.) sont publics dans le dépôt : à n'utiliser que sur ces bases fictives.
 
 ## Preview de PR sur Render (gratuit)

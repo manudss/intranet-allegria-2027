@@ -110,7 +110,7 @@ npm run migration:revert
 npm run db:migrate
 ```
 
-`db:migrate` exécute `migration:run`, puis un script qui ne fait rien sauf si `PREVIEW_SEED_PROGRAM=true` (previews de PR uniquement, voir `docs/pr-validation-and-previews.md`). Aucune donnée n'est insérée en production.
+`db:migrate` est un alias de `migration:run`.
 
 Recommandation :
 

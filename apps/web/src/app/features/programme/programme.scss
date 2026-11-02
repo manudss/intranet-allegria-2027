@@ -20,8 +20,8 @@
   }
 
   &.warning {
-    background: var(--tui-status-warning-pale);
-    color: var(--tui-status-warning);
+    background: #ffedd5;
+    color: #7c2d12;
   }
 
   &.negative {
@@ -128,7 +128,7 @@ $new: #047857;
 // Barre de validation collée en haut : visible sans devoir défiler jusqu'au panneau latéral.
 .pending-bar {
   position: sticky;
-  inset-block-start: 0.5rem;
+  inset-block-start: 3.75rem;
   z-index: 12;
   display: flex;
   flex-wrap: wrap;
@@ -622,8 +622,8 @@ $header-height: 2.5rem;
   }
 
   &.warning {
-    background: var(--tui-status-warning-pale);
-    color: var(--tui-status-warning);
+    background: #ffedd5;
+    color: #7c2d12;
   }
 
   &.negative {
@@ -713,4 +713,21 @@ $header-height: 2.5rem;
     flex-basis: 10rem;
     min-inline-size: 10rem;
   }
+}
+
+.time-before { text-decoration: line-through; color: #6b7280; margin-inline-end: 0.35rem; }
+.time-after { color: #92400e; font-weight: 700; &.blocked { color: #b91c1c; } }
+.time-tag {
+  margin-inline-start: 0.35rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: #fde68a;
+  color: #78350f;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .pending-bar .pending-hint { display: none; }
+  .pending-bar { padding: 0.5rem 0.75rem; font-size: 0.85rem; }
 }

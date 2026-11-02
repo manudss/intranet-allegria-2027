@@ -440,6 +440,38 @@ describe('ProgrammePage', () => {
     http.verify();
   });
 
+  it('aperçu partiel : bloqué en rouge, validation refusée, détail avant/après explicite', () => {
+    const { component, http, flushDay } = setup(['COORDINATOR']);
+    flushDay();
+    component.preview.set({
+      kind: 'resize',
+      sequenceId: 1,
+      previousDurationMinutes: 60,
+      newDurationMinutes: 90,
+      affected: [
+        {
+          sequenceId: 2,
+          title: 'Séquence 2',
+          before: { startTime: '09:00', endTime: '10:00', durationMinutes: 60 },
+          after: { startTime: '09:30', endTime: '10:15', durationMinutes: 45 },
+        },
+      ],
+      stoppedAtFrozenId: 3,
+      marginMinutes: null,
+      outcome: 'partial',
+      message: 'bloqué',
+      version: 'v1',
+    });
+    expect(component.columns()[0].blocks.find((b) => b.sequence?.id === 2)?.change).toBe('blocked');
+    const detail = component.detailTimes(component.chain().find((s) => s.id === 2)!);
+    expect(detail.after).toBe('09:30 - 10:15');
+    expect(detail.blocked).toBe(true);
+    component.confirmPreview();
+    http.expectNone('/api/program/sequences/1/resize/apply');
+    expect(component.detailTimes(component.chain().find((s) => s.id === 3)!).after).toBeNull();
+    http.verify();
+  });
+
   it('recharge la démo d’un jour via l’API (admin)', () => {
     const { component, http, flushDay } = setup(['ADMIN']);
     flushDay();

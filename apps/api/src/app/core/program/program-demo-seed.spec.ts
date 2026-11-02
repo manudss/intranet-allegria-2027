@@ -1,6 +1,8 @@
 import { EntityManager } from 'typeorm';
 import { describe, expect, it } from 'vitest';
 import { ProgramSequenceStatus } from '../entities';
+import { ProgramRecalcService } from './program-recalc.service';
+import { ProgramSequenceData } from './program-recalc.types';
 import { insertProgramDemoDay, PROGRAM_SEED_DAYS } from './program-demo-seed';
 
 const toMinutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
@@ -64,4 +66,42 @@ describe('programme de démonstration', () => {
     expect(new Set(saved.map((row) => row['volunteerTeamId']))).toEqual(new Set([10, 11]));
     expect(saved.some((row) => row['anchorSequenceId'] !== null)).toBe(true);
   });
+
+  it.each(PROGRAM_SEED_DAYS.map((day) => [day.eventDate, day] as const))(
+    '%s : agrandir un créneau avec le vrai moteur ne produit jamais de chevauchement appliquable',
+    (_date, day) => {
+      const recalc = new ProgramRecalcService();
+      const chain: ProgramSequenceData[] = day.slots.map((slot, index) => ({
+        id: index + 1,
+        eventDate: day.eventDate,
+        location: 'Grande salle',
+        title: slot.title,
+        startTime: slot.startTime,
+        durationMinutes: slot.durationMinutes,
+        endTime: addMinutesLocal(slot.startTime, slot.durationMinutes),
+        status: slot.frozen ? ProgramSequenceStatus.FROZEN : ProgramSequenceStatus.MOBILE,
+        minDurationMinutes: slot.minDurationMinutes,
+        minMarginMinutes: null,
+        previousSequenceId: index === 0 ? null : index,
+        anchorSequenceId: null,
+        volunteerTeamId: null,
+        notes: null,
+      })) as unknown as ProgramSequenceData[];
+      for (const target of chain) {
+        const preview = recalc.previewResize(chain, target.id, target.durationMinutes + 30);
+        if (preview.outcome !== 'ok') continue; // l'API refuse d'appliquer : rien à afficher en chevauchement
+        const next = recalc.applyResize(chain, preview);
+        next.forEach((slot, index) => {
+          if (index === 0) return;
+          const previous = next[index - 1];
+          expect(toMinutes(slot.startTime)).toBeGreaterThanOrEqual(toMinutes(previous.endTime));
+        });
+      }
+    },
+  );
 });
+
+const addMinutesLocal = (time: string, minutes: number): string => {
+  const total = toMinutes(time) + minutes;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+};

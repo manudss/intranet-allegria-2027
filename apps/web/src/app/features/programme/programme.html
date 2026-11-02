@@ -120,14 +120,20 @@
           class="pending-bar"
           role="status"
           [class.positive]="pending.outcome === 'ok'"
-          [class.warning]="pending.outcome === 'partial'"
-          [class.negative]="pending.outcome === 'impossible'"
+          [class.warning]="false"
+          [class.negative]="pending.outcome !== 'ok'"
         >
           <div class="pending-text">
             <strong>
               À valider : {{ pendingChangeCount() }} créneau{{ pendingChangeCount() > 1 ? 'x' : '' }} modifié{{ pendingChangeCount() > 1 ? 's' : '' }}
             </strong>
-            <span class="pending-hint">En couleur dans le planning, ancienne position en pointillés.</span>
+            <span class="pending-hint">
+              @if (pending.outcome === 'ok') {
+                En couleur dans le planning, ancienne position en pointillés.
+              } @else {
+                Validation impossible : modifiez la durée ou dégelez le créneau bloquant.
+              }
+            </span>
             <span>{{ pending.message }}</span>
           </div>
           <div class="pending-actions">
@@ -136,7 +142,7 @@
               appearance="primary"
               size="s"
               type="button"
-              [disabled]="pending.outcome === 'impossible'"
+              [disabled]="pending.outcome !== 'ok'"
               (click)="confirmPreview()"
             >
               Valider
@@ -260,7 +266,18 @@
           <h3>Détails et actions</h3>
           @for (sequence of chain(); track sequence.id) {
             <article class="sequence-detail" [attr.aria-label]="sequence.title">
-              <h4>{{ sequence.startTime }} - {{ sequence.endTime }} · {{ sequence.title }}</h4>
+              <h4>
+                @if (detailTimes(sequence); as times) {
+                  @if (times.after) {
+                    <span class="time-before">{{ times.before }}</span>
+                    <span class="time-after" [class.blocked]="times.blocked">→ {{ times.after }}</span>
+                    <span class="time-tag">{{ times.blocked ? 'Impossible' : 'Modifié' }}</span>
+                  } @else {
+                    {{ times.before }}
+                  }
+                }
+                · {{ sequence.title }}
+              </h4>
                 <p class="sequence-meta">
                   <tui-icon icon="@tui.map-pin" />
                   {{ sequence.location }}
@@ -508,7 +525,7 @@
               tuiButton
               appearance="primary"
               type="button"
-              [disabled]="current.outcome === 'impossible'"
+              [disabled]="current.outcome !== 'ok'"
               (click)="confirmPreview()"
             >
               Confirmer et appliquer

@@ -249,7 +249,7 @@ export class ProgrammePage {
     const px = this.pxPerMinute;
     const projected = this.projectedTimes();
     const current = this.preview();
-    const blocked = current?.outcome === 'impossible';
+    const blocked = !!current && current.outcome !== 'ok';
     const recent = this.recentlyChanged();
     const date = this.eventDate();
     const sequences = this.allSequences();
@@ -591,9 +591,23 @@ export class ProgrammePage {
     });
   }
 
+  /** Horaires affichés dans « Détails et actions » : avant/après quand un aperçu est en cours. */
+  detailTimes(sequence: ProgramSequence): { before: string; after: string | null; blocked: boolean } {
+    const before = `${sequence.startTime} - ${sequence.endTime}`;
+    const after = this.projectedTimes().get(sequence.id);
+    if (!after || (after.startTime === sequence.startTime && after.durationMinutes === sequence.durationMinutes)) {
+      return { before, after: null, blocked: false };
+    }
+    return {
+      before,
+      after: `${after.startTime} - ${after.endTime}`,
+      blocked: this.preview()?.outcome !== 'ok',
+    };
+  }
+
   confirmPreview(): void {
     const current = this.preview();
-    if (!current || current.outcome === 'impossible') return;
+    if (!current || current.outcome !== 'ok') return;
 
     const request =
       current.kind === 'insert'

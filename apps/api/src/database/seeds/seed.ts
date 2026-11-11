@@ -110,8 +110,8 @@ const dioceses = [
 /** Point de rassemblement du rassemblement 2027 : Saint-Etienne (45deg 26' 05" N, 4deg 23' 25" E). */
 const GATHERING_POINT = { latitude: 45.439695, longitude: 4.387178 } as const;
 
-const PROJECT_START = new Date('2027-10-30T08:00:00.000Z');
-const PROJECT_END = new Date('2027-11-02T23:30:00.000Z');
+const PROJECT_START = new Date('2027-10-31T08:00:00.000Z');
+const PROJECT_END = new Date('2027-11-03T23:30:00.000Z');
 
 /** Rayon maximal (km) autour du point de rassemblement pour les familles d'accueil. */
 const HOST_FAMILY_RADIUS_KM = 100;
@@ -1159,8 +1159,8 @@ async function run(): Promise<void> {
         assignmentRepository.create({
           participant,
           hostFamily: family,
-          arrivalDate: '2027-10-30',
-          departureDate: '2027-11-02',
+          arrivalDate: '2027-10-31',
+          departureDate: '2027-11-03',
           status,
           type: participant.type,
           notes:
@@ -1177,8 +1177,8 @@ async function run(): Promise<void> {
           assignmentRepository.create({
             participant,
             hostFamily: family,
-            arrivalDate: '2027-10-30',
-            departureDate: '2027-11-01',
+            arrivalDate: '2027-10-31',
+            departureDate: '2027-11-02',
             status: AssignmentStatus.CANCELLED,
             type: participant.type,
             notes: 'Historique: reaffecte apres ajustement transport.',

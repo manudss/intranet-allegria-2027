@@ -14,7 +14,6 @@ describe('EventDateSelectorComponent', () => {
     const options = buildEventDateOptions(ALLEGRIA_2027_EVENT_DATES);
 
     expect(options.map((option) => option.value)).toEqual([
-      '2027-10-28',
       '2027-10-29',
       '2027-10-30',
       '2027-10-31',
@@ -22,6 +21,7 @@ describe('EventDateSelectorComponent', () => {
       '2027-11-02',
       '2027-11-03',
       '2027-11-04',
+      '2027-11-05',
     ]);
     expect(options[0].label).toContain('Preparation');
     expect(options[2].label).toContain('Jour 1 du rassemblement');

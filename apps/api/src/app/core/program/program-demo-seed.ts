@@ -2,7 +2,9 @@ import { EntityManager } from 'typeorm';
 import { ProgramSequence, ProgramSequenceStatus } from '../entities';
 
 /**
- * Programme de démonstration des 4 jours d'ALLEGRIA 2027 (données fictives).
+ * Programme des 4 jours d'ALLEGRIA 2027 (dim. 31 oct. - mer. 3 nov.), d'après le premier planning projeté
+ * (thèmes, matin / après-midi / soirée, groupes TA / ES / ensemble). Les horaires et les créneaux marqués
+ * `proposed` (repas, trajets, temps libres) sont proposés, pas issus du planning.
  * Source unique : utilisée par le seed complet, la migration qui remplit les jours vides
  * et l'action « Réinitialiser ce jour avec la démo » de la page Planning.
  */
@@ -14,6 +16,8 @@ export interface ProgramSeedItem {
   minDurationMinutes: number;
   frozen?: boolean;
   notes?: string;
+  /** Créneau ajouté par nous entre ceux du planning projeté (repas, trajets...). */
+  proposed?: boolean;
 }
 
 export const addMinutes = (time: string, minutes: number): string => {
@@ -31,225 +35,145 @@ export interface ProgramSeedBranch {
 
 export interface ProgramSeedDay {
   eventDate: string;
+  /** Thème du jour tel qu'il figure sur le planning projeté. */
+  theme?: string;
   slots: ProgramSeedItem[];
   branches: ProgramSeedBranch[];
 }
 
+/** Créneau ajouté entre ceux du planning projeté (repas, trajets, temps libres...). */
+const PROPOSED_NOTE = 'Créneau proposé (absent du planning projeté) : à confirmer ou corriger.';
+const SPLIT_NOTE = 'Temps séparé : un programme par groupe (TA / ES), voir les lieux « Groupe TA » et « Groupe ES ».';
+
 export const PROGRAM_SEED_DAYS: ProgramSeedDay[] = [
   {
-    // J1 — arrivée et lancement
-    eventDate: '2027-10-30',
-    slots: [
-      { title: 'Accueil & installation des groupes', startTime: '12:00', durationMinutes: 90, minDurationMinutes: 45 },
-      { title: "Repas d'accueil", startTime: '13:30', durationMinutes: 60, minDurationMinutes: 45 },
-      {
-        title: "Messe d'ouverture",
-        startTime: '14:30',
-        durationMinutes: 75,
-        minDurationMinutes: 60,
-        frozen: true,
-        notes: 'Horaire validé avec le diocèse : ne pas décaler.',
-      },
-      { title: 'Jeux de connaissance', startTime: '16:00', durationMinutes: 90, minDurationMinutes: 45 },
-      { title: 'Goûter & temps libre', startTime: '17:30', durationMinutes: 45, minDurationMinutes: 30 },
-      { title: "Topo d'ouverture : « Allegria »", startTime: '18:30', durationMinutes: 45, minDurationMinutes: 20 },
-      { title: 'Dîner', startTime: '19:30', durationMinutes: 75, minDurationMinutes: 45 },
-      { title: "Veillée d'ouverture", startTime: '21:00', durationMinutes: 90, minDurationMinutes: 60 },
-    ],
-    branches: [
-      {
-        location: "Hall d'accueil",
-        items: [{ slot: 0, title: 'Inscriptions & remise des badges' }],
-      },
-      {
-        location: "Cour d'honneur",
-        items: [
-          { slot: 0, title: 'Accueil des familles hôtes' },
-          { slot: 3, title: 'Grand jeu de présentation' },
-        ],
-      },
-      { location: 'Terrain de sport', items: [{ slot: 3, title: 'Jeux collectifs en plein air' }] },
-      { location: 'Gymnase', items: [{ slot: 3, title: 'Jeux en salle (repli météo)' }] },
-      { location: 'Salle Saint-Jean', items: [{ slot: 3, title: 'Découverte des équipes & des animateurs' }] },
-      {
-        location: 'Chapelle',
-        items: [{ slot: 7, title: 'Adoration silencieuse (facultatif)', durationMinutes: 60 }],
-      },
-    ],
-  },
-  {
-    // J2 — journée thématique
+    // Dimanche 31 octobre — « Aller puiser à la source »
     eventDate: '2027-10-31',
+    theme:
+      'Aller puiser à la source - Se mettre en route avec Dieu - Découvrir la parole de Dieu - Faire l\'état des lieux de sa vie',
     slots: [
-      { title: 'Réveil & petit-déjeuner', startTime: '07:30', durationMinutes: 60, minDurationMinutes: 30 },
-      { title: 'Louange du matin', startTime: '08:30', durationMinutes: 30, minDurationMinutes: 15 },
-      { title: 'Topo du matin', startTime: '09:00', durationMinutes: 45, minDurationMinutes: 30 },
-      { title: 'Ateliers thématiques (matin)', startTime: '10:00', durationMinutes: 120, minDurationMinutes: 60 },
-      { title: 'Repas', startTime: '12:00', durationMinutes: 75, minDurationMinutes: 45 },
-      { title: 'Grand jeu inter-groupes', startTime: '13:15', durationMinutes: 120, minDurationMinutes: 60 },
-      { title: 'Ateliers thématiques (après-midi)', startTime: '15:30', durationMinutes: 90, minDurationMinutes: 45 },
+      { title: 'Accueil & installation des équipes', startTime: '10:00', durationMinutes: 120, minDurationMinutes: 60, proposed: true },
+      { title: 'Repas', startTime: '12:00', durationMinutes: 75, minDurationMinutes: 45, proposed: true },
+      { title: 'Trajet vers le lieu de lancement', startTime: '13:15', durationMinutes: 45, minDurationMinutes: 30, proposed: true },
+      { title: 'Temps de lancement', startTime: '14:00', durationMinutes: 75, minDurationMinutes: 45 },
       {
-        title: 'Temps liturgique',
-        startTime: '17:15',
+        title: 'Eucharistie',
+        startTime: '15:15',
         durationMinutes: 75,
         minDurationMinutes: 60,
         frozen: true,
-        notes: 'Horaire validé avec le diocèse : ne pas décaler.',
+        notes: 'Figé pour la démo : horaire à confirmer.',
       },
-      { title: 'Dîner', startTime: '18:45', durationMinutes: 75, minDurationMinutes: 45 },
-      { title: 'Veillée', startTime: '20:15', durationMinutes: 90, minDurationMinutes: 60 },
+      { title: 'Goûter & temps libre', startTime: '16:30', durationMinutes: 45, minDurationMinutes: 30, proposed: true },
+      { title: 'Retour aux hébergements & installation', startTime: '17:15', durationMinutes: 60, minDurationMinutes: 30, proposed: true },
+      { title: 'Dîner', startTime: '18:30', durationMinutes: 75, minDurationMinutes: 45, proposed: true },
+      { title: 'Veillée FESTIVE', startTime: '20:00', durationMinutes: 105, minDurationMinutes: 60 },
+      { title: 'Retour aux hébergements & coucher', startTime: '21:45', durationMinutes: 45, minDurationMinutes: 30, proposed: true },
     ],
-    branches: [
-      {
-        location: 'Chapelle',
-        items: [
-          { slot: 1, title: 'Laudes (facultatif)' },
-          { slot: 3, title: 'Atelier Prière & silence' },
-          { slot: 6, title: 'Temps de réconciliation' },
-          { slot: 9, title: 'Adoration (facultatif)' },
-        ],
-      },
-      {
-        location: 'Salle Saint-Jean',
-        items: [
-          { slot: 3, title: 'Atelier Chant' },
-          { slot: 6, title: 'Atelier Théâtre' },
-        ],
-      },
-      {
-        location: "Salle d'artisanat",
-        items: [
-          { slot: 3, title: 'Atelier Artisanat' },
-          { slot: 6, title: 'Atelier Bricolage solidaire' },
-        ],
-      },
-      {
-        location: 'Salle Notre-Dame',
-        items: [
-          { slot: 3, title: 'Atelier Bible & partage' },
-          { slot: 6, title: 'Atelier Témoignages' },
-        ],
-      },
-      {
-        location: 'Salle de musique',
-        items: [
-          { slot: 3, title: 'Atelier Instruments' },
-          { slot: 6, title: 'Répétition de la veillée' },
-        ],
-      },
-      {
-        location: 'Gymnase',
-        items: [
-          { slot: 3, title: 'Atelier Sport & fair-play' },
-          { slot: 5, title: 'Tournoi de balle au prisonnier' },
-        ],
-      },
-      { location: 'Parc', items: [{ slot: 5, title: 'Parcours en forêt' }] },
-      {
-        location: "Cour d'honneur",
-        items: [
-          { slot: 5, title: 'Défis en équipe' },
-          { slot: 9, title: 'Veillée autour du feu', durationMinutes: 60 },
-        ],
-      },
-    ],
+    branches: [],
   },
   {
-    // J3 — Toussaint
+    // Lundi 1er novembre — « Vivre la fraternité »
     eventDate: '2027-11-01',
+    theme:
+      "Vivre la fraternité - Découvrir le chemin des Béatitudes - Jouer en équipe - Se découvrir membre de l'Église",
     slots: [
-      { title: 'Réveil & petit-déjeuner', startTime: '07:30', durationMinutes: 60, minDurationMinutes: 30 },
-      { title: 'Topo : « Les saints parmi nous »', startTime: '08:45', durationMinutes: 45, minDurationMinutes: 30 },
-      { title: 'Ateliers saints & témoins', startTime: '09:45', durationMinutes: 105, minDurationMinutes: 45 },
+      { title: 'Réveil & petit-déjeuner', startTime: '07:30', durationMinutes: 60, minDurationMinutes: 30, proposed: true },
+      { title: 'Trajet vers les paroisses', startTime: '08:30', durationMinutes: 30, minDurationMinutes: 15, proposed: true },
+      { title: 'Temps de la Parole - Messe en paroisse', startTime: '09:00', durationMinutes: 120, minDurationMinutes: 90, notes: SPLIT_NOTE },
+      { title: 'Retour des paroisses & temps libre', startTime: '11:00', durationMinutes: 45, minDurationMinutes: 20, proposed: true },
+      { title: 'Repas', startTime: '12:00', durationMinutes: 75, minDurationMinutes: 45, proposed: true },
+      { title: 'Trajet vers le Musée de la Mine', startTime: '13:15', durationMinutes: 45, minDurationMinutes: 30, proposed: true },
       {
-        title: 'Messe de la Toussaint',
-        startTime: '11:45',
-        durationMinutes: 75,
-        minDurationMinutes: 60,
-        frozen: true,
-        notes: 'Célébration paroissiale : horaire imposé.',
+        title: 'Jeu dans la ville collaboratif - Rassemblement au Musée de la Mine',
+        startTime: '14:00',
+        durationMinutes: 150,
+        minDurationMinutes: 90,
+        notes: SPLIT_NOTE,
       },
-      { title: 'Repas', startTime: '13:00', durationMinutes: 75, minDurationMinutes: 45 },
-      { title: 'Temps libre & détente', startTime: '14:15', durationMinutes: 45, minDurationMinutes: 20 },
-      { title: 'Grand jeu de piste', startTime: '15:00', durationMinutes: 150, minDurationMinutes: 90 },
-      { title: 'Goûter', startTime: '17:30', durationMinutes: 30, minDurationMinutes: 20 },
-      { title: 'Préparation de la soirée', startTime: '18:00', durationMinutes: 60, minDurationMinutes: 30 },
-      { title: 'Dîner', startTime: '19:00', durationMinutes: 75, minDurationMinutes: 45 },
-      { title: 'Soirée festive', startTime: '20:30', durationMinutes: 120, minDurationMinutes: 60 },
+      { title: 'Goûter', startTime: '16:30', durationMinutes: 30, minDurationMinutes: 20, proposed: true },
+      { title: 'Retour aux hébergements', startTime: '17:00', durationMinutes: 60, minDurationMinutes: 30, proposed: true },
+      { title: 'Dîner', startTime: '18:30', durationMinutes: 75, minDurationMinutes: 45, proposed: true },
+      { title: 'Veillée Spectacle', startTime: '20:00', durationMinutes: 105, minDurationMinutes: 60 },
+      { title: 'Retour aux hébergements & coucher', startTime: '21:45', durationMinutes: 45, minDurationMinutes: 30, proposed: true },
     ],
     branches: [
       {
-        location: 'Salle Saint-Jean',
+        location: 'Groupe TA',
         items: [
-          { slot: 2, title: 'Atelier Vie de saints' },
-          { slot: 8, title: 'Préparation du spectacle' },
+          { slot: 2, title: 'Temps de la Parole - Messe en paroisse' },
+          { slot: 6, title: 'Jeu dans la ville collaboratif avec ES - Rassemblement au Musée de la Mine' },
         ],
       },
       {
-        location: "Salle d'artisanat",
+        location: 'Groupe ES',
         items: [
-          { slot: 2, title: 'Atelier Création de vitraux' },
-          { slot: 8, title: 'Décors de la soirée' },
+          { slot: 2, title: 'Temps de la parole - Messe en (autre) paroisse' },
+          { slot: 6, title: 'Jeu dans la ville collaboratif avec TA - Rassemblement au Musée de la mine' },
         ],
       },
-      { location: 'Salle Notre-Dame', items: [{ slot: 2, title: 'Atelier Témoignages' }] },
-      {
-        location: 'Salle de musique',
-        items: [
-          { slot: 2, title: 'Atelier Chorale' },
-          { slot: 8, title: 'Répétition de la chorale' },
-        ],
-      },
-      {
-        location: 'Gymnase',
-        items: [
-          { slot: 2, title: 'Atelier Danse' },
-          { slot: 10, title: 'Bal des saints' },
-        ],
-      },
-      { location: 'Parc', items: [{ slot: 6, title: 'Jeu de piste : parcours nature' }] },
-      { location: "Cour d'honneur", items: [{ slot: 6, title: 'Jeu de piste : parcours village' }] },
-      { location: 'Terrain de sport', items: [{ slot: 6, title: 'Chasse aux saints' }] },
-      {
-        location: 'Chapelle',
-        items: [
-          { slot: 5, title: 'Temps de prière calme', durationMinutes: 45 },
-          { slot: 10, title: 'Veillée de louange', durationMinutes: 60 },
-        ],
-      },
-      { location: 'Réfectoire', items: [{ slot: 10, title: 'Buvette & crêpes' }] },
     ],
   },
   {
-    // J4 — clôture et départ
+    // Mardi 2 novembre — « Rencontrer des témoins »
     eventDate: '2027-11-02',
+    theme:
+      'Rencontrer des témoins qui vivent les Béatitudes dans notre monde - Cultiver l\'Espérance - Prendre soin du monde',
     slots: [
-      { title: 'Réveil & petit-déjeuner', startTime: '07:30', durationMinutes: 60, minDurationMinutes: 30 },
-      { title: 'Rangement des chambres', startTime: '08:30', durationMinutes: 45, minDurationMinutes: 30 },
+      { title: 'Réveil & petit-déjeuner', startTime: '07:30', durationMinutes: 60, minDurationMinutes: 30, proposed: true },
+      { title: 'Mise en route', startTime: '08:30', durationMinutes: 30, minDurationMinutes: 15, proposed: true },
       {
-        title: 'Messe de clôture',
-        startTime: '09:15',
-        durationMinutes: 75,
-        minDurationMinutes: 60,
-        frozen: true,
-        notes: 'Horaire validé avec le diocèse : ne pas décaler.',
+        title: 'Ateliers Défis / Actions / Services & table ronde avec des témoins',
+        startTime: '09:00',
+        durationMinutes: 150,
+        minDurationMinutes: 90,
+        notes: SPLIT_NOTE,
       },
-      { title: 'Temps de bilan en groupes', startTime: '10:30', durationMinutes: 75, minDurationMinutes: 45 },
-      { title: 'Cérémonie de clôture', startTime: '11:45', durationMinutes: 60, minDurationMinutes: 45 },
-      { title: "Repas d'au revoir", startTime: '12:45', durationMinutes: 75, minDurationMinutes: 45 },
-      { title: 'Rangement & départ des groupes', startTime: '14:00', durationMinutes: 90, minDurationMinutes: 45 },
+      { title: 'Repas', startTime: '11:30', durationMinutes: 75, minDurationMinutes: 45, proposed: true },
+      { title: 'Trajet vers le Crêt des 6 soleils', startTime: '12:45', durationMinutes: 45, minDurationMinutes: 30, proposed: true },
+      { title: 'Grand Jeu / Balade au Crêt des 6 soleils', startTime: '13:30', durationMinutes: 120, minDurationMinutes: 60, notes: SPLIT_NOTE },
+      { title: 'Goûter Crêt des 6 soleils - Moments fraternels', startTime: '15:30', durationMinutes: 60, minDurationMinutes: 30 },
+      { title: 'Retour aux hébergements', startTime: '16:30', durationMinutes: 60, minDurationMinutes: 30, proposed: true },
+      { title: 'Temps libre & douches', startTime: '17:30', durationMinutes: 60, minDurationMinutes: 30, proposed: true },
+      { title: 'Dîner', startTime: '18:30', durationMinutes: 75, minDurationMinutes: 45, proposed: true },
+      { title: 'Veillée SPI', startTime: '20:00', durationMinutes: 90, minDurationMinutes: 60, notes: SPLIT_NOTE },
+      { title: 'Retour aux hébergements & coucher', startTime: '21:30', durationMinutes: 45, minDurationMinutes: 30, proposed: true },
     ],
     branches: [
-      { location: 'Chapelle', items: [{ slot: 1, title: 'Temps de prière personnel', durationMinutes: 45 }] },
-      { location: 'Salle Saint-Jean', items: [{ slot: 3, title: 'Bilan des groupes de jeunes' }] },
-      { location: 'Salle Notre-Dame', items: [{ slot: 3, title: 'Bilan des animateurs & bénévoles' }] },
-      { location: "Salle d'artisanat", items: [{ slot: 3, title: 'Bilan équipes logistique' }] },
-      { location: "Cour d'honneur", items: [{ slot: 6, title: 'Photo de groupe & au revoir' }] },
-      { location: "Hall d'accueil", items: [{ slot: 6, title: 'Restitution des badges & départs' }] },
+      {
+        location: 'Groupe TA',
+        items: [
+          { slot: 2, title: 'Ateliers Défis / Actions / Services (avec des témoins)' },
+          { slot: 5, title: 'Grand Jeu au Crêt des 6 soleils' },
+          { slot: 10, title: 'Veillée SPI - TA' },
+        ],
+      },
+      {
+        location: 'Groupe ES',
+        items: [
+          { slot: 2, title: 'Table ronde avec des témoins qui ont choisi la Joie + 2 ateliers' },
+          { slot: 5, title: "Ballade jusqu'au crêt des 6 soleils" },
+          { slot: 10, title: 'Veillée SPI - ES' },
+        ],
+      },
     ],
+  },
+  {
+    // Mercredi 3 novembre — « Relire, faire des choix »
+    eventDate: '2027-11-03',
+    theme: "Relire - Faire des choix - Engagement - Projet « J'aime » - Célébrer la Joie",
+    slots: [
+      { title: 'Réveil & petit-déjeuner', startTime: '07:30', durationMinutes: 60, minDurationMinutes: 30, proposed: true },
+      { title: 'Rangement des chambres & bagages', startTime: '08:30', durationMinutes: 45, minDurationMinutes: 30, proposed: true },
+      { title: "Écriture des « J'aime »", startTime: '09:15', durationMinutes: 60, minDurationMinutes: 30 },
+      { title: 'Eucharistie ouverte (démarches de choix)', startTime: '10:15', durationMinutes: 75, minDurationMinutes: 60 },
+      { title: 'Clôture avec Mercis-Envoi', startTime: '11:30', durationMinutes: 45, minDurationMinutes: 30 },
+      { title: "Repas d'au revoir", startTime: '12:15', durationMinutes: 75, minDurationMinutes: 45, proposed: true },
+      { title: 'Départs des équipes', startTime: '13:30', durationMinutes: 60, minDurationMinutes: 30, proposed: true },
+    ],
+    branches: [],
   },
 ];
-
 
 /**
  * Insère le programme de démo d'un jour : chaîne principale + lieux parallèles.
@@ -267,7 +191,11 @@ export async function insertProgramDemoDay(
   let count = 0;
 
   const saved: ProgramSequence[] = [];
-  for (const item of day.slots) {
+  for (const [index, item] of day.slots.entries()) {
+    const notes =
+      [index === 0 && day.theme ? `Thème du jour : ${day.theme}` : null, item.proposed ? PROPOSED_NOTE : null, item.notes]
+        .filter(Boolean)
+        .join('\n') || null;
     saved.push(
       await repository.save(
         repository.create({
@@ -281,7 +209,7 @@ export async function insertProgramDemoDay(
           minDurationMinutes: item.minDurationMinutes,
           previousSequenceId: saved.at(-1)?.id ?? null,
           volunteerTeamId: nextTeamId(),
-          notes: item.notes ?? null,
+          notes,
           frozenByUserId: item.frozen ? options.coordinatorId : null,
           frozenAt: item.frozen ? new Date() : null,
         }),

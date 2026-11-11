@@ -9,6 +9,36 @@ export const appRoutes: Routes = [
     title: 'Connexion - ALEGRIA',
   },
   {
+    path: 'public',
+    loadComponent: () =>
+      import('./features/public/public-shell/public-shell.component').then(
+        (m) => m.PublicShellComponent,
+      ),
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        loadComponent: () =>
+          import('./features/public/public-home/public-home').then((m) => m.PublicHomeComponent),
+        title: 'Bienvenue - ALEGRIA',
+      },
+      {
+        path: 'programme',
+        loadComponent: () =>
+          import('./features/public/public-program/public-program').then(
+            (m) => m.PublicProgramComponent,
+          ),
+        title: 'Programme - ALEGRIA',
+      },
+      {
+        path: 'infos',
+        loadComponent: () =>
+          import('./features/public/public-infos/public-infos').then((m) => m.PublicInfosComponent),
+        title: 'Infos pratiques - ALEGRIA',
+      },
+    ],
+  },
+  {
     path: '',
     loadComponent: () =>
       import('./shared/shell/shell.component').then((m) => m.ShellComponent),

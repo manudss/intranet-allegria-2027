@@ -1,0 +1,40 @@
+<header class="hero">
+  <div class="hero-top">
+    <span class="brand">ALEGRIA</span>
+    <span class="mode">Mode public</span>
+  </div>
+  <h1>Bienvenue à Allegria !</h1>
+  <p class="hero-sub">{{ dateLabel }} · Espace animateurs, sans connexion</p>
+</header>
+
+<main class="content">
+  <div class="note" role="note">
+    Aucun compte nécessaire. Aucune donnée personnelle dans ce mode.
+  </div>
+
+  @if (!loading() && upcoming().length > 0) {
+    <h2 class="section-title">Maintenant et à venir</h2>
+    <ul class="next-list">
+      @for (seq of upcoming().slice(0, 3); track seq.title) {
+        <li class="next-item">
+          <span class="time">{{ seq.startTime }}</span>
+          <span class="details">
+            <strong>{{ seq.title }}</strong>
+            <span class="place">{{ seq.location }}</span>
+          </span>
+        </li>
+      }
+    </ul>
+  }
+
+  <a class="tile" routerLink="/public/programme">
+    <strong>Programme des 4 jours</strong>
+    <span class="tile-sub">Horaires et lieux</span>
+  </a>
+  <a class="tile" routerLink="/public/infos">
+    <strong>Infos pratiques</strong>
+    <span class="tile-sub">Consignes, replis météo, sécurité, contacts</span>
+  </a>
+
+  <p class="cdn-note">Contenu public disponible hors-ligne après la première visite.</p>
+</main>

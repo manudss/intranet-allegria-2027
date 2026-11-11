@@ -1,0 +1,39 @@
+<header class="hero">
+  <span class="brand">ALEGRIA</span>
+  <h1>Programme</h1>
+  <nav class="days" aria-label="Jours de l'événement">
+    @for (day of days; track day) {
+      <button
+        type="button"
+        class="day-chip"
+        [class.active]="day === selectedDay()"
+        (click)="selectDay(day)"
+      >
+        {{ dayLabel(day) }}
+      </button>
+    }
+  </nav>
+</header>
+
+<main class="content">
+  @if (loading()) {
+    <div class="center"><tui-loader size="l" /></div>
+  } @else if (failed() || sequences().length === 0) {
+    <div class="notice" role="status">Programme de ce jour pas encore publié.</div>
+  } @else {
+    <ol class="timeline">
+      @for (seq of sequences(); track seq.title + seq.startTime) {
+        <li class="event">
+          <div class="times">
+            <span class="start">{{ seq.startTime }}</span>
+            <span class="end">{{ seq.endTime }}</span>
+          </div>
+          <div class="card">
+            <strong>{{ seq.title }}</strong>
+            <span class="place">{{ seq.location }}</span>
+          </div>
+        </li>
+      }
+    </ol>
+  }
+</main>

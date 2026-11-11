@@ -1,0 +1,24 @@
+{
+  "date": "2027-10-30",
+  "updatedAt": "2026-11-11",
+  "sequences": [
+    {
+      "title": "Accueil & installation des groupes",
+      "startTime": "12:00",
+      "endTime": "13:30",
+      "location": "Grande salle"
+    },
+    {
+      "title": "Repas d'accueil",
+      "startTime": "13:30",
+      "endTime": "14:30",
+      "location": "Grande salle"
+    },
+    {
+      "title": "Messe d'ouverture",
+      "startTime": "14:30",
+      "endTime": "16:00",
+      "location": "Grande salle"
+    }
+  ]
+}

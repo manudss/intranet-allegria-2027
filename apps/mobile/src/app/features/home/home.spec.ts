@@ -22,7 +22,7 @@ const setup = async (getDay: () => Observable<ProgramDay>) => {
           logout: () => undefined,
         },
       },
-      { provide: ProgramApiService, useValue: { getDay } },
+      { provide: ProgramApiService, useValue: { getDay, getChangeLog: () => of([]) } },
     ],
   }).compileComponents();
   const fixture = TestBed.createComponent(HomeComponent);

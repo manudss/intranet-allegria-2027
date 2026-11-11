@@ -33,6 +33,12 @@ export const appRoutes: Routes = [
           import('./features/program/program').then((m) => m.ProgramComponent),
         title: 'Programme - ALEGRIA',
       },
+      {
+        path: 'infos',
+        loadComponent: () =>
+          import('./features/infos/infos-page').then((m) => m.InfosPageComponent),
+        title: 'Infos pratiques - ALEGRIA',
+      },
     ],
   },
   { path: '**', redirectTo: '' },

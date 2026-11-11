@@ -24,6 +24,7 @@ export class HomeComponent {
   readonly failed = signal(false);
   readonly date = defaultDay();
   readonly dateLabel = dayLabel(this.date);
+  readonly changeCount = signal(0);
 
   /** Séquences du jour triées par heure de début. */
   readonly upcoming = computed<ProgramSequence[]>(() =>
@@ -45,6 +46,10 @@ export class HomeComponent {
         this.day.set(day);
         this.loading.set(false);
       });
+    this.programApi
+      .getChangeLog(this.date)
+      .pipe(catchError(() => of([])))
+      .subscribe((entries) => this.changeCount.set(entries.length));
   }
 
   logout() {

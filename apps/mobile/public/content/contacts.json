@@ -1,0 +1,17 @@
+{
+  "updatedAt": "2026-11-11",
+  "contacts": [
+    {
+      "label": "Coordination",
+      "detail": "Radio canal 1"
+    },
+    {
+      "label": "Santé",
+      "detail": "Poste santé, entrée principale"
+    },
+    {
+      "label": "Accueil",
+      "detail": "Point info, grande salle"
+    }
+  ]
+}

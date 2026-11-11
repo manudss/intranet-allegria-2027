@@ -2,10 +2,10 @@
 
 ## Dates officielles Allegria 2027
 
-- Samedi 30 octobre 2027
 - Dimanche 31 octobre 2027
 - Lundi 1er novembre 2027
 - Mardi 2 novembre 2027
+- Mercredi 3 novembre 2027
 
 ## Période autorisée
 
@@ -41,8 +41,8 @@ Configuration actuelle :
 
 ```ts
 export const ALLEGRIA_2027_EVENT_DATES = {
-  startDate: '2027-10-30',
-  endDate: '2027-11-02',
+  startDate: '2027-10-31',
+  endDate: '2027-11-03',
   preparationDaysBefore: 2,
   cleanupDaysAfter: 2,
   maxDateOffsetDays: 30,

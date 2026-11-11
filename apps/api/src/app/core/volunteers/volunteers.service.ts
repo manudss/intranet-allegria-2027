@@ -47,6 +47,13 @@ export class VolunteersService {
     return qb.getMany();
   }
 
+  findByUserId(userId: number): Promise<Volunteer | null> {
+    return this.volunteersRepository.findOne({
+      where: { user: { id: userId } },
+      relations: { user: true },
+    });
+  }
+
   async findOne(id: number): Promise<Volunteer> {
     const volunteer = await this.volunteersRepository.findOne({
       where: { id },

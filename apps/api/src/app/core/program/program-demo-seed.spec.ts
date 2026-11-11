@@ -10,11 +10,29 @@ const toMinutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.
 describe('programme de démonstration', () => {
   it('couvre les 4 jours de l’événement', () => {
     expect(PROGRAM_SEED_DAYS.map((day) => day.eventDate)).toEqual([
-      '2027-10-30',
       '2027-10-31',
       '2027-11-01',
       '2027-11-02',
+      '2027-11-03',
     ]);
+  });
+
+  it('reprend le planning projeté : thèmes, groupes TA / ES et créneaux ajoutés signalés', () => {
+    const [sunday, monday, tuesday, wednesday] = PROGRAM_SEED_DAYS;
+    expect(sunday.slots.map((slot) => slot.title)).toEqual(
+      expect.arrayContaining(['Temps de lancement', 'Eucharistie', 'Veillée FESTIVE']),
+    );
+    expect(monday.slots.map((slot) => slot.title)).toContain('Veillée Spectacle');
+    expect(wednesday.slots.map((slot) => slot.title)).toEqual(
+      expect.arrayContaining(["Écriture des « J'aime »", 'Clôture avec Mercis-Envoi']),
+    );
+    for (const day of [monday, tuesday]) {
+      expect(day.branches.map((branch) => branch.location)).toEqual(['Groupe TA', 'Groupe ES']);
+    }
+    expect(tuesday.branches[0].items.map((item) => item.title)).toContain('Veillée SPI - TA');
+    expect(tuesday.branches[1].items.map((item) => item.title)).toContain('Veillée SPI - ES');
+    expect(PROGRAM_SEED_DAYS.every((day) => Boolean(day.theme))).toBe(true);
+    expect(PROGRAM_SEED_DAYS.some((day) => day.slots.some((slot) => slot.proposed))).toBe(true);
   });
 
   it.each(PROGRAM_SEED_DAYS.map((day) => [day.eventDate, day] as const))(

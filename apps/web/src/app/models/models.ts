@@ -510,6 +510,137 @@ export interface DashboardTodoMission {
   shiftCount: number;
 }
 
+// ─── Module Programme (planification en chaîne des séquences) ──
+
+export enum ProgramSequenceStatus {
+  MOBILE = 'MOBILE',
+  FROZEN = 'FROZEN',
+}
+
+export interface ProgramDocumentLink {
+  label: string;
+  url: string;
+}
+
+export interface ProgramSequence {
+  id: number;
+  eventDate: string;
+  location: string;
+  title: string;
+  /** Heure de début au format HH:mm */
+  startTime: string;
+  durationMinutes: number;
+  /** Heure de fin calculée (HH:mm), dérivée de startTime + durationMinutes */
+  endTime: string;
+  status: ProgramSequenceStatus;
+  minDurationMinutes: number | null;
+  minMarginMinutes: number | null;
+  /** Prédécesseur dans la chaîne principale du lieu/jour ; null = tête de chaîne */
+  previousSequenceId: number | null;
+  /** Repère commun utilisé pour rattacher des branches parallèles */
+  anchorSequenceId: number | null;
+  volunteerTeamId: number | null;
+  volunteerTeamName: string | null;
+  missionIds: number[];
+  documentLinks: ProgramDocumentLink[];
+  notes: string | null;
+  frozenByUserId: number | null;
+  frozenByUserName: string | null;
+  frozenAt: string | null;
+}
+
+export interface ProgramDay {
+  date: string;
+  sequences: ProgramSequence[];
+}
+
+/** Corps des requêtes d'insertion (aperçu et application). */
+export interface ProgramSequenceDraft {
+  title: string;
+  durationMinutes: number;
+  volunteerTeamId: number | null;
+  notes: string | null;
+  minDurationMinutes?: number | null;
+  minMarginMinutes?: number | null;
+}
+
+export interface ProgramSequenceDiff {
+  sequenceId: number;
+  title: string;
+  before: { startTime: string; endTime: string; durationMinutes: number };
+  after: { startTime: string; endTime: string; durationMinutes: number };
+}
+
+export type ProgramRecalcOutcome = 'ok' | 'partial' | 'impossible';
+
+export interface ProgramInsertPreview {
+  kind: 'insert';
+  afterSequenceId: number;
+  draft: ProgramSequenceDraft;
+  /** Séquence à créer (sans id : attribué à l'application par le serveur). */
+  newSequence: Pick<
+    ProgramSequence,
+    'eventDate' | 'location' | 'title' | 'startTime' | 'endTime' | 'durationMinutes'
+  >;
+  affected: ProgramSequenceDiff[];
+  outcome: ProgramRecalcOutcome;
+  message: string;
+  /** Empreinte de la chaîne, à renvoyer à l'application pour détecter une modification concurrente. */
+  version: string;
+}
+
+export interface ProgramResizePreview {
+  kind: 'resize';
+  sequenceId: number;
+  previousDurationMinutes: number;
+  newDurationMinutes: number;
+  affected: ProgramSequenceDiff[];
+  stoppedAtFrozenId: number | null;
+  marginMinutes: number | null;
+  outcome: ProgramRecalcOutcome;
+  message: string;
+  version: string;
+}
+
+export type ProgramPreview = ProgramInsertPreview | ProgramResizePreview;
+
+export type ProgramChangeLogAction =
+  'INSERT' | 'RESIZE' | 'MOVE' | 'FREEZE' | 'UNFREEZE' | 'DELETE' | 'UPDATE';
+
+/** Création de la première séquence d'un jour/lieu (ou tête d'une branche rattachée à un repère). */
+export interface ProgramSequenceCreatePayload {
+  eventDate: string;
+  location: string;
+  title: string;
+  startTime: string;
+  durationMinutes: number;
+  volunteerTeamId?: number | null;
+  notes?: string | null;
+  anchorSequenceId?: number | null;
+}
+
+/** Champs descriptifs modifiables d'une séquence (les horaires passent par insert/resize). */
+export interface ProgramSequenceUpdatePayload {
+  title?: string;
+  notes?: string | null;
+  volunteerTeamId?: number | null;
+  minDurationMinutes?: number | null;
+  minMarginMinutes?: number | null;
+  missionIds?: number[];
+  documentLinks?: ProgramDocumentLink[];
+}
+
+export interface ProgramChangeLogEntry {
+  id: number;
+  action: ProgramChangeLogAction;
+  eventDate: string;
+  authorUserId: number;
+  authorUserName: string | null;
+  createdAt: string;
+  affectedSequenceIds: number[];
+  comment: string | null;
+}
+
 export interface DashboardTodoShift {
   shiftId: number;
   missionTitle: string;

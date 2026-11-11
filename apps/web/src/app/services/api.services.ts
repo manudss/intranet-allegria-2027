@@ -22,6 +22,15 @@ import {
   ParticipantPayload,
   ParticipantSearchResult,
   PersonType,
+  ProgramChangeLogEntry,
+  ProgramDay,
+  ProgramInsertPreview,
+  ProgramResizePreview,
+  ProgramSequenceCreatePayload,
+  ProgramSequenceUpdatePayload,
+  ProgramSequence,
+  ProgramSequenceDiff,
+  ProgramSequenceDraft,
   SkillCount,
   StatusCounters,
   Team,
@@ -523,5 +532,88 @@ export class OperationalDashboardApiService {
       params: this.params({ ...options }),
       responseType: 'blob',
     });
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class ProgramApiService {
+  private readonly http = inject(HttpClient);
+  private readonly base = '/api/program';
+
+  getDay(date: string): Observable<ProgramDay> {
+    return this.http.get<ProgramDay>(`${this.base}/days/${date}`);
+  }
+
+  previewInsert(
+    afterSequenceId: number,
+    draft: ProgramSequenceDraft,
+  ): Observable<ProgramInsertPreview> {
+    return this.http.post<ProgramInsertPreview>(
+      `${this.base}/sequences/${afterSequenceId}/insert-after/preview`,
+      draft,
+    );
+  }
+
+  applyInsert(
+    afterSequenceId: number,
+    draft: ProgramSequenceDraft,
+    version: string,
+  ): Observable<{ sequence: ProgramSequence; affected: ProgramSequenceDiff[] }> {
+    return this.http.post<{ sequence: ProgramSequence; affected: ProgramSequenceDiff[] }>(
+      `${this.base}/sequences/${afterSequenceId}/insert-after/apply`,
+      { ...draft, version },
+    );
+  }
+
+  previewResize(sequenceId: number, durationMinutes: number): Observable<ProgramResizePreview> {
+    return this.http.patch<ProgramResizePreview>(
+      `${this.base}/sequences/${sequenceId}/resize/preview`,
+      {
+        durationMinutes,
+      },
+    );
+  }
+
+  applyResize(
+    sequenceId: number,
+    durationMinutes: number,
+    version: string,
+  ): Observable<{ affected: ProgramSequenceDiff[] }> {
+    return this.http.patch<{ affected: ProgramSequenceDiff[] }>(
+      `${this.base}/sequences/${sequenceId}/resize/apply`,
+      { durationMinutes, version },
+    );
+  }
+
+  freeze(sequenceId: number): Observable<ProgramSequence> {
+    return this.http.patch<ProgramSequence>(`${this.base}/sequences/${sequenceId}/freeze`, {});
+  }
+
+  unfreeze(sequenceId: number): Observable<ProgramSequence> {
+    return this.http.patch<ProgramSequence>(`${this.base}/sequences/${sequenceId}/unfreeze`, {});
+  }
+
+  createSequence(payload: ProgramSequenceCreatePayload): Observable<ProgramSequence> {
+    return this.http.post<ProgramSequence>(`${this.base}/sequences`, payload);
+  }
+
+  updateSequence(
+    sequenceId: number,
+    payload: ProgramSequenceUpdatePayload,
+  ): Observable<ProgramSequence> {
+    return this.http.patch<ProgramSequence>(`${this.base}/sequences/${sequenceId}`, payload);
+  }
+
+  deleteSequence(sequenceId: number, closeGap = false): Observable<{ deletedId: number; shiftedMinutes: number }> {
+    const params = closeGap ? new HttpParams().set('closeGap', 'true') : new HttpParams();
+    return this.http.delete<{ deletedId: number; shiftedMinutes: number }>(
+      `${this.base}/sequences/${sequenceId}`,
+      { params },
+    );
+  }
+
+  getChangeLog(date?: string): Observable<ProgramChangeLogEntry[]> {
+    const params = date ? new HttpParams().set('date', date) : undefined;
+    return this.http.get<ProgramChangeLogEntry[]>(`${this.base}/change-log`, { params });
   }
 }

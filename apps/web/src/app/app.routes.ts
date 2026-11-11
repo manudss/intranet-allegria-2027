@@ -119,6 +119,13 @@ export const appRoutes: Route[] = [
         loadComponent: () => import('./pages/transports').then((m) => m.Transports),
       },
       {
+        path: 'programme',
+        title: 'Planning & Ordonnancement',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'LOGISTICS', 'VIEWER'] },
+        loadComponent: () => import('./features/programme/programme').then((m) => m.ProgrammePage),
+      },
+      {
         path: 'jour-j',
         title: 'Tableau de bord Jour J',
         canActivate: [roleGuard],

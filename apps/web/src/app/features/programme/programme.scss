@@ -1,0 +1,725 @@
+:host {
+  display: block;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.banner {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+
+  &.positive {
+    background: var(--tui-status-positive-pale);
+    color: var(--tui-status-positive);
+  }
+
+  &.warning {
+    background: #ffedd5;
+    color: #7c2d12;
+  }
+
+  &.negative {
+    background: var(--tui-status-negative-pale);
+    color: var(--tui-status-negative);
+  }
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.day-tabs {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.kpi-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--tui-background-neutral-1);
+  border: 1px solid var(--tui-border-normal);
+}
+
+.kpi-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--allegria-primary, #d52f57);
+}
+
+.kpi-label {
+  color: #4b5563;
+  font-size: 0.85rem;
+}
+
+.programme-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(16rem, 3fr);
+  gap: 1.25rem;
+  align-items: start;
+
+  @media (max-width: 960px) {
+    grid-template-columns: minmax(0, 1fr);
+
+    // Un formulaire ou un aperçu est ouvert : on le montre avant le calendrier, pas tout en bas.
+    &.panel-active .preview-panel { order: -1; position: static; }
+  }
+}
+
+.chain-column {
+  min-inline-size: 0;
+}
+
+// Couleurs explicites : le calendrier doit rester lisible même si le navigateur force un thème sombre.
+$ink: #1f2937;
+$ink-soft: #4b5563;
+$line: #d1d5db;
+$changed: #b45309;
+$new: #047857;
+
+.calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 1rem;
+  margin-block-end: 0.5rem;
+  font-size: 0.8rem;
+  color: $ink-soft;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.swatch {
+  display: inline-block;
+  inline-size: 1.1rem;
+  block-size: 0.75rem;
+  border-radius: 0.2rem;
+  border: 2px solid transparent;
+
+  &-changed { background: #fef3c7; border-color: $changed; }
+  &-new { background: #d1fae5; border-color: $new; border-style: dashed; }
+  &-blocked { background: #fee2e2; border-color: #b91c1c; }
+  &-ghost { background: transparent; border: 2px dashed #9ca3af; }
+  &-frozen { background: #f3f4f6; border-color: #d97706; border-inline-start-width: 5px; }
+}
+
+// Barre de validation collée en haut : visible sans devoir défiler jusqu'au panneau latéral.
+.pending-bar {
+  position: sticky;
+  inset-block-start: 3.75rem;
+  z-index: 12;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-block-end: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.75rem;
+  border: 2px solid $changed;
+  background: #fffbeb;
+  color: $ink;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+
+  &.positive { border-color: $new; background: #ecfdf5; }
+  &.negative { border-color: #b91c1c; background: #fef2f2; }
+
+  .pending-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    font-size: 0.85rem;
+    min-inline-size: 0;
+    flex: 1 1 14rem;
+  }
+
+  .pending-actions { display: flex; gap: 0.5rem; }
+
+  @media (max-width: 600px) {
+    padding: 0.5rem 0.75rem;
+
+    .pending-hint { display: none; }
+    .pending-text { flex-basis: 100%; font-size: 0.8rem; }
+  }
+}
+
+.calendar-scroll {
+  max-block-size: 75vh;
+  overflow: auto;
+  border: 1px solid $line;
+  border-radius: 0.75rem;
+  background: #ffffff;
+  color: $ink;
+  color-scheme: light;
+}
+
+$header-height: 2.5rem;
+
+.calendar {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr);
+  min-inline-size: min-content;
+}
+
+.calendar-axis {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 6;
+  background: #ffffff;
+  border-inline-end: 1px solid $line;
+
+  .axis-corner {
+    position: sticky;
+    inset-block-start: 0;
+    block-size: $header-height;
+    background: #ffffff;
+    border-block-end: 1px solid $line;
+    z-index: 7;
+  }
+
+  .axis-body {
+    position: relative;
+    block-size: var(--calendar-height);
+  }
+}
+
+.hour-mark {
+  position: absolute;
+  inset-inline-start: 0;
+  inline-size: 100%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: $ink;
+  text-align: right;
+  padding-inline-end: 0.375rem;
+
+  &.half {
+    font-weight: 400;
+    font-size: 0.68rem;
+    color: $ink-soft;
+  }
+}
+
+.calendar-columns {
+  display: flex;
+  min-inline-size: 0;
+}
+
+.calendar-column {
+  position: relative;
+  flex: 1 0 11.5rem;
+  min-inline-size: 11.5rem;
+  border-inline-end: 1px solid $line;
+
+  &.selected .column-header {
+    background: #fde8ee;
+    border-block-end-color: var(--allegria-primary, #d52f57);
+  }
+}
+
+.column-header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  inline-size: 100%;
+  block-size: $header-height;
+  box-sizing: border-box;
+  padding: 0 0.5rem;
+  border: 0;
+  border-block-end: 3px solid $line;
+  background: #f9fafb;
+  color: $ink;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.column-body {
+  position: relative;
+  block-size: var(--calendar-height);
+}
+
+.hour-line {
+  position: absolute;
+  inset-inline: 0;
+  border-block-start: 1px solid $line;
+
+  &.half { border-block-start: 1px dashed #e5e7eb; }
+}
+
+.sequence-ghost {
+  position: absolute;
+  inset-inline: 0.25rem;
+  box-sizing: border-box;
+  border: 2px dashed #9ca3af;
+  border-radius: 0.5rem;
+  background: repeating-linear-gradient(135deg, rgba(156, 163, 175, 0.12) 0 6px, transparent 6px 12px);
+  color: $ink-soft;
+  font-size: 0.7rem;
+  padding: 0.125rem 0.375rem;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.sequence-block {
+  position: absolute;
+  inset-inline: 0.25rem;
+  z-index: 2;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.375rem 1.5rem 0.375rem 0.625rem;
+  border-radius: 0.5rem;
+  border-inline-start: 0.35rem solid $line;
+  background: #f3f4f6;
+  color: $ink;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  cursor: grab;
+  touch-action: pan-x pan-y; // le défilement tactile reste possible ; le déplacement passe par la poignée
+  transition:
+    top 0.2s ease,
+    height 0.2s ease,
+    box-shadow 0.15s ease;
+
+  &:hover { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+
+  &.dragging {
+    cursor: grabbing;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+    z-index: 4;
+    transition: none;
+  }
+
+  &.frozen {
+    cursor: default;
+    border-inline-start-color: #d97706;
+    background-image: repeating-linear-gradient(135deg, rgba(217, 119, 6, 0.08) 0 6px, transparent 6px 12px);
+  }
+
+  // Créneau modifié par l'aperçu en cours : contour plein orange + halo, bien distinct des autres.
+  &.changed {
+    z-index: 3;
+    outline: 3px solid $changed;
+    outline-offset: -1px;
+    box-shadow: 0 0 0 4px rgba(180, 83, 9, 0.2);
+  }
+
+  &.blocked {
+    z-index: 3;
+    outline: 3px solid #b91c1c;
+    outline-offset: -1px;
+    box-shadow: 0 0 0 4px rgba(185, 28, 28, 0.2);
+  }
+
+  &.is-new {
+    z-index: 3;
+    cursor: default;
+    background: #d1fae5;
+    border-inline-start-color: $new;
+    outline: 3px dashed $new;
+    outline-offset: -1px;
+  }
+
+  // Modification validée : le créneau reste surligné quelques secondes après le rechargement.
+  &.just-changed {
+    outline: 3px solid $new;
+    outline-offset: -1px;
+    animation: just-changed 1.6s ease-out 3;
+  }
+
+  .drag-grip {
+    position: absolute;
+    inset-block-start: 0.125rem;
+    inset-inline-end: 0.125rem;
+    display: grid;
+    place-items: center;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    border-radius: 0.375rem;
+    color: $ink-soft;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+  }
+
+  .resize-handle {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0;
+    block-size: 0.875rem;
+    cursor: ns-resize;
+    touch-action: none;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.22));
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset-inline: 40%;
+      inset-block-end: 0.2rem;
+      block-size: 0.2rem;
+      border-radius: 1rem;
+      background: rgba(0, 0, 0, 0.45);
+    }
+  }
+
+  // Palette de couleurs par catégorie (heuristique, en attendant un vrai champ "type" de séquence).
+  &.cat-0 { background: #e0f2fe; border-inline-start-color: #0284c7; }
+  &.cat-1 { background: #fce7f3; border-inline-start-color: #db2777; }
+  &.cat-2 { background: #fef9c3; border-inline-start-color: #ca8a04; }
+  &.cat-3 { background: #dcfce7; border-inline-start-color: #16a34a; }
+  &.cat-4 { background: #ede9fe; border-inline-start-color: #7c3aed; }
+  &.cat-5 { background: #ffedd5; border-inline-start-color: #ea580c; }
+  &.is-new { background: #d1fae5; }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.2;
+    color: $ink;
+    overflow-wrap: anywhere;
+  }
+
+  &.compact {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    padding-block: 0.125rem;
+
+    header { flex-wrap: nowrap; }
+    h3 { font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sequence-time { font-size: 0.75rem; white-space: nowrap; }
+    .drag-grip { inset-block-start: 0; }
+  }
+}
+
+@keyframes just-changed {
+  0% { box-shadow: 0 0 0 0 rgba(4, 120, 87, 0.7); }
+  100% { box-shadow: 0 0 0 10px rgba(4, 120, 87, 0); }
+}
+
+.state-tag {
+  padding: 0 0.4rem;
+  border-radius: 0.75rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #ffffff;
+  white-space: nowrap;
+
+  &.state-changed { background: $changed; }
+  &.state-new { background: $new; }
+  &.state-done { background: $new; }
+  &.state-frozen { background: #92400e; }
+}
+
+.sequence-time {
+  font-weight: 700;
+  color: $ink;
+  font-size: 0.8rem;
+}
+
+.sequence-meta {
+  margin: 0;
+  color: var(--tui-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.sequence-notes {
+  margin: 0;
+  font-style: italic;
+  color: var(--tui-text-secondary);
+}
+
+.sequence-documents {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.parallel-branches {
+  border-top: 1px dashed var(--tui-border-normal);
+  padding-top: 0.5rem;
+
+  ul {
+    margin: 0.375rem 0 0;
+    padding-left: 1.1rem;
+  }
+}
+
+.sequence-actions {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+.preview-panel {
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-card,
+.preview-card,
+.changelog-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: var(--tui-background-neutral-1);
+  border: 1px solid var(--tui-border-normal);
+
+  h4 {
+    margin: 0;
+  }
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+  }
+
+  input,
+  textarea,
+  select {
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--tui-border-normal);
+    font: inherit;
+  }
+
+  .document-links,
+  .mission-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    border: 1px solid var(--tui-border-normal);
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  .mission-picker ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 12rem;
+    overflow-y: auto;
+  }
+
+  .checkbox-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .document-link-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+
+    input {
+      flex: 1 1 8rem;
+    }
+  }
+}
+
+.overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1rem;
+}
+
+.overview-day {
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: var(--tui-background-neutral-1);
+  border: 1px solid var(--tui-border-normal);
+
+  h3,
+  h4 {
+    margin: 0 0 0.5rem;
+  }
+
+  h4 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+  }
+
+  ul {
+    margin: 0 0 0.75rem;
+    padding-left: 1.1rem;
+    font-size: 0.85rem;
+  }
+
+  li.frozen {
+    color: var(--tui-status-warning);
+  }
+}
+
+.outcome-banner {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+
+  &.positive {
+    background: var(--tui-status-positive-pale);
+    color: var(--tui-status-positive);
+  }
+
+  &.warning {
+    background: #ffedd5;
+    color: #7c2d12;
+  }
+
+  &.negative {
+    background: var(--tui-status-negative-pale);
+    color: var(--tui-status-negative);
+  }
+}
+
+.schedule-comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    text-align: left;
+    padding: 0.375rem 0.5rem;
+    border-bottom: 1px solid var(--tui-border-normal);
+    font-size: 0.85rem;
+  }
+}
+
+.preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.form-card button[tuiButton],
+.preview-card button[tuiButton] {
+  white-space: normal;
+  text-align: center;
+}
+
+.changelog-card ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.empty-state {
+  color: var(--tui-text-secondary);
+  font-style: italic;
+}
+
+// Les détails et commandes ne dépendent jamais de la hauteur temporelle d'un bloc.
+.sequence-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-block-start: 1rem;
+  min-inline-size: 0;
+}
+
+.sequence-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--tui-border-normal);
+  border-radius: 0.75rem;
+  background: var(--tui-background-neutral-1);
+  overflow-wrap: anywhere;
+
+  h4 { margin: 0; }
+}
+
+// Le sous-en-tête partagé doit empiler les actions sur cette page dense en mobile.
+@media (max-width: 600px) {
+  :host ::ng-deep app-page-layout .page-layout > header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  :host ::ng-deep app-page-layout header[tuiSubheader] {
+    flex-wrap: wrap;
+  }
+
+  .header-actions {
+    min-inline-size: 0;
+    inline-size: 100%;
+
+    button { max-inline-size: 100%; flex: 1 1 auto; }
+  }
+
+  .calendar-column {
+    flex-basis: 10rem;
+    min-inline-size: 10rem;
+  }
+}
+
+.time-before { text-decoration: line-through; color: #6b7280; margin-inline-end: 0.35rem; }
+.time-after { color: #92400e; font-weight: 700; &.blocked { color: #b91c1c; } }
+.time-tag {
+  margin-inline-start: 0.35rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: #fde68a;
+  color: #78350f;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .pending-bar .pending-hint { display: none; }
+  .pending-bar { padding: 0.5rem 0.75rem; font-size: 0.85rem; }
+}

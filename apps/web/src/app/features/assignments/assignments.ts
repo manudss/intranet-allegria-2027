@@ -251,8 +251,8 @@ export class HostFamilyAssignmentsSelectorComponent {
   readonly participants = signal<Participant[]>([]);
   readonly selectedIds = signal<number[]>([]);
   readonly saving = signal(false);
-  readonly arrivalDate = new FormControl('2027-10-30', { nonNullable: true });
-  readonly departureDate = new FormControl('2027-11-02', { nonNullable: true });
+  readonly arrivalDate = new FormControl('2027-10-31', { nonNullable: true });
+  readonly departureDate = new FormControl('2027-11-03', { nonNullable: true });
   readonly filters = new FormGroup({
     unassignedOnly: new FormControl(true, { nonNullable: true }),
     type: new FormControl<PersonType | null>(null),

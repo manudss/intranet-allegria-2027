@@ -166,6 +166,73 @@ test('refresh with unchanged env vars deploys every existing service explicitly,
   assert.equal(renderCalls(calls, 'POST', /\/deploys/).length, 3, 'one explicit deploy per service');
 });
 
+test('refresh on a branch with apps/mobile also creates the mobile static site and CORS it', async () => {
+  const calls = mockFetch(async (u) => {
+    if (u.includes('/pulls/3')) return openPr();
+    if (u.includes('/contents/apps/mobile')) return json200([{ name: 'project.json', type: 'file' }]);
+    if (u.includes('api.github.com') && u.includes('/comments')) return json200([]);
+    const fromMap = withServices({})(u);
+    if (fromMap) return fromMap;
+    if (u.endsWith('/services')) return json200({ service: { id: 'srv-new', serviceDetails: { url: 'https://x.onrender.com' } } });
+    return json200({});
+  });
+  const m = await load({ MODE: 'refresh' });
+  await m.refresh();
+  const creates = renderCalls(calls, 'POST', /\/v1\/services$/);
+  assert.equal(creates.length, 4, 'api + web + site + mobile created');
+  assert.equal(creates.filter((c) => c.body.type === 'static_site').length, 3);
+  const mobile = creates.find((c) => c.body.name === 'al-pr3-mobile').body;
+  assert.match(mobile.serviceDetails.buildCommand, /build:mobile/);
+  assert.equal(mobile.serviceDetails.publishPath, 'dist/apps/mobile/browser');
+  assert.deepEqual(mobile.serviceDetails.routes, [{ type: 'rewrite', source: '/*', destination: '/index.html' }]);
+  assert.ok(mobile.envVars.some((v) => v.key === 'MOBILE_API_URL'), 'mobile gets MOBILE_API_URL');
+  const api = creates.find((c) => c.body.name === 'al-pr3-api').body;
+  assert.match(api.envVars.find((v) => v.key === 'CORS_ORIGIN').value, /al-pr3-mobile\.onrender\.com/, 'API CORS includes the mobile origin');
+  const comments = ghCalls(calls, 'POST', /\/issues\/3\/comments/);
+  assert.match(comments[0].body.body, /App mobile \(PWA\)/, 'comment links the mobile preview');
+});
+
+test('refresh on a branch without apps/mobile creates no mobile service', async () => {
+  const calls = mockFetch(async (u) => {
+    if (u.includes('/pulls/3')) return openPr();
+    if (u.includes('/contents/apps/mobile')) return { ok: false, status: 404, json: async () => null, text: async () => '' };
+    if (u.includes('api.github.com') && u.includes('/comments')) return json200([]);
+    const fromMap = withServices({})(u);
+    if (fromMap) return fromMap;
+    if (u.endsWith('/services')) return json200({ service: { id: 'srv-new', serviceDetails: { url: 'https://x.onrender.com' } } });
+    return json200({});
+  });
+  const m = await load({ MODE: 'refresh' });
+  await m.refresh();
+  assert.equal(renderCalls(calls, 'POST', /\/v1\/services$/).length, 3, 'no mobile service without apps/mobile');
+  const comments = ghCalls(calls, 'POST', /\/issues\/3\/comments/);
+  assert.ok(!comments[0].body.body.includes('App mobile'), 'comment has no mobile row');
+});
+
+test('refresh with existing mobile service and unchanged env deploys it explicitly, once', async () => {
+  const map = { 'al-pr3-api': svc('al-pr3-api'), 'al-pr3-web': svc('al-pr3-web'), 'al-pr3-site': svc('al-pr3-site'), 'al-pr3-mobile': svc('al-pr3-mobile') };
+  const calls = mockFetch(async (u) => {
+    if (u.includes('/pulls/3')) return openPr();
+    if (u.includes('/contents/apps/mobile')) return json200([{ name: 'project.json', type: 'file' }]);
+    if (u.includes('api.github.com') && u.includes('/comments')) return json200([]);
+    const fromMap = withServices(map)(u);
+    if (fromMap) return fromMap;
+    if (u.includes('/env-vars')) return json200([
+      { envVar: { key: 'DATABASE_URL', value: 'postgres://pooled' } },
+      { envVar: { key: 'DATABASE_URL_DIRECT', value: 'postgres://direct' } },
+      { envVar: { key: 'CORS_ORIGIN', value: 'https://al-pr3-web.onrender.com,https://al-pr3-site.onrender.com,https://al-pr3-mobile.onrender.com' } },
+      { envVar: { key: 'WEB_API_URL', value: 'https://al-pr3-api.onrender.com' } },
+      { envVar: { key: 'MOBILE_API_URL', value: 'https://al-pr3-api.onrender.com' } },
+    ]);
+    return json200({});
+  });
+  const m = await load({ MODE: 'refresh' });
+  await m.refresh();
+  assert.equal(renderCalls(calls, 'PUT', /env-vars/).length, 0, 'no env change needed');
+  assert.equal(renderCalls(calls, 'POST', /\/deploys/).length, 4, 'one explicit deploy per service, mobile included');
+  assert.equal(renderCalls(calls, 'POST', /srv-al-pr3-mobile\/deploys/).length, 1);
+});
+
 test('refresh refuses a fork PR', async () => {
   mockFetch(async (u) => {
     if (u.includes('/pulls/3')) return openPr({ head: { ref: 'x', sha: SHA, repo: { full_name: 'someone/else' } } });
@@ -198,15 +265,15 @@ test('workflow never pins trusted-code checkouts to pull_request metadata (stale
   assert.ok(!/ref:\s*\$\{\{\s*github\.event\.pull_request/.test(wf), 'a checkout must never take its ref from pull_request event metadata');
 });
 
-test('cleanup deletes the existing services and comments', async () => {
-  const map = { 'al-pr3-api': svc('al-pr3-api'), 'al-pr3-web': svc('al-pr3-web'), 'al-pr3-site': svc('al-pr3-site') };
+test('cleanup deletes the existing services, mobile included, and comments', async () => {
+  const map = { 'al-pr3-api': svc('al-pr3-api'), 'al-pr3-web': svc('al-pr3-web'), 'al-pr3-site': svc('al-pr3-site'), 'al-pr3-mobile': svc('al-pr3-mobile') };
   const calls = mockFetch(async (u) => {
     if (u.includes('api.github.com') && u.includes('/comments')) return json200([]);
     return withServices(map)(u) ?? json200({});
   });
   const m = await load();
   await m.cleanup();
-  assert.equal(renderCalls(calls, 'DELETE', /\/services\//).length, 3);
+  assert.equal(renderCalls(calls, 'DELETE', /\/services\//).length, 4);
   const comments = ghCalls(calls, 'POST', /\/issues\/3\/comments/);
   assert.match(comments[0].body.body, /supprimes/);
 });

@@ -6,7 +6,10 @@ import {
   LoginResponse,
   ProgramChangeLogEntry,
   ProgramDay,
+  ShiftAssignment,
+  TeamMembership,
   User,
+  Volunteer,
 } from '../models/models';
 
 @Injectable({ providedIn: 'root' })
@@ -34,5 +37,23 @@ export class ProgramApiService {
   getChangeLog(date?: string): Observable<ProgramChangeLogEntry[]> {
     const options = date ? { params: new HttpParams().set('date', date) } : {};
     return this.http.get<ProgramChangeLogEntry[]>(`${this.base}/change-log`, options);
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class MySpaceApiService {
+  private readonly http = inject(HttpClient);
+  private readonly base = '/api/me';
+
+  getVolunteer(): Observable<Volunteer> {
+    return this.http.get<Volunteer>(`${this.base}/volunteer`);
+  }
+
+  getShiftAssignments(): Observable<ShiftAssignment[]> {
+    return this.http.get<ShiftAssignment[]>(`${this.base}/shift-assignments`);
+  }
+
+  getTeamMemberships(): Observable<TeamMembership[]> {
+    return this.http.get<TeamMembership[]>(`${this.base}/team-memberships`);
   }
 }

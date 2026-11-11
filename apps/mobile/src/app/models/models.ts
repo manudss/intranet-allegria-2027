@@ -58,3 +58,55 @@ export interface ProgramChangeLogEntry {
   affectedSequenceIds: number[];
   comment: string | null;
 }
+
+// ─── Mon espace (bénévole connecté) ───
+
+export interface Volunteer {
+  id: number;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  email: string | null;
+  team: string | null;
+  isGroupLeader: boolean;
+  notes: string | null;
+}
+
+export type ShiftAssignmentStatus = 'PROVISIONAL' | 'CONFIRMED' | 'CANCELLED';
+
+export interface VolunteerMission {
+  id: number;
+  title: string;
+  description: string | null;
+  location: string | null;
+}
+
+export interface VolunteerShift {
+  id: number;
+  startAt: string;
+  endAt: string;
+  location: string | null;
+  mission: VolunteerMission;
+}
+
+export interface ShiftAssignment {
+  id: number;
+  status: ShiftAssignmentStatus;
+  notes: string | null;
+  shift: VolunteerShift;
+}
+
+export interface VolunteerTeam {
+  id: number;
+  name: string;
+  code: string;
+  description: string | null;
+}
+
+export interface TeamMembership {
+  id: number;
+  role: string | null;
+  startAt: string | null;
+  endAt: string | null;
+  volunteerTeam: VolunteerTeam;
+}

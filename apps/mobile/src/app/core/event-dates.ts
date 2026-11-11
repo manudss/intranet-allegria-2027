@@ -3,7 +3,6 @@
 export const EVENT_START_DATE = '2027-10-30';
 export const EVENT_END_DATE = '2027-11-02';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 const parseDay = (iso: string): Date => new Date(`${iso}T00:00:00`);
 

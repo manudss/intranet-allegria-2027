@@ -22,6 +22,12 @@ export const appRoutes: Routes = [
         title: 'Accueil - ALEGRIA',
       },
       {
+        path: 'espace',
+        loadComponent: () =>
+          import('./features/my-space/my-space').then((m) => m.MySpaceComponent),
+        title: 'Mon espace - ALEGRIA',
+      },
+      {
         path: 'programme',
         loadComponent: () =>
           import('./features/program/program').then((m) => m.ProgramComponent),

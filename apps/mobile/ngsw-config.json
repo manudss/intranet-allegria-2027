@@ -40,11 +40,11 @@
     },
     {
       "name": "api-user",
-      "urls": ["**/api/users/me"],
+      "urls": ["**/api/users/me", "**/api/me/**"],
       "cacheConfig": {
         "strategy": "freshness",
         "maxSize": 5,
-        "maxAge": "1h",
+        "maxAge": "12h",
         "timeout": "5s"
       }
     }

@@ -1,0 +1,47 @@
+<header class="hero">
+  <div class="hero-top">
+    <span class="brand">ALEGRIA</span>
+    <button type="button" class="logout" (click)="logout()">Déconnexion</button>
+  </div>
+  <h1>Bonjour !</h1>
+  <p class="hero-sub">{{ dateLabel }} · Espace bénévoles</p>
+</header>
+
+<main class="content">
+  @if (loading()) {
+    <div class="center"><tui-loader size="l" /></div>
+  } @else if (failed()) {
+    <div class="notice" role="status">
+      Programme indisponible pour le moment. Les données déjà consultées restent
+      visibles hors-ligne après une première visite.
+    </div>
+  } @else if (upcoming().length === 0) {
+    <div class="notice" role="status">Aucune séquence prévue ce jour-là.</div>
+  } @else {
+    <h2 class="section-title">Maintenant et à venir</h2>
+    <ul class="next-list">
+      @for (seq of upcoming().slice(0, 3); track seq.id) {
+        <li class="next-item">
+          <span class="time">{{ seq.startTime }}</span>
+          <span class="details">
+            <strong>{{ seq.title }}</strong>
+            <span class="place">{{ seq.location }}</span>
+          </span>
+        </li>
+      }
+    </ul>
+  }
+
+  <a class="tile" routerLink="/programme">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M8 3v4M16 3v4M3 10h18" />
+    </svg>
+    <span class="tile-text">
+      <strong>Programme des 4 jours</strong>
+      <span>Horaires, lieux, verrous</span>
+    </span>
+    <span class="chevron" aria-hidden="true">›</span>
+  </a>
+</main>

@@ -1,0 +1,79 @@
+<header class="hero">
+  <span class="brand">ALEGRIA</span>
+  <h1>Programme</h1>
+  <nav class="days" aria-label="Jours de l'événement">
+    @for (day of days; track day) {
+      <button
+        type="button"
+        class="day-chip"
+        [class.active]="day === selectedDay()"
+        (click)="selectDay(day)"
+      >
+        {{ dayLabel(day) }}
+      </button>
+    }
+  </nav>
+</header>
+
+<main class="content">
+  @if (changeCount() > 0) {
+    <p class="changes" role="status">
+      {{ changeCount() }} modification(s) du programme ce jour-là
+    </p>
+  }
+
+  @if (loading()) {
+    <div class="center"><tui-loader size="l" /></div>
+  } @else if (failed()) {
+    <div class="notice" role="status">
+      Programme indisponible. Les jours déjà consultés restent accessibles hors-ligne.
+    </div>
+  } @else {
+    @if (locations().length > 1) {
+      <div class="filters" role="group" aria-label="Filtrer par lieu">
+        @for (location of locations(); track location) {
+          <button
+            type="button"
+            class="filter-chip"
+            [class.active]="location === locationFilter()"
+            (click)="toggleLocation(location)"
+          >
+            {{ location }}
+          </button>
+        }
+      </div>
+    }
+
+    @if (sequences().length === 0) {
+      <div class="notice" role="status">Aucune séquence pour ce filtre.</div>
+    } @else {
+      <ol class="timeline">
+        @for (seq of sequences(); track seq.id) {
+          <li class="event">
+            <div class="times">
+              <span class="start">{{ seq.startTime }}</span>
+              <span class="end">{{ seq.endTime }}</span>
+            </div>
+            <div class="card">
+              <div class="card-head">
+                <strong>{{ seq.title }}</strong>
+                @if (seq.status === status.FROZEN) {
+                  <span class="badge">Verrouillé</span>
+                }
+              </div>
+              <span class="place">
+                {{ seq.location }} · {{ seq.durationMinutes }} min
+              </span>
+              @if (seq.volunteerTeamName) {
+                <span class="team">Équipe : {{ seq.volunteerTeamName }}</span>
+              }
+              @if (seq.notes) {
+                <span class="notes">{{ seq.notes }}</span>
+              }
+            </div>
+          </li>
+        }
+      </ol>
+    }
+  }
+</main>

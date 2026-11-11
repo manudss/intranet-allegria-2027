@@ -39,8 +39,8 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: Test the PR-previews orchestration script
-        run: node --test scripts/render-pr-previews.test.mjs
+      - name: Test the Render orchestration scripts
+        run: node --test scripts/*.test.mjs
 
       - name: Build public site
         run: npm run build:site

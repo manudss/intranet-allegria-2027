@@ -1,0 +1,72 @@
+name: Prod image (GHCR)
+
+# Build l'image Docker de l'API (Dockerfile a la racine) sur les runners GitHub -
+# gratuit sur ce repo public - et la pousse sur GHCR. Render ne fait ensuite QUE
+# tirer l'image et la demarrer : il ne consomme plus aucune des 500 minutes de
+# pipeline gratuites partagees du workspace (docs/deploiement.md).
+#
+# Tags (ghcr.io/manudss/intranet-allegria-2027) :
+#   <sha complet>   tag immutable, celui que reference l'historique
+#   latest          tag mobile, uniquement sur main : c'est celui que Render tire
+#
+# Declenchement : chaque push sur main ; workflow_dispatch en secours (ref au choix).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branche, tag ou sha a builder (defaut : la branche par defaut)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: prod-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build + push ghcr.io/${{ github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout du ref exact a builder
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref != '' && inputs.ref || github.sha }}
+
+      - name: Resolution du sha et des tags
+        id: t
+        run: |
+          set -eu
+          SHA=$(git rev-parse HEAD)
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          TAGS="ghcr.io/${REPO}:${SHA}"
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            TAGS="${TAGS},ghcr.io/${REPO}:latest"
+          fi
+          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+          echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
+          echo "Build ${REPO}@${SHA} -> ${TAGS}"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build + push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.t.outputs.tags }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api

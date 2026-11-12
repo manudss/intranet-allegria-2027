@@ -6,6 +6,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -13,7 +14,12 @@ import { AuthTokenGuard } from '../auth/auth-token.guard';
 import { RoleGuard } from '../auth/role.guard';
 import { Roles } from '../auth/roles.decorator';
 import { TeamBenevolesService } from './team-benevoles.service';
-import { AssignBenevoleDto } from './team-benevoles.types';
+import {
+  ApplyRepartitionDto,
+  AssignBenevoleDto,
+  RepartitionTeamsQueryDto,
+  RepartitionVolunteersQueryDto,
+} from './team-benevoles.types';
 
 const READ_ROLES = ['ADMIN', 'COORDINATOR', 'VOLUNTEERS', 'LOGISTICS'];
 const WRITE_ROLES = ['ADMIN', 'COORDINATOR', 'LOGISTICS'];
@@ -30,6 +36,34 @@ export class TeamBenevolesController {
   @Get('benevoles/assignments')
   listAssignments() {
     return this.service.listAssignments();
+  }
+
+  @ApiOperation({ summary: 'Répartition : listes de valeurs des filtres (zones, groupes, pôles, étiquettes, compétences)' })
+  @Roles(...READ_ROLES)
+  @Get('benevoles/repartition/filters')
+  repartitionFilters() {
+    return this.service.repartitionFilters();
+  }
+
+  @ApiOperation({ summary: 'Répartition étape 1 : équipes de rassemblement avec remplissage' })
+  @Roles(...READ_ROLES)
+  @Get('benevoles/repartition/teams')
+  repartitionTeams(@Query() query: RepartitionTeamsQueryDto) {
+    return this.service.searchRepartitionTeams(query);
+  }
+
+  @ApiOperation({ summary: 'Répartition étape 2 : bénévoles filtrés (recherche, pôle, compétence, étiquette, affectation)' })
+  @Roles(...READ_ROLES)
+  @Get('benevoles/repartition/volunteers')
+  repartitionVolunteers(@Query() query: RepartitionVolunteersQueryDto) {
+    return this.service.searchRepartitionVolunteers(query);
+  }
+
+  @ApiOperation({ summary: 'Répartition étape 3 : application groupée des affectations (une transaction)' })
+  @Roles(...WRITE_ROLES)
+  @Post('benevoles/repartition/apply')
+  repartitionApply(@Body() dto: ApplyRepartitionDto) {
+    return this.service.applyRepartition(dto);
   }
 
   @ApiOperation({ summary: 'Bénévoles (adultes) affectés à une équipe' })

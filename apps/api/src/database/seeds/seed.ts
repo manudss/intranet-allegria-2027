@@ -14,7 +14,10 @@ import {
   Participant,
   ParticipantHealth,
   ParticipantHostFamilyAssignment,
+  ParticipantRegistrationStatus,
   ParticipantSex,
+  PersonSource,
+  PersonType,
   Role,
   Team,
   TeamParticipant,
@@ -37,6 +40,7 @@ import {
 } from '../../app/core/entities';
 import { insertProgramDemoDay, PROGRAM_SEED_DAYS } from '../../app/core/program/program-demo-seed';
 import dataSource from '../typeorm.config';
+import { computeTeamMaxSize, hasSecondaryAnimator } from './team-fill';
 
 type SeedProfileName = 'small' | 'medium' | 'large';
 
@@ -913,6 +917,7 @@ async function run(): Promise<void> {
 
     const teamsToCreate: Team[] = [];
     const teamsByGroup = new Map<number, Team[]>();
+    const teamlessVolunteersByGroup = new Map<number, Volunteer[]>();
     let globalTeamIndex = 0;
 
     for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
@@ -925,11 +930,18 @@ async function run(): Promise<void> {
       const primaryVolunteers = [...localVolunteers.slice(0, teamCount)];
       const secondaryVolunteers = localVolunteers.slice(teamCount);
 
+      // Une équipe sur cinq reste sans second animateur : ces bénévoles ne
+      // sont rattachés à aucune équipe du rassemblement (démo répartition).
+      let secondaryCursor = 0;
+
       const localTeams: Team[] = [];
       for (let i = 0; i < teamCount; i += 1) {
         const primary = primaryVolunteers[i];
-        const secondary = i < secondaryVolunteers.length ? secondaryVolunteers[i] : null;
-        const maxSize = teamSizes[i];
+        const secondary =
+          hasSecondaryAnimator(globalTeamIndex) && secondaryCursor < secondaryVolunteers.length
+            ? secondaryVolunteers[secondaryCursor++]
+            : null;
+        const maxSize = computeTeamMaxSize(teamSizes[i], secondary ? 2 : 1, globalTeamIndex);
 
         const team = teamRepository.create({
           name: teamNameFrom(group, i, globalTeamIndex),
@@ -947,6 +959,7 @@ async function run(): Promise<void> {
       }
 
       teamsByGroup.set(group.id, localTeams);
+      teamlessVolunteersByGroup.set(group.id, secondaryVolunteers.slice(secondaryCursor));
     }
 
     const teams = await teamRepository.save(teamsToCreate, { chunk: 1000 });
@@ -995,6 +1008,119 @@ async function run(): Promise<void> {
     }
 
     await teamParticipantRepository.save(teamParticipantsToCreate, { chunk: 1000 });
+
+    // Adultes membres des équipes : la fiche participant (ANIMATEUR/BENEVOLE)
+    // + l'appartenance team_participants sont la source unique de vérité
+    // bénévole -> équipe. Les logements (plus bas) en sont la projection.
+    const adultParticipantsToCreate: Participant[] = [];
+    const adultTeamParticipants: TeamParticipant[] = [];
+    const teamFreeSeats = new Map<number, number>();
+    let teamlessTotal = 0;
+    let benevolesPlaced = 0;
+
+    for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
+      const group = groups[groupIndex];
+      const localTeams = teamsByGroupSaved.get(group.id) ?? [];
+      const teamSizes = buildTeamSizes(
+        (participantsByGroupSaved.get(group.id) ?? []).length,
+        localTeams.length,
+      );
+
+      for (let teamIndex = 0; teamIndex < localTeams.length; teamIndex += 1) {
+        const team = localTeams[teamIndex];
+        const animators = [team.primaryAnimator, team.secondaryAnimator].filter(
+          (animator): animator is Volunteer => animator != null,
+        );
+
+        for (const [animatorIndex, animator] of animators.entries()) {
+          const fiche = participantRepository.create({
+            firstName: animator.firstName,
+            lastName: animator.lastName,
+            type: PersonType.ANIMATEUR,
+            dateOfBirth: toDateString(
+              faker.date.between({
+                from: '1968-01-01T00:00:00.000Z',
+                to: '2009-06-30T00:00:00.000Z',
+              }),
+            ),
+            sex: pick(sexValues),
+            mejAgeGroup: null,
+            volunteer: animator,
+            group: null,
+            status: ParticipantRegistrationStatus.CONFIRMED,
+            source: PersonSource.PUBLIC_FORM,
+            emergencyContactName: null,
+            emergencyContactPhone: null,
+            diocese: null,
+            city: null,
+          });
+          adultParticipantsToCreate.push(fiche);
+          adultTeamParticipants.push(
+            teamParticipantRepository.create({
+              team,
+              participant: fiche,
+              role:
+                animatorIndex === 0 ? TeamParticipantRole.MEMBER : TeamParticipantRole.ASSISTANT,
+              notes: null,
+            }),
+          );
+        }
+
+        teamFreeSeats.set(
+          team.id,
+          Math.max(0, team.maxSize - teamSizes[teamIndex] - animators.length),
+        );
+      }
+
+      // Bénévoles sans rôle d'animation : ~60 % rejoignent une équipe de leur
+      // groupe qui a encore de la place (fiche BENEVOLE + appartenance) ; les
+      // autres restent « sans équipe » pour la démonstration de répartition.
+      const teamless = teamlessVolunteersByGroup.get(group.id) ?? [];
+      teamlessTotal += teamless.length;
+      const benevoleCandidates = teamless.filter((_, index) => index % 5 < 3);
+      let seatCursor = 0;
+      for (const volunteer of benevoleCandidates) {
+        for (let k = 0; k < localTeams.length; k += 1) {
+          const team = localTeams[(seatCursor + k) % localTeams.length];
+          const seats = teamFreeSeats.get(team.id) ?? 0;
+          if (seats <= 0) {
+            continue;
+          }
+          teamFreeSeats.set(team.id, seats - 1);
+          seatCursor = (seatCursor + k + 1) % localTeams.length;
+          const fiche = participantRepository.create({
+            firstName: volunteer.firstName,
+            lastName: volunteer.lastName,
+            type: PersonType.BENEVOLE,
+            dateOfBirth: null,
+            sex: null,
+            mejAgeGroup: null,
+            volunteer,
+            group: null,
+            status: ParticipantRegistrationStatus.CONFIRMED,
+            source: PersonSource.STAFF,
+            emergencyContactName: null,
+            emergencyContactPhone: null,
+            diocese: null,
+            city: null,
+          });
+          adultParticipantsToCreate.push(fiche);
+          adultTeamParticipants.push(
+            teamParticipantRepository.create({
+              team,
+              participant: fiche,
+              role: TeamParticipantRole.MEMBER,
+              notes: null,
+            }),
+          );
+          benevolesPlaced += 1;
+          break;
+        }
+      }
+    }
+
+    await participantRepository.save(adultParticipantsToCreate, { chunk: 1000 });
+    await teamParticipantRepository.save(adultTeamParticipants, { chunk: 1000 });
 
     const volunteerMissionsToCreate: VolunteerMission[] = [];
     const volunteerShiftsToCreate: VolunteerShift[] = [];
@@ -1171,21 +1297,22 @@ async function run(): Promise<void> {
 
     const hostFamilies = await hostFamilyRepository.save(hostFamiliesToCreate, { chunk: 1000 });
 
-    // Logement des bénévoles : rattachés à une équipe de jeunes existante,
-    // ils dorment avec les jeunes comme les animateurs.
+    // Logement des bénévoles : projection synchronisée de l'appartenance
+    // team_participants (source unique) — chaque adulte membre d'une équipe
+    // dort avec elle. Les bénévoles sans équipe n'ont pas de logement seedé.
     const volunteerLodgingRepository = dataSource.getRepository(VolunteerTeamLodging);
     const volunteerLodgingsToCreate: VolunteerTeamLodging[] = [];
-    for (const volunteer of volunteers) {
-      if (!chance(0.5)) {
+    for (const membership of adultTeamParticipants) {
+      const volunteer = membership.participant.volunteer;
+      if (!volunteer) {
         continue;
       }
-      const team = pick(teams);
       volunteerLodgingsToCreate.push(
         volunteerLodgingRepository.create({
           volunteer,
           volunteerId: volunteer.id,
-          team,
-          teamId: team.id,
+          team: membership.team,
+          teamId: membership.team.id,
           room: chance(0.4) ? `Dortoir ${faker.string.alpha({ length: 1, casing: 'upper' })}` : null,
           notes: chance(0.15) ? 'Arrivée possible dès le jeudi soir.' : null,
           startAt: '2027-10-31',
@@ -1324,10 +1451,14 @@ async function run(): Promise<void> {
     console.log(`Users: ${users.length}`);
     console.log(`Roles: ${roles.length}`);
     console.log(`Groups: ${groups.length}`);
-    console.log(`Volunteers: ${volunteers.length}`);
-    console.log(`Participants: ${participants.length}`);
-    console.log(`Teams: ${teams.length}`);
-    console.log(`Team memberships: ${teamParticipantsToCreate.length}`);
+    console.log(`Volunteers: ${volunteers.length} (sans équipe au rassemblement: ${teamlessTotal - benevolesPlaced})`);
+    console.log(
+      `Participants: ${participants.length} jeunes + ${adultParticipantsToCreate.length} adultes`,
+    );
+    console.log(`Teams: ${teams.length} (1/5 pleines, 1/5 à moitié, le reste avec 2-4 places libres)`);
+    console.log(
+      `Team memberships: ${teamParticipantsToCreate.length} jeunes + ${adultTeamParticipants.length} adultes`,
+    );
     console.log(`Host families: ${hostFamilies.length}`);
     console.log(`Assignments: ${assignmentsToCreate.length}`);
     console.log(`Health records: ${participantHealthToCreate.length}`);

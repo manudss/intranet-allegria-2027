@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, Volunteer } from '../entities';
@@ -65,6 +65,57 @@ export class VolunteersService {
     }
 
     return volunteer;
+  }
+
+  /**
+   * Mise à jour par le bénévole lui-même : seuls le téléphone et l'email
+   * sont modifiables, le reste reste géré par la coordination.
+   */
+  async updateOwnProfile(
+    userId: number,
+    dto: { phone?: string | null; email?: string | null },
+  ): Promise<Volunteer> {
+    const volunteer = await this.findByUserId(userId);
+    if (!volunteer) {
+      throw new NotFoundException('Aucun profil bénévole rattaché à cet utilisateur');
+    }
+
+    if (dto.phone !== undefined) {
+      volunteer.phone = this.normalizeOwnPhone(dto.phone);
+    }
+    if (dto.email !== undefined) {
+      volunteer.email = this.normalizeOwnEmail(dto.email);
+    }
+
+    return this.volunteersRepository.save(volunteer);
+  }
+
+  private normalizeOwnPhone(value: string | null): string | null {
+    if (value === null) {
+      return null;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    if (!/^\+?[0-9 .()-]{6,20}$/.test(trimmed)) {
+      throw new BadRequestException('Le numéro de téléphone est invalide');
+    }
+    return trimmed;
+  }
+
+  private normalizeOwnEmail(value: string | null): string | null {
+    if (value === null) {
+      return null;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmed)) {
+      throw new BadRequestException("L'adresse email est invalide");
+    }
+    return trimmed;
   }
 
   async update(id: number, dto: UpdateVolunteerDto): Promise<Volunteer> {

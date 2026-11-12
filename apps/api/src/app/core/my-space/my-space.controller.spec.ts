@@ -81,4 +81,14 @@ describe('MySpaceController', () => {
     const { controller } = build({ findByUserId: vi.fn().mockResolvedValue(null) });
     await expect(controller.getMyHosting(req)).rejects.toBeInstanceOf(NotFoundException);
   });
+
+  it('délègue la mise à jour des coordonnées au service, limitée au profil propre', async () => {
+    const { controller, volunteers } = build({
+      updateOwnProfile: vi.fn().mockResolvedValue({ id: 7, phone: '+33612345678' }),
+    } as Partial<VolunteersService>);
+    await expect(
+      controller.updateMyVolunteer(req, { phone: '+33612345678' }),
+    ).resolves.toEqual({ id: 7, phone: '+33612345678' });
+    expect(volunteers.updateOwnProfile).toHaveBeenCalledWith(42, { phone: '+33612345678' });
+  });
 });

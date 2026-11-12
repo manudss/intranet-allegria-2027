@@ -1,7 +1,8 @@
-import { Controller, Get, NotFoundException, Param, ParseIntPipe, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, NotFoundException, Param, ParseIntPipe, Patch, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthTokenGuard } from '../auth/auth-token.guard';
 import { VolunteerHostingService } from '../volunteer-hosting/volunteer-hosting.service';
+import { UpdateMyVolunteerDto } from './my-space.types';
 import { RoleGuard } from '../auth/role.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Volunteer } from '../entities';
@@ -31,6 +32,13 @@ export class MySpaceController {
   @Get('volunteer')
   async getMyVolunteer(@Req() req: UserRequest): Promise<Volunteer> {
     return this.findMyVolunteer(req);
+  }
+
+  @ApiOperation({ summary: 'Mettre à jour les coordonnées du bénévole authentifié (téléphone, email)' })
+  @Roles(...READ_ROLES)
+  @Patch('volunteer')
+  async updateMyVolunteer(@Req() req: UserRequest, @Body() dto: UpdateMyVolunteerDto) {
+    return this.volunteersService.updateOwnProfile(req.user.id, dto);
   }
 
   @ApiOperation({ summary: 'Planning des affectations du bénévole authentifié' })

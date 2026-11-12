@@ -39,6 +39,27 @@ export const appRoutes: Routes = [
     ],
   },
   {
+    // Mode scan : hors du shell principal, écran dédié plein écran (badge
+    // personnel posé à un poste). Garde d'authentification + rôle vérifié
+    // côté client (SCANNER / BADGE_MANAGER / ADMIN) dans les composants.
+    path: 'scan',
+    canActivate: [authGuard],
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./features/scan/scan-entry.component').then((m) => m.ScanEntryComponent),
+        title: 'Mode scan - ALEGRIA',
+      },
+      {
+        path: ':pointId',
+        loadComponent: () =>
+          import('./features/scan/scanner.component').then((m) => m.ScannerComponent),
+        title: 'Scanner - ALEGRIA',
+      },
+    ],
+  },
+  {
     path: '',
     loadComponent: () =>
       import('./shared/shell/shell.component').then((m) => m.ShellComponent),

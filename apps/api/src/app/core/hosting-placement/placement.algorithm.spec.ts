@@ -13,6 +13,7 @@ const person = (id: number, teamId: number, extra: Partial<PlacementPerson> = {}
   id,
   teamId,
   isAnimator: false,
+  isBenevole: false,
   isUnder18: true,
   sex: 'F',
   ...extra,
@@ -46,7 +47,7 @@ describe('proposePlacement', () => {
 
   it('tient compte de l’occupation existante et ne la modifie pas', () => {
     const occupied = family(1, 3, {
-      occupants: [{ teamId: 99, isAnimator: false, isUnder18: true, sex: 'M' }],
+      occupants: [{ teamId: 99, isAnimator: false, isBenevole: false, isUnder18: true, sex: 'M' }],
     });
     const { proposals, unplaced } = proposePlacement(
       [person(1, 10), person(2, 10), person(3, 10)],
@@ -89,7 +90,7 @@ describe('proposePlacement', () => {
 
   it('interdit la mixité quand la règle est forbid', () => {
     const occupied = family(1, 4, {
-      occupants: [{ teamId: 5, isAnimator: false, isUnder18: true, sex: 'M' }],
+      occupants: [{ teamId: 5, isAnimator: false, isBenevole: false, isUnder18: true, sex: 'M' }],
     });
     const forbid = proposePlacement([person(1, 1)], [occupied], { ...rules, sexMixing: 'forbid' });
     expect(forbid.unplaced).toEqual([{ participantId: 1, reason: 'SEX_MIXING' }]);
@@ -99,7 +100,7 @@ describe('proposePlacement', () => {
 
   it('préfère une famille sans mixité quand la règle est avoid', () => {
     const withBoy = family(1, 4, {
-      occupants: [{ teamId: 5, isAnimator: false, isUnder18: true, sex: 'M' }],
+      occupants: [{ teamId: 5, isAnimator: false, isBenevole: false, isUnder18: true, sex: 'M' }],
     });
     const { proposals } = proposePlacement([person(1, 1)], [withBoy, family(2, 4)], { ...rules, sexMixing: 'avoid' });
     expect(proposals[0].hostFamilyId).toBe(2);
@@ -118,5 +119,49 @@ describe('proposePlacement', () => {
 
   it('refusalReason accepte une famille avec place', () => {
     expect(refusalReason(family(1, 2), person(1, 1), rules)).toBeNull();
+  });
+
+  describe('bénévoles adultes rattachés à une équipe', () => {
+    const benevole = (id: number, teamId: number) =>
+      person(id, teamId, { isAnimator: true, isBenevole: true, isUnder18: false, sex: '' });
+
+    it('compte toujours dans la capacité, même si les animateurs n’y comptent pas', () => {
+      const apart = proposePlacement([benevole(1, 1), person(2, 1)], [family(1, 1)], {
+        ...rules,
+        countAnimatorsInCapacity: false,
+      });
+      // Le bénévole prend une place : le jeune ne peut plus entrer (capacité 1).
+      expect(apart.proposals).toHaveLength(1);
+      expect(apart.unplaced).toEqual([{ participantId: 2, reason: 'NO_CAPACITY' }]);
+    });
+
+    it('compte dans le quota adultes (maxAnimators) comme un animateur', () => {
+      const { proposals, unplaced } = proposePlacement(
+        [benevole(1, 1), benevole(2, 1)],
+        [family(1, 5, { maxAnimators: 1 })],
+        rules,
+      );
+      expect(proposals).toHaveLength(1);
+      expect(unplaced).toEqual([{ participantId: 2, reason: 'ANIMATOR_LIMIT' }]);
+    });
+
+    it('ne compte jamais dans le quota de mineurs', () => {
+      const occupied = family(1, 5, {
+        maxUnder18: 1,
+        occupants: [{ teamId: 5, isAnimator: false, isBenevole: false, isUnder18: true, sex: 'M' }],
+      });
+      const { proposals, unplaced } = proposePlacement([benevole(1, 1)], [occupied], rules);
+      expect(unplaced).toEqual([]);
+      expect(proposals).toHaveLength(1);
+    });
+
+    it('est ignoré par la règle de mixité des jeunes', () => {
+      const occupied = family(1, 4, {
+        occupants: [{ teamId: 5, isAnimator: false, isBenevole: false, isUnder18: true, sex: 'M' }],
+      });
+      const forbid = proposePlacement([benevole(1, 1)], [occupied], { ...rules, sexMixing: 'forbid' });
+      expect(forbid.unplaced).toEqual([]);
+      expect(forbid.proposals).toHaveLength(1);
+    });
   });
 });

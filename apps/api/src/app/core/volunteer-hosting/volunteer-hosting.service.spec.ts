@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
-import { AssignmentStatus } from '../entities';
+import { AssignmentStatus, PersonType } from '../entities';
 import { VolunteerHostingService } from './volunteer-hosting.service';
 
 const build = (overrides: Record<string, unknown> = {}) => {
@@ -30,6 +30,7 @@ const teamWithMembers = {
       participant: {
         firstName: 'Zoé',
         lastName: 'Secret',
+        type: PersonType.JEUNE,
         hostFamilyAssignments: [
           {
             status: AssignmentStatus.CONFIRMED,
@@ -49,6 +50,7 @@ const teamWithMembers = {
       participant: {
         firstName: 'Adam',
         lastName: 'Secret',
+        type: PersonType.JEUNE,
         hostFamilyAssignments: [
           {
             status: AssignmentStatus.CANCELLED,
@@ -65,7 +67,11 @@ const teamWithMembers = {
       },
     },
     {
-      participant: { firstName: 'Léa', lastName: 'Secret', hostFamilyAssignments: [] },
+      participant: { firstName: 'Léa', lastName: 'Secret', type: PersonType.JEUNE, hostFamilyAssignments: [] },
+    },
+    {
+      // Fiche BENEVOLE (adulte, projection d'un bénévole) : exclue de la liste des jeunes.
+      participant: { firstName: 'Camille', lastName: 'Perrot', type: PersonType.BENEVOLE, hostFamilyAssignments: [] },
     },
   ],
 };

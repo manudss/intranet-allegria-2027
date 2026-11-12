@@ -27,6 +27,12 @@ export interface PlacementPerson {
   id: number;
   teamId: number;
   isAnimator: boolean;
+  /**
+   * Bénévole adulte rattaché à l'équipe : compte TOUJOURS dans la capacité
+   * totale (même si les animateurs n'y comptent pas) et dans le quota adultes
+   * (isAnimator vaut true pour lui). Jamais mineur, jamais dans la mixité jeunes.
+   */
+  isBenevole: boolean;
   isUnder18: boolean;
   sex: string;
 }
@@ -45,6 +51,7 @@ export interface PlacementFamily {
 export interface PlacementOccupant {
   teamId: number | null;
   isAnimator: boolean;
+  isBenevole: boolean;
   isUnder18: boolean;
   sex: string;
 }
@@ -67,8 +74,10 @@ export interface PlacementResult {
   unplaced: UnplacedPerson[];
 }
 
-const countsInCapacity = (rules: PlacementRules, person: { isAnimator: boolean }): boolean =>
-  rules.countAnimatorsInCapacity || !person.isAnimator;
+const countsInCapacity = (
+  rules: PlacementRules,
+  person: { isAnimator: boolean; isBenevole: boolean },
+): boolean => person.isBenevole || rules.countAnimatorsInCapacity || !person.isAnimator;
 
 export function freeSeats(family: PlacementFamily, rules: PlacementRules): number {
   const used = family.occupants.filter((o) => countsInCapacity(rules, o)).length;
@@ -166,6 +175,7 @@ export function proposePlacement(
           target.occupants.push({
             teamId,
             isAnimator: person.isAnimator,
+            isBenevole: person.isBenevole,
             isUnder18: person.isUnder18,
             sex: person.sex,
           });

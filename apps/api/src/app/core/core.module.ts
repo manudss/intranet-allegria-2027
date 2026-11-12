@@ -9,6 +9,7 @@ import { ParticipantsModule } from './participants/participants.module';
 import { VolunteerSkillsModule } from './volunteer-skills/volunteer-skills.module';
 import { VolunteerTeamsModule } from './volunteer-teams/volunteer-teams.module';
 import { TeamParticipantsModule } from './team-participants/team-participants.module';
+import { TeamBenevolesModule } from './team-benevoles/team-benevoles.module';
 import { TeamsModule } from './teams/teams.module';
 import { VolunteersModule } from './volunteers/volunteers.module';
 import { VolunteerMissionsModule } from './volunteer-missions/volunteer-missions.module';
@@ -27,6 +28,7 @@ import { VolunteerHostingModule } from './volunteer-hosting/volunteer-hosting.mo
     ParticipantsModule,
     TeamsModule,
     TeamParticipantsModule,
+    TeamBenevolesModule,
     VolunteersModule,
     VolunteerTeamsModule,
     VolunteerMissionsModule,

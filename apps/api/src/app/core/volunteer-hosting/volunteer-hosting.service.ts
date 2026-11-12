@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AssignmentStatus, Team, Volunteer, VolunteerTeamLodging } from '../entities';
+import { AssignmentStatus, PersonType, Team, Volunteer, VolunteerTeamLodging } from '../entities';
 import { CreateVolunteerHostingDto, UpdateVolunteerHostingDto, VolunteerLodgingView } from './volunteer-hosting.types';
 
 @Injectable()
@@ -64,7 +64,10 @@ export class VolunteerHostingService {
       });
     }
 
+    // Jeunes uniquement : les fiches BENEVOLE de l'équipe sont des adultes
+    // (projections de bénévoles), elles n'apparaissent pas dans la liste des jeunes.
     const youths = (team.members ?? [])
+      .filter((member) => member.participant.type === PersonType.JEUNE)
       .map((member) => ({ firstName: member.participant.firstName }))
       .sort((a, b) => a.firstName.localeCompare(b.firstName, 'fr'));
 

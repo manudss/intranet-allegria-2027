@@ -4,6 +4,11 @@ import { Observable } from 'rxjs';
 import {
   AssignmentPayload,
   BenevoleAssignment,
+  ApplyRepartitionEntry,
+  ApplyRepartitionResult,
+  RepartitionFilters,
+  RepartitionTeamRow,
+  RepartitionVolunteersResult,
   DashboardGlobalSummary,
   DashboardLocationRow,
   DashboardTeamSummary,
@@ -425,6 +430,46 @@ export class TeamBenevolesApiService {
   unassign(teamId: number, volunteerId: number) {
     return this.http.delete<DeleteResponse>(`/api/teams/${teamId}/benevoles/${volunteerId}`);
   }
+
+  // ── Page de répartition bénévoles → équipes ──────────────────────────────
+  repartitionFilters(): Observable<RepartitionFilters> {
+    return this.http.get<RepartitionFilters>('/api/benevoles/repartition/filters');
+  }
+  repartitionTeams(query: {
+    search?: string;
+    hostingGroupId?: number | null;
+    groupId?: number | null;
+    fill?: 'all' | 'free' | 'full';
+  } = {}): Observable<RepartitionTeamRow[]> {
+    return this.http.get<RepartitionTeamRow[]>('/api/benevoles/repartition/teams', {
+      params: repartitionParams(query),
+    });
+  }
+  repartitionVolunteers(query: {
+    search?: string;
+    skill?: string;
+    tag?: string;
+    poleId?: number | null;
+    assignment?: 'all' | 'unassigned' | 'assigned';
+  } = {}): Observable<RepartitionVolunteersResult> {
+    return this.http.get<RepartitionVolunteersResult>('/api/benevoles/repartition/volunteers', {
+      params: repartitionParams(query),
+    });
+  }
+  applyRepartition(assignments: ApplyRepartitionEntry[]): Observable<ApplyRepartitionResult> {
+    return this.http.post<ApplyRepartitionResult>('/api/benevoles/repartition/apply', { assignments });
+  }
+}
+
+/** Paramètres de requête : ignore les valeurs vides/null. */
+function repartitionParams(query: Record<string, unknown>): Record<string, string> {
+  const params: Record<string, string> = {};
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== null && value !== undefined && value !== '' && value !== 'all') {
+      params[key] = String(value);
+    }
+  }
+  return params;
 }
 @Injectable({ providedIn: 'root' })
 export class HostFamiliesApiService extends CrudApi<HostFamily, HostFamilyPayload> {

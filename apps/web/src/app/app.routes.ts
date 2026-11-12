@@ -37,6 +37,16 @@ export const appRoutes: Route[] = [
           import('./features/participants/participants').then((m) => m.ParticipantsPage),
       },
       {
+        path: 'benevoles/repartition',
+        title: 'Repartition benevoles',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'COORDINATOR', 'LOGISTICS', 'VOLUNTEERS'] },
+        loadComponent: () =>
+          import('./features/benevoles-repartition/benevoles-repartition').then(
+            (m) => m.BenevolesRepartitionPage,
+          ),
+      },
+      {
         path: 'benevoles',
         title: 'Benevoles',
         loadComponent: () =>

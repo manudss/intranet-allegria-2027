@@ -1,0 +1,429 @@
+<app-page-layout
+  title="Bénévoles → Équipes"
+  description="Répartition des bénévoles adultes dans les équipes de rassemblement"
+>
+  <div actions>
+    <a tuiButton appearance="secondary" size="s" routerLink="/equipes">Équipes</a>
+    <a tuiButton appearance="secondary" size="s" routerLink="/benevoles">Bénévoles</a>
+  </div>
+
+  @if (loading()) {
+    <tui-loader />
+  } @else {
+    <nav class="steps" aria-label="Étapes">
+      <button type="button" class="step" [class.active]="step() === 1" (click)="step.set(1)">
+        <b>1</b> Équipes
+        <small>{{ selectedTeams().length }} équipe(s) à compléter</small>
+      </button>
+      <button type="button" class="step" [class.active]="step() === 2" (click)="goToStep(2)">
+        <b>2</b> Bénévoles
+        <small>{{ poolVolunteers().size }} bénévole(s) dans le pool</small>
+      </button>
+      <button type="button" class="step" [class.active]="step() === 3" (click)="goToStep(3)">
+        <b>3</b> Affectation
+        <small>{{ poolUnassignedCount() }} bénévole(s) sans équipe à répartir</small>
+      </button>
+    </nav>
+
+    @if (notice(); as n) {
+      <div class="notice" [class.error]="n.kind === 'error'" [class.warning]="n.kind === 'warning'" role="status" aria-live="polite">
+        {{ n.text }}
+        <button type="button" class="link" (click)="notice.set(null)" aria-label="Fermer le message">✕</button>
+      </div>
+    }
+
+    @if (step() === 1) {
+      <p class="hint">
+        Étape 1 : constituez le pool d'équipes à compléter. Cumulez plusieurs recherches : chaque équipe
+        trouvée peut être glissée dans le panneau de droite ou ajoutée avec « + Ajouter ».
+        Rien n'est enregistré à cette étape.
+      </p>
+      <div class="panels">
+        <section class="panel" aria-label="Rechercher des équipes">
+          <h2>Rechercher des équipes <small>{{ allTeams().length }} au total</small></h2>
+          <tui-textfield iconStart="@tui.search">
+            <label tuiLabel for="rep-team-search">Rechercher une équipe</label>
+            <input
+              tuiInput
+              id="rep-team-search"
+              placeholder="Nom de l'équipe…"
+              [ngModel]="teamSearch()"
+              (ngModelChange)="teamSearch.set($event)"
+            />
+          </tui-textfield>
+          <div class="filters">
+            <app-select-field
+              label="Zone de logement"
+              [options]="hostingGroupOptions()"
+              [value]="teamHostingGroupId() ?? 0"
+              (valueChange)="teamHostingGroupId.set($event || null)"
+            />
+            <app-select-field
+              label="Groupe"
+              [options]="groupOptions()"
+              [value]="teamGroupId() ?? 0"
+              (valueChange)="teamGroupId.set($event || null)"
+            />
+            <app-select-field
+              label="Remplissage"
+              [options]="fillOptions"
+              [value]="teamFill()"
+              (valueChange)="setTeamFill($event)"
+            />
+          </div>
+          <div class="chips">
+            <span class="chip on">{{ filteredTeams().length }} résultat(s)</span>
+            <button type="button" class="chip action" (click)="addAllFilteredTeams()">
+              Tout ajouter ({{ filteredTeams().length }})
+            </button>
+          </div>
+          <div
+            class="rows"
+            cdkDropList
+            id="team-results"
+            [cdkDropListData]="1"
+            [cdkDropListConnectedTo]="['team-pool']"
+            (cdkDropListDropped)="dropTeam($event)"
+          >
+            @for (team of filteredTeams(); track trackTeam($index, team)) {
+              <article class="row" [class.added]="selectedTeamIds().has(team.id)" cdkDrag [cdkDragData]="{ teamId: team.id }">
+                <span class="grip" aria-hidden="true">⋮⋮</span>
+                <div class="info">
+                  <div class="name">{{ team.name }}</div>
+                  <div class="meta">
+                    {{ team.groupName ?? 'Sans groupe' }} ·
+                    {{ team.hostingGroupName ? 'zone ' + team.hostingGroupName : 'sans zone de logement' }} —
+                    {{ team.jeunes }} jeunes + {{ team.adultes }} adulte(s) / {{ team.maxSize }}
+                  </div>
+                  <div class="gauge"><div [style.width.%]="percent(team.jeunes + team.adultes, team.maxSize)"></div></div>
+                </div>
+                @if (team.free === 0) {
+                  <span class="badge full">Complète</span>
+                } @else {
+                  <span class="badge ok">{{ team.free }} libre(s)</span>
+                }
+                @if (selectedTeamIds().has(team.id)) {
+                  <button tuiButton type="button" size="s" appearance="secondary" disabled>✓ Dans le pool</button>
+                } @else {
+                  <button tuiButton type="button" size="s" (click)="addTeam(team.id)">+ Ajouter</button>
+                }
+              </article>
+            } @empty {
+              <p class="empty">Aucune équipe ne correspond à cette recherche.</p>
+            }
+          </div>
+        </section>
+
+        <section class="panel pool" aria-label="Équipes sélectionnées">
+          <h2>
+            Équipes sélectionnées
+            <small>{{ selectedTeams().length }} équipe(s) · {{ selectedFreeSeats() }} place(s) libre(s)</small>
+          </h2>
+          <div
+            class="rows"
+            cdkDropList
+            id="team-pool"
+            [cdkDropListData]="POOL"
+            [cdkDropListConnectedTo]="['team-results']"
+            (cdkDropListDropped)="dropTeam($event)"
+          >
+            @for (team of selectedTeams(); track trackTeam($index, team)) {
+              <article class="row" cdkDrag [cdkDragData]="{ teamId: team.id }">
+                <div class="info">
+                  <div class="name">{{ team.name }}</div>
+                  <div class="meta">
+                    {{ team.groupName ?? 'Sans groupe' }} ·
+                    {{ team.hostingGroupName ? 'zone ' + team.hostingGroupName : 'sans zone de logement' }} —
+                    {{ team.jeunes }} jeunes + {{ team.adultes }} adulte(s) / {{ team.maxSize }}
+                  </div>
+                  <div class="gauge"><div [style.width.%]="percent(team.jeunes + team.adultes, team.maxSize)"></div></div>
+                </div>
+                <span class="badge ok">{{ team.free }} libre(s)</span>
+                <button tuiButton type="button" size="s" appearance="secondary" (click)="removeTeam(team.id)">Retirer</button>
+              </article>
+            } @empty {
+              <p class="empty">Glissez une équipe ici ou utilisez « + Ajouter ».</p>
+            }
+          </div>
+        </section>
+      </div>
+      <div class="footer">
+        <small>Rien n'est enregistré : on ne fait que choisir les pools.</small>
+        <button tuiButton type="button" [disabled]="selectedTeams().length === 0" (click)="goToStep(2)">
+          Continuer : sélectionner les bénévoles ({{ selectedTeams().length }} équipe(s)) →
+        </button>
+      </div>
+    }
+
+    @if (step() === 2) {
+      <p class="hint">
+        Étape 2 : constituez le pool de bénévoles à répartir. Cumulez plusieurs recherches (pôle, compétence,
+        étiquette, affectation…) : chaque bénévole trouvé peut être ajouté avec « + Ajouter » ou glissé dans
+        le panneau de droite. Rien n'est enregistré à cette étape.
+      </p>
+      <div class="panels">
+        <section class="panel" aria-label="Rechercher des bénévoles">
+          <h2>Rechercher des bénévoles</h2>
+          <tui-textfield iconStart="@tui.search">
+            <label tuiLabel for="rep-vol-search">Rechercher un bénévole</label>
+            <input
+              tuiInput
+              id="rep-vol-search"
+              placeholder="Nom, prénom…"
+              [ngModel]="volSearch()"
+              (ngModelChange)="volSearch.set($event); searchVolunteers()"
+            />
+          </tui-textfield>
+          <div class="filters">
+            <app-select-field
+              label="Pôle bénévole"
+              [options]="poleOptions()"
+              [value]="volPoleId() ?? 0"
+              (valueChange)="volPoleId.set($event || null); searchVolunteers()"
+            />
+            <app-select-field
+              label="Compétence"
+              [options]="skillOptions()"
+              [value]="volSkill()"
+              (valueChange)="volSkill.set($event ?? ''); searchVolunteers()"
+            />
+          </div>
+          <div class="filters">
+            <app-select-field
+              label="Étiquette"
+              [options]="tagOptions()"
+              [value]="volTag()"
+              (valueChange)="volTag.set($event ?? ''); searchVolunteers()"
+            />
+            <app-select-field
+              label="Affectation"
+              [options]="assignmentOptions"
+              [value]="volAssignment()"
+              (valueChange)="setVolAssignment($event); searchVolunteers()"
+            />
+          </div>
+          <div class="chips">
+            <span class="chip on">{{ volTotal() }} résultat(s)</span>
+            <button type="button" class="chip action" (click)="addAllResultVolunteers()">
+              Tout ajouter ({{ volResults().length }})
+            </button>
+          </div>
+          <div class="rows">
+            @for (vol of volResults(); track trackVolunteer($index, vol)) {
+              <article class="row" [class.added]="poolVolunteers().has(vol.id)">
+                <div class="info">
+                  <div class="name">{{ volunteerName(vol) }}</div>
+                  <div class="meta">
+                    @for (pole of vol.poles; track pole) {
+                      <span class="pole">{{ pole }}</span>
+                    }
+                    @for (skill of vol.skills; track skill) {
+                      <span class="skill">{{ skillLabel(skill) }}</span>
+                    }
+                    @if (vol.teamId === null) {
+                      <b class="state-free">sans équipe</b>
+                    } @else {
+                      <span class="state-assigned">→ {{ vol.teamName }}</span>
+                    }
+                  </div>
+                </div>
+                @if (poolVolunteers().has(vol.id)) {
+                  <button tuiButton type="button" size="s" appearance="secondary" disabled>✓ Dans le pool</button>
+                } @else {
+                  <button tuiButton type="button" size="s" (click)="addVolunteer(vol)">+ Ajouter</button>
+                }
+              </article>
+            } @empty {
+              <p class="empty">Aucun bénévole ne correspond à cette recherche.</p>
+            }
+          </div>
+          @if (volTotal() > volResults().length) {
+            <p class="empty">… et {{ volTotal() - volResults().length }} autre(s) : affinez la recherche.</p>
+          }
+        </section>
+
+        <section class="panel pool" aria-label="Pool de bénévoles">
+          <h2>
+            Pool de bénévoles
+            <small>{{ poolList().length }} sélectionné(s) · {{ poolUnassignedCount() }} sans équipe</small>
+          </h2>
+          <div class="rows">
+            @for (vol of poolList(); track trackVolunteer($index, vol)) {
+              <article class="row">
+                <div class="info">
+                  <div class="name">{{ volunteerName(vol) }}</div>
+                  <div class="meta">
+                    @for (pole of vol.poles; track pole) {
+                      <span class="pole">{{ pole }}</span>
+                    }
+                    @for (skill of vol.skills; track skill) {
+                      <span class="skill">{{ skillLabel(skill) }}</span>
+                    }
+                    @if (vol.teamId === null) {
+                      <b class="state-free">sans équipe</b>
+                    } @else {
+                      <span class="state-assigned">→ {{ vol.teamName }}</span>
+                    }
+                  </div>
+                </div>
+                <button tuiButton type="button" size="s" appearance="secondary" (click)="removeVolunteer(vol.id)">Retirer</button>
+              </article>
+            } @empty {
+              <p class="empty">Ajoutez des bénévoles depuis les résultats de recherche.</p>
+            }
+          </div>
+        </section>
+      </div>
+      <div class="footer">
+        <small>Rien n'est enregistré : on ne fait que choisir les pools.</small>
+        <div class="footer-actions">
+          <button tuiButton type="button" appearance="secondary" (click)="step.set(1)">← Équipes</button>
+          <button tuiButton type="button" [disabled]="poolVolunteers().size === 0" (click)="goToStep(3)">
+            Passer à l'affectation ({{ poolVolunteers().size }} bénévole(s) → {{ selectedTeams().length }} équipe(s)) →
+          </button>
+        </div>
+      </div>
+    }
+
+    @if (step() === 3) {
+      <p class="hint">
+        Glissez un bénévole dans une équipe (menu « Équipe » sur téléphone). Rien n'est enregistré
+        automatiquement : la proposition se corrige à la main, puis « Valider les affectations » enregistre.
+      </p>
+
+      <div class="auto">
+        <div class="title">Répartition automatique</div>
+        <p class="hint compact">
+          Propose une équipe aux bénévoles du pool encore sans équipe : équipes sélectionnées à l'étape 1,
+          effectifs équilibrés, taille maximale jamais dépassée. Aperçu en pointillés, corrections possibles
+          avant validation.
+        </p>
+        <div class="auto-actions">
+          <button tuiButton type="button" size="m" [disabled]="busy()" (click)="computeAuto()">
+            Calculer une proposition
+          </button>
+          @if (autoProposed().size > 0) {
+            <button tuiButton type="button" size="m" appearance="secondary" [disabled]="busy()" (click)="recalcAuto()">
+              Recalculer
+            </button>
+          }
+          @if (pendingChanges() > 0) {
+            <button tuiButton type="button" size="m" appearance="primary" [disabled]="busy()" (click)="validate()">
+              Valider les affectations ({{ pendingChanges() }})
+            </button>
+            <button tuiButton type="button" size="m" appearance="secondary" [disabled]="busy()" (click)="resetBoard()">
+              Tout annuler
+            </button>
+          }
+        </div>
+        @if (autoUnplaced().length > 0) {
+          <div class="notice warning">
+            <b>{{ autoUnplaced().length }} bénévole(s) sans solution :</b> toutes les équipes sélectionnées
+            seraient complètes.
+          </div>
+        }
+      </div>
+
+      <div class="board">
+        <section
+          class="column pool"
+          aria-label="Pool de bénévoles"
+          cdkDropList
+          id="vol-pool"
+          [cdkDropListData]="POOL"
+          [cdkDropListConnectedTo]="boardListIds()"
+          (cdkDropListDropped)="dropVolunteer($event)"
+        >
+          <header>
+            <h3>Pool de bénévoles</h3>
+            <div class="gauge-line">{{ poolList().length }} bénévole(s) · {{ boardPoolUnassigned().length }} sans équipe</div>
+          </header>
+          <h4>Sans équipe ({{ boardPoolUnassigned().length }})</h4>
+          @for (vol of boardPoolUnassigned(); track trackVolunteer($index, vol)) {
+            <article class="card benevole" [class.proposed]="isPending(vol.id)" cdkDrag [cdkDragData]="{ volunteerId: vol.id }">
+              <div>
+                <b>{{ volunteerName(vol) }}</b>
+                @if (autoProposed().has(vol.id)) { <small> (proposé)</small> }
+                <br /><small>
+                  @for (pole of vol.poles; track pole) { <span class="pole">{{ pole }}</span> }
+                  @for (skill of vol.skills; track skill) { <span class="skill">{{ skillLabel(skill) }}</span> }
+                  · adulte
+                </small>
+              </div>
+              <app-select-field
+                class="mobile-select"
+                [label]="'Équipe de ' + vol.firstName"
+                [options]="teamOptions()"
+                [value]="POOL"
+                (valueChange)="setDesired(vol.id, $event)"
+              />
+            </article>
+          } @empty {
+            <p class="empty">Tous les bénévoles du pool ont une équipe.</p>
+          }
+          @if (boardPoolAssigned().length > 0) {
+            <h4>Affectés ({{ boardPoolAssigned().length }})</h4>
+            @for (vol of boardPoolAssigned(); track trackVolunteer($index, vol)) {
+              <article class="card benevole" [class.proposed]="isPending(vol.id)" cdkDrag [cdkDragData]="{ volunteerId: vol.id }">
+                <div>
+                  <b>{{ volunteerName(vol) }}</b>
+                  @if (autoProposed().has(vol.id)) { <small> (proposé)</small> }
+                  <br /><small>
+                    @for (pole of vol.poles; track pole) { <span class="pole">{{ pole }}</span> }
+                    @for (skill of vol.skills; track skill) { <span class="skill">{{ skillLabel(skill) }}</span> }
+                    · adulte
+                  </small>
+                </div>
+                <app-select-field
+                  class="mobile-select"
+                  [label]="'Équipe de ' + vol.firstName"
+                  [options]="teamOptions()"
+                  [value]="desiredTeamOf(vol.id) ?? POOL"
+                  (valueChange)="setDesired(vol.id, $event)"
+                />
+              </article>
+            }
+          }
+        </section>
+
+        @for (team of selectedTeams(); track trackTeam($index, team)) {
+          <section
+            class="column"
+            [attr.aria-label]="team.name"
+            cdkDropList
+            [id]="'vol-team-' + team.id"
+            [cdkDropListData]="team.id"
+            [cdkDropListConnectedTo]="boardListIds()"
+            (cdkDropListDropped)="dropVolunteer($event)"
+          >
+            <header>
+              <h3>{{ team.name }} <span class="kind">{{ team.hostingGroupName ?? '' }}</span></h3>
+              <div class="gauge-line">
+                <span>{{ team.jeunes }} jeunes + {{ adultesWithPending(team) }} adulte(s) / {{ team.maxSize }}</span>
+                <span class="badge ok">{{ freeWithPending(team) }} libre(s)</span>
+              </div>
+              <div class="gauge">
+                <div [style.width.%]="percent(team.jeunes + adultesWithPending(team), team.maxSize)"></div>
+              </div>
+            </header>
+            <h4>Bénévoles ({{ columnCards(team.id).length }})</h4>
+            @for (card of columnCards(team.id); track card.volunteer.id) {
+              <article class="card benevole" [class.proposed]="card.pending">
+                <div>
+                  <b>{{ volunteerName(card.volunteer) }}</b>
+                  @if (card.pending) { <small> (proposé)</small> }
+                  <br /><small>
+                    @for (pole of card.volunteer.poles; track pole) { <span class="pole">{{ pole }}</span> }
+                    · adulte
+                  </small>
+                </div>
+              </article>
+            } @empty {
+              <p class="empty">Glissez un bénévole ici</p>
+            }
+          </section>
+        }
+      </div>
+    }
+  }
+</app-page-layout>

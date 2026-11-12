@@ -672,3 +672,52 @@ export interface DashboardTodoList {
   withoutConfirmedStaff: DashboardTodoShift[];
   optionalIncomplete: DashboardTodoMission[];
 }
+
+// ── Répartition bénévoles → équipes de rassemblement (benevoles/repartition) ─
+
+export interface RepartitionTeamRow {
+  id: number;
+  name: string;
+  groupId: number | null;
+  groupName: string | null;
+  hostingGroupId: number | null;
+  hostingGroupName: string | null;
+  jeunes: number;
+  adultes: number;
+  maxSize: number;
+  free: number;
+}
+
+export interface RepartitionVolunteerRow {
+  id: number;
+  firstName: string;
+  lastName: string;
+  mission: string | null;
+  poles: string[];
+  skills: string[];
+  tags: string[];
+  teamId: number | null;
+  teamName: string | null;
+}
+
+export interface RepartitionVolunteersResult {
+  total: number;
+  volunteers: RepartitionVolunteerRow[];
+}
+
+export interface RepartitionFilters {
+  hostingGroups: { id: number; name: string }[];
+  groups: { id: number; name: string }[];
+  poles: { id: number; name: string }[];
+  tags: string[];
+  skills: string[];
+}
+
+export interface ApplyRepartitionEntry {
+  volunteerId: number;
+  teamId: number | null;
+}
+
+export interface ApplyRepartitionResult {
+  applied: number;
+}

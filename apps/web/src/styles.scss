@@ -1,4 +1,8 @@
 :root {
+  /* Thème clair uniquement : empêche Chrome/Android d'assombrir la page
+   * (le texte des champs passait blanc sur fond blanc en mode sombre forcé). */
+  color-scheme: only light;
+
   --allegria-primary: #d52f57;
   --allegria-secondary: #f5a623;
   --allegria-on-primary: #ffffff;
@@ -145,4 +149,18 @@ a {
 
 a:hover {
   color: #bf294e;
+}
+
+/* Couleur de texte explicite des champs, y compris remplissage automatique
+ * (Chrome peint ses propres couleurs sur -webkit-autofill). */
+input,
+textarea {
+  color: var(--allegria-text);
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--allegria-text);
+  caret-color: var(--allegria-text);
 }

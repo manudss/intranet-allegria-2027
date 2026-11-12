@@ -1,3 +1,4 @@
+import { AccessReportingModule } from './core/access-reporting/access-reporting.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -15,6 +16,7 @@ import { CoreModule } from './core/core.module';
       useFactory: createTypeOrmOptions,
     }),
     CoreModule,
+    AccessReportingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

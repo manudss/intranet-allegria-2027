@@ -17,6 +17,14 @@ import {
   DeleteResponse,
   Group,
   GroupPayload,
+  ApplyJeunesRepartitionEntry,
+  ApplyJeunesRepartitionResult,
+  BulkCreateTeamsResult,
+  JeunesRepartitionFilters,
+  JeunesRepartitionParams,
+  JeunesRepartitionParticipantsResult,
+  JeunesRepartitionTeamRow,
+  ProposeJeunesRepartitionResult,
   HostFamily,
   HostFamilyPayload,
   LoginCredentials,
@@ -462,6 +470,69 @@ export class TeamBenevolesApiService {
     return this.http.post<ApplyRepartitionResult>('/api/benevoles/repartition/apply', { assignments });
   }
 }
+@Injectable({ providedIn: 'root' })
+export class JeunesRepartitionApiService {
+  private readonly http = inject(HttpClient);
+
+  repartitionFilters(): Observable<JeunesRepartitionFilters> {
+    return this.http.get<JeunesRepartitionFilters>('/api/jeunes/repartition/filters');
+  }
+
+  participants(
+    query: {
+      search?: string;
+      type?: 'all' | 'JEUNE' | 'ANIMATEUR';
+      ageGroup?: string;
+      sex?: string;
+      groupId?: number | null;
+      city?: string;
+      diocese?: string;
+      assignment?: 'all' | 'unassigned' | 'assigned';
+      limit?: number;
+      offset?: number;
+    } = {},
+  ): Observable<JeunesRepartitionParticipantsResult> {
+    return this.http.get<JeunesRepartitionParticipantsResult>('/api/jeunes/repartition/participants', {
+      params: repartitionParams(query),
+    });
+  }
+
+  repartitionTeams(
+    query: {
+      search?: string;
+      groupId?: number | null;
+      fill?: 'all' | 'free' | 'full';
+    } = {},
+  ): Observable<JeunesRepartitionTeamRow[]> {
+    return this.http.get<JeunesRepartitionTeamRow[]>('/api/jeunes/repartition/teams', {
+      params: repartitionParams(query),
+    });
+  }
+
+  bulkCreateTeams(query: {
+    count: number;
+    baseName?: string;
+    maxSize?: number;
+  }): Observable<BulkCreateTeamsResult> {
+    return this.http.post<BulkCreateTeamsResult>('/api/jeunes/repartition/teams/bulk-create', query);
+  }
+
+  propose(
+    participantIds: number[],
+    teamIds: number[],
+    params: Partial<JeunesRepartitionParams>,
+  ): Observable<ProposeJeunesRepartitionResult> {
+    return this.http.post<ProposeJeunesRepartitionResult>('/api/jeunes/repartition/propose', {
+      participantIds,
+      teamIds,
+      params,
+    });
+  }
+
+  apply(assignments: ApplyJeunesRepartitionEntry[]): Observable<ApplyJeunesRepartitionResult> {
+    return this.http.post<ApplyJeunesRepartitionResult>('/api/jeunes/repartition/apply', { assignments });
+  }
+}
 
 /** Paramètres de requête : ignore les valeurs vides/null. */
 function repartitionParams(query: Record<string, unknown>): Record<string, string> {
@@ -473,6 +544,7 @@ function repartitionParams(query: Record<string, unknown>): Record<string, strin
   }
   return params;
 }
+
 @Injectable({ providedIn: 'root' })
 export class HostFamiliesApiService extends CrudApi<HostFamily, HostFamilyPayload> {
   protected readonly path = '/api/host-families';

@@ -107,7 +107,7 @@ export class AccessConfigController {
   constructor(private readonly configService: ScanConfigService) {}
 
   @ApiOperation({ summary: 'Lister les types de scan' })
-  @Roles(...MANAGE_ROLES)
+  @Roles(...MANAGE_ROLES, ...SCAN_ROLES)
   @Get('scan-types')
   listScanTypes() {
     return this.configService.listScanTypes();
@@ -121,7 +121,7 @@ export class AccessConfigController {
   }
 
   @ApiOperation({ summary: 'Lister les zones et leurs points' })
-  @Roles(...MANAGE_ROLES)
+  @Roles(...MANAGE_ROLES, ...SCAN_ROLES)
   @Get('zones')
   listZones() {
     return this.configService.listZones();
@@ -141,8 +141,8 @@ export class AccessConfigController {
     return this.configService.updateZone(id, dto, req.user.id);
   }
 
-  @ApiOperation({ summary: 'Lister les points de scan' })
-  @Roles(...MANAGE_ROLES)
+  @ApiOperation({ summary: 'Lister les points de scan (lecture ouverte au rôle scanner : choix du point en mode scan)' })
+  @Roles(...MANAGE_ROLES, ...SCAN_ROLES)
   @Get('points')
   listPoints() {
     return this.configService.listPoints();

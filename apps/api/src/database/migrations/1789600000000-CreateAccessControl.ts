@@ -1,7 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 /**
- * Contrôle d'accès par QR code (PR 1 du plan validé par Emmanuel le 12/11/2026) :
+ * Contrôle d'accès par QR code (PR 1 du plan du 12/11/2026, développement
+ * lancé sur son accord du 12/11 22:48 ; les points ouverts restent à trancher) :
  * stock de badges pré-imprimés, affectations versionnées (remplacement atomique,
  * un seul badge actif par personne et un seul porteur actif par badge), types de
  * scan/zones/points configurables, sessions de scan à clé expirante, événements

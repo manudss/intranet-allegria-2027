@@ -16,7 +16,7 @@ Sur chaque PR et chaque push, `.github/workflows/ci.yml` lance :
 `neon-db.yml` crée une branche Neon par PR. Elle dérive désormais de `preview/main`, jamais de `production`.
 `preview/main` est reseedée à chaque push sur `main` : le seed vide **toutes** les tables
 (test `seed-coverage.spec.ts`) puis insère des données générées avec faker. Ne jamais y mettre de vraies données.
-Le programme (Planning & Ordonnancement) est rempli par ce seed pour les 4 jours (J1 à J4, 2027-10-30 à 2027-11-02), via
+Le programme (Planning & Ordonnancement) est rempli par ce seed pour les 4 jours (J1 à J4, 2027-10-31 à 2027-11-03), via
 `program-demo-seed.ts` (testé par `program-demo-seed.spec.ts`). Il n'existe ni bouton de démonstration dans l'application
 ni migration qui insère des données : l'application s'installe sans aucune donnée (migrations seules, planning vide), et
 seuls les scripts de seed (`npm run seed:api*`, workflow `neon-db.yml` sur `main` ou en dispatch avec `seed=true`) peuplent

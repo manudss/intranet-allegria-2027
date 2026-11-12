@@ -111,3 +111,12 @@ jobs:
             sleep 2
           done
           API_URL=http://localhost:3000 node scripts/check-hosting-placement.mjs || { cat api.log; exit 1; }
+
+      - name: Check QR access control (real database, seed people only)
+        run: |
+          node dist/apps/api/main.js > api-qr.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000/health >/dev/null && break
+            sleep 2
+          done
+          API_URL=http://localhost:3000 QR_SMOKE_ALLOW_MUTATION=yes node scripts/check-access-control.mjs || { cat api-qr.log; exit 1; }

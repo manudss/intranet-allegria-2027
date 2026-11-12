@@ -25,7 +25,7 @@ describe('PublicHomeComponent', () => {
     const fixture = await setup({
       getPublicProgramDay: () =>
         of({
-          date: '2027-10-30',
+          date: '2027-10-31',
           updatedAt: '2026-11-11',
           sequences: [
             { title: 'Messe', startTime: '14:30', endTime: '16:00', location: 'Grande salle' },

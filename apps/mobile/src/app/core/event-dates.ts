@@ -1,7 +1,7 @@
 // Dates de l'événement Allegria 2027 (même source que
 // apps/web/src/app/shared/event-date-selector/event-date.config.ts).
-export const EVENT_START_DATE = '2027-10-30';
-export const EVENT_END_DATE = '2027-11-02';
+export const EVENT_START_DATE = '2027-10-31';
+export const EVENT_END_DATE = '2027-11-03';
 
 
 const parseDay = (iso: string): Date => new Date(`${iso}T00:00:00`);

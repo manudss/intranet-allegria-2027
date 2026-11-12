@@ -11,7 +11,7 @@ export function seq(
 ): ProgramSequence {
   return {
     id,
-    eventDate: '2027-10-30',
+    eventDate: '2027-10-31',
     location: 'Grande salle',
     title: `Séquence ${id}`,
     startTime,
@@ -26,5 +26,5 @@ export function seq(
 }
 
 export function dayOf(...sequences: ProgramSequence[]): ProgramDay {
-  return { date: '2027-10-30', sequences };
+  return { date: '2027-10-31', sequences };
 }

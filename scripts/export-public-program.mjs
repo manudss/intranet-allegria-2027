@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 
 const apiBase = (process.env.API_URL ?? 'http://localhost:3000').replace(/\/+$/, '');
 const token = process.env.API_TOKEN ?? '';
-const days = ['2027-10-30', '2027-10-31', '2027-11-01', '2027-11-02'];
+const days = ['2027-10-31', '2027-11-01', '2027-11-02', '2027-11-03'];
 const outDir = resolve('apps/mobile/public/content');
 
 await mkdir(outDir, { recursive: true });

@@ -129,7 +129,7 @@ export class ScanStore implements OnDestroy {
   recordScan(rawCode: string): Promise<Verdict> {
     return this.serial(async () => {
       if (!this.meta || !this.db || !this.isOwner()) return this.verdict('offline', 'Mode scan non prêt', 'Démarrez une session avant de scanner.');
-      if (Date.now() >= Date.parse(this.meta.keyExpiresAt) && navigator.onLine) await this.renewKeyIfNeeded();
+      if (Date.now() >= Date.parse(this.meta.keyExpiresAt) && navigator.onLine) await this.sync();
       if (this.isExpired(this.meta)) {
         await this.suspend();
         return this.verdict('expired', 'Session expirée', 'Les scans non envoyés sont conservés. Reconnectez cet appareil.');
@@ -206,7 +206,7 @@ export class ScanStore implements OnDestroy {
     } catch { await this.refreshPendingCount(); this.updateFreshness(); return { sent, failed: true }; }
   }
   private async renewKeyIfNeeded(): Promise<void> {
-    if (!this.meta || !this.key || Date.now() < Date.parse(this.meta.keyExpiresAt) - 60_000) return;
+    if (!this.meta || !this.key || this.pendingCount() > 0 || Date.now() < Date.parse(this.meta.keyExpiresAt) - 60_000) return;
     try {
       const res = await firstValueFrom(this.api.renewKey(this.meta.sessionId).pipe(timeout(4_000)));
       this.key = await deriveTableKey(res.sessionKey); this.sessionKey = res.sessionKey;
@@ -233,7 +233,7 @@ export class ScanStore implements OnDestroy {
   }
   refreshExpiry(): Promise<void> {
     return this.serial(async () => {
-      await this.renewKeyIfNeeded();
+      await this.sync();
       if (this.meta && this.isExpired(this.meta)) await this.suspend();
     });
   }

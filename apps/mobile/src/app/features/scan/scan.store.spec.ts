@@ -89,6 +89,16 @@ describe('ScanStore persisted workflow', () => {
     await store.startSession(point); owner = 2;
     await expect(store.restore()).rejects.toThrow('autre session');
   });
+  it('stores pending scans as ciphertext and keeps them readable until acknowledgement', async () => {
+    await store.startSession(point); await store.recordScan('aaa');
+    const db = await openScanDb();
+    const raw = await new Promise<unknown[]>((resolve, reject) => {
+      const req = db.transaction('scans').objectStore('scans').getAll();
+      req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error);
+    });
+    expect(JSON.stringify(raw)).not.toContain('aaa');
+    expect((await listScans(db))[0].scan.code).toBe('aaa'); db.close();
+  });
   it('uses the real session endpoints and metadata for upload', async () => {
     await store.startSession(point); await store.recordScan('aaa'); await store.uploadPending();
     expect(api.startSession).toHaveBeenCalledWith(1);

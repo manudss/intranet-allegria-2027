@@ -40,6 +40,8 @@ const makeService = (point = makePoint()) => {
     assignments: makeRepo(),
     audit: makeRepo(),
   };
+  const manager = { query: vi.fn().mockResolvedValue([]), getRepository: () => repos.events };
+  Object.assign(repos.events, { manager: { transaction: vi.fn((fn) => fn(manager)) } });
   repos.points.findOne.mockResolvedValue(point);
 
   const sessionsService = { findOwnedSession: vi.fn().mockResolvedValue({ id: 11, userId: 1 }) };
@@ -58,7 +60,7 @@ const makeService = (point = makePoint()) => {
     auditService as never,
     rateLimiter,
   );
-  return { service, repos, auditService, grantsService, rateLimiter, sessionsService };
+  return { service, repos, auditService, grantsService, rateLimiter, sessionsService, manager };
 };
 
 const scan = (overrides?: Record<string, unknown>) => ({
@@ -69,6 +71,13 @@ const scan = (overrides?: Record<string, unknown>) => ({
 });
 
 describe('ScansService.upload', () => {
+  it('takes a database transaction lock before deciding unique-service scans', async () => {
+    const { service, repos, manager } = makeService(makePoint({duplicateRule: AccessScanDuplicateRule.UNIQUE_PER_SERVICE}));
+    repos.badges.findOneBy.mockResolvedValue(null);
+    await service.upload(11, 1, {scans: [scan()]});
+    expect(manager.query).toHaveBeenCalledWith('SELECT pg_advisory_xact_lock($1, $2)', [21027, 2]);
+    expect(manager.query.mock.invocationCallOrder[0]).toBeLessThan(repos.events.save.mock.invocationCallOrder[0]);
+  });
   it('est idempotent : un clientEventId déjà enregistré renvoie le verdict stocké', async () => {
     const { service, repos } = makeService();
     repos.events.findOneBy.mockResolvedValue({ verdict: AccessScanVerdict.ACCEPTED });

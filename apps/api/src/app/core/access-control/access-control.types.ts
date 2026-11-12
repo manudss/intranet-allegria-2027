@@ -356,3 +356,8 @@ export type LookupResult = {
   firstName?: string;
   lastName?: string;
 };
+
+export class UpdateScanPointDto {
+  @IsBoolean()
+  active!: boolean;
+}

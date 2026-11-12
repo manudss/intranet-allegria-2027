@@ -100,6 +100,15 @@ export class ScanConfigService {
     });
   }
 
+  async updatePoint(id: number, active: boolean, actorId: number) {
+    const point = await this.pointsRepository.findOneBy({ id });
+    if (!point) throw new NotFoundException('Point introuvable');
+    point.active = active;
+    const saved = await this.pointsRepository.save(point);
+    await this.auditService.record({ userId: actorId, action: AccessAuditAction.CONFIG_CHANGED, entityType: 'access_scan_points', entityId: id, details: { active } });
+    return saved;
+  }
+
   async createPoint(dto: CreateScanPointDto, actorId: number | null) {
     const zone = await this.zonesRepository.findOneBy({ id: dto.zoneId });
     if (!zone) {

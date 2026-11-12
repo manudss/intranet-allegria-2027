@@ -37,6 +37,7 @@ import {
   StartScanSessionDto,
   UploadScansDto,
   UpdateZoneDto,
+  UpdateScanPointDto,
 } from './access-control.types';
 import { AccessAuditAction } from '../entities';
 
@@ -151,6 +152,12 @@ export class AccessConfigController {
   @Get('points')
   listPoints() {
     return this.configService.listPoints();
+  }
+
+  @Roles(...MANAGE_ROLES)
+  @Patch('points/:id')
+  updatePoint(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateScanPointDto, @Req() req: UserRequest) {
+    return this.configService.updatePoint(id, dto.active, req.user.id);
   }
 
   @ApiOperation({ summary: 'Créer un point de scan' })

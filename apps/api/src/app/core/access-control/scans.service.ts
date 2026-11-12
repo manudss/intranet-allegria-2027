@@ -69,7 +69,10 @@ export class ScansService {
   }
 
   private serviceKeyOf(context: PointContext, scan: ScanBatchItemDto): string | null {
-    return scan.serviceKey ?? context.point.serviceKey;
+    if (scan.serviceKey != null && scan.serviceKey !== context.point.serviceKey) {
+      throw new BadRequestException('Le service doit correspondre au point');
+    }
+    return context.point.serviceKey;
   }
 
   /**
@@ -81,12 +84,13 @@ export class ScansService {
     participantId: number,
     serviceKey: string | null,
     occurredAt: Date,
+    events = this.eventsRepository,
   ): Promise<AccessScanEvent | null> {
     if (context.duplicateRule === AccessScanDuplicateRule.ALLOW) {
       return null;
     }
     if (context.duplicateRule === AccessScanDuplicateRule.UNIQUE_PER_SERVICE) {
-      return this.eventsRepository.findOne({
+      return events.findOne({
         where: {
           participantId,
           scanTypeId: context.point.scanTypeId,
@@ -98,7 +102,7 @@ export class ScansService {
     const dayStart = new Date(occurredAt);
     dayStart.setUTCHours(0, 0, 0, 0);
     const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
-    return this.eventsRepository.findOne({
+    return events.findOne({
       where: {
         participantId,
         scanTypeId: context.point.scanTypeId,
@@ -115,6 +119,7 @@ export class ScansService {
     assignmentId: number | undefined,
     serviceKey: string | null,
     occurredAt: Date,
+    events = this.eventsRepository,
   ): Promise<{ verdict: AccessScanVerdict; assignment: AccessBadgeAssignment | null; duplicateOf?: AccessScanEvent; needsReview: boolean }> {
     const badge = await this.badgesRepository.findOneBy({ code });
     if (!badge) {
@@ -156,7 +161,7 @@ export class ScansService {
       return { verdict: AccessScanVerdict.REJECTED_NO_RIGHT, assignment, needsReview: false };
     }
 
-    const duplicate = await this.findDuplicate(context, assignment.participantId, serviceKey, occurredAt);
+    const duplicate = await this.findDuplicate(context, assignment.participantId, serviceKey, occurredAt, events);
     if (duplicate) {
       return { verdict: AccessScanVerdict.DUPLICATE, assignment, duplicateOf: duplicate, needsReview: false };
     }
@@ -166,6 +171,20 @@ export class ScansService {
 
   /** Envoi par lots, idempotent : un clientEventId = un seul événement. */
   async upload(sessionId: number, userId: number, dto: UploadScansDto): Promise<ScanVerdictResult[]> {
+    // Shared database locks, not in-process mutexes: works across API replicas.
+    // Lock scan types in a fixed order to avoid cross-batch deadlocks.
+    return this.eventsRepository.manager.transaction(async manager => {
+      const contexts = await Promise.all([...new Set(dto.scans.map(s => s.pointId))].map(id => this.loadPointContext(id)));
+      const typeIds = [...new Set(contexts.filter(c => c.duplicateRule !== AccessScanDuplicateRule.ALLOW).map(c => c.point.scanTypeId))].sort((a, b) => a - b);
+      for (const typeId of typeIds) await manager.query('SELECT pg_advisory_xact_lock($1, $2)', [21027, typeId]);
+      for (const id of [...new Set(dto.scans.map(s => s.clientEventId))].sort()) {
+        await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [id]);
+      }
+      return this.uploadBatch(sessionId, userId, dto, manager.getRepository(AccessScanEvent));
+    });
+  }
+
+  private async uploadBatch(sessionId: number, userId: number, dto: UploadScansDto, events: Repository<AccessScanEvent>): Promise<ScanVerdictResult[]> {
     const session = await this.sessionsService.findOwnedSession(sessionId, userId);
     const results: ScanVerdictResult[] = [];
 
@@ -174,7 +193,7 @@ export class ScansService {
         throw new BadRequestException('Chaque scan exige clientEventId, code et pointId');
       }
 
-      const existing = await this.eventsRepository.findOneBy({ clientEventId: scan.clientEventId });
+      const existing = await events.findOneBy({ clientEventId: scan.clientEventId });
       if (existing) {
         // Répétition réseau du téléphone : on renvoie le verdict déjà tranché.
         results.push({ clientEventId: scan.clientEventId, verdict: existing.verdict });
@@ -193,11 +212,12 @@ export class ScansService {
         scan.assignmentId,
         this.serviceKeyOf(context, scan),
         occurredAt,
+        events,
       );
 
       try {
-        const event = await this.eventsRepository.save(
-          this.eventsRepository.create({
+        const event = await events.save(
+          events.create({
             sessionId: session.id,
             assignmentId: decision.assignment?.id ?? null,
             participantId: decision.assignment?.participantId ?? null,
@@ -222,7 +242,7 @@ export class ScansService {
         });
       } catch (error) {
         if ((error as { code?: string }).code === UNIQUE_VIOLATION) {
-          const raced = await this.eventsRepository.findOneBy({ clientEventId: scan.clientEventId });
+          const raced = await events.findOneBy({ clientEventId: scan.clientEventId });
           if (raced) {
             results.push({ clientEventId: scan.clientEventId, verdict: raced.verdict });
             continue;

@@ -432,6 +432,16 @@ const participantAgeDate = (): string => {
   return toDateString(birthday);
 };
 
+const animateurAgeDate = (): string => {
+  const birthday = faker.date.birthdate({
+    mode: 'age',
+    min: 20,
+    max: 35,
+    refDate: new Date('2027-07-20'),
+  });
+  return toDateString(birthday);
+};
+
 const normalizeText = (value: string): string =>
   value
     .normalize('NFD')
@@ -445,20 +455,25 @@ const splitEvenly = (total: number, parts: number): number[] => {
   return Array.from({ length: parts }, (_, index) => base + (index < remainder ? 1 : 0));
 };
 
-const computeTeamCount = (participantsCount: number): number => {
-  const minTeams = Math.ceil(participantsCount / 10);
-  const maxTeams = Math.floor(participantsCount / 5);
-  const target = Math.ceil(participantsCount / 8);
-  return Math.min(maxTeams, Math.max(minTeams, target));
-};
+// Equipes de rassemblement : cible ~6 jeunes par equipe (defaut de la page de
+// repartition), avec de la marge dans maxSize pour completer les equipes en demo.
+const TARGET_TEAM_SIZE = 6;
+const computeTeamCount = (participantsCount: number): number =>
+  Math.max(1, Math.ceil(participantsCount / TARGET_TEAM_SIZE));
+
+// ~10 % des jeunes restent volontairement sans equipe : la page de repartition
+// a ainsi des jeunes a placer en demonstration.
+const UNASSIGNED_JEUNES_RATE = 0.1;
+const assignableJeunesCount = (total: number): number =>
+  total - Math.max(1, Math.round(total * UNASSIGNED_JEUNES_RATE));
 
 const buildTeamSizes = (participantsCount: number, teamCount: number): number[] => {
   const sizes = splitEvenly(participantsCount, teamCount);
 
   for (const size of sizes) {
-    if (size < 5 || size > 10) {
+    if (size < 4 || size > 10) {
       throw new Error(
-        `Impossible de generer des equipes 5-10 pour ${participantsCount} participants et ${teamCount} equipes`,
+        `Impossible de generer des equipes 4-10 pour ${participantsCount} participants et ${teamCount} equipes`,
       );
     }
   }
@@ -885,6 +900,39 @@ async function run(): Promise<void> {
       participantsByGroup.set(group.id, localParticipants);
     }
 
+    // Fiches animateurs (adultes encadrant les equipes de rassemblement) :
+    // une par equipe + deux en reserve par groupe, pour alimenter l'etape 1
+    // de la page de repartition. Creees APRES tous les jeunes pour preserver
+    // le decoupage par tranches du tableau sauvegarde.
+    const animateurCountsPerGroup = teamCountsPerGroup.map((count) => count + 2);
+    const animateursByGroup = new Map<number, Participant[]>();
+
+    for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
+      const group = groups[groupIndex];
+      const localAnimateurs: Participant[] = [];
+
+      for (let i = 0; i < animateurCountsPerGroup[groupIndex]; i += 1) {
+        const animateur = participantRepository.create({
+          firstName: faker.person.firstName(),
+          lastName: faker.person.lastName(),
+          dateOfBirth: animateurAgeDate(),
+          sex: pick(sexValues),
+          mejAgeGroup: null,
+          type: PersonType.ANIMATEUR,
+          emergencyContactName: null,
+          emergencyContactPhone: null,
+          diocese: group.diocese,
+          city: faker.location.city(),
+          group,
+        });
+
+        participantsToCreate.push(animateur);
+        localAnimateurs.push(animateur);
+      }
+
+      animateursByGroup.set(group.id, localAnimateurs);
+    }
+
     const participants = await participantRepository.save(participantsToCreate, { chunk: 1000 });
 
     const participantsByGroupSaved = new Map<number, Participant[]>();
@@ -897,6 +945,18 @@ async function run(): Promise<void> {
         participants.slice(participantSaveCursor, participantSaveCursor + count),
       );
       participantSaveCursor += count;
+    }
+
+    const animateursByGroupSaved = new Map<number, Participant[]>();
+    let animateurSaveCursor = profile.participants;
+    for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
+      const group = groups[groupIndex];
+      const count = animateurCountsPerGroup[groupIndex];
+      animateursByGroupSaved.set(
+        group.id,
+        participants.slice(animateurSaveCursor, animateurSaveCursor + count),
+      );
+      animateurSaveCursor += count;
     }
 
     // Groupes d'hébergement fictifs : quelques équipes et familles restent volontairement
@@ -925,7 +985,7 @@ async function run(): Promise<void> {
       const localParticipants = participantsByGroupSaved.get(group.id) ?? [];
       const localVolunteers = volunteersByGroupSaved.get(group.id) ?? [];
       const teamCount = teamCountsPerGroup[groupIndex];
-      const teamSizes = buildTeamSizes(localParticipants.length, teamCount);
+      const teamSizes = buildTeamSizes(assignableJeunesCount(localParticipants.length), teamCount);
 
       const primaryVolunteers = [...localVolunteers.slice(0, teamCount)];
       const secondaryVolunteers = localVolunteers.slice(teamCount);
@@ -977,7 +1037,10 @@ async function run(): Promise<void> {
 
     for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
       const group = groups[groupIndex];
-      const localParticipants = faker.helpers.shuffle(participantsByGroupSaved.get(group.id) ?? []);
+      const allLocalJeunes = faker.helpers.shuffle(participantsByGroupSaved.get(group.id) ?? []);
+      // ~10 % des jeunes restent sans equipe (voir assignableJeunesCount).
+      const localParticipants = allLocalJeunes.slice(0, assignableJeunesCount(allLocalJeunes.length));
+      const localAnimateurs = animateursByGroupSaved.get(group.id) ?? [];
       const localTeams = teamsByGroupSaved.get(group.id) ?? [];
       const teamSizes = buildTeamSizes(localParticipants.length, localTeams.length);
 
@@ -985,6 +1048,20 @@ async function run(): Promise<void> {
       for (let teamIndex = 0; teamIndex < localTeams.length; teamIndex += 1) {
         const team = localTeams[teamIndex];
         const expectedSize = teamSizes[teamIndex];
+
+        // Un animateur referent par equipe ; les animateurs en reserve
+        // (2 par groupe) restent sans equipe pour la page de repartition.
+        const referent = localAnimateurs[teamIndex];
+        if (referent) {
+          teamParticipantsToCreate.push(
+            teamParticipantRepository.create({
+              team,
+              participant: referent,
+              role: TeamParticipantRole.MEMBER,
+              notes: chance(0.15) ? 'Animateur referent d equipe.' : null,
+            }),
+          );
+        }
 
         for (let i = 0; i < expectedSize; i += 1) {
           const participant = localParticipants[cursor];

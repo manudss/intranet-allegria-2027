@@ -78,6 +78,7 @@ export class Layout {
       items: [
         { label: 'Participants', path: '/participants', icon: '@tui.users' },
         { label: 'Équipes rassemblement', path: '/equipes', icon: '@tui.users-round' },
+        { label: 'Répartition jeunes', path: '/equipes/repartition', icon: '@tui.shuffle' },
         { label: "Familles d'accueil", path: '/familles', icon: '@tui.home' },
         { label: 'Bénévoles', path: '/benevoles', icon: '@tui.user-check' },
         { label: 'Répartition bénévoles', path: '/benevoles/repartition', icon: '@tui.users-round' },

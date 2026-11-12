@@ -64,6 +64,16 @@ export const appRoutes: Route[] = [
         loadComponent: () => import('./features/teams/teams').then((m) => m.TeamsPage),
       },
       {
+        path: 'equipes/repartition',
+        title: 'Repartition jeunes en equipes',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'COORDINATOR', 'ANIMATOR', 'LOGISTICS', 'VIEWER'] },
+        loadComponent: () =>
+          import('./features/jeunes-repartition/jeunes-repartition').then(
+            (m) => m.JeunesRepartitionPage,
+          ),
+      },
+      {
         path: 'equipes-operationnelles',
         title: 'Équipes opérationnelles',
         canActivate: [roleGuard],

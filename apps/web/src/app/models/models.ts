@@ -700,6 +700,35 @@ export interface RepartitionVolunteerRow {
   teamName: string | null;
 }
 
+// ── Répartition jeunes/animateurs → équipes de rassemblement ────────────────
+
+export interface JeunesRepartitionFilters {
+  groups: { id: number; name: string }[];
+  cities: string[];
+  dioceses: string[];
+  ageGroups: MejAgeGroup[];
+}
+
+/**
+ * Un participant (jeune ou animateur) de la page de répartition.
+ * Confidentialité mineurs : lastName vaut toujours null pour un jeune.
+ */
+export interface JeunesRepartitionParticipantRow {
+  id: number;
+  type: 'JEUNE' | 'ANIMATEUR';
+  firstName: string;
+  lastName: string | null;
+  age: number | null;
+  sex: ParticipantSex | null;
+  mejAgeGroup: MejAgeGroup | null;
+  groupId: number | null;
+  groupName: string | null;
+  city: string | null;
+  diocese: string | null;
+  teamId: number | null;
+  teamName: string | null;
+}
+
 export interface RepartitionVolunteersResult {
   total: number;
   volunteers: RepartitionVolunteerRow[];
@@ -719,5 +748,72 @@ export interface ApplyRepartitionEntry {
 }
 
 export interface ApplyRepartitionResult {
+  applied: number;
+}
+export interface JeunesRepartitionParticipantsResult {
+  total: number;
+  participants: JeunesRepartitionParticipantRow[];
+}
+
+export interface JeunesRepartitionTeamRow {
+  id: number;
+  name: string;
+  maxSize: number;
+  groupId: number | null;
+  groupName: string | null;
+  jeunesCount: number;
+  adultesCount: number;
+  totalCount: number;
+}
+
+export interface BulkCreateTeamsResult {
+  created: { id: number; name: string; maxSize: number }[];
+}
+
+export type JeunesRepartitionAgeMode = 'tranches' | 'same-age' | 'mixed';
+export type JeunesRepartitionSexMode = 'balanced' | 'none' | 'non-mixed';
+export type JeunesRepartitionGeoGranularity = 'group' | 'city' | 'diocese';
+
+export interface JeunesRepartitionParams {
+  jeunesPerTeam: number;
+  adultsPerTeam: number;
+  ageMode: JeunesRepartitionAgeMode;
+  sexMode: JeunesRepartitionSexMode;
+  geoGranularity: JeunesRepartitionGeoGranularity;
+  geoMaxPerTeam: number;
+  separateAnimators: boolean;
+  moveAssigned: boolean;
+}
+
+export interface JeunesProposalViolation {
+  teamId: number | null;
+  participantId: number | null;
+  kind: 'geo' | 'animator-origin' | 'capacity';
+  message: string;
+}
+
+export interface JeunesProposalTeamStat {
+  teamId: number;
+  jeunes: number;
+  adultes: number;
+  maxSize: number;
+  sexes: Record<string, number>;
+  tranches: Record<string, number>;
+  origins: Record<string, number>;
+}
+
+export interface ProposeJeunesRepartitionResult {
+  proposals: { participantId: number; teamId: number }[];
+  unplaced: number[];
+  violations: JeunesProposalViolation[];
+  teamStats: JeunesProposalTeamStat[];
+}
+
+export interface ApplyJeunesRepartitionEntry {
+  participantId: number;
+  teamId: number | null;
+}
+
+export interface ApplyJeunesRepartitionResult {
   applied: number;
 }

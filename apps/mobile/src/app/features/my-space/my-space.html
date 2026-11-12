@@ -1,0 +1,63 @@
+<header class="hero">
+  <span class="brand">ALEGRIA</span>
+  <h1>Mon espace</h1>
+  @if (volunteer(); as v) {
+    <p class="hero-sub">{{ v.firstName }} {{ v.lastName }}</p>
+  }
+</header>
+
+<main class="content">
+  @if (loading()) {
+    <div class="center"><tui-loader size="l" /></div>
+  } @else if (noProfile()) {
+    <div class="notice" role="status">
+      Aucun profil bénévole n'est rattaché à ce compte. La coordination peut le
+      rattacher depuis l'intranet.
+    </div>
+  } @else {
+    <h2 class="section-title">Mes missions</h2>
+    @if (missions().length === 0) {
+      <div class="notice" role="status">Aucune mission affectée pour l'instant.</div>
+    } @else {
+      <ul class="mission-list">
+        @for (assignment of missions(); track assignment.id) {
+          <li class="mission">
+            <div class="mission-head">
+              <strong>{{ assignment.shift.mission.title }}</strong>
+              <span class="badge" [class.confirmed]="assignment.status === 'CONFIRMED'">
+                {{ statusLabel(assignment.status) }}
+              </span>
+            </div>
+            <span class="meta">
+              {{ shiftDay(assignment.shift.startAt) }} · {{ shiftTime(assignment) }}
+            </span>
+            @if (assignment.shift.location ?? assignment.shift.mission.location) {
+              <span class="meta">
+                {{ assignment.shift.location ?? assignment.shift.mission.location }}
+              </span>
+            }
+            @if (assignment.notes) {
+              <span class="notes">{{ assignment.notes }}</span>
+            }
+          </li>
+        }
+      </ul>
+    }
+
+    <h2 class="section-title">Mon équipe</h2>
+    @if (memberships().length === 0) {
+      <div class="notice" role="status">Pas encore rattaché à une équipe.</div>
+    } @else {
+      <ul class="team-list">
+        @for (membership of memberships(); track membership.id) {
+          <li class="team">
+            <strong>{{ membership.volunteerTeam.name }}</strong>
+            @if (membership.role) {
+              <span class="meta">{{ membership.role }}</span>
+            }
+          </li>
+        }
+      </ul>
+    }
+  }
+</main>

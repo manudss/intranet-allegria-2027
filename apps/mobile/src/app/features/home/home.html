@@ -1,0 +1,78 @@
+<header class="hero">
+  <div class="hero-top">
+    <span class="brand">ALEGRIA</span>
+    <button type="button" class="logout" (click)="logout()">Déconnexion</button>
+  </div>
+  <h1>Bonjour !</h1>
+  <p class="hero-sub">{{ dateLabel }} · Espace bénévoles</p>
+</header>
+
+<main class="content">
+  @if (changeCount() > 0) {
+    <a class="changes" routerLink="/programme" role="status">
+      {{ changeCount() }} modification(s) du programme aujourd'hui — voir le programme
+    </a>
+  }
+
+  @if (loading()) {
+    <div class="center"><tui-loader size="l" /></div>
+  } @else if (failed()) {
+    <div class="notice" role="status">
+      Programme indisponible pour le moment. Les données déjà consultées restent
+      visibles hors-ligne après une première visite.
+    </div>
+  } @else if (upcoming().length === 0) {
+    <div class="notice" role="status">Aucune séquence prévue ce jour-là.</div>
+  } @else {
+    <h2 class="section-title">Maintenant et à venir</h2>
+    <ul class="next-list">
+      @for (seq of upcoming().slice(0, 3); track seq.id) {
+        <li class="next-item">
+          <span class="time">{{ seq.startTime }}</span>
+          <span class="details">
+            <strong>{{ seq.title }}</strong>
+            <span class="place">{{ seq.location }}</span>
+          </span>
+        </li>
+      }
+    </ul>
+  }
+
+  <a class="tile" routerLink="/espace">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" />
+    </svg>
+    <span class="tile-text">
+      <strong>Mon espace</strong>
+      <span>Mes missions, mon équipe</span>
+    </span>
+    <span class="chevron" aria-hidden="true">›</span>
+  </a>
+
+  <a class="tile" routerLink="/programme">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M8 3v4M16 3v4M3 10h18" />
+    </svg>
+    <span class="tile-text">
+      <strong>Programme des 4 jours</strong>
+      <span>Horaires, lieux, verrous</span>
+    </span>
+    <span class="chevron" aria-hidden="true">›</span>
+  </a>
+  <a class="tile" routerLink="/infos">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5M12 8h.01" />
+    </svg>
+    <span class="tile-text">
+      <strong>Infos pratiques</strong>
+      <span>Consignes, météo, contacts utiles</span>
+    </span>
+    <span class="chevron" aria-hidden="true">›</span>
+  </a>
+</main>

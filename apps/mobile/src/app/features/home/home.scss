@@ -1,0 +1,121 @@
+.hero {
+  background: var(--allegria-primary);
+  color: var(--allegria-on-primary);
+  padding: 1.25rem 1.25rem 1.75rem;
+  border-radius: 0 0 1.5rem 1.5rem;
+}
+.hero-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.brand {
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.logout {
+  background: #ffffff26;
+  color: inherit;
+  border: 1px solid #ffffff55;
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.hero h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+.hero-sub {
+  margin: 0.25rem 0 0;
+  opacity: 0.9;
+}
+.content {
+  padding: 1.25rem;
+  display: grid;
+  gap: 1rem;
+}
+.center {
+  display: grid;
+  place-items: center;
+  padding: 2rem 0;
+}
+.notice {
+  background: #fff;
+  border: 1px solid var(--tui-border-normal);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  color: var(--allegria-muted);
+}
+.section-title {
+  margin: 0;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--allegria-muted);
+}
+.next-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 1rem;
+  background: #fff;
+  border-radius: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+.next-item {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+.time {
+  color: var(--allegria-primary);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.details {
+  display: grid;
+}
+.place {
+  color: var(--allegria-muted);
+  font-size: 0.85rem;
+}
+.tile {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  background: #fff;
+  border-radius: 1rem;
+  padding: 1rem;
+  color: inherit;
+  text-decoration: none;
+}
+.tile svg {
+  width: 1.8rem;
+  height: 1.8rem;
+  color: var(--allegria-primary);
+}
+.tile-text {
+  display: grid;
+  flex: 1;
+}
+.tile-text span {
+  color: var(--allegria-muted);
+  font-size: 0.85rem;
+}
+.chevron {
+  color: var(--allegria-primary);
+  font-size: 1.4rem;
+}
+
+.changes {
+  display: block;
+  background: #f5a62326;
+  border: 1px solid #f5a62366;
+  color: #8a5b00;
+  border-radius: 0.75rem;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.9rem;
+  text-decoration: none;
+}

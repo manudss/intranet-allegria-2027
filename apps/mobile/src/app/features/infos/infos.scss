@@ -1,0 +1,39 @@
+.content {
+  padding: 1.25rem;
+  display: grid;
+  gap: 1rem;
+}
+.center {
+  display: grid;
+  place-items: center;
+  padding: 2rem 0;
+}
+.notice {
+  background: #fff;
+  border: 1px solid var(--tui-border-normal);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  color: var(--allegria-muted);
+}
+.card {
+  background: #fff;
+  border-radius: 1rem;
+  padding: 1rem 1.25rem;
+}
+.card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  color: var(--allegria-primary);
+}
+.card ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+.updated {
+  margin: 0;
+  text-align: center;
+  color: var(--allegria-muted);
+  font-size: 0.8rem;
+}

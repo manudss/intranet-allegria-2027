@@ -1,0 +1,29 @@
+<main class="content">
+  @if (loading()) {
+    <div class="center"><tui-loader size="l" /></div>
+  } @else if (failed()) {
+    <div class="notice" role="status">Infos indisponibles hors-ligne pour l'instant.</div>
+  } @else {
+    @for (section of infos()?.sections ?? []; track section.title) {
+      <section class="card">
+        <h2>{{ section.title }}</h2>
+        <ul>
+          @for (item of section.items; track item) {
+            <li>{{ item }}</li>
+          }
+        </ul>
+      </section>
+    }
+    @if (contacts(); as c) {
+      <section class="card">
+        <h2>Contacts utiles</h2>
+        <ul>
+          @for (contact of c.contacts; track contact.label) {
+            <li><strong>{{ contact.label }}</strong> — {{ contact.detail }}</li>
+          }
+        </ul>
+      </section>
+    }
+    <p class="updated">Contenu mis à jour le {{ infos()?.updatedAt }}</p>
+  }
+</main>

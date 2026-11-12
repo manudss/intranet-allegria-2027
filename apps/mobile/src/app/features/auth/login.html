@@ -1,0 +1,50 @@
+<main class="login">
+  <section class="card">
+    <img src="assets/logo-allegria.svg" alt="Allegria 2027" />
+    <h1>ALEGRIA</h1>
+    <p>L'appli du jour J des bénévoles</p>
+    <form (submit)="onSubmit($event)">
+      <tui-textfield>
+        <label tuiLabel for="email">Email</label>
+        <input
+          tuiInput
+          type="email"
+          autocomplete="username"
+          [formField]="loginForm.email"
+          id="email"
+        />
+      </tui-textfield>
+      <tui-error
+        [error]="
+          loginForm.email().touched() && loginForm.email().invalid()
+            ? 'Adresse email requise'
+            : null
+        "
+      />
+      <tui-textfield>
+        <label tuiLabel for="password">Mot de passe</label>
+        <input
+          tuiInput
+          type="password"
+          autocomplete="current-password"
+          [formField]="loginForm.password"
+          id="password"
+        />
+        <tui-icon tuiPassword />
+      </tui-textfield>
+      <tui-error
+        [error]="
+          loginForm.password().touched() && loginForm.password().invalid()
+            ? 'Mot de passe requis'
+            : null
+        "
+      />
+      @if (error()) {
+        <p class="error" role="alert">{{ error() }}</p>
+      }
+      <button tuiButton appearance="primary" type="submit" [disabled]="loading()">
+        {{ loading() ? 'Connexion…' : 'Se connecter' }}
+      </button>
+    </form>
+  </section>
+</main>

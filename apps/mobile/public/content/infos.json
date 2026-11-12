@@ -1,0 +1,25 @@
+{
+  "updatedAt": "2026-11-11",
+  "sections": [
+    {
+      "title": "Consignes générales",
+      "items": [
+        "Badge bénévole obligatoire dans toutes les zones.",
+        "Point info ouvert de 8h à 22h, grande salle."
+      ]
+    },
+    {
+      "title": "Replis météo",
+      "items": [
+        "En cas de pluie, les activités extérieures basculent en salle polyvalente."
+      ]
+    },
+    {
+      "title": "Sécurité",
+      "items": [
+        "En cas d'urgence, prévenir la coordination (poste radio canal 1).",
+        "Le point de rassemblement est devant la chapelle."
+      ]
+    }
+  ]
+}

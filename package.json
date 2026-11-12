@@ -26,7 +26,10 @@
     "migration:revert": "npm run typeorm -- migration:revert",
     "seed:api": "tsx apps/api/src/database/seeds/seed.ts --profile=medium",
     "seed:api:small": "tsx apps/api/src/database/seeds/seed.ts --profile=small",
-    "seed:api:large": "tsx apps/api/src/database/seeds/seed.ts --profile=large"
+    "seed:api:large": "tsx apps/api/src/database/seeds/seed.ts --profile=large",
+    "mobile:config": "node scripts/write-web-config.mjs mobile",
+    "build:mobile": "npm run mobile:config && nx build mobile --configuration production",
+    "serve:mobile": "npm run mobile:config && nx serve mobile"
   },
   "private": true,
   "devDependencies": {
@@ -88,6 +91,7 @@
     "@angular/platform-browser": "~22.0.4",
     "@angular/platform-server": "~22.0.4",
     "@angular/router": "~22.0.4",
+    "@angular/service-worker": "~22.0.4",
     "@angular/ssr": "~22.0.4",
     "@bluehalo/ngx-leaflet": "^22.0.0",
     "@bluehalo/ngx-leaflet-markercluster": "^22.0.0",

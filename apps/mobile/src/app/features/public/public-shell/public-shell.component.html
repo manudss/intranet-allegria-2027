@@ -1,0 +1,16 @@
+<div class="shell">
+  <main class="shell-content">
+    <router-outlet />
+  </main>
+  <nav class="tabbar" aria-label="Navigation publique">
+    <a
+      routerLink="/public"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="tab"
+      >Accueil</a
+    >
+    <a routerLink="/public/programme" routerLinkActive="active" class="tab">Programme</a>
+    <a routerLink="/public/infos" routerLinkActive="active" class="tab">Infos</a>
+  </nav>
+</div>

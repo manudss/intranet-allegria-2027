@@ -1014,6 +1014,11 @@ async function run(): Promise<void> {
     // bénévole -> équipe. Les logements (plus bas) en sont la projection.
     const adultParticipantsToCreate: Participant[] = [];
     const adultTeamParticipants: TeamParticipant[] = [];
+    // Appartenances a creer apres le save des fiches : avec { chunk }, save()
+    // ne reinjecte pas les ids dans les instances d'entree ; il faut utiliser
+    // les entites retournees (comme le bloc jeunes ci-dessus).
+    const adultMembershipsPending: { team: Team; role: TeamParticipantRole; notes: string | null }[] =
+      [];
     const teamFreeSeats = new Map<number, number>();
     let teamlessTotal = 0;
     let benevolesPlaced = 0;
@@ -1045,7 +1050,9 @@ async function run(): Promise<void> {
             ),
             sex: pick(sexValues),
             mejAgeGroup: null,
-            volunteer: animator,
+            // Reference par id : passer l'entite complete (avec son user imbrique)
+            // fait tenter a TypeORM un update vide en cascade -> erreur.
+            volunteer: { id: animator.id } as Volunteer,
             group: null,
             status: ParticipantRegistrationStatus.CONFIRMED,
             source: PersonSource.PUBLIC_FORM,
@@ -1055,15 +1062,11 @@ async function run(): Promise<void> {
             city: null,
           });
           adultParticipantsToCreate.push(fiche);
-          adultTeamParticipants.push(
-            teamParticipantRepository.create({
-              team,
-              participant: fiche,
-              role:
-                animatorIndex === 0 ? TeamParticipantRole.MEMBER : TeamParticipantRole.ASSISTANT,
-              notes: null,
-            }),
-          );
+          adultMembershipsPending.push({
+            team,
+            role: animatorIndex === 0 ? TeamParticipantRole.MEMBER : TeamParticipantRole.ASSISTANT,
+            notes: null,
+          });
         }
 
         teamFreeSeats.set(
@@ -1095,7 +1098,7 @@ async function run(): Promise<void> {
             dateOfBirth: null,
             sex: null,
             mejAgeGroup: null,
-            volunteer,
+            volunteer: { id: volunteer.id } as Volunteer,
             group: null,
             status: ParticipantRegistrationStatus.CONFIRMED,
             source: PersonSource.STAFF,
@@ -1105,21 +1108,26 @@ async function run(): Promise<void> {
             city: null,
           });
           adultParticipantsToCreate.push(fiche);
-          adultTeamParticipants.push(
-            teamParticipantRepository.create({
-              team,
-              participant: fiche,
-              role: TeamParticipantRole.MEMBER,
-              notes: null,
-            }),
-          );
+          adultMembershipsPending.push({ team, role: TeamParticipantRole.MEMBER, notes: null });
           benevolesPlaced += 1;
           break;
         }
       }
     }
 
-    await participantRepository.save(adultParticipantsToCreate, { chunk: 1000 });
+    const savedAdultParticipants = await participantRepository.save(adultParticipantsToCreate, {
+      chunk: 1000,
+    });
+    for (const [membershipIndex, membership] of adultMembershipsPending.entries()) {
+      adultTeamParticipants.push(
+        teamParticipantRepository.create({
+          team: membership.team,
+          participant: savedAdultParticipants[membershipIndex],
+          role: membership.role,
+          notes: membership.notes,
+        }),
+      );
+    }
     await teamParticipantRepository.save(adultTeamParticipants, { chunk: 1000 });
 
     const volunteerMissionsToCreate: VolunteerMission[] = [];

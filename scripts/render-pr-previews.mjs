@@ -138,8 +138,10 @@ async function refresh() {
   if (!e.RENDER_ENVIRONMENT_ID) throw new Error('RENDER_ENVIRONMENT_ID is required (Allegria-demo project, dev environment)');
   const common = { ownerId: e.RENDER_OWNER_ID, environmentId: e.RENDER_ENVIRONMENT_ID, repo, branch, autoDeploy: 'no' }; // deploys are triggered only by this trusted workflow, not by Render's GitHub webhook
 
-  // PUT only the env vars whose value actually changed; Render redeploys a service by
-  // itself when an env var changes, so a change means we skip the explicit deploy.
+  // PUT only the env vars whose value actually changed. NOTE: with autoDeploy 'no',
+  // Render does NOT redeploy on an env var change, so a change never replaces the
+  // explicit deploy below - without it, rotating the DB creds would leave the running
+  // API with invalid credentials (observed 2026-11-12: 'password authentication failed').
   const syncEnv = async (id, desired) => {
     const vars = await render('GET', `/services/${id}/env-vars`);
     const cur = {};
@@ -205,27 +207,28 @@ async function refresh() {
   const corsGuess = [guess(names.web), guess(names.site), ...(hasMobile ? [guess(names.mobile)] : [])].join(',');
 
   // Existing services: rotate the DB creds (they change at every run) and deploy the
-  // newest commit, exactly one build per service (env change redeploys by itself).
+  // newest commit, exactly one build per service. The explicit deploy is ALWAYS needed:
+  // an env var change does not redeploy a service whose autoDeploy is 'no'.
   if (apiCreated) {
     if (corsValue !== corsGuess) {
       await render('PUT', `/services/${api.id}/env-vars/CORS_ORIGIN`, { value: corsValue });
     }
   } else {
-    const envDeployed = await syncEnv(api.id, [
+    await syncEnv(api.id, [
       { key: 'DATABASE_URL', value: e.NEON_DB_URL },
       { key: 'DATABASE_URL_DIRECT', value: e.NEON_DB_URL_DIRECT },
       { key: 'CORS_ORIGIN', value: corsValue },
     ]);
-    if (!envDeployed) await explicitDeploy(api.id);
+    await explicitDeploy(api.id);
   }
   if (!web.created) {
-    const envDeployed = await syncEnv(web.s.id, [{ key: 'WEB_API_URL', value: apiUrl }]);
-    if (!envDeployed) await explicitDeploy(web.s.id);
+    await syncEnv(web.s.id, [{ key: 'WEB_API_URL', value: apiUrl }]);
+    await explicitDeploy(web.s.id);
   }
   if (!site.created) await explicitDeploy(site.s.id);
   if (mobile && !mobile.created) {
-    const envDeployed = await syncEnv(mobile.s.id, [{ key: 'MOBILE_API_URL', value: apiUrl }]);
-    if (!envDeployed) await explicitDeploy(mobile.s.id);
+    await syncEnv(mobile.s.id, [{ key: 'MOBILE_API_URL', value: apiUrl }]);
+    await explicitDeploy(mobile.s.id);
   }
 
   await upsertComment([

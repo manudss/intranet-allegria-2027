@@ -120,7 +120,7 @@ test('refresh reads the head from the pulls API and creates the 3 services with 
   assert.match(comments[0].body.body, /bbbbbbb/, 'comment names the deployed short sha');
 });
 
-test('refresh on existing services rotates the api creds (env change redeploys) and deploys web and site explicitly', async () => {
+test('refresh on existing services rotates the api creds and STILL deploys explicitly (env change does not redeploy with autoDeploy off)', async () => {
   const map = { 'al-pr3-api': svc('al-pr3-api'), 'al-pr3-web': svc('al-pr3-web'), 'al-pr3-site': svc('al-pr3-site') };
   const calls = mockFetch(async (u) => {
     if (u.includes('/pulls/3')) return openPr();
@@ -140,7 +140,7 @@ test('refresh on existing services rotates the api creds (env change redeploys) 
   assert.equal(renderCalls(calls, 'POST', /\/v1\/services$/).length, 0, 'no re-creation');
   assert.equal(renderCalls(calls, 'PUT', /srv-al-pr3-api\/env-vars\/DATABASE_URL$/).length, 1, 'creds rotated');
   assert.equal(renderCalls(calls, 'PUT', /env-vars\/CORS_ORIGIN/).length, 0, 'CORS already right');
-  assert.equal(renderCalls(calls, 'POST', /srv-al-pr3-api\/deploys/).length, 0, 'env change redeploys the api: no double build');
+  assert.equal(renderCalls(calls, 'POST', /srv-al-pr3-api\/deploys/).length, 1, 'api deployed once even though its env changed');
   assert.equal(renderCalls(calls, 'POST', /srv-al-pr3-web\/deploys/).length, 1, 'web deployed once');
   assert.equal(renderCalls(calls, 'POST', /srv-al-pr3-site\/deploys/).length, 1, 'site deployed once');
 });

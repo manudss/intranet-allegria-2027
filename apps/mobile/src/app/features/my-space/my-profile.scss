@@ -1,0 +1,152 @@
+.hero {
+  background: var(--allegria-primary);
+  color: var(--allegria-on-primary);
+  padding: 1.25rem 1.25rem 1.75rem;
+  border-radius: 0 0 1.5rem 1.5rem;
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--allegria-on-primary);
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  opacity: 0.9;
+}
+.back svg {
+  width: 1rem;
+  height: 1rem;
+}
+.hero h1 {
+  margin: 0.5rem 0 0;
+  font-size: 1.5rem;
+}
+.hero-sub {
+  margin: 0.25rem 0 0;
+  opacity: 0.9;
+}
+.content {
+  padding: 1.25rem;
+  display: grid;
+  gap: 1rem;
+}
+.center {
+  display: grid;
+  place-items: center;
+  padding: 2rem 0;
+}
+.section-title {
+  margin: 0;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--allegria-muted);
+}
+.card {
+  background: #fff;
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+.meta {
+  color: var(--allegria-muted);
+  font-size: 0.9rem;
+}
+.contact {
+  color: var(--allegria-primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+.empty {
+  text-align: center;
+  padding: 0.5rem 0;
+}
+.notes {
+  font-size: 0.85rem;
+  border-top: 1px dashed var(--tui-border-normal);
+  padding-top: 0.35rem;
+  margin-top: 0.25rem;
+}
+.team-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.badge {
+  flex: none;
+  background: var(--allegria-secondary);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.6rem;
+}
+.skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.skill {
+  background: var(--tui-background-neutral-1);
+  color: var(--allegria-muted);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.btn {
+  border: 1.5px solid var(--allegria-primary);
+  background: #fff;
+  color: var(--allegria-primary);
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border-radius: 0.75rem;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  margin-top: 0.4rem;
+}
+.btn.primary {
+  background: var(--allegria-primary);
+  color: var(--allegria-on-primary);
+}
+.btn[disabled] {
+  opacity: 0.6;
+}
+.edit-form {
+  display: grid;
+  gap: 0.6rem;
+}
+.edit-form label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--allegria-muted);
+}
+.edit-form input {
+  font: inherit;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--tui-border-normal);
+  border-radius: 0.75rem;
+}
+.edit-form input:focus {
+  outline: 2px solid var(--allegria-primary);
+  outline-offset: 1px;
+}
+.error {
+  margin: 0;
+  color: var(--tui-text-negative);
+  font-size: 0.85rem;
+}
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.actions .btn {
+  flex: 1;
+}

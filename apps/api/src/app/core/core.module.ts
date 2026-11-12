@@ -21,6 +21,7 @@ import { ProgramModule } from './program/program.module';
 import { MySpaceModule } from './my-space/my-space.module';
 import { VolunteerHostingModule } from './volunteer-hosting/volunteer-hosting.module';
 import { JeunesRepartitionModule } from './jeunes-repartition/jeunes-repartition.module';
+import { AccessControlModule } from './access-control/access-control.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { JeunesRepartitionModule } from './jeunes-repartition/jeunes-repartition
     MySpaceModule,
     VolunteerHostingModule,
     JeunesRepartitionModule,
+    AccessControlModule,
   ],
 })
 export class CoreModule {}

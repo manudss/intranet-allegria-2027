@@ -27,6 +27,8 @@ import {
   VolunteerShift,
   VolunteerShiftAssignment,
   VolunteerShiftAssignmentStatus,
+  VolunteerHostingAssignment,
+  VolunteerHostingType,
   VolunteerShiftStatus,
   VolunteerSkill,
   VolunteerSkillType,
@@ -527,6 +529,7 @@ async function run(): Promise<void> {
           "program_change_logs",
           "program_sequences",
           "volunteer_applications",
+          "volunteer_hosting_assignments",
           "volunteer_audit_logs",
           "shift_status_logs",
           "mission_status_logs",
@@ -1156,6 +1159,61 @@ async function run(): Promise<void> {
     }
 
     const hostFamilies = await hostFamilyRepository.save(hostFamiliesToCreate, { chunk: 1000 });
+
+    // Hébergement des bénévoles : une partie en famille d'accueil, une partie sur place.
+    const volunteerHostingRepository = dataSource.getRepository(VolunteerHostingAssignment);
+    const volunteerHostingToCreate: VolunteerHostingAssignment[] = [];
+    const onSiteLocations = [
+      { locationName: 'Gymnase Jean-Paul II', address: '14 rue des Frères Lumière, 69008 Lyon', room: 'Dortoir A' },
+      { locationName: 'Internat du lycée Montalembert', address: '3 avenue Berthelot, 69007 Lyon', room: 'Étage 2' },
+      { locationName: 'Salle paroissiale Saint-Potent', address: '28 rue de la Soie, 69100 Villeurbanne', room: null },
+    ];
+    for (const volunteer of volunteers) {
+      if (!chance(0.5)) {
+        continue;
+      }
+      const draw = faker.number.int({ min: 0, max: 9 });
+      if (draw <= 4) {
+        const family = pick(hostFamilies);
+        volunteerHostingToCreate.push(
+          volunteerHostingRepository.create({
+            volunteer,
+            volunteerId: volunteer.id,
+            type: VolunteerHostingType.HOST_FAMILY,
+            hostFamily: family,
+            hostFamilyId: family.id,
+            startAt: '2027-10-31',
+            endAt: '2027-11-03',
+          }),
+        );
+      } else if (draw <= 7) {
+        const site = pick(onSiteLocations);
+        volunteerHostingToCreate.push(
+          volunteerHostingRepository.create({
+            volunteer,
+            volunteerId: volunteer.id,
+            type: VolunteerHostingType.ON_SITE,
+            locationName: site.locationName,
+            address: site.address,
+            room: site.room,
+            startAt: '2027-10-31',
+            endAt: '2027-11-03',
+          }),
+        );
+      } else {
+        volunteerHostingToCreate.push(
+          volunteerHostingRepository.create({
+            volunteer,
+            volunteerId: volunteer.id,
+            type: VolunteerHostingType.OTHER,
+            notes: chance(0.5) ? 'Hébergé chez des amis.' : 'Logé sur place par ses propres moyens.',
+            startAt: '2027-10-31',
+            endAt: '2027-11-03',
+          }),
+        );
+      }
+    }
+    await volunteerHostingRepository.save(volunteerHostingToCreate, { chunk: 1000 });
 
     const familyRemainingCapacity = new Map<number, number>(
       hostFamilies.map((family) => [family.id, family.maxCapacity]),

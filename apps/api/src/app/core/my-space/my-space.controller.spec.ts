@@ -2,6 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { VolunteerShiftAssignmentsService } from '../volunteer-shift-assignments/volunteer-shift-assignments.service';
 import { VolunteerTeamsService } from '../volunteer-teams/volunteer-teams.service';
+import { VolunteerHostingService } from '../volunteer-hosting/volunteer-hosting.service';
 import { VolunteersService } from '../volunteers/volunteers.service';
 import { MySpaceController } from './my-space.controller';
 
@@ -20,11 +21,15 @@ const build = (overrides: Partial<VolunteersService> = {}) => {
     listVolunteerMemberships: vi.fn().mockResolvedValue([{ id: 2 }]),
     listTeammates: vi.fn().mockResolvedValue([{ id: 3 }]),
   } as unknown as VolunteerTeamsService;
+  const hosting = {
+    findByVolunteerId: vi.fn().mockResolvedValue({ id: 9 }),
+  } as unknown as VolunteerHostingService;
   return {
-    controller: new MySpaceController(volunteers, assignments, teams),
+    controller: new MySpaceController(volunteers, assignments, teams, hosting),
     volunteers,
     assignments,
     teams,
+    hosting,
   };
 };
 
@@ -64,5 +69,16 @@ describe('MySpaceController', () => {
   it('renvoie 404 sur les équipiers quand aucun profil bénévole n est rattaché', async () => {
     const { controller } = build({ findByUserId: vi.fn().mockResolvedValue(null) });
     await expect(controller.getMyTeammates(req, 2)).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('retourne l hébergement du bénévole, null quand il est absent', async () => {
+    const { controller, hosting } = build();
+    await expect(controller.getMyHosting(req)).resolves.toEqual({ id: 9 });
+    expect(hosting.findByVolunteerId).toHaveBeenCalledWith(7);
+  });
+
+  it('renvoie 404 sur l hébergement quand aucun profil bénévole n est rattaché', async () => {
+    const { controller } = build({ findByUserId: vi.fn().mockResolvedValue(null) });
+    await expect(controller.getMyHosting(req)).rejects.toBeInstanceOf(NotFoundException);
   });
 });

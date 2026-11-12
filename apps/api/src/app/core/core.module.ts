@@ -18,6 +18,7 @@ import { OperationalDashboardModule } from './operational-dashboard/operational-
 import { PublicRegistrationsModule } from './public-registrations/public-registrations.module';
 import { ProgramModule } from './program/program.module';
 import { MySpaceModule } from './my-space/my-space.module';
+import { VolunteerHostingModule } from './volunteer-hosting/volunteer-hosting.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { MySpaceModule } from './my-space/my-space.module';
     PublicRegistrationsModule,
     ProgramModule,
     MySpaceModule,
+    VolunteerHostingModule,
   ],
 })
 export class CoreModule {}

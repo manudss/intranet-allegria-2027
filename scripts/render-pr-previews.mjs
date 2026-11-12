@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { pathToFileURL } from 'node:url';
-// Orchestrates the 3 per-PR Render services (api, web admin, public site) from a TRUSTED
+// Orchestrates the per-PR Render services (api, web admin, public site, and the mobile PWA
+// when the PR branch contains apps/mobile) from a TRUSTED
 // GitHub Actions workflow (pull_request_target, or issue_comment / workflow_dispatch which
 // run the DEFAULT branch version of this file: never PR code).
 //
@@ -15,7 +16,7 @@ import { pathToFileURL } from 'node:url';
 //              dispatch): creates the services if needed, rotates the DB creds and deploys
 //              the latest commit of the PR branch. The head branch/sha are read back from
 //              the GitHub API here, never taken from event or env metadata.
-//   - cleanup  (PR closed): deletes the 3 services (the workflow deletes the Neon branch).
+//   - cleanup  (PR closed): deletes the preview services (the workflow deletes the Neon branch).
 // Untrusted values (branch name) are validated before use.
 // Usage: node scripts/render-pr-previews.mjs ensure|refresh|cleanup
 // Env: RENDER_API_KEY, GITHUB_TOKEN, GITHUB_REPOSITORY, PR_NUMBER,
@@ -30,7 +31,7 @@ const repoFull = e.GITHUB_REPOSITORY ?? '';
 if (!/^[\w.-]+\/[\w.-]+$/.test(repoFull)) throw new Error('GITHUB_REPOSITORY invalid');
 
 const RENDER = 'https://api.render.com/v1';
-const names = { api: `al-pr${pr}-api`, web: `al-pr${pr}-web`, site: `al-pr${pr}-site` };
+const names = { api: `al-pr${pr}-api`, web: `al-pr${pr}-web`, site: `al-pr${pr}-site`, mobile: `al-pr${pr}-mobile` };
 const MARK = '<!-- render-previews -->';
 
 async function render(method, path, body) {
@@ -73,13 +74,15 @@ const guess = (n) => `https://${n}.onrender.com`;
 function header() {
   return `### Previews Render pour la PR #${pr}`;
 }
-function linksTable(apiUrl, webUrl, siteUrl) {
-  return [
+function linksTable(apiUrl, webUrl, siteUrl, mobileUrl) {
+  const rows = [
     '| Composant | Lien |', '|---|---|',
     `| Site public | ${siteUrl} |`,
     `| Front d'administration | ${webUrl} |`,
     `| API | ${apiUrl}/health |`,
-  ].join('\n');
+  ];
+  if (mobileUrl) rows.push(`| App mobile (PWA) | ${mobileUrl} |`);
+  return rows.join('\n');
 }
 const HOWTO = "Pour deployer ou mettre a jour les previews avec le dernier commit : commente `/preview` sur cette PR (ou onglet **Actions > PR Previews > Run workflow** avec le numero de la PR).";
 
@@ -91,7 +94,7 @@ async function ensure() {
   if (!any) {
     await upsertComment([
       header(),
-      '**Previews a la demande** : les pushes ne lancent plus de build Render (chaque build consomme une part des 500 minutes de pipeline gratuites partagees du mois, et cette PR en construit 3 : api, admin, site).',
+      '**Previews a la demande** : les pushes ne lancent plus de build Render (chaque build consomme une part des 500 minutes de pipeline gratuites partagees du mois, et cette PR construit plusieurs services : api, admin, site, et mobile si la branche contient apps/mobile).',
       '',
       HOWTO,
       '',
@@ -104,9 +107,10 @@ async function ensure() {
   const apiUrl = urlOf(found.api, guess(names.api));
   const webUrl = urlOf(found.web, guess(names.web));
   const siteUrl = urlOf(found.site, guess(names.site));
+  const mobileUrl = found.mobile ? urlOf(found.mobile, guess(names.mobile)) : undefined;
   await upsertComment([
     header(),
-    linksTable(apiUrl, webUrl, siteUrl),
+    linksTable(apiUrl, webUrl, siteUrl, mobileUrl),
     '',
     'Les pushes ne redeploient plus automatiquement. ' + HOWTO,
     'Plan gratuit : le premier appel peut etre lent. Les services sont supprimes a la fermeture de la PR.',
@@ -124,6 +128,11 @@ async function refresh() {
   const sha = d.head?.sha ?? '';
   if (!/^[\w./-]{1,200}$/.test(branch)) throw new Error('head branch rejected');
   if (!/^[0-9a-f]{40}$/.test(sha)) throw new Error('head sha rejected');
+
+  // The mobile PWA preview only makes sense when the branch actually carries apps/mobile
+  // (its build command would fail otherwise). A directory listing comes back as an array;
+  // a 404 comes back as null.
+  const hasMobile = Array.isArray(await gh('GET', `/contents/apps/mobile?ref=${sha}`));
 
   const repo = `https://github.com/${repoFull}`;
   if (!e.RENDER_ENVIRONMENT_ID) throw new Error('RENDER_ENVIRONMENT_ID is required (Allegria-demo project, dev environment)');
@@ -156,7 +165,7 @@ async function refresh() {
         { key: 'DATABASE_URL', value: e.NEON_DB_URL },
         { key: 'DATABASE_URL_DIRECT', value: e.NEON_DB_URL_DIRECT },
         { key: 'DB_SSL', value: 'true' },
-        { key: 'CORS_ORIGIN', value: `${guess(names.web)},${guess(names.site)}` },
+        { key: 'CORS_ORIGIN', value: [guess(names.web), guess(names.site), ...(hasMobile ? [guess(names.mobile)] : [])].join(',') },
         { key: 'NODE_VERSION', value: '24' },
       ],
       serviceDetails: {
@@ -183,22 +192,29 @@ async function refresh() {
     [{ key: 'WEB_API_URL', value: apiUrl }, { key: 'NODE_VERSION', value: '24' }]);
   const site = await staticSvc(names.site, 'npm ci --include=dev && npm run build:site', 'dist/apps/site/browser',
     [{ key: 'NODE_VERSION', value: '24' }]);
+  const mobile = hasMobile
+    ? await staticSvc(names.mobile, 'npm ci --include=dev && npm run build:mobile', 'dist/apps/mobile/browser',
+      [{ key: 'MOBILE_API_URL', value: apiUrl }, { key: 'NODE_VERSION', value: '24' }])
+    : null;
 
   // Real URLs can differ from the guess (name collision suffix): keep CORS exact.
   const realWeb = urlOf(web.s, guess(names.web));
   const realSite = urlOf(site.s, guess(names.site));
+  const realMobile = mobile ? urlOf(mobile.s, guess(names.mobile)) : undefined;
+  const corsValue = [realWeb, realSite, ...(realMobile ? [realMobile] : [])].join(',');
+  const corsGuess = [guess(names.web), guess(names.site), ...(hasMobile ? [guess(names.mobile)] : [])].join(',');
 
   // Existing services: rotate the DB creds (they change at every run) and deploy the
   // newest commit, exactly one build per service (env change redeploys by itself).
   if (apiCreated) {
-    if (realWeb !== guess(names.web) || realSite !== guess(names.site)) {
-      await render('PUT', `/services/${api.id}/env-vars/CORS_ORIGIN`, { value: `${realWeb},${realSite}` });
+    if (corsValue !== corsGuess) {
+      await render('PUT', `/services/${api.id}/env-vars/CORS_ORIGIN`, { value: corsValue });
     }
   } else {
     const envDeployed = await syncEnv(api.id, [
       { key: 'DATABASE_URL', value: e.NEON_DB_URL },
       { key: 'DATABASE_URL_DIRECT', value: e.NEON_DB_URL_DIRECT },
-      { key: 'CORS_ORIGIN', value: `${realWeb},${realSite}` },
+      { key: 'CORS_ORIGIN', value: corsValue },
     ]);
     if (!envDeployed) await explicitDeploy(api.id);
   }
@@ -207,12 +223,16 @@ async function refresh() {
     if (!envDeployed) await explicitDeploy(web.s.id);
   }
   if (!site.created) await explicitDeploy(site.s.id);
+  if (mobile && !mobile.created) {
+    const envDeployed = await syncEnv(mobile.s.id, [{ key: 'MOBILE_API_URL', value: apiUrl }]);
+    if (!envDeployed) await explicitDeploy(mobile.s.id);
+  }
 
   await upsertComment([
     header(),
     `Previews demandees : deploiement du dernier commit \`${sha.slice(0, 7)}\` lance.`,
     '',
-    linksTable(apiUrl, realWeb, realSite),
+    linksTable(apiUrl, realWeb, realSite, realMobile),
     '',
     `Base de donnees Neon isolee pour cette PR : \`${e.NEON_BRANCH_NAME ?? `preview/pr-${pr}`}\` (fictive, derivee de \`preview/main\`).`,
     'Les services Render sont en plan gratuit (le premier appel peut etre lent). Chaque `/preview` relance les builds (minutes de pipeline gratuites). Ils sont supprimes a la fermeture de la PR.',
@@ -224,7 +244,7 @@ async function cleanup() {
     const s = await findService(n);
     if (s) await render('DELETE', `/services/${s.id}`);
   }
-  await upsertComment(`### Previews Render pour la PR #${pr}\nPR fermee : les 3 services de preview ont ete supprimes.`);
+  await upsertComment(`### Previews Render pour la PR #${pr}\nPR fermee : les services de preview ont ete supprimes.`);
 }
 
 export { ensure, refresh, cleanup };

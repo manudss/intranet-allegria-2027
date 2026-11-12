@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Sitemap statique du site public Alegria 2027.
+  ⚠️ À régénérer automatiquement si de nouvelles routes (ex: /actualites/*) sont ajoutées.
+  Remplacer le domaine ci-dessous par le domaine définitif si différent.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://alegria2027.mej.fr/</loc></url>
+  <url><loc>https://alegria2027.mej.fr/evenement</loc></url>
+  <url><loc>https://alegria2027.mej.fr/programme</loc></url>
+  <url><loc>https://alegria2027.mej.fr/participer</loc></url>
+  <url><loc>https://alegria2027.mej.fr/inscription/jeunes</loc></url>
+  <url><loc>https://alegria2027.mej.fr/inscription/familles</loc></url>
+  <url><loc>https://alegria2027.mej.fr/benevoles</loc></url>
+  <url><loc>https://alegria2027.mej.fr/inscription/benevoles</loc></url>
+  <url><loc>https://alegria2027.mej.fr/faq</loc></url>
+  <url><loc>https://alegria2027.mej.fr/lieu</loc></url>
+  <url><loc>https://alegria2027.mej.fr/contact</loc></url>
+  <url><loc>https://alegria2027.mej.fr/accessibilite</loc></url>
+</urlset>

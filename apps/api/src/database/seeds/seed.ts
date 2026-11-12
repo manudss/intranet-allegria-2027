@@ -677,11 +677,13 @@ async function run(): Promise<void> {
         groupRepository.create({
           name: `Rassemblement ${diocese} ${Math.floor(i / dioceses.length) + 1}`,
           diocese,
+          // Aligné sur l'événement (31 oct. au 3 nov. 2027) : un groupe sur
+          // deux arrive la veille au soir ou repart un jour plus tot.
           arrivalDatetime: new Date(
-            `2027-07-${(19 + (i % 2)).toString().padStart(2, '0')}T08:00:00.000Z`,
+            i % 2 === 0 ? '2027-10-31T08:00:00.000Z' : '2027-10-30T18:00:00.000Z',
           ),
           departureDatetime: new Date(
-            `2027-07-${(27 + (i % 2)).toString().padStart(2, '0')}T17:30:00.000Z`,
+            i % 2 === 0 ? '2027-11-03T17:30:00.000Z' : '2027-11-02T17:30:00.000Z',
           ),
           notes: chance(0.2) ? 'Arrivee en bus de nuit, accueil gare requis.' : null,
         }),
@@ -799,8 +801,8 @@ async function run(): Promise<void> {
             volunteerTeam: selectedTeam,
             volunteerId: volunteer.id,
             volunteerTeamId: selectedTeam.id,
-            startAt: toDateString(new Date('2027-07-15T00:00:00.000Z')),
-            endAt: toDateString(new Date('2027-07-30T00:00:00.000Z')),
+            startAt: toDateString(new Date('2027-10-31T00:00:00.000Z')),
+            endAt: toDateString(new Date('2027-11-03T00:00:00.000Z')),
             role: pick(['Coordination', 'Support', 'Animation', 'Restauration', 'Sante']),
           }),
         );

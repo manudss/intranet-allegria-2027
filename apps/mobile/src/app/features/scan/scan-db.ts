@@ -38,6 +38,10 @@ function write(db: IDBDatabase, stores: string[], run: (t: IDBTransaction) => vo
 export interface StoredScanRow { id: IDBValidKey; scan: PendingScan }
 export const scanDb = {
   getKv: <T>(db: IDBDatabase, key: string) => read<T>(db, 'kv', key),
+  countScans: (db: IDBDatabase): Promise<number> => new Promise((resolve, reject) => {
+    const req = db.transaction('scans').objectStore('scans').count();
+    req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error);
+  }),
   getTable: (db: IDBDatabase) => read<ArrayBuffer>(db, 'table', 'current'),
   /** Atomically replaces snapshot, key and metadata; optionally queues a scan. */
   save: async (db: IDBDatabase, meta: unknown, sessionKey: string, blob: ArrayBuffer, scan?: PendingScan) => {

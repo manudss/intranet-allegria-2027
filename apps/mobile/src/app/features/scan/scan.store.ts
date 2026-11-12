@@ -247,6 +247,6 @@ export class ScanStore implements OnDestroy {
     this.tableFreshness.set(Date.now() - Date.parse(this.meta.lastRefreshAt) < 90_000 ? 'fresh' : 'stale');
   }
   private async refreshPendingCount(): Promise<void> {
-    if (this.db) this.pendingCount.set((await listScans(this.db)).length);
+    if (this.db) this.pendingCount.set(await scanDb.countScans(this.db));
   }
 }

@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { ScanApiService } from './scan-api.service';
 import { ScanStore } from './scan.store';
-import { ScanPointConfig } from './scan.models';
+import { AccessZone, ScanPoint } from './scan.models';
 
 const SCAN_ROLES = ['SCANNER', 'BADGE_MANAGER', 'ADMIN'];
 
@@ -20,7 +20,7 @@ const SCAN_ROLES = ['SCANNER', 'BADGE_MANAGER', 'ADMIN'];
       } @else {
         <header>
           <h1>Mode scan</h1>
-          <p class="sub">Choisissez votre poste, téléchargez la table chiffrée, puis scannez.</p>
+          <p class="sub">Choisissez votre point de contrôle, la table chiffrée est téléchargée, puis scannez.</p>
         </header>
 
         <section class="card">
@@ -28,31 +28,26 @@ const SCAN_ROLES = ['SCANNER', 'BADGE_MANAGER', 'ADMIN'];
           <div class="points">
             @for (p of points(); track p.id) {
               <button type="button" class="point" [class.sel]="selected()?.id === p.id" (click)="select(p)">
-                <strong>{{ p.label }}</strong>
-                <span class="type">{{ typeLabel(p.type) }}</span>
+                <strong>{{ p.name }}</strong>
+                <span class="type">{{ zoneName(p) }}{{ p.scanType?.label ? ' · ' + p.scanType.label : '' }}</span>
               </button>
             }
           </div>
+          @if (!loadingCfg() && points().length === 0) {
+            <p class="hint">Aucun point de contrôle actif configuré.</p>
+          }
         </section>
-
-        <section class="card">
-          <h2>Type de scan</h2>
-          <div class="types">
-            <button type="button" class="type-btn" [class.sel]="scanType() === 'ENTRY'" (click)="scanType.set('ENTRY')">Entrée</button>
-            <button type="button" class="type-btn" [class.sel]="$any(scanType()) === 'EXIT'" (click)="scanType.set($any('EXIT'))">Sortie</button>
-          </div>
-        </section>
-
-        @if (canAssign()) {
-          <button class="cta assign" type="button" (click)="goAssign()">Attribuer / remplacer un badge</button>
-        }
 
         <button class="cta" type="button" [disabled]="!selected() || loading()" (click)="start()">
           {{ loading() ? 'Téléchargement…' : 'Démarrer le scan' }}
         </button>
 
-        @if (error()) {
-          <p class="error">{{ error() }}</p>
+        @if (canAssign()) {
+          <button class="cta assign" type="button" (click)="goAssign()">Attribuer / remplacer un badge</button>
+        }
+
+        @if (error(); as e) {
+          <p class="error">{{ e }}</p>
         }
         <p class="hint">Table chiffrée sur l'appareil · expiration automatique · scans renvoyés au serveur dès que le réseau revient.</p>
       }
@@ -65,12 +60,9 @@ const SCAN_ROLES = ['SCANNER', 'BADGE_MANAGER', 'ADMIN'];
     .card { background: #fff; border-radius: 16px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
     .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; margin: 0 0 10px; }
     .points { display: flex; flex-direction: column; gap: 8px; }
-    .point { display: flex; justify-content: space-between; align-items: center; padding: 14px; border: 2px solid transparent; border-radius: 12px; background: #f4f5f7; font-size: 15px; cursor: pointer; }
+    .point { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 14px; border: 2px solid transparent; border-radius: 12px; background: #f4f5f7; font-size: 15px; cursor: pointer; }
     .point.sel { border-color: #526ed3; background: #eef1fb; }
-    .type { font-size: 12px; color: #6b7280; }
-    .types { display: flex; gap: 8px; }
-    .type-btn { flex: 1; height: 48px; border-radius: 12px; border: 2px solid transparent; background: #f4f5f7; font-size: 16px; font-weight: 600; cursor: pointer; }
-    .type-btn.sel { border-color: #526ed3; background: #eef1fb; color: #526ed3; }
+    .type { font-size: 12px; color: #6b7280; text-align: right; }
     .cta { height: 56px; border: none; border-radius: 14px; background: #526ed3; color: #fff; font-size: 17px; font-weight: 700; cursor: pointer; }
     .cta:disabled { opacity: .5; }
     .cta.assign { background: #1a9e4b; }
@@ -86,35 +78,44 @@ export class ScanEntryComponent implements OnInit {
   private readonly router = inject(Router);
 
   readonly allowed = signal(false);
-  readonly points = signal<ScanPointConfig[]>([]);
-  readonly selected = signal<ScanPointConfig | null>(null);
-  readonly scanType = signal<'ENTRY' | 'EXIT'>('ENTRY');
+  readonly canAssign = signal(false);
+  readonly points = signal<ScanPoint[]>([]);
+  readonly zones = signal<Map<number, AccessZone>>(new Map());
+  readonly selected = signal<ScanPoint | null>(null);
   readonly loading = signal(false);
+  readonly loadingCfg = signal(true);
   readonly error = signal<string | null>(null);
 
   ngOnInit(): void {
     this.allowed.set(this.auth.hasAnyRole(SCAN_ROLES));
     this.canAssign.set(this.auth.hasAnyRole(['BADGE_MANAGER', 'ADMIN']));
     if (!this.allowed()) return;
+    this.api.listZones().subscribe({
+      next: (zones) => this.zones.set(new Map(zones.map((z) => [z.id, z]))),
+      error: () => undefined,
+    });
     this.api.listPoints().subscribe({
-      next: (points) => this.points.set(points.filter((p) => p.active)),
-      error: () => this.error.set("Impossible de charger les points de contrôle."),
+      next: (points) => {
+        this.points.set(points.filter((p) => p.active));
+        this.loadingCfg.set(false);
+      },
+      error: () => {
+        this.loadingCfg.set(false);
+        this.error.set('Impossible de charger les points de contrôle.');
+      },
     });
   }
 
-  select(p: ScanPointConfig): void {
+  select(p: ScanPoint): void {
     this.selected.set(p);
   }
 
-  readonly canAssign = signal(false);
+  zoneName(p: ScanPoint): string {
+    return this.zones().get(p.zoneId)?.name ?? '';
+  }
 
   goAssign(): void {
     void this.router.navigate(['/scan/attribuer']);
-  }
-
-  typeLabel(t: string): string {
-    const labels: Record<string, string> = { ENTRY: 'Entrée', EXIT: 'Sortie', MEAL: 'Repas', BUS: 'Bus', ZONE: 'Zone', GENERAL: 'Général' };
-    return labels[t] ?? t;
   }
 
   async start(): Promise<void> {
@@ -124,10 +125,10 @@ export class ScanEntryComponent implements OnInit {
     this.error.set(null);
     try {
       await this.store.init();
-      await this.store.startSession(point, this.scanType());
+      await this.store.startSession(point);
       await this.router.navigate(['/scan', point.id]);
     } catch {
-      this.error.set("Téléchargement de la table impossible. Vérifiez la connexion et réessayez.");
+      this.error.set('Téléchargement de la table impossible. Vérifiez la connexion et votre habilitation, puis réessayez.');
     } finally {
       this.loading.set(false);
     }

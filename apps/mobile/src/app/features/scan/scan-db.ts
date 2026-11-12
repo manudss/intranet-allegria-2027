@@ -47,6 +47,10 @@ export const scanDb = {
   getTable: (db: IDBDatabase) => tx<ArrayBuffer | undefined>(db, 'table', 'readonly', (s) => s.get('current') as IDBRequest<ArrayBuffer | undefined>),
   addScan: (db: IDBDatabase, scan: unknown) => tx<number>(db, 'scans', 'readwrite', (s) => s.add(scan) as IDBRequest<number>),
   clearScans: (db: IDBDatabase) => tx(db, 'scans', 'readwrite', (s) => s.clear()),
+  clearKvAndTable: async (db: IDBDatabase) => {
+    await tx(db, 'kv', 'readwrite', (s) => s.clear());
+    await tx(db, 'table', 'readwrite', (s) => s.clear());
+  },
   clearAll: async (db: IDBDatabase) => {
     await tx(db, 'kv', 'readwrite', (s) => s.clear());
     await tx(db, 'table', 'readwrite', (s) => s.clear());

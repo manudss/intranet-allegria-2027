@@ -1,72 +1,93 @@
-/** Modèles du mode scan hors-ligne (miroir des DTO de l'API access-control). */
+/** Modèles du mode scan hors-ligne — alignés sur l'API access-control (PR 1). */
 
-export type ScanPointType = 'ENTRY' | 'EXIT' | 'MEAL' | 'BUS' | 'ZONE' | 'GENERAL';
-export type ScanTypeCode = 'ENTRY' | 'EXIT';
+export type DuplicateRule = 'ALLOW' | 'UNIQUE_PER_SERVICE' | 'UNIQUE_PER_DAY';
 
-export interface ScanPointConfig {
-  id: string;
-  code: string;
-  label: string;
-  type: ScanPointType;
-  active: boolean;
-  config: Record<string, unknown> | null;
+export interface AccessZone {
+  id: number;
+  name: string;
+  description: string | null;
+  allowedPersonTypes: string[] | null;
+  requiresOnlineValidation: boolean;
+  maxOfflineMinutes: number;
+  points?: ScanPoint[];
 }
 
-export interface ScanTypeConfig {
-  id: string;
+export interface ScanPoint {
+  id: number;
+  zoneId: number;
+  scanTypeId: number;
+  name: string;
+  serviceKey: string | null;
+  active: boolean;
+  zone?: AccessZone;
+  scanType?: ScanType;
+}
+
+export interface ScanType {
+  id: number;
   code: string;
   label: string;
   description: string | null;
-  oneWay: boolean;
-  active: boolean;
+  duplicateRule: DuplicateRule;
 }
 
-/** Ligne de la table chiffrée téléchargée (indexée par hash du code QR). */
-export interface ScanTableRow {
-  qrCodeHash: string;
+/** Ligne d'instantané servie par l'API : le minimum utile au verdict. */
+export interface SnapshotEntry {
+  assignmentId: number;
+  code: string;
   firstName: string;
   lastName: string;
-  teamName: string | null;
-  participantType: string | null;
-  badgeStatus: string;
-  hasActivePass: boolean;
-  checkedOutAt: string | null;
-  servedMealCount: number;
+  personType: string;
+  version: number;
 }
 
-export interface AccessTableDto {
-  pointId: string;
-  generatedAt: string;
+export interface ScanSessionStart {
+  sessionId: number;
+  zoneId: number | null;
+  startedAt: string;
   expiresAt: string;
-  participants: ScanTableRow[];
+  keyExpiresAt: string;
+  sessionKey: string;
+  snapshotVersion: number;
+  maxOfflineMinutes: number;
+  requiresOnlineValidation: boolean;
+  snapshot: SnapshotEntry[];
+}
+
+export interface ScanDelta {
+  version: number;
+  upserts: SnapshotEntry[];
+  revokedAssignmentIds: number[];
 }
 
 export interface PendingScan {
-  qrCodeHash: string;
-  scannedAt: string;
-  pointId: string;
-  scanTypeCode: string;
-  localSeq: number;
+  clientEventId: string;
+  code: string;
+  pointId: number;
+  assignmentId?: number;
+  tableVersion?: number;
+  occurredAtLocal?: string;
+  serviceKey?: string;
 }
 
-export interface ScanUploadResponse {
-  processed: number;
-  duplicated: number;
-  rejected: { localSeq: number; qrCodeHash: string; reason: string }[];
+export type ServerVerdict =
+  | 'ACCEPTED'
+  | 'DUPLICATE'
+  | 'REJECTED_UNKNOWN'
+  | 'REJECTED_REVOKED'
+  | 'REJECTED_NO_RIGHT'
+  | 'REJECTED_EXPIRED_ASSIGNMENT';
+
+export interface ScanVerdictResult {
+  clientEventId: string;
+  verdict: ServerVerdict;
+  duplicateOfEventId?: number;
 }
 
-export interface ScanLookupResponse {
-  allowed: boolean;
-  reason: string;
-  participant: {
-    firstName: string;
-    lastName: string;
-    teamName: string | null;
-    participantType: string | null;
-    hasActivePass: boolean;
-    checkedOutAt: string | null;
-    servedMealCount: number;
-  } | null;
+export interface LookupResult {
+  verdict: ServerVerdict;
+  firstName?: string;
+  lastName?: string;
 }
 
 export type VerdictKind = 'ok' | 'already' | 'ko' | 'unknown' | 'expired' | 'offline';
@@ -77,42 +98,45 @@ export interface Verdict {
   detail: string;
   /** Compteur de service (direction C) après ce scan, si applicable. */
   servedCount?: number;
-  firstName?: string;
-  lastName?: string;
 }
 
-/** Évalue un scan contre la table locale. Hash calculé en amont (crypto async). */
+/**
+ * Évalue un scan contre l'instantané local.
+ * `seenKeys` contient les clés de doublon déjà acceptées localement :
+ *  - UNIQUE_PER_DAY : le code seul
+ *  - UNIQUE_PER_SERVICE : code + serviceKey
+ *  - ALLOW : jamais de doublon
+ * `servedSoFar` : nombre de passages déjà acceptés sur ce service (compteur C).
+ */
 export function evaluateScan(
-  row: ScanTableRow | undefined,
-  scanType: ScanTypeCode,
-  point: ScanPointConfig,
-  alreadyScannedHashes: ReadonlySet<string>,
+  entry: SnapshotEntry | undefined,
+  rule: DuplicateRule,
+  serviceKey: string | null,
+  seenKeys: ReadonlySet<string>,
+  servedSoFar: number,
 ): Verdict {
-  if (!row) {
+  if (!entry) {
     return { kind: 'unknown', title: 'Badge inconnu', detail: 'Vérifiez le badge avec un référent.' };
   }
-  if (row.checkedOutAt) {
-    return { kind: 'ko', title: 'Sortie déjà enregistrée', detail: `${row.firstName} ${row.lastName} a quitté l'événement.` };
-  }
-  if (row.badgeStatus !== 'ACTIVE' || !row.hasActivePass) {
-    return { kind: 'ko', title: 'Badge inactif', detail: `${row.firstName} ${row.lastName} — badge perdu ou remplacé.` };
-  }
-  if (scanType === 'ENTRY' && alreadyScannedHashes.has(row.qrCodeHash)) {
-    const count = point.type === 'MEAL' || point.type === 'BUS' ? row.servedMealCount : undefined;
+  const name = `${entry.firstName} ${entry.lastName}`;
+  const dupKey = rule === 'UNIQUE_PER_SERVICE' ? `${entry.code}|${serviceKey ?? ''}` : entry.code;
+  if (rule !== 'ALLOW' && seenKeys.has(dupKey)) {
     return {
       kind: 'already',
       title: 'Déjà validé',
-      detail: `${row.firstName} ${row.lastName} a déjà été validé ici aujourd'hui.`,
-      servedCount: count,
+      detail: `${name} a déjà été validé ici.`,
+      servedCount: rule === 'UNIQUE_PER_SERVICE' ? servedSoFar : undefined,
     };
   }
-  const counted = point.type === 'MEAL' || point.type === 'BUS';
   return {
     kind: 'ok',
-    title: scanType === 'EXIT' ? 'Sortie enregistrée' : 'OK',
-    detail: `${row.firstName} ${row.lastName}${row.teamName ? ` · ${row.teamName}` : ''}`,
-    servedCount: counted ? row.servedMealCount + 1 : undefined,
-    firstName: row.firstName,
-    lastName: row.lastName,
+    title: 'OK',
+    detail: name,
+    servedCount: rule === 'UNIQUE_PER_SERVICE' ? servedSoFar + 1 : undefined,
   };
+}
+
+/** Clé de doublon locale pour marquer un scan accepté. */
+export function duplicateKeyOf(code: string, rule: DuplicateRule, serviceKey: string | null): string {
+  return rule === 'UNIQUE_PER_SERVICE' ? `${code}|${serviceKey ?? ''}` : code;
 }

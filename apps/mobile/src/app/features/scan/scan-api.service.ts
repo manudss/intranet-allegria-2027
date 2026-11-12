@@ -2,12 +2,14 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
-  AccessTableDto,
+  AccessZone,
+  LookupResult,
   PendingScan,
-  ScanLookupResponse,
-  ScanPointConfig,
-  ScanTypeConfig,
-  ScanUploadResponse,
+  ScanDelta,
+  ScanPoint,
+  ScanSessionStart,
+  ScanType,
+  ScanVerdictResult,
 } from './scan.models';
 
 @Injectable({ providedIn: 'root' })
@@ -15,26 +17,41 @@ export class ScanApiService {
   private readonly http = inject(HttpClient);
   private readonly base = '/api/access-control';
 
-  listPoints(): Observable<ScanPointConfig[]> {
-    return this.http.get<ScanPointConfig[]>(`${this.base}/config/points`);
+  listZones(): Observable<AccessZone[]> {
+    return this.http.get<AccessZone[]>(`${this.base}/config/zones`);
   }
 
-  listScanTypes(): Observable<ScanTypeConfig[]> {
-    return this.http.get<ScanTypeConfig[]>(`${this.base}/config/scan-types`);
+  listPoints(): Observable<ScanPoint[]> {
+    return this.http.get<ScanPoint[]>(`${this.base}/config/points`);
   }
 
-  downloadTable(pointId: string, scope?: string): Observable<AccessTableDto> {
-    const options = scope ? { params: new HttpParams().set('scope', scope) } : {};
-    return this.http.get<AccessTableDto>(`${this.base}/scan/table/${pointId}`, options);
+  listScanTypes(): Observable<ScanType[]> {
+    return this.http.get<ScanType[]>(`${this.base}/config/scan-types`);
   }
 
-  uploadScans(scans: PendingScan[]): Observable<ScanUploadResponse> {
-    return this.http.post<ScanUploadResponse>(`${this.base}/scan/upload`, { scans });
+  startSession(zoneId?: number): Observable<ScanSessionStart> {
+    return this.http.post<ScanSessionStart>(`${this.base}/scan/sessions`, zoneId != null ? { zoneId } : {});
   }
 
-  lookupCode(code: string, pointId: string, scanType: string): Observable<ScanLookupResponse> {
-    return this.http.get<ScanLookupResponse>(`${this.base}/scan/lookup`, {
-      params: new HttpParams().set('code', code).set('pointId', pointId).set('scanType', scanType),
+  renewKey(sessionId: number): Observable<{ sessionKey: string; keyExpiresAt: string }> {
+    return this.http.get<{ sessionKey: string; keyExpiresAt: string }>(`${this.base}/scan/sessions/${sessionId}/key`);
+  }
+
+  delta(sessionId: number, sinceVersion: number): Observable<ScanDelta> {
+    return this.http.get<ScanDelta>(`${this.base}/scan/sessions/${sessionId}/delta`, {
+      params: new HttpParams().set('since', sinceVersion),
     });
+  }
+
+  uploadScans(sessionId: number, scans: PendingScan[]): Observable<ScanVerdictResult[]> {
+    return this.http.post<ScanVerdictResult[]>(`${this.base}/scan/sessions/${sessionId}/scans`, { scans });
+  }
+
+  closeSession(sessionId: number): Observable<unknown> {
+    return this.http.post(`${this.base}/scan/sessions/${sessionId}/close`, {});
+  }
+
+  lookupCode(code: string, pointId: number): Observable<LookupResult> {
+    return this.http.post<LookupResult>(`${this.base}/scan/lookup`, { code, pointId });
   }
 }

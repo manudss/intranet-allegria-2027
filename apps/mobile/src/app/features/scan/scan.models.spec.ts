@@ -1,67 +1,47 @@
-import { evaluateScan, ScanPointConfig, ScanTableRow } from './scan.models';
+import { SnapshotEntry, duplicateKeyOf, evaluateScan } from './scan.models';
 
-const point = (type: ScanPointConfig['type']): ScanPointConfig => ({
-  id: 'p1',
-  code: 'T1',
-  label: 'Test',
-  type,
-  active: true,
-  config: null,
-});
-
-const row = (over: Partial<ScanTableRow> = {}): ScanTableRow => ({
-  qrCodeHash: 'h1',
+const entry = (over: Partial<SnapshotEntry> = {}): SnapshotEntry => ({
+  assignmentId: 1,
+  code: 'abc123',
   firstName: 'Ada',
   lastName: 'Martin',
-  teamName: 'Lyon 2',
-  participantType: 'Jeune',
-  badgeStatus: 'ACTIVE',
-  hasActivePass: true,
-  checkedOutAt: null,
-  servedMealCount: 0,
+  personType: 'JEUNE',
+  version: 1,
   ...over,
 });
 
 describe('evaluateScan', () => {
-  it('badge inconnu → unknown', () => {
-    expect(evaluateScan(undefined, 'ENTRY', point('ENTRY'), new Set()).kind).toBe('unknown');
+  it('code inconnu → unknown', () => {
+    expect(evaluateScan(undefined, 'ALLOW', null, new Set(), 0).kind).toBe('unknown');
   });
 
-  it('entrée valide → ok', () => {
-    const v = evaluateScan(row(), 'ENTRY', point('ENTRY'), new Set());
+  it('règle ALLOW (entrée) → ok répétable', () => {
+    const seen = new Set(['abc123']);
+    const v = evaluateScan(entry(), 'ALLOW', null, seen, 0);
     expect(v.kind).toBe('ok');
     expect(v.detail).toContain('Ada Martin');
   });
 
-  it('badge inactif ou pass révoqué → ko', () => {
-    expect(evaluateScan(row({ badgeStatus: 'LOST' }), 'ENTRY', point('ENTRY'), new Set()).kind).toBe('ko');
-    expect(evaluateScan(row({ hasActivePass: false }), 'ENTRY', point('ENTRY'), new Set()).kind).toBe('ko');
+  it('UNIQUE_PER_DAY → doublon détecté', () => {
+    const seen = new Set(['abc123']);
+    expect(evaluateScan(entry(), 'UNIQUE_PER_DAY', null, seen, 0).kind).toBe('already');
   });
 
-  it('déjà sorti → ko', () => {
-    expect(evaluateScan(row({ checkedOutAt: '2027-07-01T10:00:00Z' }), 'ENTRY', point('ENTRY'), new Set()).kind).toBe('ko');
-  });
-
-  it('doublon entrée → already', () => {
-    const v = evaluateScan(row(), 'ENTRY', point('ENTRY'), new Set(['h1']));
-    expect(v.kind).toBe('already');
-  });
-
-  it('repas : compteur de service incrémenté (direction C)', () => {
-    const v = evaluateScan(row({ servedMealCount: 2 }), 'ENTRY', point('MEAL'), new Set());
+  it('UNIQUE_PER_SERVICE → compteur de service incrémenté (direction C)', () => {
+    const v = evaluateScan(entry(), 'UNIQUE_PER_SERVICE', 'repas-midi', new Set(), 2);
     expect(v.kind).toBe('ok');
     expect(v.servedCount).toBe(3);
   });
 
-  it('repas déjà servi → already avec compteur actuel', () => {
-    const v = evaluateScan(row({ servedMealCount: 1 }), 'ENTRY', point('MEAL'), new Set(['h1']));
+  it('UNIQUE_PER_SERVICE → même personne deux fois sur le même service = doublon avec compteur', () => {
+    const seen = new Set([duplicateKeyOf('abc123', 'UNIQUE_PER_SERVICE', 'repas-midi')]);
+    const v = evaluateScan(entry(), 'UNIQUE_PER_SERVICE', 'repas-midi', seen, 1);
     expect(v.kind).toBe('already');
     expect(v.servedCount).toBe(1);
   });
 
-  it('sortie → ok « Sortie enregistrée »', () => {
-    const v = evaluateScan(row(), 'EXIT', point('EXIT'), new Set());
-    expect(v.kind).toBe('ok');
-    expect(v.title).toContain('Sortie');
+  it('UNIQUE_PER_SERVICE → autre service = ok', () => {
+    const seen = new Set([duplicateKeyOf('abc123', 'UNIQUE_PER_SERVICE', 'repas-midi')]);
+    expect(evaluateScan(entry(), 'UNIQUE_PER_SERVICE', 'repas-soir', seen, 0).kind).toBe('ok');
   });
 });

@@ -7,6 +7,12 @@ import { ProgramApiService } from '../../services/api.services';
 import { ProgramDay, ProgramSequence } from '../../models/models';
 import { dayLabel, defaultDay } from '../../core/event-dates';
 
+/**
+ * Rôles ouvrant l'accès à « Mon espace » : miroir de READ_ROLES dans
+ * apps/api/src/app/core/my-space/my-space.controller.ts (sinon 403 côté API).
+ */
+export const MY_SPACE_ROLES = ['ADMIN', 'COORDINATOR', 'HEALTH', 'VOLUNTEERS', 'LOGISTICS', 'VIEWER'];
+
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -19,6 +25,7 @@ export class HomeComponent {
   private readonly programApi = inject(ProgramApiService);
 
   readonly user = this.auth.currentUser;
+  readonly canAccessSpace = computed(() => this.auth.hasAnyRole(MY_SPACE_ROLES));
   readonly day = signal<ProgramDay | null>(null);
   readonly loading = signal(true);
   readonly failed = signal(false);

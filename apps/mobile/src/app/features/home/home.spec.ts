@@ -9,7 +9,7 @@ import { ProgramDay } from '../../models/models';
 import { dayOf, seq } from '../program/program.fixture';
 import { HomeComponent } from './home';
 
-const setup = async (getDay: () => Observable<ProgramDay>) => {
+const setup = async (getDay: () => Observable<ProgramDay>, roles: string[] = ['VOLUNTEERS']) => {
   await TestBed.configureTestingModule({
     imports: [HomeComponent],
     providers: [
@@ -18,7 +18,8 @@ const setup = async (getDay: () => Observable<ProgramDay>) => {
       {
         provide: AuthService,
         useValue: {
-          currentUser: () => ({ id: 1, email: 'ben@example.com', roles: [] }),
+          currentUser: () => ({ id: 1, email: 'ben@example.com', roles }),
+          hasAnyRole: (candidates: string[]) => candidates.some((r) => roles.includes(r)),
           logout: () => undefined,
         },
       },
@@ -44,5 +45,15 @@ describe('HomeComponent', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
       'Programme indisponible',
     );
+  });
+
+  it('affiche la tuile « Mon espace » pour un compte bénévole', async () => {
+    const fixture = await setup(() => of(dayOf(seq(1, '12:00'))), ['VOLUNTEERS']);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Mon espace');
+  });
+
+  it('masque la tuile « Mon espace » sans rôle autorisé', async () => {
+    const fixture = await setup(() => of(dayOf(seq(1, '12:00'))), ['ANIMATOR']);
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Mon espace');
   });
 });

@@ -14,7 +14,7 @@ import { AccessControlApiService, ScannerGrant, ZoneItem } from './access-contro
         <h2>Nouvelle habilitation</h2>
         <p class="hint">Donne le droit de scanner à un utilisateur, pour une zone précise ou toutes les zones, avec une fin de validité.</p>
         <div class="grid">
-          <select [(ngModel)]="userId"><option [ngValue]="null">Choisir un utilisateur</option>@for (u of users(); track u.id) { <option [ngValue]="u.id">{{ u.firstName }} {{ u.lastName }} ({{ u.email }})</option> }</select>
+          <select [(ngModel)]="userId"><option [ngValue]="null">Choisir un utilisateur</option>@for (u of users(); track u.id) { <option [ngValue]="u.id">{{ u.email }}</option> }</select>
           <select [(ngModel)]="zoneId">
             <option [ngValue]="null">Toutes les zones</option>
             @for (z of zones(); track z.id) { <option [ngValue]="z.id">{{ z.name }}</option> }
@@ -33,7 +33,7 @@ import { AccessControlApiService, ScannerGrant, ZoneItem } from './access-contro
           <tbody>
             @for (g of items(); track g.id) {
               <tr>
-                <td>{{ g.user ? g.user.firstName + ' ' + g.user.lastName : 'Utilisateur #' + g.userId }}</td>
+                <td>{{ g.user?.email ?? 'Utilisateur #' + g.userId }}</td>
                 <td>{{ g.zone?.name ?? 'Toutes' }}</td>
                 <td>{{ g.startsAt | date: 'dd/MM HH:mm' }}</td>
                 <td>{{ g.endsAt ? (g.endsAt | date: 'dd/MM HH:mm') : '—' }}</td>

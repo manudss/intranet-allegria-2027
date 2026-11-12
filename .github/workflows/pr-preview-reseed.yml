@@ -1,9 +1,11 @@
 name: PR Preview Reseed
 
-# Reseed manuel de la base Neon d'une preview de PR.
+# Reseed manuel de la base Neon d'une preview de PR + redeploiement.
 # pr-previews.yml cree la branche preview/pr-<N> (migrations au build Render)
-# mais ne la seede jamais. Ajouter le label `reseed-preview` sur la PR lance
-# migrations + seed sur cette branche. Retirer puis rajouter le label relance.
+# mais ne la seede jamais. Ajouter le label `reseed-preview` sur la PR lance,
+# en un seul declenchement : regeneration des identifiants DB, migrations,
+# seed, puis synchro de l'env Render et redeploiement de la preview (le meme
+# refresh que /preview). Retirer puis rajouter le label relance le tout.
 # Workflow declenche par l'evenement pull_request (label) : il s'execute depuis
 # le code de la branche de la PR, avec les secrets du depot (PR interne).
 
@@ -13,6 +15,8 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
+  issues: write
 
 concurrency:
   group: preview-reseed-${{ github.event.pull_request.number }}
@@ -52,9 +56,9 @@ jobs:
 
       # pr-previews.yml donne a chaque branche PR son propre mot de passe
       # (neon-branch-credentials.mjs) : l'URL sortie par create-branch-action
-      # sur une branche existante est perimee. On refait la meme chose ici.
-      # Apres un reseed, relancer le deploiement (/preview) pour que Render
-      # recoive le mot de passe le plus recent.
+      # sur une branche existante est perimee. On refait la meme chose ici et
+      # l'etape de deploiement ci-dessous synchronise Render avec ce mot de
+      # passe frais : une seule rotation, un seul declenchement.
       - name: Fresh DB credentials for the PR Neon branch
         id: creds
         env:
@@ -87,3 +91,18 @@ jobs:
           DATABASE_URL: ${{ steps.creds.outputs.db_url_pooled }}
           DATABASE_URL_DIRECT: ${{ steps.creds.outputs.db_url }}
           DB_SSL: 'true'
+
+      # Meme refresh que le job de pr-previews.yml (/preview) : met a jour
+      # l'env Render avec les identifiants frais ci-dessus et redeploie la
+      # preview sur le dernier commit de la PR.
+      - name: Redeploy the previews on the latest PR commit
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_OWNER_ID: ${{ vars.RENDER_OWNER_ID }}
+          RENDER_ENVIRONMENT_ID: ${{ vars.RENDER_ENVIRONMENT_ID }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          NEON_DB_URL: ${{ steps.creds.outputs.db_url_pooled }}
+          NEON_DB_URL_DIRECT: ${{ steps.creds.outputs.db_url }}
+          NEON_BRANCH_NAME: preview/pr-${{ github.event.pull_request.number }}
+        run: node scripts/render-pr-previews.mjs refresh

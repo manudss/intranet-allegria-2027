@@ -44,6 +44,21 @@ jobs:
             exit 1
           fi
 
+      # pr-previews.yml donne a chaque branche PR son propre mot de passe
+      # (neon-branch-credentials.mjs) : l'URL sortie par create-branch-action
+      # sur une branche existante est perimee. On refait la meme chose ici.
+      # Apres un reseed, relancer le deploiement (/preview) pour que Render
+      # recoive le mot de passe le plus recent.
+      - name: Fresh DB credentials for the PR Neon branch
+        id: creds
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          NEON_BRANCH_ID: ${{ steps.neon.outputs.branch_id }}
+          NEON_DB_URL: ${{ steps.neon.outputs.db_url_pooled }}
+          NEON_DB_URL_DIRECT: ${{ steps.neon.outputs.db_url }}
+        run: node scripts/neon-branch-credentials.mjs
+
       - name: Check out the PR code
         uses: actions/checkout@v5
         with:
@@ -62,13 +77,13 @@ jobs:
       - name: Run migrations
         run: npm run migration:run
         env:
-          DATABASE_URL: ${{ steps.neon.outputs.db_url_pooled }}
-          DATABASE_URL_DIRECT: ${{ steps.neon.outputs.db_url }}
+          DATABASE_URL: ${{ steps.creds.outputs.db_url_pooled }}
+          DATABASE_URL_DIRECT: ${{ steps.creds.outputs.db_url }}
           DB_SSL: 'true'
 
       - name: Reseed (fictitious data, full reset)
         run: npx tsx apps/api/src/database/seeds/seed.ts --profile=medium
         env:
-          DATABASE_URL: ${{ steps.neon.outputs.db_url_pooled }}
-          DATABASE_URL_DIRECT: ${{ steps.neon.outputs.db_url }}
+          DATABASE_URL: ${{ steps.creds.outputs.db_url_pooled }}
+          DATABASE_URL_DIRECT: ${{ steps.creds.outputs.db_url }}
           DB_SSL: 'true'

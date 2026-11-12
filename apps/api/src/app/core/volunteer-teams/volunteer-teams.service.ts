@@ -81,6 +81,27 @@ export class VolunteerTeamsService {
     await this.volunteerTeamsRepository.remove(team);
   }
 
+  async listTeammates(volunteerId: number, membershipId: number): Promise<VolunteerTeamMembership[]> {
+    await this.findVolunteer(volunteerId);
+
+    const membership = await this.membershipsRepository.findOne({
+      where: { id: membershipId },
+      relations: { volunteer: true },
+    });
+
+    if (!membership || membership.volunteerId !== volunteerId) {
+      throw new NotFoundException('Aucune appartenance correspondante pour ce bénévole');
+    }
+
+    const teammates = await this.membershipsRepository.find({
+      where: { volunteerTeamId: membership.volunteerTeamId },
+      relations: { volunteer: true },
+      order: { volunteer: { lastName: 'ASC', firstName: 'ASC' } },
+    });
+
+    return teammates.filter((teammate) => teammate.volunteerId !== volunteerId);
+  }
+
   async listVolunteerMemberships(volunteerId: number): Promise<VolunteerTeamMembership[]> {
     await this.findVolunteer(volunteerId);
 

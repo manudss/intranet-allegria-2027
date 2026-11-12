@@ -18,6 +18,7 @@ const build = (overrides: Partial<VolunteersService> = {}) => {
   } as unknown as VolunteerShiftAssignmentsService;
   const teams = {
     listVolunteerMemberships: vi.fn().mockResolvedValue([{ id: 2 }]),
+    listTeammates: vi.fn().mockResolvedValue([{ id: 3 }]),
   } as unknown as VolunteerTeamsService;
   return {
     controller: new MySpaceController(volunteers, assignments, teams),
@@ -52,5 +53,16 @@ describe('MySpaceController', () => {
     const { controller, teams } = build();
     await expect(controller.getMyTeamMemberships(req)).resolves.toEqual([{ id: 2 }]);
     expect(teams.listVolunteerMemberships).toHaveBeenCalledWith(7);
+  });
+
+  it('retourne les équipiers de son équipe, limités à sa propre appartenance', async () => {
+    const { controller, teams } = build();
+    await expect(controller.getMyTeammates(req, 2)).resolves.toEqual([{ id: 3 }]);
+    expect(teams.listTeammates).toHaveBeenCalledWith(7, 2);
+  });
+
+  it('renvoie 404 sur les équipiers quand aucun profil bénévole n est rattaché', async () => {
+    const { controller } = build({ findByUserId: vi.fn().mockResolvedValue(null) });
+    await expect(controller.getMyTeammates(req, 2)).rejects.toBeInstanceOf(NotFoundException);
   });
 });

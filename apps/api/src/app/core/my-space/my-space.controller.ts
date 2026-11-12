@@ -1,4 +1,4 @@
-import { Controller, Get, NotFoundException, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Param, ParseIntPipe, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthTokenGuard } from '../auth/auth-token.guard';
 import { RoleGuard } from '../auth/role.guard';
@@ -45,6 +45,14 @@ export class MySpaceController {
   async getMyTeamMemberships(@Req() req: UserRequest) {
     const volunteer = await this.findMyVolunteer(req);
     return this.volunteerTeamsService.listVolunteerMemberships(volunteer.id);
+  }
+
+  @ApiOperation({ summary: 'Équipiers d une appartenance du bénévole authentifié' })
+  @Roles(...READ_ROLES)
+  @Get('team-memberships/:id/members')
+  async getMyTeammates(@Req() req: UserRequest, @Param('id', ParseIntPipe) membershipId: number) {
+    const volunteer = await this.findMyVolunteer(req);
+    return this.volunteerTeamsService.listTeammates(volunteer.id, membershipId);
   }
 
   private async findMyVolunteer(req: UserRequest): Promise<Volunteer> {

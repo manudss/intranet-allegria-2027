@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { VolunteerTeamsService } from './volunteer-teams.service';
 
@@ -79,5 +79,45 @@ describe('VolunteerTeamsService', () => {
         role: null,
       }),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('liste les équipiers en excluant le bénévole lui-même', async () => {
+    const membershipsRepository = {
+      findOne: vi.fn().mockResolvedValue({ id: 5, volunteerId: 12, volunteerTeamId: 4 }),
+      find: vi.fn().mockResolvedValue([
+        { id: 5, volunteerId: 12, volunteer: { firstName: 'Ben', lastName: 'Martin' } },
+        { id: 6, volunteerId: 13, volunteer: { firstName: 'Aline', lastName: 'Fabre' } },
+      ]),
+    };
+    const service = new VolunteerTeamsService(
+      {} as never,
+      membershipsRepository as never,
+      {} as never,
+    );
+    vi.spyOn(service as never, 'findVolunteer').mockResolvedValue({ id: 12 } as never);
+
+    const teammates = await service.listTeammates(12, 5);
+    expect(teammates).toEqual([
+      { id: 6, volunteerId: 13, volunteer: { firstName: 'Aline', lastName: 'Fabre' } },
+    ]);
+    expect(membershipsRepository.find).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { volunteerTeamId: 4 } }),
+    );
+  });
+
+  it('refuse les équipiers d une appartenance qui appartient à un autre bénévole', async () => {
+    const membershipsRepository = {
+      findOne: vi.fn().mockResolvedValue({ id: 5, volunteerId: 99, volunteerTeamId: 4 }),
+      find: vi.fn(),
+    };
+    const service = new VolunteerTeamsService(
+      {} as never,
+      membershipsRepository as never,
+      {} as never,
+    );
+    vi.spyOn(service as never, 'findVolunteer').mockResolvedValue({ id: 12 } as never);
+
+    await expect(service.listTeammates(12, 5)).rejects.toBeInstanceOf(NotFoundException);
+    expect(membershipsRepository.find).not.toHaveBeenCalled();
   });
 });

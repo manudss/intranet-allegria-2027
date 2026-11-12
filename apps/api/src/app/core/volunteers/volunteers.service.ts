@@ -50,7 +50,7 @@ export class VolunteersService {
   findByUserId(userId: number): Promise<Volunteer | null> {
     return this.volunteersRepository.findOne({
       where: { user: { id: userId } },
-      relations: { user: true },
+      relations: { user: true, skills: true, tags: true },
     });
   }
 

@@ -1,0 +1,14 @@
+.git
+.github
+node_modules
+dist
+docs
+downloads
+*.md
+!README.md
+.env
+.env.*
+.vscode
+.idea
+coverage
+tmp

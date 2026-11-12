@@ -1,0 +1,116 @@
+name: Prod deploy (Render)
+
+# Deploiement de production, 100% pilote depuis GitHub Actions (zero minute de
+# pipeline Render : image pre-build pour l'API, copie CDN pour les fronts).
+#
+# Declenchement :
+#   - automatiquement apres un run vert de "Prod image (GHCR)" sur main ;
+#   - a la main (workflow_dispatch) pour redeployer sans rebuild.
+#
+# Ordre : migrations de base (job separe, SECRET dedie) -> API (image GHCR) ->
+# fronts (branche `deploy`) -> checks de sante.
+# Les services pas encore bascules sont simplement sautes par les scripts
+# (voir docs/deploiement.md) : ce workflow reste vert et sans effet sur eux.
+on:
+  workflow_run:
+    workflows: ['Prod image (GHCR)']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write   # publication des dist sur la branche `deploy`
+
+concurrency:
+  group: prod-deploy-main
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Migrations base Neon (prod)
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_VERSION: '24.15.0'
+      DATABASE_URL: ${{ secrets.ALLEGRIA_PROD_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Exposer le secret DIRECT seulement s'il est rempli
+        # typeorm.config.ts utilise DATABASE_URL_DIRECT ?? DATABASE_URL : une
+        # chaine vide serait traitee comme definie, donc on ne l'exporte que
+        # si le secret optionnel existe.
+        env:
+          DIRECT: ${{ secrets.ALLEGRIA_PROD_DATABASE_URL_DIRECT }}
+        run: |
+          if [ -n "$DIRECT" ]; then echo "DATABASE_URL_DIRECT=$DIRECT" >> "$GITHUB_ENV"; fi
+      - name: typeorm migration:run
+        run: npm run db:migrate
+
+  deploy-api:
+    name: API (image GHCR -> Render)
+    needs: migrate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      PROD_SERVICE_NAME: intranet-allegria-2027
+    steps:
+      - uses: actions/checkout@v5
+      - name: Declencher le deploy image sur Render (skip tant que git-backed)
+        run: node scripts/render-prod-deploy.mjs
+
+  deploy-static:
+    name: Fronts statiques (web admin, site public, mobile)
+    needs: migrate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NODE_VERSION: '24.15.0'
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      WEB_API_URL: https://alegria.dss.name
+      MOBILE_API_URL: https://alegria.dss.name
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0   # le script pousse la branche `deploy`
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci --include=dev
+      - name: Build web admin + site public (+ mobile si apps/mobile existe)
+        run: |
+          npm run build:web
+          npm run build:site
+          if jq -e '.scripts["build:mobile"]' package.json >/dev/null && [ -d apps/mobile ]; then
+            npm run build:mobile
+          else
+            echo "apps/mobile absent de main : pas de build mobile."
+          fi
+      - name: Publier les dist sur la branche deploy
+        id: pub
+        run: |
+          node scripts/publish-static-dist.mjs | tee /tmp/pub.log
+          grep -q '^PUBLISH_RESULT pushed=true' /tmp/pub.log && echo 'pushed=true' >> "$GITHUB_OUTPUT" || echo 'pushed=false' >> "$GITHUB_OUTPUT"
+      - name: Declencher les deploys Render des static sites
+        if: steps.pub.outputs.pushed == 'true'
+        run: node scripts/render-static-deploy.mjs
+
+  health:
+    name: Checks de sante
+    needs: [deploy-api, deploy-static]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: API (alegria.dss.name)
+        run: curl -fsS -o /dev/null -w 'API health %{http_code}\n' https://alegria.dss.name/health
+      - name: Front admin
+        run: curl -fsS -o /dev/null -w 'front admin %{http_code}\n' https://intranet-allegria-2027-1.onrender.com/
+      - name: Site public
+        run: curl -fsS -o /dev/null -w 'site public %{http_code}\n' https://allegria-2027.onrender.com/

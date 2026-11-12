@@ -29,7 +29,7 @@ const VERDICT_MS = 1600;
         <div class="verdict" [attr.data-kind]="v.kind" role="alert">
           <div class="v-title">{{ v.title }}</div>
           <div class="v-detail">{{ v.detail }}</div>
-          @if (v.servedCount != null) {
+          @if (v.servedCount !== undefined) {
             <div class="v-count">Service n° {{ v.servedCount }}</div>
           }
         </div>

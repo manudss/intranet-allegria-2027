@@ -16,9 +16,16 @@ Ce dossier contient un script de generation de donnees de test coherentes pour l
 
 ## Comptes crees
 
-- `admin@allegria.local` / `Admin#2027!`
-- `sante@allegria.local` / `Health#2027!`
-- `coordination@allegria.local` / `Coord#2027!`
+Tous les comptes crees par le seed partagent le meme mot de passe de
+demonstration : `demo-only-not-a-secret` (donnees 100 % fictives,
+environnements de demo/preview uniquement).
+
+- `admin@allegria.local` (ADMIN)
+- `sante@allegria.local` (sante)
+- `coordination@allegria.local` (coordination)
+- `animator.N@allegria.local` (N = 1..850 en profil medium) : benevoles lies a
+  leur fiche, avec le role VOLUNTEERS (acces "Mon espace")
+- `logistic.N@allegria.local` : logistique
 
 ## Execution
 

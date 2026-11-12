@@ -1,0 +1,74 @@
+name: PR Preview Reseed
+
+# Reseed manuel de la base Neon d'une preview de PR.
+# pr-previews.yml cree la branche preview/pr-<N> (migrations au build Render)
+# mais ne la seede jamais. Ajouter le label `reseed-preview` sur la PR lance
+# migrations + seed sur cette branche. Retirer puis rajouter le label relance.
+# Workflow declenche par l'evenement pull_request (label) : il s'execute depuis
+# le code de la branche de la PR, avec les secrets du depot (PR interne).
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-reseed-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  reseed:
+    name: Migrate and reseed the PR preview database
+    if: github.event.label.name == 'reseed-preview' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Neon branch of this PR preview (existing branch is reused)
+        id: neon
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          parent_branch: preview/main
+          branch_name: preview/pr-${{ github.event.pull_request.number }}
+
+      - name: Check Neon outputs
+        shell: bash
+        run: |
+          echo "branch_id=${{ steps.neon.outputs.branch_id }}"
+          echo "created=${{ steps.neon.outputs.created }}"
+          if [ -z "${{ steps.neon.outputs.db_url }}" ]; then
+            echo "Neon db_url output is empty"
+            exit 1
+          fi
+
+      - name: Check out the PR code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run migrations
+        run: npm run migration:run
+        env:
+          DATABASE_URL: ${{ steps.neon.outputs.db_url_pooled }}
+          DATABASE_URL_DIRECT: ${{ steps.neon.outputs.db_url }}
+          DB_SSL: 'true'
+
+      - name: Reseed (fictitious data, full reset)
+        run: npx tsx apps/api/src/database/seeds/seed.ts --profile=medium
+        env:
+          DATABASE_URL: ${{ steps.neon.outputs.db_url_pooled }}
+          DATABASE_URL_DIRECT: ${{ steps.neon.outputs.db_url }}
+          DB_SSL: 'true'

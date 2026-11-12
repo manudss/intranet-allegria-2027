@@ -42,3 +42,4 @@ export { ProgramChangeLogAction } from './program-change-log-action.enum';
 export { ProgramSequence } from './program-sequence.entity';
 export type { ProgramDocumentLink } from './program-sequence.entity';
 export { ProgramChangeLog } from './program-change-log.entity';
+export { VolunteerTeamLodging } from './volunteer-team-lodging.entity';

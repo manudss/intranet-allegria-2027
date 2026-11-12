@@ -45,9 +45,9 @@ npm run serve:api
 Set-Location "C:\Users\A740550\WebstormProjects\intranet-allegria-2027"
 npm run seed:api
 npm run seed:api:large
-Ensuite ouvre http://localhost:3000/api/docs et teste avec:
-admin@allegria.local / Admin#2027!
-sante@allegria.local / Health#2027!
-coordination@allegria.local / Coord#2027!
+Ensuite ouvre http://localhost:3000/api/docs et teste avec un des comptes de
+demo (mot de passe commun : `demo-only-not-a-secret`) :
+admin@allegria.local (ADMIN), sante@allegria.local, coordination@allegria.local,
+animator.1@allegria.local (benevole, acces Mon espace), logistic.1@allegria.local.
 Si tu veux, je peux maintenant ajouter des exemples de payload/réponse plus riches par endpoint dans Swagger (@ApiResponse, exemples d’erreurs métier).
 Je peux aussi ajouter un script seed:api:reset (drop + migrate + seed en une commande).

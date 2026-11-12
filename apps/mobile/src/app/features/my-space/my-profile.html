@@ -1,0 +1,141 @@
+<header class="hero">
+  <a class="back" routerLink="/espace" aria-label="Retour à mon espace">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M15 5l-7 7 7 7" />
+    </svg>
+    Mon espace
+  </a>
+  <h1>Mon profil</h1>
+  @if (volunteer(); as v) {
+    <p class="hero-sub">{{ v.firstName }} {{ v.lastName }}</p>
+  }
+</header>
+
+<main class="content">
+  @if (loading()) {
+    <div class="center"><tui-loader size="l" /></div>
+  } @else if (noProfile()) {
+    <div class="notice" role="status">
+      Aucun profil bénévole n'est rattaché à ce compte.
+    </div>
+  } @else if (volunteer(); as v) {
+    <section aria-label="Coordonnées">
+      <h2 class="section-title">Coordonnées</h2>
+      <div class="card">
+        @if (!editing()) {
+          <span class="meta">{{ v.email ?? 'Aucun email renseigné' }}</span>
+          <span class="meta">{{ v.phone ?? 'Aucun téléphone renseigné' }}</span>
+          <button type="button" class="btn" (click)="startEdit()">Modifier mes coordonnées</button>
+        } @else {
+          <form (submit)="save(); $event.preventDefault()" class="edit-form">
+            <label>
+              Email
+              <input
+                type="email"
+                name="email"
+                [value]="editEmail()"
+                (input)="onEmailInput($event)"
+                autocomplete="email"
+              />
+            </label>
+            <label>
+              Téléphone
+              <input
+                type="tel"
+                name="phone"
+                [value]="editPhone()"
+                (input)="onPhoneInput($event)"
+                autocomplete="tel"
+              />
+            </label>
+            @if (saveError()) {
+              <p class="error" role="alert">
+                Enregistrement impossible. Vérifie le format et réessaie.
+              </p>
+            }
+            <div class="actions">
+              <button type="submit" class="btn primary" [disabled]="saving()">
+                {{ saving() ? 'Enregistrement…' : 'Enregistrer' }}
+              </button>
+              <button type="button" class="btn" (click)="cancelEdit()">Annuler</button>
+            </div>
+          </form>
+        }
+      </div>
+    </section>
+
+    <section aria-label="Compétences">
+      <h2 class="section-title">Compétences déclarées</h2>
+      <div class="card">
+        @if ((v.skills ?? []).length === 0) {
+          <span class="meta">Aucune compétence enregistrée.</span>
+        } @else {
+          <div class="skills">
+            @for (skill of v.skills ?? []; track skill.id) {
+              <span class="skill">{{ skillLabel(skill.skill) }}</span>
+            }
+          </div>
+        }
+        @if ((v.tags ?? []).length > 0) {
+          <div class="skills">
+            @for (tag of v.tags ?? []; track tag.id) {
+              <span class="skill tag">{{ tag.value }}</span>
+            }
+          </div>
+        }
+      </div>
+    </section>
+
+    <section aria-label="Mon hébergement">
+      <h2 class="section-title">Mon hébergement</h2>
+      <div class="card">
+        @if (!hosting()) {
+          <span class="meta empty">
+            Les informations d'hébergement seront publiées ici dès que la
+            coordination les aura saisies.
+          </span>
+        } @else {
+          @if (hosting(); as h) {
+            <div class="team-head">
+              <strong>Logé avec l'équipe {{ h.team.name }}</strong>
+            </div>
+            @for (animator of h.animators; track animator.id) {
+              <span class="meta animator">
+                {{ animatorLabel(animator) }}
+                @if (animator.phone) {
+                  <a class="contact" [href]="'tel:' + animator.phone" [attr.aria-label]="'Appeler ' + animator.firstName">{{ animator.phone }}</a>
+                }
+              </span>
+            }
+            @if (h.youths.length > 0) {
+              <div class="youths" aria-label="Jeunes de l'équipe">
+                @for (youth of h.youths; track youth.firstName) {
+                  <span class="skill">{{ youth.firstName }}</span>
+                }
+              </div>
+            }
+            @for (family of h.hostFamilies; track family.id) {
+              <div class="family">
+                <strong>{{ family.familyName }}</strong>
+                <span class="meta">{{ family.address }}, {{ family.postalCode }} {{ family.city }}</span>
+                @if (family.phone) {
+                  <a class="meta contact" [href]="'tel:' + family.phone">{{ family.phone }}</a>
+                }
+              </div>
+            }
+            @if (h.room) {
+              <span class="meta">Emplacement : {{ h.room }}</span>
+            }
+            @if (hostingPeriod(h); as p) {
+              <span class="meta">{{ p }}</span>
+            }
+            @if (h.notes) {
+              <span class="notes">{{ h.notes }}</span>
+            }
+          }
+        }
+      </div>
+    </section>
+  }
+</main>

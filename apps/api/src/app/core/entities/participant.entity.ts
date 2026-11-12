@@ -16,6 +16,7 @@ import { TeamParticipant } from './team-participant.entity';
 import { PersonType } from './person-type.enum';
 import { ParticipantRegistrationStatus } from './participant-registration-status.enum';
 import { PersonSource } from './person-source.enum';
+import { Volunteer } from './volunteer.entity';
 
 @Entity({ name: 'participants' })
 export class Participant {
@@ -28,11 +29,16 @@ export class Participant {
   @Column({ type: 'varchar', length: 120 })
   lastName!: string;
 
-  @Column({ type: 'date' })
-  dateOfBirth!: string;
+  /**
+   * Nullable : les fiches BENEVOLE (projection d'un bénévole) n'ont pas de date
+   * de naissance — elles comptent toujours comme des adultes dans la répartition.
+   */
+  @Column({ type: 'date', nullable: true })
+  dateOfBirth!: string | null;
 
-  @Column({ type: 'enum', enum: ParticipantSex })
-  sex!: ParticipantSex;
+  /** Nullable pour les fiches BENEVOLE : la mixité ne concerne que les jeunes. */
+  @Column({ type: 'enum', enum: ParticipantSex, nullable: true })
+  sex!: ParticipantSex | null;
 
   @Column({ type: 'enum', enum: MejAgeGroup, nullable: true })
   mejAgeGroup!: MejAgeGroup | null;
@@ -82,6 +88,15 @@ export class Participant {
   @ManyToOne(() => Group, (group) => group.participants, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'group_id' })
   group!: Group | null;
+
+  /**
+   * Bénévole dont cette fiche est la projection (type BENEVOLE uniquement) :
+   * le bénévole dort avec l'équipe et compte comme un adulte. Null pour les
+   * jeunes et animateurs saisis comme fiches autonomes.
+   */
+  @ManyToOne(() => Volunteer, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'volunteer_id' })
+  volunteer!: Volunteer | null;
 
   @OneToMany(() => TeamParticipant, (teamParticipant) => teamParticipant.participant)
   teamMemberships!: TeamParticipant[];

@@ -1,6 +1,8 @@
-import { Controller, Get, NotFoundException, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, NotFoundException, Param, ParseIntPipe, Patch, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthTokenGuard } from '../auth/auth-token.guard';
+import { VolunteerHostingService } from '../volunteer-hosting/volunteer-hosting.service';
+import { UpdateMyVolunteerDto } from './my-space.types';
 import { RoleGuard } from '../auth/role.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Volunteer } from '../entities';
@@ -22,6 +24,7 @@ export class MySpaceController {
     private readonly volunteersService: VolunteersService,
     private readonly assignmentsService: VolunteerShiftAssignmentsService,
     private readonly volunteerTeamsService: VolunteerTeamsService,
+    private readonly volunteerHostingService: VolunteerHostingService,
   ) {}
 
   @ApiOperation({ summary: 'Profil bénévole de l utilisateur authentifié' })
@@ -29,6 +32,13 @@ export class MySpaceController {
   @Get('volunteer')
   async getMyVolunteer(@Req() req: UserRequest): Promise<Volunteer> {
     return this.findMyVolunteer(req);
+  }
+
+  @ApiOperation({ summary: 'Mettre à jour les coordonnées du bénévole authentifié (téléphone, email)' })
+  @Roles(...READ_ROLES)
+  @Patch('volunteer')
+  async updateMyVolunteer(@Req() req: UserRequest, @Body() dto: UpdateMyVolunteerDto) {
+    return this.volunteersService.updateOwnProfile(req.user.id, dto);
   }
 
   @ApiOperation({ summary: 'Planning des affectations du bénévole authentifié' })
@@ -45,6 +55,22 @@ export class MySpaceController {
   async getMyTeamMemberships(@Req() req: UserRequest) {
     const volunteer = await this.findMyVolunteer(req);
     return this.volunteerTeamsService.listVolunteerMemberships(volunteer.id);
+  }
+
+  @ApiOperation({ summary: 'Équipiers d une appartenance du bénévole authentifié' })
+  @Roles(...READ_ROLES)
+  @Get('team-memberships/:id/members')
+  async getMyTeammates(@Req() req: UserRequest, @Param('id', ParseIntPipe) membershipId: number) {
+    const volunteer = await this.findMyVolunteer(req);
+    return this.volunteerTeamsService.listTeammates(volunteer.id, membershipId);
+  }
+
+  @ApiOperation({ summary: 'Hébergement du bénévole authentifié, null si non défini' })
+  @Roles(...READ_ROLES)
+  @Get('hosting')
+  async getMyHosting(@Req() req: UserRequest) {
+    const volunteer = await this.findMyVolunteer(req);
+    return this.volunteerHostingService.findByVolunteerId(volunteer.id);
   }
 
   private async findMyVolunteer(req: UserRequest): Promise<Volunteer> {

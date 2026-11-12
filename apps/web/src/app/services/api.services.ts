@@ -3,6 +3,12 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   AssignmentPayload,
+  BenevoleAssignment,
+  ApplyRepartitionEntry,
+  ApplyRepartitionResult,
+  RepartitionFilters,
+  RepartitionTeamRow,
+  RepartitionVolunteersResult,
   DashboardGlobalSummary,
   DashboardLocationRow,
   DashboardTeamSummary,
@@ -407,6 +413,65 @@ export class TeamParticipantsApiService {
   remove(teamId: number, participantId: number) {
     return this.http.delete<DeleteResponse>(`/api/teams/${teamId}/participants/${participantId}`);
   }
+}
+@Injectable({ providedIn: 'root' })
+export class TeamBenevolesApiService {
+  private readonly http = inject(HttpClient);
+  /** Toutes les affectations bénévoles → équipes (page de répartition). */
+  listAssignments(): Observable<BenevoleAssignment[]> {
+    return this.http.get<BenevoleAssignment[]>('/api/benevoles/assignments');
+  }
+  listForTeam(teamId: number): Observable<BenevoleAssignment[]> {
+    return this.http.get<BenevoleAssignment[]>(`/api/teams/${teamId}/benevoles`);
+  }
+  assign(teamId: number, volunteerId: number): Observable<BenevoleAssignment> {
+    return this.http.post<BenevoleAssignment>(`/api/teams/${teamId}/benevoles`, { volunteerId });
+  }
+  unassign(teamId: number, volunteerId: number) {
+    return this.http.delete<DeleteResponse>(`/api/teams/${teamId}/benevoles/${volunteerId}`);
+  }
+
+  // ── Page de répartition bénévoles → équipes ──────────────────────────────
+  repartitionFilters(): Observable<RepartitionFilters> {
+    return this.http.get<RepartitionFilters>('/api/benevoles/repartition/filters');
+  }
+  repartitionTeams(query: {
+    search?: string;
+    hostingGroupId?: number | null;
+    groupId?: number | null;
+    fill?: 'all' | 'free' | 'full';
+  } = {}): Observable<RepartitionTeamRow[]> {
+    return this.http.get<RepartitionTeamRow[]>('/api/benevoles/repartition/teams', {
+      params: repartitionParams(query),
+    });
+  }
+  repartitionVolunteers(query: {
+    search?: string;
+    skill?: string;
+    tag?: string;
+    poleId?: number | null;
+    assignment?: 'all' | 'unassigned' | 'assigned';
+    limit?: number;
+    offset?: number;
+  } = {}): Observable<RepartitionVolunteersResult> {
+    return this.http.get<RepartitionVolunteersResult>('/api/benevoles/repartition/volunteers', {
+      params: repartitionParams(query),
+    });
+  }
+  applyRepartition(assignments: ApplyRepartitionEntry[]): Observable<ApplyRepartitionResult> {
+    return this.http.post<ApplyRepartitionResult>('/api/benevoles/repartition/apply', { assignments });
+  }
+}
+
+/** Paramètres de requête : ignore les valeurs vides/null. */
+function repartitionParams(query: Record<string, unknown>): Record<string, string> {
+  const params: Record<string, string> = {};
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== null && value !== undefined && value !== '' && value !== 'all') {
+      params[key] = String(value);
+    }
+  }
+  return params;
 }
 @Injectable({ providedIn: 'root' })
 export class HostFamiliesApiService extends CrudApi<HostFamily, HostFamilyPayload> {

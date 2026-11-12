@@ -14,7 +14,10 @@ import {
   Participant,
   ParticipantHealth,
   ParticipantHostFamilyAssignment,
+  ParticipantRegistrationStatus,
   ParticipantSex,
+  PersonSource,
+  PersonType,
   Role,
   Team,
   TeamParticipant,
@@ -28,6 +31,7 @@ import {
   VolunteerShiftAssignment,
   VolunteerShiftAssignmentStatus,
   VolunteerShiftStatus,
+  VolunteerTeamLodging,
   VolunteerSkill,
   VolunteerSkillType,
   VolunteerTag,
@@ -36,6 +40,7 @@ import {
 } from '../../app/core/entities';
 import { insertProgramDemoDay, PROGRAM_SEED_DAYS } from '../../app/core/program/program-demo-seed';
 import dataSource from '../typeorm.config';
+import { computeTeamMaxSize, hasSecondaryAnimator } from './team-fill';
 
 type SeedProfileName = 'small' | 'medium' | 'large';
 
@@ -115,6 +120,13 @@ const GATHERING_POINT = { latitude: 45.439695, longitude: 4.387178 } as const;
 
 const PROJECT_START = new Date('2027-10-31T08:00:00.000Z');
 const PROJECT_END = new Date('2027-11-03T23:30:00.000Z');
+
+/**
+ * Mot de passe unique de tous les comptes crees par le seed (donnees 100 %
+ * fictives, environnements de demo/preview uniquement). Documente dans
+ * apps/api/src/database/seeds/README.md et affiche dans les logs de seed.
+ */
+const DEMO_PASSWORD = 'demo-only-not-a-secret';
 
 /** Rayon maximal (km) autour du point de rassemblement pour les familles d'accueil. */
 const HOST_FAMILY_RADIUS_KM = 100;
@@ -527,6 +539,7 @@ async function run(): Promise<void> {
           "program_change_logs",
           "program_sequences",
           "volunteer_applications",
+          "volunteer_team_lodgings",
           "volunteer_audit_logs",
           "shift_status_logs",
           "mission_status_logs",
@@ -610,20 +623,20 @@ async function run(): Promise<void> {
     const teamCountsPerGroup = participantsPerGroup.map((count) => computeTeamCount(count));
     const volunteersPerGroup = allocateVolunteersPerGroup(teamCountsPerGroup, profile.volunteers);
 
+    // Un seul hash calcule et reutilise : tous les comptes de demo partagent
+    // DEMO_PASSWORD, et le seed reste rapide malgre le nombre de comptes.
+    const demoPasswordHash = hashPassword(DEMO_PASSWORD);
+
     const baseUsers: Array<Partial<User>> = [
-      { email: 'admin@allegria.local', passwordHash: hashPassword('Admin#2027!'), isActive: true },
-      { email: 'sante@allegria.local', passwordHash: hashPassword('Health#2027!'), isActive: true },
-      {
-        email: 'coordination@allegria.local',
-        passwordHash: hashPassword('Coord#2027!'),
-        isActive: true,
-      },
+      { email: 'admin@allegria.local', passwordHash: demoPasswordHash, isActive: true },
+      { email: 'sante@allegria.local', passwordHash: demoPasswordHash, isActive: true },
+      { email: 'coordination@allegria.local', passwordHash: demoPasswordHash, isActive: true },
     ];
 
     for (let i = 0; i < profile.volunteers; i += 1) {
       baseUsers.push({
         email: `animator.${i + 1}@allegria.local`,
-        passwordHash: hashPassword(`Anim#${(i + 1000).toString(36)}!`),
+        passwordHash: demoPasswordHash,
         isActive: true,
       });
     }
@@ -632,7 +645,7 @@ async function run(): Promise<void> {
     for (let i = 0; i < logisticCount; i += 1) {
       baseUsers.push({
         email: `logistic.${i + 1}@allegria.local`,
-        passwordHash: hashPassword(`Log#${(i + 2000).toString(36)}!`),
+        passwordHash: demoPasswordHash,
         isActive: true,
       });
     }
@@ -654,6 +667,9 @@ async function run(): Promise<void> {
 
     for (const animatorUser of animatorUsers) {
       pushRole(userRoles, animatorUser, ROLE_CODES.animator);
+      // Chaque compte animateur est lie a une fiche benevole : le role
+      // VOLUNTEERS ouvre l'acces a "Mon espace" (sinon 403 sur /api/me/*).
+      pushRole(userRoles, animatorUser, ROLE_CODES.volunteers);
       if (chance(0.07)) {
         pushRole(userRoles, animatorUser, ROLE_CODES.coordinator);
       }
@@ -675,11 +691,13 @@ async function run(): Promise<void> {
         groupRepository.create({
           name: `Rassemblement ${diocese} ${Math.floor(i / dioceses.length) + 1}`,
           diocese,
+          // Aligné sur l'événement (31 oct. au 3 nov. 2027) : un groupe sur
+          // deux arrive la veille au soir ou repart un jour plus tot.
           arrivalDatetime: new Date(
-            `2027-07-${(19 + (i % 2)).toString().padStart(2, '0')}T08:00:00.000Z`,
+            i % 2 === 0 ? '2027-10-31T08:00:00.000Z' : '2027-10-30T18:00:00.000Z',
           ),
           departureDatetime: new Date(
-            `2027-07-${(27 + (i % 2)).toString().padStart(2, '0')}T17:30:00.000Z`,
+            i % 2 === 0 ? '2027-11-03T17:30:00.000Z' : '2027-11-02T17:30:00.000Z',
           ),
           notes: chance(0.2) ? 'Arrivee en bus de nuit, accueil gare requis.' : null,
         }),
@@ -797,8 +815,8 @@ async function run(): Promise<void> {
             volunteerTeam: selectedTeam,
             volunteerId: volunteer.id,
             volunteerTeamId: selectedTeam.id,
-            startAt: toDateString(new Date('2027-07-15T00:00:00.000Z')),
-            endAt: toDateString(new Date('2027-07-30T00:00:00.000Z')),
+            startAt: toDateString(new Date('2027-10-31T00:00:00.000Z')),
+            endAt: toDateString(new Date('2027-11-03T00:00:00.000Z')),
             role: pick(['Coordination', 'Support', 'Animation', 'Restauration', 'Sante']),
           }),
         );
@@ -899,6 +917,7 @@ async function run(): Promise<void> {
 
     const teamsToCreate: Team[] = [];
     const teamsByGroup = new Map<number, Team[]>();
+    const teamlessVolunteersByGroup = new Map<number, Volunteer[]>();
     let globalTeamIndex = 0;
 
     for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
@@ -911,11 +930,18 @@ async function run(): Promise<void> {
       const primaryVolunteers = [...localVolunteers.slice(0, teamCount)];
       const secondaryVolunteers = localVolunteers.slice(teamCount);
 
+      // Une équipe sur cinq reste sans second animateur : ces bénévoles ne
+      // sont rattachés à aucune équipe du rassemblement (démo répartition).
+      let secondaryCursor = 0;
+
       const localTeams: Team[] = [];
       for (let i = 0; i < teamCount; i += 1) {
         const primary = primaryVolunteers[i];
-        const secondary = i < secondaryVolunteers.length ? secondaryVolunteers[i] : null;
-        const maxSize = teamSizes[i];
+        const secondary =
+          hasSecondaryAnimator(globalTeamIndex) && secondaryCursor < secondaryVolunteers.length
+            ? secondaryVolunteers[secondaryCursor++]
+            : null;
+        const maxSize = computeTeamMaxSize(teamSizes[i], secondary ? 2 : 1, globalTeamIndex);
 
         const team = teamRepository.create({
           name: teamNameFrom(group, i, globalTeamIndex),
@@ -933,6 +959,7 @@ async function run(): Promise<void> {
       }
 
       teamsByGroup.set(group.id, localTeams);
+      teamlessVolunteersByGroup.set(group.id, secondaryVolunteers.slice(secondaryCursor));
     }
 
     const teams = await teamRepository.save(teamsToCreate, { chunk: 1000 });
@@ -981,6 +1008,127 @@ async function run(): Promise<void> {
     }
 
     await teamParticipantRepository.save(teamParticipantsToCreate, { chunk: 1000 });
+
+    // Adultes membres des équipes : la fiche participant (ANIMATEUR/BENEVOLE)
+    // + l'appartenance team_participants sont la source unique de vérité
+    // bénévole -> équipe. Les logements (plus bas) en sont la projection.
+    const adultParticipantsToCreate: Participant[] = [];
+    const adultTeamParticipants: TeamParticipant[] = [];
+    // Appartenances a creer apres le save des fiches : avec { chunk }, save()
+    // ne reinjecte pas les ids dans les instances d'entree ; il faut utiliser
+    // les entites retournees (comme le bloc jeunes ci-dessus).
+    const adultMembershipsPending: { team: Team; role: TeamParticipantRole; notes: string | null }[] =
+      [];
+    const teamFreeSeats = new Map<number, number>();
+    let teamlessTotal = 0;
+    let benevolesPlaced = 0;
+
+    for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
+      const group = groups[groupIndex];
+      const localTeams = teamsByGroupSaved.get(group.id) ?? [];
+      const teamSizes = buildTeamSizes(
+        (participantsByGroupSaved.get(group.id) ?? []).length,
+        localTeams.length,
+      );
+
+      for (let teamIndex = 0; teamIndex < localTeams.length; teamIndex += 1) {
+        const team = localTeams[teamIndex];
+        const animators = [team.primaryAnimator, team.secondaryAnimator].filter(
+          (animator): animator is Volunteer => animator != null,
+        );
+
+        for (const [animatorIndex, animator] of animators.entries()) {
+          const fiche = participantRepository.create({
+            firstName: animator.firstName,
+            lastName: animator.lastName,
+            type: PersonType.ANIMATEUR,
+            dateOfBirth: toDateString(
+              faker.date.between({
+                from: '1968-01-01T00:00:00.000Z',
+                to: '2009-06-30T00:00:00.000Z',
+              }),
+            ),
+            sex: pick(sexValues),
+            mejAgeGroup: null,
+            // Reference par id : passer l'entite complete (avec son user imbrique)
+            // fait tenter a TypeORM un update vide en cascade -> erreur.
+            volunteer: { id: animator.id } as Volunteer,
+            group: null,
+            status: ParticipantRegistrationStatus.CONFIRMED,
+            source: PersonSource.PUBLIC_FORM,
+            emergencyContactName: null,
+            emergencyContactPhone: null,
+            diocese: null,
+            city: null,
+          });
+          adultParticipantsToCreate.push(fiche);
+          adultMembershipsPending.push({
+            team,
+            role: animatorIndex === 0 ? TeamParticipantRole.MEMBER : TeamParticipantRole.ASSISTANT,
+            notes: null,
+          });
+        }
+
+        teamFreeSeats.set(
+          team.id,
+          Math.max(0, team.maxSize - teamSizes[teamIndex] - animators.length),
+        );
+      }
+
+      // Bénévoles sans rôle d'animation : ~60 % rejoignent une équipe de leur
+      // groupe qui a encore de la place (fiche BENEVOLE + appartenance) ; les
+      // autres restent « sans équipe » pour la démonstration de répartition.
+      const teamless = teamlessVolunteersByGroup.get(group.id) ?? [];
+      teamlessTotal += teamless.length;
+      const benevoleCandidates = teamless.filter((_, index) => index % 5 < 3);
+      let seatCursor = 0;
+      for (const volunteer of benevoleCandidates) {
+        for (let k = 0; k < localTeams.length; k += 1) {
+          const team = localTeams[(seatCursor + k) % localTeams.length];
+          const seats = teamFreeSeats.get(team.id) ?? 0;
+          if (seats <= 0) {
+            continue;
+          }
+          teamFreeSeats.set(team.id, seats - 1);
+          seatCursor = (seatCursor + k + 1) % localTeams.length;
+          const fiche = participantRepository.create({
+            firstName: volunteer.firstName,
+            lastName: volunteer.lastName,
+            type: PersonType.BENEVOLE,
+            dateOfBirth: null,
+            sex: null,
+            mejAgeGroup: null,
+            volunteer: { id: volunteer.id } as Volunteer,
+            group: null,
+            status: ParticipantRegistrationStatus.CONFIRMED,
+            source: PersonSource.STAFF,
+            emergencyContactName: null,
+            emergencyContactPhone: null,
+            diocese: null,
+            city: null,
+          });
+          adultParticipantsToCreate.push(fiche);
+          adultMembershipsPending.push({ team, role: TeamParticipantRole.MEMBER, notes: null });
+          benevolesPlaced += 1;
+          break;
+        }
+      }
+    }
+
+    const savedAdultParticipants = await participantRepository.save(adultParticipantsToCreate, {
+      chunk: 1000,
+    });
+    for (const [membershipIndex, membership] of adultMembershipsPending.entries()) {
+      adultTeamParticipants.push(
+        teamParticipantRepository.create({
+          team: membership.team,
+          participant: savedAdultParticipants[membershipIndex],
+          role: membership.role,
+          notes: membership.notes,
+        }),
+      );
+    }
+    await teamParticipantRepository.save(adultTeamParticipants, { chunk: 1000 });
 
     const volunteerMissionsToCreate: VolunteerMission[] = [];
     const volunteerShiftsToCreate: VolunteerShift[] = [];
@@ -1157,6 +1305,31 @@ async function run(): Promise<void> {
 
     const hostFamilies = await hostFamilyRepository.save(hostFamiliesToCreate, { chunk: 1000 });
 
+    // Logement des bénévoles : projection synchronisée de l'appartenance
+    // team_participants (source unique) — chaque adulte membre d'une équipe
+    // dort avec elle. Les bénévoles sans équipe n'ont pas de logement seedé.
+    const volunteerLodgingRepository = dataSource.getRepository(VolunteerTeamLodging);
+    const volunteerLodgingsToCreate: VolunteerTeamLodging[] = [];
+    for (const membership of adultTeamParticipants) {
+      const volunteer = membership.participant.volunteer;
+      if (!volunteer) {
+        continue;
+      }
+      volunteerLodgingsToCreate.push(
+        volunteerLodgingRepository.create({
+          volunteer,
+          volunteerId: volunteer.id,
+          team: membership.team,
+          teamId: membership.team.id,
+          room: chance(0.4) ? `Dortoir ${faker.string.alpha({ length: 1, casing: 'upper' })}` : null,
+          notes: chance(0.15) ? 'Arrivée possible dès le jeudi soir.' : null,
+          startAt: '2027-10-31',
+          endAt: '2027-11-03',
+        }),
+      );
+    }
+    await volunteerLodgingRepository.save(volunteerLodgingsToCreate, { chunk: 1000 });
+
     const familyRemainingCapacity = new Map<number, number>(
       hostFamilies.map((family) => [family.id, family.maxCapacity]),
     );
@@ -1286,20 +1459,27 @@ async function run(): Promise<void> {
     console.log(`Users: ${users.length}`);
     console.log(`Roles: ${roles.length}`);
     console.log(`Groups: ${groups.length}`);
-    console.log(`Volunteers: ${volunteers.length}`);
-    console.log(`Participants: ${participants.length}`);
-    console.log(`Teams: ${teams.length}`);
-    console.log(`Team memberships: ${teamParticipantsToCreate.length}`);
+    console.log(`Volunteers: ${volunteers.length} (sans équipe au rassemblement: ${teamlessTotal - benevolesPlaced})`);
+    console.log(
+      `Participants: ${participants.length} jeunes + ${adultParticipantsToCreate.length} adultes`,
+    );
+    console.log(`Teams: ${teams.length} (1/5 pleines, 1/5 à moitié, le reste avec 2-4 places libres)`);
+    console.log(
+      `Team memberships: ${teamParticipantsToCreate.length} jeunes + ${adultTeamParticipants.length} adultes`,
+    );
     console.log(`Host families: ${hostFamilies.length}`);
     console.log(`Assignments: ${assignmentsToCreate.length}`);
     console.log(`Health records: ${participantHealthToCreate.length}`);
     console.log(
       `Unassigned participants (team): ${participants.length - teamParticipantsToCreate.length}`,
     );
-    console.log('Comptes de test:');
-    console.log('- admin@allegria.local / Admin#2027!');
-    console.log('- sante@allegria.local / Health#2027!');
-    console.log('- coordination@allegria.local / Coord#2027!');
+    console.log(`Mot de passe commun des comptes de demo: ${DEMO_PASSWORD}`);
+    console.log('Comptes de demo utilisables (tous avec ce mot de passe):');
+    console.log('- admin@allegria.local (ADMIN)');
+    console.log('- sante@allegria.local (sante)');
+    console.log('- coordination@allegria.local (coordination)');
+    console.log('- animator.1@allegria.local, animator.2@allegria.local, ... (benevoles lies a leur fiche, acces Mon espace)');
+    console.log('- logistic.1@allegria.local, logistic.2@allegria.local, ... (logistique)');
   } finally {
     await dataSource.destroy();
   }

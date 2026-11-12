@@ -410,9 +410,11 @@ export class HostingPlacementService {
       .filter((r) => r.participant.id !== excludeParticipantId)
       .map((r) => ({
         teamId: teamOf.get(r.participant.id) ?? null,
-        isAnimator: r.participant.type === PersonType.ANIMATEUR,
-        isUnder18: isUnder18At(r.participant.dateOfBirth, arrival),
-        sex: r.participant.sex,
+        // Adultes = animateurs ET bénévoles rattachés à une équipe (quota adultes, hors mixité jeunes).
+        isAnimator: r.participant.type !== PersonType.JEUNE,
+        isBenevole: r.participant.type === PersonType.BENEVOLE,
+        isUnder18: r.participant.dateOfBirth ? isUnder18At(r.participant.dateOfBirth, arrival) : false,
+        sex: r.participant.sex ?? '',
       }));
   }
 
@@ -489,9 +491,12 @@ export class HostingPlacementService {
       const refusal = refusalReason(
         this.toFamily(family, occupants),
         {
-          isAnimator: participant.type === PersonType.ANIMATEUR,
-          isUnder18: isUnder18At(participant.dateOfBirth, arrival as string),
-          sex: participant.sex,
+          isAnimator: participant.type !== PersonType.JEUNE,
+          isBenevole: participant.type === PersonType.BENEVOLE,
+          isUnder18: participant.dateOfBirth
+            ? isUnder18At(participant.dateOfBirth, arrival as string)
+            : false,
+          sex: participant.sex ?? '',
         },
         rules,
       );
@@ -592,9 +597,12 @@ export class HostingPlacementService {
         people.push({
           id: m.participant.id,
           teamId: m.team.id,
-          isAnimator: m.participant.type === PersonType.ANIMATEUR,
-          isUnder18: isUnder18At(m.participant.dateOfBirth, dto.arrivalDate),
-          sex: m.participant.sex,
+          isAnimator: m.participant.type !== PersonType.JEUNE,
+          isBenevole: m.participant.type === PersonType.BENEVOLE,
+          isUnder18: m.participant.dateOfBirth
+            ? isUnder18At(m.participant.dateOfBirth, dto.arrivalDate)
+            : false,
+          sex: m.participant.sex ?? '',
         });
       }
 

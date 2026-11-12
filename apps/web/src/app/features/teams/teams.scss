@@ -7,6 +7,14 @@
 .over {
   color: var(--tui-status-negative);
 }
+.hint,
+.muted {
+  color: var(--allegria-muted, #666);
+  font-size: 0.9rem;
+}
+.hint {
+  margin: 0.5rem 0 0;
+}
 li {
   display: flex;
   justify-content: space-between;

@@ -26,6 +26,20 @@ describe('hosting placement logic', () => {
     expect(isMinorAt('2009-11-01', '2027-10-30')).toBe(true);
     expect(isMinorAt('2009-10-30', '2027-10-30')).toBe(false);
   });
+  it('sans date de naissance (fiche BENEVOLE) : jamais mineur', () => {
+    expect(isMinorAt(null, '2027-10-30')).toBe(false);
+  });
+  it('compte un bénévole dans les adultes de la famille (quota anim.)', () => {
+    const withBenevole: Board = {
+      ...board,
+      members: [
+        ...board.members,
+        { participantId: 9, firstName: 'Camille', lastName: 'Perrot', sex: null, type: 'BENEVOLE', dateOfBirth: null, teamId: 10, assignmentId: 7, hostFamilyId: 5, assignmentStatus: 'PENDING' },
+      ],
+    };
+    const load = familyLoad(withBenevole, board.families[0], '2027-10-30');
+    expect(load).toMatchObject({ used: 2, minors: 1, animators: 1 });
+  });
   it('compte les places des familles validées seulement', () => {
     expect(groupStats(board, 1)).toEqual({ teams: 1, families: 2, people: 3, placed: 1, seats: 2 });
   });

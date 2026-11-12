@@ -4,6 +4,10 @@ import { catchError, finalize, map, of, tap } from 'rxjs';
 import { LoginCredentials, User } from '../models/models';
 import { AuthApiService } from '../services/api.services';
 
+/** Rôles ouvrant l'accès à « Mon espace » : miroir de READ_ROLES dans
+ * apps/api/src/app/core/my-space/my-space.controller.ts (sinon 403 côté API). */
+export const MY_SPACE_ROLES = ['ADMIN', 'COORDINATOR', 'HEALTH', 'VOLUNTEERS', 'LOGISTICS', 'VIEWER'];
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly api = inject(AuthApiService);

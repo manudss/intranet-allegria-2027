@@ -18,8 +18,10 @@ const call = async (method, path, body, token) => {
   return [res.status, json];
 };
 const login = async (email, password) => (await call('POST', '/auth/login', { email, password }))[1]?.accessToken;
-const adm = await login('admin@allegria.local', 'Admin#2027!');
-const health = await login('sante@allegria.local', 'Health#2027!');
+// Mot de passe commun des comptes de demo seedes (voir seed.ts DEMO_PASSWORD).
+const demoPassword = process.env.CHECK_PASSWORD ?? 'demo-only-not-a-secret';
+const adm = await login('admin@allegria.local', demoPassword);
+const health = await login('sante@allegria.local', demoPassword);
 check('connexion admin et sante', Boolean(adm && health));
 
 let [s, board] = await call('GET', '/hosting/board', undefined, adm);

@@ -9,6 +9,7 @@ import { ParticipantsModule } from './participants/participants.module';
 import { VolunteerSkillsModule } from './volunteer-skills/volunteer-skills.module';
 import { VolunteerTeamsModule } from './volunteer-teams/volunteer-teams.module';
 import { TeamParticipantsModule } from './team-participants/team-participants.module';
+import { TeamBenevolesModule } from './team-benevoles/team-benevoles.module';
 import { TeamsModule } from './teams/teams.module';
 import { VolunteersModule } from './volunteers/volunteers.module';
 import { VolunteerMissionsModule } from './volunteer-missions/volunteer-missions.module';
@@ -18,6 +19,7 @@ import { OperationalDashboardModule } from './operational-dashboard/operational-
 import { PublicRegistrationsModule } from './public-registrations/public-registrations.module';
 import { ProgramModule } from './program/program.module';
 import { MySpaceModule } from './my-space/my-space.module';
+import { VolunteerHostingModule } from './volunteer-hosting/volunteer-hosting.module';
 
 @Module({
   imports: [
@@ -26,6 +28,7 @@ import { MySpaceModule } from './my-space/my-space.module';
     ParticipantsModule,
     TeamsModule,
     TeamParticipantsModule,
+    TeamBenevolesModule,
     VolunteersModule,
     VolunteerTeamsModule,
     VolunteerMissionsModule,
@@ -40,6 +43,7 @@ import { MySpaceModule } from './my-space/my-space.module';
     PublicRegistrationsModule,
     ProgramModule,
     MySpaceModule,
+    VolunteerHostingModule,
   ],
 })
 export class CoreModule {}

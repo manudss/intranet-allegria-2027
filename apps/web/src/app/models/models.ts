@@ -80,8 +80,10 @@ export interface Participant {
   id: number;
   firstName: string;
   lastName: string;
-  dateOfBirth: string;
-  sex: ParticipantSex;
+  /** Null pour les fiches BENEVOLE (adultes, projection d'un bénévole). */
+  dateOfBirth: string | null;
+  /** Null pour les fiches BENEVOLE. */
+  sex: ParticipantSex | null;
   mejAgeGroup: MejAgeGroup | null;
   type: PersonType;
   emergencyContactName: string | null;
@@ -220,6 +222,17 @@ export interface Team {
   maxSize: number;
   notes: string | null;
 }
+/** Affectation d'un bénévole à une équipe de rassemblement, en tant qu'adulte. */
+export interface BenevoleAssignment {
+  volunteerId: number;
+  participantId: number;
+  teamId: number;
+  teamName: string;
+  firstName: string;
+  lastName: string;
+  mission: string | null;
+}
+
 export interface TeamParticipant {
   id: number;
   team: Team;
@@ -658,4 +671,53 @@ export interface DashboardTodoList {
   unstarted: DashboardTodoShift[];
   withoutConfirmedStaff: DashboardTodoShift[];
   optionalIncomplete: DashboardTodoMission[];
+}
+
+// ── Répartition bénévoles → équipes de rassemblement (benevoles/repartition) ─
+
+export interface RepartitionTeamRow {
+  id: number;
+  name: string;
+  groupId: number | null;
+  groupName: string | null;
+  hostingGroupId: number | null;
+  hostingGroupName: string | null;
+  jeunes: number;
+  adultes: number;
+  maxSize: number;
+  free: number;
+}
+
+export interface RepartitionVolunteerRow {
+  id: number;
+  firstName: string;
+  lastName: string;
+  mission: string | null;
+  poles: string[];
+  skills: string[];
+  tags: string[];
+  teamId: number | null;
+  teamName: string | null;
+}
+
+export interface RepartitionVolunteersResult {
+  total: number;
+  volunteers: RepartitionVolunteerRow[];
+}
+
+export interface RepartitionFilters {
+  hostingGroups: { id: number; name: string }[];
+  groups: { id: number; name: string }[];
+  poles: { id: number; name: string }[];
+  tags: string[];
+  skills: string[];
+}
+
+export interface ApplyRepartitionEntry {
+  volunteerId: number;
+  teamId: number | null;
+}
+
+export interface ApplyRepartitionResult {
+  applied: number;
 }

@@ -34,9 +34,11 @@ export interface BoardMember {
   participantId: number;
   firstName: string;
   lastName: string;
-  sex: string;
+  /** Null pour les fiches BENEVOLE (adultes). */
+  sex: string | null;
   type: string;
-  dateOfBirth: string;
+  /** Null pour les fiches BENEVOLE (toujours comptées adultes). */
+  dateOfBirth: string | null;
   teamId: number;
   assignmentId: number | null;
   hostFamilyId: number | null;

@@ -3,7 +3,8 @@
 // Variables optionnelles : CHECK_EMAIL / CHECK_PASSWORD (par defaut compte seed fictif).
 const base = (process.env.API_URL ?? 'http://localhost:3000').replace(/\/+$/, '');
 const email = process.env.CHECK_EMAIL ?? 'admin@allegria.local';
-const password = process.env.CHECK_PASSWORD ?? 'Admin#2027!';
+// Mot de passe commun des comptes de demo seedes (voir seed.ts DEMO_PASSWORD).
+const password = process.env.CHECK_PASSWORD ?? 'demo-only-not-a-secret';
 
 let failures = 0;
 const expect = (label, actual, ok) => {

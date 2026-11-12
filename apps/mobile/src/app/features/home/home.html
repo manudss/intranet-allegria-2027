@@ -38,18 +38,20 @@
     </ul>
   }
 
-  <a class="tile" routerLink="/espace">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" />
-    </svg>
-    <span class="tile-text">
-      <strong>Mon espace</strong>
-      <span>Mes missions, mon équipe</span>
-    </span>
-    <span class="chevron" aria-hidden="true">›</span>
-  </a>
+  @if (canAccessSpace()) {
+    <a class="tile" routerLink="/espace">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" />
+      </svg>
+      <span class="tile-text">
+        <strong>Mon espace</strong>
+        <span>Mes missions, mon équipe</span>
+      </span>
+      <span class="chevron" aria-hidden="true">›</span>
+    </a>
+  }
 
   <a class="tile" routerLink="/programme">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"

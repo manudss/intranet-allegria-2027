@@ -80,6 +80,7 @@ export class Layout {
         { label: 'Équipes rassemblement', path: '/equipes', icon: '@tui.users-round' },
         { label: "Familles d'accueil", path: '/familles', icon: '@tui.home' },
         { label: 'Bénévoles', path: '/benevoles', icon: '@tui.user-check' },
+        { label: 'Répartition bénévoles', path: '/benevoles/repartition', icon: '@tui.users-round' },
       ],
     },
     {

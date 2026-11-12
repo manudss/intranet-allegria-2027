@@ -451,6 +451,8 @@ export class TeamBenevolesApiService {
     tag?: string;
     poleId?: number | null;
     assignment?: 'all' | 'unassigned' | 'assigned';
+    limit?: number;
+    offset?: number;
   } = {}): Observable<RepartitionVolunteersResult> {
     return this.http.get<RepartitionVolunteersResult>('/api/benevoles/repartition/volunteers', {
       params: repartitionParams(query),

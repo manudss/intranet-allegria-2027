@@ -204,8 +204,8 @@
           </div>
           <div class="chips">
             <span class="chip on">{{ volTotal() }} résultat(s)</span>
-            <button type="button" class="chip action" (click)="addAllResultVolunteers()">
-              Tout ajouter ({{ volResults().length }})
+            <button type="button" class="chip action" (click)="addAllResultVolunteers()" [disabled]="volLoading()">
+              Tout ajouter ({{ volTotal() }})
             </button>
           </div>
           <div class="rows">
@@ -238,7 +238,9 @@
             }
           </div>
           @if (volTotal() > volResults().length) {
-            <p class="empty">… et {{ volTotal() - volResults().length }} autre(s) : affinez la recherche.</p>
+            <button type="button" class="chip action" (click)="searchVolunteers(true)" [disabled]="volLoading()">
+              Charger plus ({{ volResults().length }} affiché(s) sur {{ volTotal() }})
+            </button>
           }
         </section>
 

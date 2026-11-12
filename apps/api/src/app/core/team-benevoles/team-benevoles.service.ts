@@ -328,7 +328,12 @@ export class TeamBenevolesService {
         (query.assignment !== 'assigned' || row.teamId !== null)
       );
     });
-    return { total: filtered.length, volunteers: filtered.slice(0, 200) };
+    // Pagination explicite, sans plafond silencieux : le total est toujours
+    // retourné ; l'UI affiche « X sur Y », « Charger plus » pagine et
+    // « Tout ajouter » récupère toutes les correspondances.
+    const limit = Math.min(Math.max(Number(query.limit) || 100, 1), 1000);
+    const offset = Math.max(Number(query.offset) || 0, 0);
+    return { total: filtered.length, volunteers: filtered.slice(offset, offset + limit) };
   }
 
   /**

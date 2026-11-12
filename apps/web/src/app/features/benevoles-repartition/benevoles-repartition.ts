@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Observable } from 'rxjs';
+import { Observable, firstValueFrom } from 'rxjs';
 import { TuiInput } from '@taiga-ui/core';
 import { SelectFieldComponent, SelectOption } from '../../shared/select-field.component';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
@@ -72,6 +72,7 @@ export class BenevolesRepartitionPage implements OnInit {
   protected readonly volAssignment = signal<AssignmentFilter>('unassigned');
   protected readonly volResults = signal<RepartitionVolunteerRow[]>([]);
   protected readonly volTotal = signal(0);
+  protected readonly volLoading = signal(false);
   /** Pool cumulatif : les recherches successives s'y ajoutent. */
   protected readonly poolVolunteers = signal<ReadonlyMap<number, RepartitionVolunteerRow>>(new Map());
 
@@ -162,21 +163,36 @@ export class BenevolesRepartitionPage implements OnInit {
 
   // ── Étape 2 ────────────────────────────────────────────────────────────────
 
-  protected searchVolunteers(): void {
+  private volFilters() {
+    return {
+      search: this.volSearch(),
+      skill: this.volSkill(),
+      tag: this.volTag(),
+      poleId: this.volPoleId(),
+      assignment: this.volAssignment(),
+    };
+  }
+
+  protected searchVolunteers(append = false): void {
+    this.volLoading.set(true);
     this.api
       .repartitionVolunteers({
-        search: this.volSearch(),
-        skill: this.volSkill(),
-        tag: this.volTag(),
-        poleId: this.volPoleId(),
-        assignment: this.volAssignment(),
+        ...this.volFilters(),
+        offset: append ? this.volResults().length : 0,
+        limit: 100,
       })
       .subscribe({
         next: (result) => {
-          this.volResults.set(result.volunteers);
+          this.volResults.update((rows) =>
+            append ? [...rows, ...result.volunteers] : result.volunteers,
+          );
           this.volTotal.set(result.total);
+          this.volLoading.set(false);
         },
-        error: (error) => this.fail(error),
+        error: (error) => {
+          this.volLoading.set(false);
+          this.fail(error);
+        },
       });
   }
 
@@ -192,12 +208,33 @@ export class BenevolesRepartitionPage implements OnInit {
     });
   }
 
-  protected addAllResultVolunteers(): void {
-    this.poolVolunteers.update((map) => {
-      const next = new Map(map);
-      for (const row of this.volResults()) next.set(row.id, row);
-      return next;
-    });
+  /**
+   * « Tout ajouter » : récupère TOUTES les correspondances du filtre courant
+   * (pagination côté API, aucune limite silencieuse) puis les ajoute au pool.
+   */
+  protected async addAllResultVolunteers(): Promise<void> {
+    this.volLoading.set(true);
+    try {
+      const rows = [...this.volResults()];
+      while (rows.length < this.volTotal()) {
+        const result = await firstValueFrom(
+          this.api.repartitionVolunteers({ ...this.volFilters(), offset: rows.length, limit: 1000 }),
+        );
+        if (result.volunteers.length === 0) break;
+        rows.push(...result.volunteers);
+        this.volTotal.set(result.total);
+      }
+      this.volResults.set(rows);
+      this.poolVolunteers.update((map) => {
+        const next = new Map(map);
+        for (const row of rows) next.set(row.id, row);
+        return next;
+      });
+    } catch (error) {
+      this.fail(error);
+    } finally {
+      this.volLoading.set(false);
+    }
   }
 
   protected readonly poolList = computed(() =>

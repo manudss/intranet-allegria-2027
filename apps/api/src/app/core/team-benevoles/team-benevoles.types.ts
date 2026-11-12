@@ -52,6 +52,12 @@ export class RepartitionVolunteersQueryDto {
 
   @ApiPropertyOptional({ enum: ['all', 'unassigned', 'assigned'], description: 'Affectation actuelle' })
   assignment?: 'all' | 'unassigned' | 'assigned';
+
+  @ApiPropertyOptional({ description: 'Taille de page (défaut 100, max 1000)' })
+  limit?: number;
+
+  @ApiPropertyOptional({ description: 'Décalage de pagination (défaut 0)' })
+  offset?: number;
 }
 
 export class ApplyRepartitionEntryDto {

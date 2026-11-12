@@ -313,6 +313,33 @@ describe('TeamBenevolesService.searchRepartitionVolunteers', () => {
     expect(await ids({ assignment: 'unassigned' })).toEqual([13]);
     expect(await ids({ assignment: 'assigned' })).toEqual([12]);
   });
+
+  it('pagine sans plafond silencieux : total complet et page demandée', async () => {
+    const { service, repos } = build();
+    const many = Array.from({ length: 250 }, (_, i) => ({
+      id: i + 1,
+      firstName: `Prenom${i}`,
+      lastName: 'Nom',
+      team: null,
+      skills: [],
+      tags: [],
+      teamMemberships: [],
+    }));
+    repos.volunteers.find.mockResolvedValue(many);
+    repos.participants.find.mockResolvedValue([]);
+
+    const page1 = await service.searchRepartitionVolunteers({ limit: 100, offset: 0 });
+    expect(page1.total).toBe(250);
+    expect(page1.volunteers).toHaveLength(100);
+
+    const page3 = await service.searchRepartitionVolunteers({ limit: 100, offset: 200 });
+    expect(page3.total).toBe(250);
+    expect(page3.volunteers).toHaveLength(50);
+
+    // « Tout ajouter » : une seule page large suffit sous le max (1000).
+    const all = await service.searchRepartitionVolunteers({ limit: 1000 });
+    expect(all.volunteers).toHaveLength(250);
+  });
 });
 
 describe('TeamBenevolesService.applyRepartition', () => {

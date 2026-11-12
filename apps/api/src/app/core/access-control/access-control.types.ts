@@ -264,6 +264,10 @@ export class StartScanSessionDto {
 }
 
 export class ScanBatchItemDto {
+  @IsOptional()
+  @IsBoolean()
+  clientAccepted?: boolean;
+
   @ApiProperty({ example: 'evt-2027-07-31-000045' })
   @IsString()
   @MaxLength(80)

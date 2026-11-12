@@ -230,7 +230,7 @@ export class ScansService {
             verdict: decision.verdict,
             serviceKey: this.serviceKeyOf(context, scan),
             clientEventId: scan.clientEventId,
-            needsReview: decision.needsReview || session.expiresAt <= new Date() || !!session.closedAt
+            needsReview: scan.clientAccepted === false || decision.needsReview || session.expiresAt <= new Date() || !!session.closedAt
               || occurredAt < session.startedAt || occurredAt > session.expiresAt,
 
           }),

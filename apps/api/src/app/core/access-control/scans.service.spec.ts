@@ -71,6 +71,13 @@ const scan = (overrides?: Record<string, unknown>) => ({
 });
 
 describe('ScansService.upload', () => {
+  it('flags a locally refused observation even if the current server would accept the badge', async () => {
+    const {service,repos}=makeService();
+    repos.badges.findOneBy.mockResolvedValue({id:8,status:AccessBadgeStatus.ASSIGNED});
+    repos.assignments.findOne.mockResolvedValue({id:5,badgeId:8,participantId:42,participant:{type:PersonType.JEUNE},endsAt:null});
+    await service.upload(11,1,{scans:[scan({clientAccepted:false})]});
+    expect(repos.events.save).toHaveBeenCalledWith(expect.objectContaining({verdict:AccessScanVerdict.ACCEPTED,needsReview:true}));
+  });
   it('takes a database transaction lock before deciding unique-service scans', async () => {
     const { service, repos, manager } = makeService(makePoint({duplicateRule: AccessScanDuplicateRule.UNIQUE_PER_SERVICE}));
     repos.badges.findOneBy.mockResolvedValue(null);

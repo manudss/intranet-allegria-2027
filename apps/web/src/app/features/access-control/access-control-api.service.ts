@@ -25,13 +25,13 @@ export interface AccessBadgeAssignment {
 
 export interface ScannerGrant {
   id: number;
-  userId: string;
-  pointId: string | null;
+  userId: number;
+  zoneId: number | null;
   startsAt: string;
-  expiresAt: string;
-  revokedAt: string | null;
+  endsAt: string | null;
+  createdAt: string;
   user?: { firstName: string; lastName: string; email: string };
-  point?: { label: string } | null;
+  zone?: { name: string } | null;
 }
 
 export interface AccessAuditEntry {
@@ -45,29 +45,34 @@ export interface AccessAuditEntry {
   createdAt: string;
 }
 
+export type DuplicateRule = 'ALLOW' | 'UNIQUE_PER_SERVICE' | 'UNIQUE_PER_DAY';
+
 export interface ScanTypeItem {
-  id: string;
+  id: number;
   code: string;
   label: string;
   description: string | null;
-  oneWay: boolean;
-  active: boolean;
+  duplicateRule: DuplicateRule;
 }
 
 export interface ZoneItem {
   id: number;
   name: string;
-  restricted: boolean;
-  active: boolean;
+  description: string | null;
+  allowedPersonTypes: string[] | null;
+  requiresOnlineValidation: boolean;
+  maxOfflineMinutes: number;
 }
 
 export interface ScanPointItem {
-  id: string;
-  code: string;
-  label: string;
-  type: string;
-  zoneId: number | null;
+  id: number;
+  zoneId: number;
+  scanTypeId: number;
+  name: string;
+  serviceKey: string | null;
   active: boolean;
+  zone?: ZoneItem;
+  scanType?: ScanTypeItem;
 }
 
 export interface ParticipantSearchItem {
@@ -93,8 +98,8 @@ export class AccessControlApiService {
     return this.http.get<{ items: AccessBadge[]; total: number }>(this.badges, { params: query });
   }
 
-  registerStock(codes: string[], lot?: string): Observable<unknown> {
-    return this.http.post(`${this.badges}/stock`, { codes, lot });
+  registerStock(lot: string, codes: string[]): Observable<unknown> {
+    return this.http.post(`${this.badges}/stock`, { lot, codes });
   }
 
   revokeBadge(id: number, reason: string): Observable<unknown> {
@@ -123,7 +128,7 @@ export class AccessControlApiService {
     return this.http.get<ScannerGrant[]>(`${this.base}/scanner-grants`);
   }
 
-  createGrant(grant: { userId: string; pointId?: string; startsAt: string; expiresAt: string }): Observable<unknown> {
+  createGrant(grant: { userId: number; zoneId?: number; startsAt?: string; endsAt?: string }): Observable<unknown> {
     return this.http.post(`${this.base}/scanner-grants`, grant);
   }
 
@@ -135,7 +140,7 @@ export class AccessControlApiService {
     return this.http.get<ScanTypeItem[]>(`${this.base}/config/scan-types`);
   }
 
-  createScanType(dto: { code: string; label: string; description?: string; oneWay: boolean }): Observable<unknown> {
+  createScanType(dto: { code: string; label: string; description?: string; duplicateRule?: DuplicateRule }): Observable<unknown> {
     return this.http.post(`${this.base}/config/scan-types`, dto);
   }
 
@@ -143,11 +148,11 @@ export class AccessControlApiService {
     return this.http.get<ZoneItem[]>(`${this.base}/config/zones`);
   }
 
-  createZone(dto: { name: string; restricted: boolean }): Observable<unknown> {
+  createZone(dto: { name: string; description?: string; allowedPersonTypes?: string[]; requiresOnlineValidation?: boolean; maxOfflineMinutes?: number }): Observable<unknown> {
     return this.http.post(`${this.base}/config/zones`, dto);
   }
 
-  updateZone(id: number, dto: Partial<{ name: string; restricted: boolean; active: boolean }>): Observable<unknown> {
+  updateZone(id: number, dto: Partial<{ name: string; description: string; requiresOnlineValidation: boolean; maxOfflineMinutes: number }>): Observable<unknown> {
     return this.http.patch(`${this.base}/config/zones/${id}`, dto);
   }
 
@@ -155,7 +160,7 @@ export class AccessControlApiService {
     return this.http.get<ScanPointItem[]>(`${this.base}/config/points`);
   }
 
-  createPoint(dto: { code: string; label: string; type: string; zoneId?: number }): Observable<unknown> {
+  createPoint(dto: { zoneId: number; scanTypeId: number; name: string; serviceKey?: string }): Observable<unknown> {
     return this.http.post(`${this.base}/config/points`, dto);
   }
 

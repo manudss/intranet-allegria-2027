@@ -1,8 +1,19 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
-import { AccessControlApiService, ScanPointItem, ScanTypeItem, ZoneItem } from './access-control-api.service';
+import {
+  AccessControlApiService,
+  DuplicateRule,
+  ScanPointItem,
+  ScanTypeItem,
+  ZoneItem,
+} from './access-control-api.service';
 
-const POINT_TYPES = ['ENTRY', 'EXIT', 'MEAL', 'BUS', 'ZONE', 'GENERAL'];
+const PERSON_TYPES = ['JEUNE', 'ANIMATEUR', 'BENEVOLE'];
+const DUPLICATE_RULES: { value: DuplicateRule; label: string }[] = [
+  { value: 'ALLOW', label: 'Répétable (entrées)' },
+  { value: 'UNIQUE_PER_DAY', label: 'Une fois par jour' },
+  { value: 'UNIQUE_PER_SERVICE', label: 'Une fois par service (repas)' },
+];
 
 @Component({
   selector: 'app-scan-config',
@@ -15,17 +26,17 @@ const POINT_TYPES = ['ENTRY', 'EXIT', 'MEAL', 'BUS', 'ZONE', 'GENERAL'];
       <section class="panel">
         <h2>Types de scan</h2>
         <table class="tbl">
-          <thead><tr><th>Code</th><th>Libellé</th><th>Sens unique</th><th>Actif</th></tr></thead>
+          <thead><tr><th>Code</th><th>Libellé</th><th>Règle de doublon</th></tr></thead>
           <tbody>
             @for (t of scanTypes(); track t.id) {
-              <tr><td><code>{{ t.code }}</code></td><td>{{ t.label }}</td><td>{{ t.oneWay ? 'Oui' : 'Non' }}</td><td>{{ t.active ? 'Oui' : 'Non' }}</td></tr>
+              <tr><td><code>{{ t.code }}</code></td><td>{{ t.label }}</td><td>{{ ruleLabel(t.duplicateRule) }}</td></tr>
             }
           </tbody>
         </table>
-        <div class="grid3">
-          <input type="text" [(ngModel)]="stCode" placeholder="Code (ex. MEAL_NOON)" />
+        <div class="grid4">
+          <input type="text" [(ngModel)]="stCode" placeholder="Code (ex. MEAL)" />
           <input type="text" [(ngModel)]="stLabel" placeholder="Libellé" />
-          <label class="chk"><input type="checkbox" [(ngModel)]="stOneWay" /> Sens unique</label>
+          <select [(ngModel)]="stRule">@for (r of rules; track r.value) { <option [ngValue]="r.value">{{ r.label }}</option> }</select>
           <button tuiButton size="s" type="button" (click)="addScanType()" [disabled]="!stCode.trim() || !stLabel.trim()">Ajouter</button>
         </div>
       </section>
@@ -33,22 +44,26 @@ const POINT_TYPES = ['ENTRY', 'EXIT', 'MEAL', 'BUS', 'ZONE', 'GENERAL'];
       <section class="panel">
         <h2>Zones</h2>
         <table class="tbl">
-          <thead><tr><th>Nom</th><th>Accès restreint</th><th>Active</th></tr></thead>
+          <thead><tr><th>Nom</th><th>Types admis</th><th>Validation en ligne</th><th>Durée hors-ligne max</th></tr></thead>
           <tbody>
             @for (z of zones(); track z.id) {
               <tr>
                 <td>{{ z.name }}</td>
-                <td>{{ z.restricted ? 'Oui' : 'Non' }}</td>
-                <td>
-                  <button tuiButton appearance="secondary" size="s" type="button" (click)="toggleZone(z)">{{ z.active ? 'Désactiver' : 'Réactiver' }}</button>
-                </td>
+                <td>{{ z.allowedPersonTypes?.join(', ') ?? 'Tous' }}</td>
+                <td>{{ z.requiresOnlineValidation ? 'Oui' : 'Non' }}</td>
+                <td>{{ z.maxOfflineMinutes }} min</td>
               </tr>
             }
           </tbody>
         </table>
-        <div class="grid3">
+        <div class="grid4">
           <input type="text" [(ngModel)]="zoneName" placeholder="Nom de la zone" />
-          <label class="chk"><input type="checkbox" [(ngModel)]="zoneRestricted" /> Accès restreint</label>
+          <span class="chk-group">
+            @for (t of personTypes; track t) {
+              <label class="chk"><input type="checkbox" [checked]="zoneTypes.has(t)" (change)="toggleType(t)" /> {{ t }}</label>
+            }
+          </span>
+          <input type="number" [(ngModel)]="zoneMaxOffline" placeholder="Hors-ligne max (min)" />
           <button tuiButton size="s" type="button" (click)="addZone()" [disabled]="!zoneName.trim()">Ajouter</button>
         </div>
       </section>
@@ -56,18 +71,25 @@ const POINT_TYPES = ['ENTRY', 'EXIT', 'MEAL', 'BUS', 'ZONE', 'GENERAL'];
       <section class="panel">
         <h2>Points de contrôle</h2>
         <table class="tbl">
-          <thead><tr><th>Code</th><th>Libellé</th><th>Type</th><th>Actif</th></tr></thead>
+          <thead><tr><th>Nom</th><th>Zone</th><th>Type de scan</th><th>Service</th><th>Actif</th></tr></thead>
           <tbody>
             @for (p of points(); track p.id) {
-              <tr><td><code>{{ p.code }}</code></td><td>{{ p.label }}</td><td>{{ p.type }}</td><td>{{ p.active ? 'Oui' : 'Non' }}</td></tr>
+              <tr>
+                <td>{{ p.name }}</td>
+                <td>{{ p.zone?.name ?? p.zoneId }}</td>
+                <td>{{ p.scanType?.label ?? p.scanTypeId }}</td>
+                <td>{{ p.serviceKey ?? '—' }}</td>
+                <td>{{ p.active ? 'Oui' : 'Non' }}</td>
+              </tr>
             }
           </tbody>
         </table>
-        <div class="grid4">
-          <input type="text" [(ngModel)]="ptCode" placeholder="Code (ex. ENTREE_PRINCIPALE)" />
-          <input type="text" [(ngModel)]="ptLabel" placeholder="Libellé" />
-          <select [(ngModel)]="ptType">@for (t of pointTypes; track t) { <option [value]="t">{{ t }}</option> }</select>
-          <button tuiButton size="s" type="button" (click)="addPoint()" [disabled]="!ptCode.trim() || !ptLabel.trim()">Ajouter</button>
+        <div class="grid5">
+          <input type="text" [(ngModel)]="ptName" placeholder="Nom (ex. Porte A)" />
+          <select [(ngModel)]="ptZoneId">@for (z of zones(); track z.id) { <option [ngValue]="z.id">{{ z.name }}</option> }</select>
+          <select [(ngModel)]="ptScanTypeId">@for (t of scanTypes(); track t.id) { <option [ngValue]="t.id">{{ t.label }}</option> }</select>
+          <input type="text" [(ngModel)]="ptServiceKey" placeholder="Clé de service (optionnel)" />
+          <button tuiButton size="s" type="button" (click)="addPoint()" [disabled]="!ptName.trim() || !ptZoneId || !ptScanTypeId">Ajouter</button>
         </div>
       </section>
 
@@ -84,27 +106,32 @@ const POINT_TYPES = ['ENTRY', 'EXIT', 'MEAL', 'BUS', 'ZONE', 'GENERAL'];
     .tbl td { padding: 8px; border-bottom: 1px solid #f4f5f7; }
     code { font-family: ui-monospace, monospace; font-size: 12px; }
     input, select { border: 1px solid #d7dbe3; border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
-    .grid3 { display: grid; grid-template-columns: 1fr 1fr auto auto; gap: 8px; align-items: center; }
-    .grid4 { display: grid; grid-template-columns: 1fr 1fr auto auto; gap: 8px; align-items: center; }
-    .chk { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+    .grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: center; }
+    .grid5 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 8px; align-items: center; }
+    .chk { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; margin-right: 10px; }
     .ok-msg { color: #1a9e4b; font-size: 13px; margin: 0; }
   `],
 })
 export class ScanConfigPage implements OnInit {
   private readonly api = inject(AccessControlApiService);
-  readonly pointTypes = POINT_TYPES;
+  readonly rules = DUPLICATE_RULES;
+  readonly personTypes = PERSON_TYPES;
 
   readonly scanTypes = signal<ScanTypeItem[]>([]);
   readonly zones = signal<ZoneItem[]>([]);
   readonly points = signal<ScanPointItem[]>([]);
   readonly msg = signal<string | null>(null);
 
-  stCode = ''; stLabel = ''; stOneWay = false;
-  zoneName = ''; zoneRestricted = false;
-  ptCode = ''; ptLabel = ''; ptType = 'ENTRY';
+  stCode = ''; stLabel = ''; stRule: DuplicateRule = 'ALLOW';
+  zoneName = ''; zoneTypes = new Set<string>(); zoneMaxOffline: number | null = 240;
+  ptName = ''; ptZoneId: number | null = null; ptScanTypeId: number | null = null; ptServiceKey = '';
 
   ngOnInit(): void {
     this.reload();
+  }
+
+  ruleLabel(r: DuplicateRule): string {
+    return DUPLICATE_RULES.find((x) => x.value === r)?.label ?? r;
   }
 
   reload(): void {
@@ -113,29 +140,44 @@ export class ScanConfigPage implements OnInit {
     this.api.listPoints().subscribe({ next: (v) => this.points.set(v), error: () => undefined });
   }
 
+  toggleType(t: string): void {
+    if (this.zoneTypes.has(t)) this.zoneTypes.delete(t);
+    else this.zoneTypes.add(t);
+  }
+
   addScanType(): void {
-    this.api.createScanType({ code: this.stCode.trim(), label: this.stLabel.trim(), oneWay: this.stOneWay }).subscribe({
-      next: () => { this.stCode = ''; this.stLabel = ''; this.stOneWay = false; this.flash('Type de scan ajouté.'); this.reload(); },
+    this.api.createScanType({ code: this.stCode.trim(), label: this.stLabel.trim(), duplicateRule: this.stRule }).subscribe({
+      next: () => { this.stCode = ''; this.stLabel = ''; this.flash('Type de scan ajouté.'); this.reload(); },
       error: (e) => this.flash(e?.error?.message ?? 'Échec.'),
     });
   }
 
   addZone(): void {
-    this.api.createZone({ name: this.zoneName.trim(), restricted: this.zoneRestricted }).subscribe({
-      next: () => { this.zoneName = ''; this.zoneRestricted = false; this.flash('Zone ajoutée.'); this.reload(); },
-      error: (e) => this.flash(e?.error?.message ?? 'Échec.'),
-    });
-  }
-
-  toggleZone(z: ZoneItem): void {
-    this.api.updateZone(z.id, { active: !z.active }).subscribe({ next: () => this.reload(), error: () => undefined });
+    this.api
+      .createZone({
+        name: this.zoneName.trim(),
+        allowedPersonTypes: this.zoneTypes.size > 0 ? [...this.zoneTypes] : undefined,
+        maxOfflineMinutes: this.zoneMaxOffline ?? undefined,
+      })
+      .subscribe({
+        next: () => { this.zoneName = ''; this.zoneTypes = new Set(); this.flash('Zone ajoutée.'); this.reload(); },
+        error: (e) => this.flash(e?.error?.message ?? 'Échec.'),
+      });
   }
 
   addPoint(): void {
-    this.api.createPoint({ code: this.ptCode.trim(), label: this.ptLabel.trim(), type: this.ptType }).subscribe({
-      next: () => { this.ptCode = ''; this.ptLabel = ''; this.flash('Point ajouté.'); this.reload(); },
-      error: (e) => this.flash(e?.error?.message ?? 'Échec.'),
-    });
+    if (!this.ptZoneId || !this.ptScanTypeId) return;
+    this.api
+      .createPoint({
+        zoneId: this.ptZoneId,
+        scanTypeId: this.ptScanTypeId,
+        name: this.ptName.trim(),
+        serviceKey: this.ptServiceKey.trim() || undefined,
+      })
+      .subscribe({
+        next: () => { this.ptName = ''; this.ptServiceKey = ''; this.flash('Point ajouté.'); this.reload(); },
+        error: (e) => this.flash(e?.error?.message ?? 'Échec.'),
+      });
   }
 
   private flash(m: string): void {

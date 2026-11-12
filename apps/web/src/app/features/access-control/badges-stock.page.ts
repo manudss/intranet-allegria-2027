@@ -25,8 +25,8 @@ const STATUS_LABELS: Record<AccessBadgeStatus, string> = {
         <p class="hint">Un code par ligne (code opaque, sans nom). Le stock seul ne suffit pas : chaque badge doit ensuite être attribué.</p>
         <textarea rows="4" [(ngModel)]="stockCodes" placeholder="9f2c1e0a4b6d8f30…&#10;ab12cd34ef56ab78…"></textarea>
         <div class="row">
-          <input type="text" [(ngModel)]="stockLot" placeholder="Lot (ex. L2027-A)" />
-          <button tuiButton type="button" (click)="registerStock()" [disabled]="saving()">Enregistrer</button>
+          <input type="text" [(ngModel)]="stockLot" placeholder="Lot (obligatoire, ex. L2027-A)" />
+          <button tuiButton type="button" (click)="registerStock()" [disabled]="saving() || !stockLot.trim()">Enregistrer</button>
         </div>
         @if (stockMsg(); as m) { <p class="ok-msg">{{ m }}</p> }
       </section>
@@ -135,7 +135,7 @@ export class BadgesStockPage implements OnInit {
     if (codes.length === 0) return;
     this.saving.set(true);
     this.stockMsg.set(null);
-    this.api.registerStock(codes, this.stockLot.trim() || undefined).subscribe({
+    this.api.registerStock(this.stockLot.trim(), codes).subscribe({
       next: () => {
         this.saving.set(false);
         this.stockCodes = '';

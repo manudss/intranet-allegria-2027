@@ -117,6 +117,13 @@ const GATHERING_POINT = { latitude: 45.439695, longitude: 4.387178 } as const;
 const PROJECT_START = new Date('2027-10-31T08:00:00.000Z');
 const PROJECT_END = new Date('2027-11-03T23:30:00.000Z');
 
+/**
+ * Mot de passe unique de tous les comptes crees par le seed (donnees 100 %
+ * fictives, environnements de demo/preview uniquement). Documente dans
+ * apps/api/src/database/seeds/README.md et affiche dans les logs de seed.
+ */
+const DEMO_PASSWORD = 'demo-only-not-a-secret';
+
 /** Rayon maximal (km) autour du point de rassemblement pour les familles d'accueil. */
 const HOST_FAMILY_RADIUS_KM = 100;
 
@@ -612,20 +619,20 @@ async function run(): Promise<void> {
     const teamCountsPerGroup = participantsPerGroup.map((count) => computeTeamCount(count));
     const volunteersPerGroup = allocateVolunteersPerGroup(teamCountsPerGroup, profile.volunteers);
 
+    // Un seul hash calcule et reutilise : tous les comptes de demo partagent
+    // DEMO_PASSWORD, et le seed reste rapide malgre le nombre de comptes.
+    const demoPasswordHash = hashPassword(DEMO_PASSWORD);
+
     const baseUsers: Array<Partial<User>> = [
-      { email: 'admin@allegria.local', passwordHash: hashPassword('Admin#2027!'), isActive: true },
-      { email: 'sante@allegria.local', passwordHash: hashPassword('Health#2027!'), isActive: true },
-      {
-        email: 'coordination@allegria.local',
-        passwordHash: hashPassword('Coord#2027!'),
-        isActive: true,
-      },
+      { email: 'admin@allegria.local', passwordHash: demoPasswordHash, isActive: true },
+      { email: 'sante@allegria.local', passwordHash: demoPasswordHash, isActive: true },
+      { email: 'coordination@allegria.local', passwordHash: demoPasswordHash, isActive: true },
     ];
 
     for (let i = 0; i < profile.volunteers; i += 1) {
       baseUsers.push({
         email: `animator.${i + 1}@allegria.local`,
-        passwordHash: hashPassword(`Anim#${(i + 1000).toString(36)}!`),
+        passwordHash: demoPasswordHash,
         isActive: true,
       });
     }
@@ -634,7 +641,7 @@ async function run(): Promise<void> {
     for (let i = 0; i < logisticCount; i += 1) {
       baseUsers.push({
         email: `logistic.${i + 1}@allegria.local`,
-        passwordHash: hashPassword(`Log#${(i + 2000).toString(36)}!`),
+        passwordHash: demoPasswordHash,
         isActive: true,
       });
     }
@@ -656,6 +663,9 @@ async function run(): Promise<void> {
 
     for (const animatorUser of animatorUsers) {
       pushRole(userRoles, animatorUser, ROLE_CODES.animator);
+      // Chaque compte animateur est lie a une fiche benevole : le role
+      // VOLUNTEERS ouvre l'acces a "Mon espace" (sinon 403 sur /api/me/*).
+      pushRole(userRoles, animatorUser, ROLE_CODES.volunteers);
       if (chance(0.07)) {
         pushRole(userRoles, animatorUser, ROLE_CODES.coordinator);
       }
@@ -1324,10 +1334,13 @@ async function run(): Promise<void> {
     console.log(
       `Unassigned participants (team): ${participants.length - teamParticipantsToCreate.length}`,
     );
-    console.log('Comptes de test:');
-    console.log('- admin@allegria.local / Admin#2027!');
-    console.log('- sante@allegria.local / Health#2027!');
-    console.log('- coordination@allegria.local / Coord#2027!');
+    console.log(`Mot de passe commun des comptes de demo: ${DEMO_PASSWORD}`);
+    console.log('Comptes de demo utilisables (tous avec ce mot de passe):');
+    console.log('- admin@allegria.local (ADMIN)');
+    console.log('- sante@allegria.local (sante)');
+    console.log('- coordination@allegria.local (coordination)');
+    console.log('- animator.1@allegria.local, animator.2@allegria.local, ... (benevoles lies a leur fiche, acces Mon espace)');
+    console.log('- logistic.1@allegria.local, logistic.2@allegria.local, ... (logistique)');
   } finally {
     await dataSource.destroy();
   }

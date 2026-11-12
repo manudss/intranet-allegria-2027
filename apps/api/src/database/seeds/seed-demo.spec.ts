@@ -21,7 +21,7 @@ describe('seed demo accounts', () => {
 
   it('assigns the VOLUNTEERS role to volunteer accounts', () => {
     const animatorLoop =
-      /for \(const animatorUser of animatorUsers\) \{([\s\S]*?)\n    \}/.exec(seed)?.[1] ?? '';
+      /for \(const animatorUser of animatorUsers\) \{([\s\S]*?)\n {4}\}/.exec(seed)?.[1] ?? '';
     expect(animatorLoop).toContain('ROLE_CODES.volunteers');
   });
 

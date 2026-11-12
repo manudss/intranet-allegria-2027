@@ -61,6 +61,16 @@ export interface ProgramChangeLogEntry {
 
 // ─── Mon espace (bénévole connecté) ───
 
+export interface VolunteerSkill {
+  id: number;
+  skill: string;
+}
+
+export interface VolunteerTag {
+  id: number;
+  value: string;
+}
+
 export interface Volunteer {
   id: number;
   firstName: string;
@@ -70,6 +80,14 @@ export interface Volunteer {
   team: string | null;
   isGroupLeader: boolean;
   notes: string | null;
+  skills?: VolunteerSkill[];
+  tags?: VolunteerTag[];
+}
+
+/** Payload de mise à jour du profil par le bénévole (liste blanche côté API). */
+export interface UpdateMyVolunteerPayload {
+  phone?: string | null;
+  email?: string | null;
 }
 
 export type ShiftAssignmentStatus = 'PROVISIONAL' | 'CONFIRMED' | 'CANCELLED';
@@ -79,6 +97,8 @@ export interface VolunteerMission {
   title: string;
   description: string | null;
   location: string | null;
+  volunteerTeam?: VolunteerTeam | null;
+  responsibleVolunteer?: { id: number; firstName: string; lastName: string } | null;
 }
 
 export interface VolunteerShift {
@@ -109,4 +129,39 @@ export interface TeamMembership {
   startAt: string | null;
   endAt: string | null;
   volunteerTeam: VolunteerTeam;
+}
+
+/** Équipier d'une équipe opérationnelle (coordonnées visibles au sein de l'équipe). */
+export interface Teammate {
+  id: number;
+  role: string | null;
+  volunteer: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+    email: string | null;
+  };
+}
+
+export type VolunteerHostingType = 'HOST_FAMILY' | 'ON_SITE' | 'OTHER';
+
+export interface VolunteerHosting {
+  id: number;
+  type: VolunteerHostingType;
+  locationName: string | null;
+  address: string | null;
+  room: string | null;
+  notes: string | null;
+  startAt: string | null;
+  endAt: string | null;
+  hostFamily: {
+    id: number;
+    familyName: string;
+    address: string;
+    postalCode: string;
+    city: string;
+    phone: string | null;
+    email: string | null;
+  } | null;
 }

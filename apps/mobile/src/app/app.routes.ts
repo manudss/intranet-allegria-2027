@@ -58,6 +58,18 @@ export const appRoutes: Routes = [
         title: 'Mon espace - ALEGRIA',
       },
       {
+        path: 'espace/equipes',
+        loadComponent: () =>
+          import('./features/my-space/my-teams').then((m) => m.MyTeamsComponent),
+        title: 'Mes équipes - ALEGRIA',
+      },
+      {
+        path: 'espace/profil',
+        loadComponent: () =>
+          import('./features/my-space/my-profile').then((m) => m.MyProfileComponent),
+        title: 'Mon profil - ALEGRIA',
+      },
+      {
         path: 'programme',
         loadComponent: () =>
           import('./features/program/program').then((m) => m.ProgramComponent),

@@ -2,7 +2,15 @@
   <span class="brand">ALEGRIA</span>
   <h1>Mon espace</h1>
   @if (volunteer(); as v) {
-    <p class="hero-sub">{{ v.firstName }} {{ v.lastName }}</p>
+    <p class="hero-sub">Bonjour {{ v.firstName }}</p>
+    @if (teamNames().length > 0) {
+      <div class="summary">
+        @for (team of teamNames(); track team) {
+          <span class="chip">{{ team }}</span>
+        }
+        <span class="chip">{{ missions().length }} créneau(x)</span>
+      </div>
+    }
   }
 </header>
 
@@ -15,26 +23,59 @@
       rattacher depuis l'intranet.
     </div>
   } @else {
-    <h2 class="section-title">Mes missions</h2>
-    @if (missions().length === 0) {
-      <div class="notice" role="status">Aucune mission affectée pour l'instant.</div>
+    @if (nextAssignment(); as next) {
+      <section class="card next" aria-label="Prochain créneau">
+        <span class="label">Prochain créneau</span>
+        <strong>{{ shiftDayLong(next.shift.startAt) }} · {{ timeShort(next.shift.startAt) }} - {{ next.shift.mission.title }}</strong>
+        @if (next.shift.location ?? next.shift.mission.location) {
+          <span class="meta">{{ next.shift.location ?? next.shift.mission.location }}</span>
+        }
+      </section>
+    }
+
+    <h2 class="section-title">Mon planning</h2>
+
+    @if (provisionalCount() > 0) {
+      <p class="banner" role="status">
+        {{ provisionalCount() }} créneau(x) encore <b>prévisionnel(s)</b> : la
+        coordination peut encore les ajuster.
+      </p>
+    }
+
+    <nav class="days" aria-label="Jours de l'événement">
+      @for (day of days; track day) {
+        <button
+          type="button"
+          class="day-chip"
+          [class.active]="day === selectedDay()"
+          (click)="selectDay(day)"
+        >
+          {{ dayLabel(day) }}
+        </button>
+      }
+    </nav>
+
+    @if (dayAssignments().length === 0) {
+      <div class="notice" role="status">Aucun créneau ce jour-là.</div>
     } @else {
       <ul class="mission-list">
-        @for (assignment of missions(); track assignment.id) {
-          <li class="mission">
+        @for (assignment of dayAssignments(); track assignment.id) {
+          <li class="card mission">
             <div class="mission-head">
               <strong>{{ assignment.shift.mission.title }}</strong>
               <span class="badge" [class.confirmed]="assignment.status === 'CONFIRMED'">
                 {{ statusLabel(assignment.status) }}
               </span>
             </div>
-            <span class="meta">
-              {{ shiftDay(assignment.shift.startAt) }} · {{ shiftTime(assignment) }}
-            </span>
+            <span class="meta">{{ shiftTime(assignment) }}</span>
             @if (assignment.shift.location ?? assignment.shift.mission.location) {
-              <span class="meta">
-                {{ assignment.shift.location ?? assignment.shift.mission.location }}
-              </span>
+              <span class="meta">{{ assignment.shift.location ?? assignment.shift.mission.location }}</span>
+            }
+            @if (responsible(assignment); as person) {
+              <span class="meta">Responsable : {{ person }}</span>
+            }
+            @if (assignment.shift.mission.volunteerTeam; as team) {
+              <span class="teamline">{{ team.name }}</span>
             }
             @if (assignment.notes) {
               <span class="notes">{{ assignment.notes }}</span>
@@ -44,20 +85,15 @@
       </ul>
     }
 
-    <h2 class="section-title">Mon équipe</h2>
-    @if (memberships().length === 0) {
-      <div class="notice" role="status">Pas encore rattaché à une équipe.</div>
-    } @else {
-      <ul class="team-list">
-        @for (membership of memberships(); track membership.id) {
-          <li class="team">
-            <strong>{{ membership.volunteerTeam.name }}</strong>
-            @if (membership.role) {
-              <span class="meta">{{ membership.role }}</span>
-            }
-          </li>
-        }
-      </ul>
-    }
+    <nav class="links" aria-label="Sections de mon espace">
+      <a class="link-card" routerLink="/espace/equipes">
+        <strong>Mes équipes</strong>
+        <span class="meta">{{ memberships().length }} équipe(s) · équipiers et contacts</span>
+      </a>
+      <a class="link-card" routerLink="/espace/profil">
+        <strong>Mon profil</strong>
+        <span class="meta">Coordonnées, compétences, hébergement</span>
+      </a>
+    </nav>
   }
 </main>

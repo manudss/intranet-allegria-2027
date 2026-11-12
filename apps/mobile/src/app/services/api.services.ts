@@ -8,6 +8,9 @@ import {
   ProgramDay,
   ShiftAssignment,
   TeamMembership,
+  Teammate,
+  UpdateMyVolunteerPayload,
+  VolunteerHosting,
   User,
   Volunteer,
 } from '../models/models';
@@ -55,5 +58,17 @@ export class MySpaceApiService {
 
   getTeamMemberships(): Observable<TeamMembership[]> {
     return this.http.get<TeamMembership[]>(`${this.base}/team-memberships`);
+  }
+
+  getTeammates(membershipId: number): Observable<Teammate[]> {
+    return this.http.get<Teammate[]>(`${this.base}/team-memberships/${membershipId}/members`);
+  }
+
+  getHosting(): Observable<VolunteerHosting | null> {
+    return this.http.get<VolunteerHosting | null>(`${this.base}/hosting`);
+  }
+
+  updateVolunteer(payload: UpdateMyVolunteerPayload): Observable<Volunteer> {
+    return this.http.patch<Volunteer>(`${this.base}/volunteer`, payload);
   }
 }

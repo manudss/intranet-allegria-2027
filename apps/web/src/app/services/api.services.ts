@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   AssignmentPayload,
+  BenevoleAssignment,
   DashboardGlobalSummary,
   DashboardLocationRow,
   DashboardTeamSummary,
@@ -406,6 +407,23 @@ export class TeamParticipantsApiService {
   }
   remove(teamId: number, participantId: number) {
     return this.http.delete<DeleteResponse>(`/api/teams/${teamId}/participants/${participantId}`);
+  }
+}
+@Injectable({ providedIn: 'root' })
+export class TeamBenevolesApiService {
+  private readonly http = inject(HttpClient);
+  /** Toutes les affectations bénévoles → équipes (page de répartition). */
+  listAssignments(): Observable<BenevoleAssignment[]> {
+    return this.http.get<BenevoleAssignment[]>('/api/benevoles/assignments');
+  }
+  listForTeam(teamId: number): Observable<BenevoleAssignment[]> {
+    return this.http.get<BenevoleAssignment[]>(`/api/teams/${teamId}/benevoles`);
+  }
+  assign(teamId: number, volunteerId: number): Observable<BenevoleAssignment> {
+    return this.http.post<BenevoleAssignment>(`/api/teams/${teamId}/benevoles`, { volunteerId });
+  }
+  unassign(teamId: number, volunteerId: number) {
+    return this.http.delete<DeleteResponse>(`/api/teams/${teamId}/benevoles/${volunteerId}`);
   }
 }
 @Injectable({ providedIn: 'root' })

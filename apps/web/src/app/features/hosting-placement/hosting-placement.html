@@ -330,7 +330,7 @@
                   (click)="toggleMember(m)"
                 >
                   {{ memberName(m) }}
-                  <span class="tags">{{ sexLabel(m) }}@if (isMinor(m)) { · −18 }@if (m.type === 'ANIMATEUR') { · anim. }</span>
+                  <span class="tags">{{ sexLabel(m) }}@if (isMinor(m)) { · −18 }@if (m.type === 'ANIMATEUR') { · anim. }@if (m.type === 'BENEVOLE') { · bén. }</span>
                 </button>
               }
             } @empty {
@@ -387,7 +387,7 @@
                       (click)="toggleMember(m)"
                     >
                       {{ memberName(m) }}
-                      <span class="tags">{{ sexLabel(m) }}@if (isMinor(m)) { · −18 }@if (m.type === 'ANIMATEUR') { · anim. }@if (m.assignmentStatus === 'PENDING') { · à confirmer }</span>
+                      <span class="tags">{{ sexLabel(m) }}@if (isMinor(m)) { · −18 }@if (m.type === 'ANIMATEUR') { · anim. }@if (m.type === 'BENEVOLE') { · bén. }@if (m.assignmentStatus === 'PENDING') { · à confirmer }</span>
                     </button>
                   }
                   @for (m of row.ghosts; track m.participantId) {

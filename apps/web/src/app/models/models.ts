@@ -80,8 +80,10 @@ export interface Participant {
   id: number;
   firstName: string;
   lastName: string;
-  dateOfBirth: string;
-  sex: ParticipantSex;
+  /** Null pour les fiches BENEVOLE (adultes, projection d'un bénévole). */
+  dateOfBirth: string | null;
+  /** Null pour les fiches BENEVOLE. */
+  sex: ParticipantSex | null;
   mejAgeGroup: MejAgeGroup | null;
   type: PersonType;
   emergencyContactName: string | null;
@@ -220,6 +222,17 @@ export interface Team {
   maxSize: number;
   notes: string | null;
 }
+/** Affectation d'un bénévole à une équipe de rassemblement, en tant qu'adulte. */
+export interface BenevoleAssignment {
+  volunteerId: number;
+  participantId: number;
+  teamId: number;
+  teamName: string;
+  firstName: string;
+  lastName: string;
+  mission: string | null;
+}
+
 export interface TeamParticipant {
   id: number;
   team: Team;

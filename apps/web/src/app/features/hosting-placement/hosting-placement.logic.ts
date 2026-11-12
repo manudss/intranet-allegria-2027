@@ -1,7 +1,8 @@
 import { Board, BoardFamily, BoardMember, BoardTeam } from './hosting-placement.models';
 
-/** Mineur à la date de référence (même règle que l'API). */
-export function isMinorAt(dateOfBirth: string, referenceDate: string): boolean {
+/** Mineur à la date de référence (même règle que l'API). Sans naissance (BENEVOLE) : adulte. */
+export function isMinorAt(dateOfBirth: string | null, referenceDate: string): boolean {
+  if (!dateOfBirth) return false;
   const [y, m, d] = dateOfBirth.split('-').map(Number);
   const eighteenth = `${String(y + 18).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
   return eighteenth > referenceDate;
@@ -41,7 +42,8 @@ export interface FamilyLoad {
 export function familyLoad(board: Board, family: BoardFamily, referenceDate: string): FamilyLoad {
   const occupants = board.members.filter((m) => m.hostFamilyId === family.id);
   const minors = occupants.filter((m) => isMinorAt(m.dateOfBirth, referenceDate)).length;
-  const animators = occupants.filter((m) => m.type === 'ANIMATEUR').length;
+  // Adultes = animateurs ET bénévoles rattachés à l'équipe (même quota maxAnimators).
+  const animators = occupants.filter((m) => m.type !== 'JEUNE').length;
   return {
     occupants,
     used: occupants.length,

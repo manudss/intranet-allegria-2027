@@ -51,7 +51,7 @@ const TYPE_APPEARANCE: Record<PersonType, string> = {
   BENEVOLE: 'warning',
 };
 
-function calculateAge(dateOfBirth: string): number | null {
+function calculateAge(dateOfBirth: string | null): number | null {
   if (!dateOfBirth) return null;
   const today = new Date();
   const birth = new Date(dateOfBirth);
@@ -64,7 +64,7 @@ function calculateAge(dateOfBirth: string): number | null {
   return age;
 }
 
-function formatDateFull(dateStr: string): string {
+function formatDateFull(dateStr: string | null): string {
   if (!dateStr) return '—';
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return '—';
@@ -140,12 +140,12 @@ export class ParticipantsPage implements OnInit {
       key: 'sex',
       label: 'Sexe',
       type: 'list',
-      value: (x) => SEX_LABELS[x.sex],
-      filterValue: (x) => x.sex,
+      value: (x) => (x.sex ? SEX_LABELS[x.sex] : '—'),
+      filterValue: (x) => x.sex ?? '',
       hidden: true,
       presentation: {
         type: 'chip',
-        appearance: (x) => SEX_APPEARANCE[x.sex],
+        appearance: (x) => (x.sex ? SEX_APPEARANCE[x.sex] : ''),
       },
       size: 'xsmall',
     },
@@ -161,7 +161,7 @@ export class ParticipantsPage implements OnInit {
         }
         return formatted;
       },
-      filterValue: (x) => x.dateOfBirth,
+      filterValue: (x) => x.dateOfBirth ?? '',
       hidden: true,
       size: 'large',
     },

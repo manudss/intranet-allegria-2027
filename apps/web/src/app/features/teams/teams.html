@@ -50,7 +50,7 @@
             <dt>Effectif</dt>
             <dd>
               <span tuiBadge [class.over]="members().length > (selected()?.maxSize || 10)"
-                >{{ members().length }} / {{ selected()?.maxSize }}</span
+                >{{ jeunesCount() }} jeunes + {{ adultesCount() }} adultes / {{ selected()?.maxSize }}</span
               >
             </dd>
           </dl>
@@ -85,6 +85,48 @@
               </li>
             }
           </ul>
+          <h3>Bénévoles (adultes)</h3>
+          <div class="member-add">
+            <tui-textfield iconStart="@tui.user-plus" tuiChevron [stringify]="stringifyBenevole">
+              <label for="ajouter-un-benevole" tuiLabel>Ajouter un bénévole</label
+              ><select
+                tuiSelect
+                placeholder="Sélectionner…"
+                [items]="availableBenevoleIds()"
+                [formField]="benevoleCandidateForm"
+                id="ajouter-un-benevole"
+              ></select>
+            </tui-textfield>
+            <button tuiButton size="s" [disabled]="!benevoleCandidateId()" (click)="addBenevole()">
+              Ajouter
+            </button>
+          </div>
+          <ul>
+            @for (b of benevoles(); track b.volunteerId) {
+              <li>
+                <span
+                  >{{ b.lastName }} {{ b.firstName
+                  }}@if (b.mission) {
+                    <small class="muted"> · {{ b.mission }}</small>
+                  }</span
+                >
+                <button
+                  tuiButton
+                  size="xs"
+                  appearance="flat-destructive"
+                  (click)="removeBenevole(b.volunteerId)"
+                >
+                  Retirer
+                </button>
+              </li>
+            } @empty {
+              <li class="muted">Aucun bénévole rattaché.</li>
+            }
+          </ul>
+          <p class="hint">
+            Un bénévole ajouté dort avec l'équipe et compte comme un adulte dans la répartition
+            des logements.
+          </p>
         } @else {
           <form class="drawer-form">
             <tui-textfield iconStart="@tui.briefcase">

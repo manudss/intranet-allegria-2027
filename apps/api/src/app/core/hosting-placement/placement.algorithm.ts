@@ -87,7 +87,7 @@ export function freeSeats(family: PlacementFamily, rules: PlacementRules): numbe
 /** Retourne la raison du refus, ou null si la personne peut être accueillie. */
 export function refusalReason(
   family: PlacementFamily,
-  person: Pick<PlacementPerson, 'isAnimator' | 'isUnder18' | 'sex'>,
+  person: Pick<PlacementPerson, 'isAnimator' | 'isBenevole' | 'isUnder18' | 'sex'>,
   rules: PlacementRules,
 ): UnplacedReason | null {
   if (countsInCapacity(rules, person) && freeSeats(family, rules) < 1) return 'NO_CAPACITY';

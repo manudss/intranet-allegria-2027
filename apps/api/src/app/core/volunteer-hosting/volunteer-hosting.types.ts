@@ -1,21 +1,11 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { VolunteerHostingType } from '../entities';
 
 export class CreateVolunteerHostingDto {
   @ApiProperty({ example: 12 })
   volunteerId!: number;
 
-  @ApiProperty({ enum: VolunteerHostingType, example: VolunteerHostingType.HOST_FAMILY })
-  type!: VolunteerHostingType;
-
-  @ApiPropertyOptional({ example: 34, nullable: true })
-  hostFamilyId?: number | null;
-
-  @ApiPropertyOptional({ example: 'Gymnase Jean-Paul II', nullable: true })
-  locationName?: string | null;
-
-  @ApiPropertyOptional({ example: '12 rue des Tilleuls, 69003 Lyon', nullable: true })
-  address?: string | null;
+  @ApiProperty({ example: 45, description: 'Équipe (de jeunes) avec laquelle le bénévole dort' })
+  teamId!: number;
 
   @ApiPropertyOptional({ example: 'Dortoir B', nullable: true })
   room?: string | null;
@@ -31,3 +21,23 @@ export class CreateVolunteerHostingDto {
 }
 
 export class UpdateVolunteerHostingDto extends PartialType(CreateVolunteerHostingDto) {}
+
+/** Vue /me/hosting : équipe rattachée, animateurs, jeunes (prénoms seulement), hébergements. */
+export interface VolunteerLodgingView {
+  id: number;
+  room: string | null;
+  notes: string | null;
+  startAt: string | null;
+  endAt: string | null;
+  team: { id: number; name: string };
+  animators: { id: number; firstName: string; lastName: string; role: 'PRIMARY' | 'SECONDARY' }[];
+  youths: { firstName: string }[];
+  hostFamilies: {
+    id: number;
+    familyName: string;
+    address: string;
+    postalCode: string;
+    city: string;
+    phone: string | null;
+  }[];
+}

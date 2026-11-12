@@ -150,3 +150,15 @@
 .actions .btn {
   flex: 1;
 }
+.youths {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.family {
+  display: grid;
+  gap: 0.15rem;
+  border-top: 1px solid var(--tui-border-normal);
+  padding-top: 0.5rem;
+  margin-top: 0.35rem;
+}

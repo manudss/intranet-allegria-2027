@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
-import { HostFamily, Volunteer, VolunteerHostingAssignment } from '../entities';
+import { Team, Volunteer, VolunteerTeamLodging } from '../entities';
 import { VolunteerHostingController } from './volunteer-hosting.controller';
 import { VolunteerHostingService } from './volunteer-hosting.service';
 
 @Module({
-  imports: [AuthModule, TypeOrmModule.forFeature([VolunteerHostingAssignment, Volunteer, HostFamily])],
+  imports: [AuthModule, TypeOrmModule.forFeature([VolunteerTeamLodging, Volunteer, Team])],
   controllers: [VolunteerHostingController],
   providers: [VolunteerHostingService],
   exports: [VolunteerHostingService],

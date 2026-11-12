@@ -98,18 +98,26 @@
         } @else {
           @if (hosting(); as h) {
             <div class="team-head">
-              <strong>{{ h.hostFamily?.familyName ?? h.locationName ?? hostingTypeLabel(h) }}</strong>
-              <span class="badge">{{ hostingTypeLabel(h) }}</span>
+              <strong>Logé avec l'équipe {{ h.team.name }}</strong>
             </div>
-            @if (h.hostFamily) {
-              <span class="meta">{{ h.hostFamily.address }}, {{ h.hostFamily.postalCode }} {{ h.hostFamily.city }}</span>
-              @if (h.hostFamily.phone) {
-                <a class="meta contact" [href]="'tel:' + h.hostFamily.phone">{{ h.hostFamily.phone }}</a>
-              }
-            } @else {
-              @if (h.address) {
-                <span class="meta">{{ h.address }}</span>
-              }
+            @for (animator of h.animators; track animator.id) {
+              <span class="meta">{{ animatorLabel(animator) }}</span>
+            }
+            @if (h.youths.length > 0) {
+              <div class="youths" aria-label="Jeunes de l'équipe">
+                @for (youth of h.youths; track youth.firstName) {
+                  <span class="skill">{{ youth.firstName }}</span>
+                }
+              </div>
+            }
+            @for (family of h.hostFamilies; track family.id) {
+              <div class="family">
+                <strong>{{ family.familyName }}</strong>
+                <span class="meta">{{ family.address }}, {{ family.postalCode }} {{ family.city }}</span>
+                @if (family.phone) {
+                  <a class="meta contact" [href]="'tel:' + family.phone">{{ family.phone }}</a>
+                }
+              </div>
             }
             @if (h.room) {
               <span class="meta">Emplacement : {{ h.room }}</span>

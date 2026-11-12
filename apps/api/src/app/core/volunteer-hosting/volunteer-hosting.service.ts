@@ -1,130 +1,175 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { HostFamily, Volunteer, VolunteerHostingAssignment, VolunteerHostingType } from '../entities';
-import { CreateVolunteerHostingDto, UpdateVolunteerHostingDto } from './volunteer-hosting.types';
+import { AssignmentStatus, Team, Volunteer, VolunteerTeamLodging } from '../entities';
+import { CreateVolunteerHostingDto, UpdateVolunteerHostingDto, VolunteerLodgingView } from './volunteer-hosting.types';
 
 @Injectable()
 export class VolunteerHostingService {
   constructor(
-    @InjectRepository(VolunteerHostingAssignment)
-    private readonly hostingRepository: Repository<VolunteerHostingAssignment>,
+    @InjectRepository(VolunteerTeamLodging)
+    private readonly lodgingsRepository: Repository<VolunteerTeamLodging>,
     @InjectRepository(Volunteer)
     private readonly volunteersRepository: Repository<Volunteer>,
-    @InjectRepository(HostFamily)
-    private readonly hostFamiliesRepository: Repository<HostFamily>,
+    @InjectRepository(Team)
+    private readonly teamsRepository: Repository<Team>,
   ) {}
 
-  findAll(volunteerId?: number): Promise<VolunteerHostingAssignment[]> {
-    return this.hostingRepository.find({
+  findAll(volunteerId?: number): Promise<VolunteerTeamLodging[]> {
+    return this.lodgingsRepository.find({
       where: volunteerId ? { volunteerId } : {},
-      relations: { volunteer: true, hostFamily: true },
+      relations: { volunteer: true, team: true },
       order: { id: 'ASC' },
     });
   }
 
-  findByVolunteerId(volunteerId: number): Promise<VolunteerHostingAssignment | null> {
-    return this.hostingRepository.findOne({
+  /**
+   * Logement du bénévole connecté : équipe rattachée, ses animateurs,
+   * les prénoms des jeunes (minimum exposé, sans contact) et les
+   * familles d'accueil de l'équipe. Null si rien n'est saisi.
+   */
+  async findByVolunteerId(volunteerId: number): Promise<VolunteerLodgingView | null> {
+    const lodging = await this.lodgingsRepository.findOne({
       where: { volunteerId },
-      relations: { hostFamily: true },
+      relations: {
+        team: {
+          primaryAnimator: true,
+          secondaryAnimator: true,
+          members: { participant: { hostFamilyAssignments: { hostFamily: true } } },
+        },
+      },
     });
+    if (!lodging) {
+      return null;
+    }
+
+    const team = lodging.team;
+    const animators: VolunteerLodgingView['animators'] = [];
+    if (team.primaryAnimator) {
+      animators.push({
+        id: team.primaryAnimator.id,
+        firstName: team.primaryAnimator.firstName,
+        lastName: team.primaryAnimator.lastName,
+        role: 'PRIMARY',
+      });
+    }
+    if (team.secondaryAnimator) {
+      animators.push({
+        id: team.secondaryAnimator.id,
+        firstName: team.secondaryAnimator.firstName,
+        lastName: team.secondaryAnimator.lastName,
+        role: 'SECONDARY',
+      });
+    }
+
+    const youths = (team.members ?? [])
+      .map((member) => ({ firstName: member.participant.firstName }))
+      .sort((a, b) => a.firstName.localeCompare(b.firstName, 'fr'));
+
+    const families = new Map<number, VolunteerLodgingView['hostFamilies'][number]>();
+    for (const member of team.members ?? []) {
+      for (const assignment of member.participant.hostFamilyAssignments ?? []) {
+        if (assignment.status === AssignmentStatus.CANCELLED) {
+          continue;
+        }
+        const family = assignment.hostFamily;
+        families.set(family.id, {
+          id: family.id,
+          familyName: family.familyName,
+          address: family.address,
+          postalCode: family.postalCode,
+          city: family.city,
+          phone: family.phone,
+        });
+      }
+    }
+
+    return {
+      id: lodging.id,
+      room: lodging.room,
+      notes: lodging.notes,
+      startAt: lodging.startAt,
+      endAt: lodging.endAt,
+      team: { id: team.id, name: team.name },
+      animators,
+      youths,
+      hostFamilies: [...families.values()],
+    };
   }
 
-  async create(dto: CreateVolunteerHostingDto): Promise<VolunteerHostingAssignment> {
+  async create(dto: CreateVolunteerHostingDto): Promise<VolunteerTeamLodging> {
     const volunteer = await this.volunteersRepository.findOne({ where: { id: dto.volunteerId } });
     if (!volunteer) {
       throw new NotFoundException(`Bénévole ${dto.volunteerId} introuvable`);
     }
-
-    const existing = await this.findByVolunteerId(dto.volunteerId);
-    if (existing) {
-      throw new ConflictException('Ce bénévole a déjà un hébergement, utilisez la mise à jour');
+    const team = await this.teamsRepository.findOne({ where: { id: dto.teamId } });
+    if (!team) {
+      throw new NotFoundException(`Équipe ${dto.teamId} introuvable`);
     }
 
-    const hostFamily = await this.resolveHostFamily(dto.type, dto.hostFamilyId ?? null);
-    const { startAt, endAt } = this.normalizePeriod(dto.startAt ?? null, dto.endAt ?? null);
+    const existing = await this.lodgingsRepository.findOne({
+      where: { volunteerId: dto.volunteerId },
+    });
+    if (existing) {
+      throw new ConflictException('Ce bénévole a déjà un logement, utilisez la mise à jour');
+    }
 
-    const assignment = this.hostingRepository.create({
+    const { startAt, endAt } = this.normalizePeriod(dto.startAt ?? null, dto.endAt ?? null);
+    const lodging = this.lodgingsRepository.create({
       volunteer,
       volunteerId: volunteer.id,
-      type: dto.type,
-      hostFamily,
-      hostFamilyId: hostFamily?.id ?? null,
-      locationName: this.normalizeOptionalText(dto.locationName ?? null),
-      address: this.normalizeOptionalText(dto.address ?? null),
+      team,
+      teamId: team.id,
       room: this.normalizeOptionalText(dto.room ?? null),
       notes: this.normalizeOptionalText(dto.notes ?? null),
       startAt,
       endAt,
     });
 
-    return this.hostingRepository.save(assignment);
+    return this.lodgingsRepository.save(lodging);
   }
 
-  async update(id: number, dto: UpdateVolunteerHostingDto): Promise<VolunteerHostingAssignment> {
-    const assignment = await this.hostingRepository.findOne({
+  async update(id: number, dto: UpdateVolunteerHostingDto): Promise<VolunteerTeamLodging> {
+    const lodging = await this.lodgingsRepository.findOne({
       where: { id },
-      relations: { volunteer: true, hostFamily: true },
+      relations: { volunteer: true, team: true },
     });
-    if (!assignment) {
-      throw new NotFoundException(`Hébergement bénévole ${id} introuvable`);
+    if (!lodging) {
+      throw new NotFoundException(`Logement bénévole ${id} introuvable`);
     }
 
-    if (dto.type !== undefined) {
-      assignment.type = dto.type;
-    }
-    if (dto.hostFamilyId !== undefined || dto.type !== undefined) {
-      const hostFamily = await this.resolveHostFamily(assignment.type, dto.hostFamilyId ?? assignment.hostFamilyId);
-      assignment.hostFamily = hostFamily;
-      assignment.hostFamilyId = hostFamily?.id ?? null;
-    }
-    if (dto.locationName !== undefined) {
-      assignment.locationName = this.normalizeOptionalText(dto.locationName);
-    }
-    if (dto.address !== undefined) {
-      assignment.address = this.normalizeOptionalText(dto.address);
+    if (dto.teamId !== undefined) {
+      const team = await this.teamsRepository.findOne({ where: { id: dto.teamId } });
+      if (!team) {
+        throw new NotFoundException(`Équipe ${dto.teamId} introuvable`);
+      }
+      lodging.team = team;
+      lodging.teamId = team.id;
     }
     if (dto.room !== undefined) {
-      assignment.room = this.normalizeOptionalText(dto.room);
+      lodging.room = this.normalizeOptionalText(dto.room);
     }
     if (dto.notes !== undefined) {
-      assignment.notes = this.normalizeOptionalText(dto.notes);
+      lodging.notes = this.normalizeOptionalText(dto.notes);
     }
     if (dto.startAt !== undefined || dto.endAt !== undefined) {
       const { startAt, endAt } = this.normalizePeriod(
-        dto.startAt !== undefined ? dto.startAt : assignment.startAt,
-        dto.endAt !== undefined ? dto.endAt : assignment.endAt,
+        dto.startAt !== undefined ? dto.startAt : lodging.startAt,
+        dto.endAt !== undefined ? dto.endAt : lodging.endAt,
       );
-      assignment.startAt = startAt;
-      assignment.endAt = endAt;
+      lodging.startAt = startAt;
+      lodging.endAt = endAt;
     }
 
-    return this.hostingRepository.save(assignment);
+    return this.lodgingsRepository.save(lodging);
   }
 
   async remove(id: number): Promise<void> {
-    const assignment = await this.hostingRepository.findOne({ where: { id } });
-    if (!assignment) {
-      throw new NotFoundException(`Hébergement bénévole ${id} introuvable`);
+    const lodging = await this.lodgingsRepository.findOne({ where: { id } });
+    if (!lodging) {
+      throw new NotFoundException(`Logement bénévole ${id} introuvable`);
     }
-    await this.hostingRepository.remove(assignment);
-  }
-
-  private async resolveHostFamily(
-    type: VolunteerHostingType,
-    hostFamilyId: number | null,
-  ): Promise<HostFamily | null> {
-    if (type !== VolunteerHostingType.HOST_FAMILY) {
-      return null;
-    }
-    if (hostFamilyId === null) {
-      throw new BadRequestException('Une famille d accueil est requise pour ce type d hébergement');
-    }
-    const hostFamily = await this.hostFamiliesRepository.findOne({ where: { id: hostFamilyId } });
-    if (!hostFamily) {
-      throw new NotFoundException(`Famille d accueil ${hostFamilyId} introuvable`);
-    }
-    return hostFamily;
+    await this.lodgingsRepository.remove(lodging);
   }
 
   private normalizePeriod(

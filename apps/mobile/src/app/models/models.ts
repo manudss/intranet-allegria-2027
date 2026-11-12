@@ -144,24 +144,25 @@ export interface Teammate {
   };
 }
 
-export type VolunteerHostingType = 'HOST_FAMILY' | 'ON_SITE' | 'OTHER';
-
+/**
+ * Logement du bénévole : rattaché à une équipe de jeunes existante,
+ * il dort avec eux. Les jeunes sont exposés au minimum (prénom uniquement).
+ */
 export interface VolunteerHosting {
   id: number;
-  type: VolunteerHostingType;
-  locationName: string | null;
-  address: string | null;
   room: string | null;
   notes: string | null;
   startAt: string | null;
   endAt: string | null;
-  hostFamily: {
+  team: { id: number; name: string };
+  animators: { id: number; firstName: string; lastName: string; role: 'PRIMARY' | 'SECONDARY' }[];
+  youths: { firstName: string }[];
+  hostFamilies: {
     id: number;
     familyName: string;
     address: string;
     postalCode: string;
     city: string;
     phone: string | null;
-    email: string | null;
-  } | null;
+  }[];
 }

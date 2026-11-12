@@ -22,22 +22,23 @@ const volunteer: Volunteer = {
 
 const hosting: VolunteerHosting = {
   id: 5,
-  type: 'HOST_FAMILY',
-  locationName: null,
-  address: null,
-  room: null,
-  notes: null,
+  room: 'Dortoir B',
+  notes: 'Arrivée possible dès le jeudi soir.',
   startAt: '2027-10-31',
   endAt: '2027-11-03',
-  hostFamily: {
-    id: 34,
-    familyName: 'Famille Bernard',
-    address: '12 rue des Tilleuls',
-    postalCode: '69003',
-    city: 'Lyon',
-    phone: '+33472727272',
-    email: null,
-  },
+  team: { id: 45, name: 'Équipe des Lynx' },
+  animators: [{ id: 20, firstName: 'Sarah', lastName: 'Nguyen', role: 'PRIMARY' }],
+  youths: [{ firstName: 'Adam' }, { firstName: 'Léa' }, { firstName: 'Zoé' }],
+  hostFamilies: [
+    {
+      id: 34,
+      familyName: 'Famille Bernard',
+      address: '12 rue des Tilleuls',
+      postalCode: '69003',
+      city: 'Lyon',
+      phone: '+33472727272',
+    },
+  ],
 };
 
 const setup = async (api: Partial<MySpaceApiService>) => {
@@ -57,7 +58,7 @@ const setup = async (api: Partial<MySpaceApiService>) => {
 };
 
 describe('MyProfileComponent', () => {
-  it('affiche coordonnées, compétences et hébergement en famille', async () => {
+  it('affiche coordonnées, compétences et hébergement avec l équipe', async () => {
     const fixture = await setup({
       getVolunteer: () => of(volunteer),
       getHosting: () => of(hosting),
@@ -67,9 +68,13 @@ describe('MyProfileComponent', () => {
     expect(el.textContent).toContain('ben@example.com');
     expect(el.textContent).toContain('+33612345678');
     expect(el.textContent).toContain('disponible');
+    expect(el.textContent).toContain("Logé avec l'équipe Équipe des Lynx");
+    expect(el.textContent).toContain('Sarah Nguyen (animateur référent)');
+    expect(el.textContent).toContain('Adam');
+    expect(el.textContent).toContain('Zoé');
     expect(el.textContent).toContain('Famille Bernard');
-    expect(el.textContent).toContain("En famille d'accueil");
     expect(el.textContent).toContain('12 rue des Tilleuls, 69003 Lyon');
+    expect(el.textContent).toContain('Dortoir B');
     expect(el.querySelector('a[href="tel:+33472727272"]')).toBeTruthy();
   });
 

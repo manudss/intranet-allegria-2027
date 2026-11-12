@@ -21,12 +21,6 @@ const SKILL_LABELS: Record<string, string> = {
   OTHER: 'Autre',
 };
 
-const HOSTING_TYPE_LABELS: Record<string, string> = {
-  HOST_FAMILY: "En famille d'accueil",
-  ON_SITE: 'Sur place',
-  OTHER: 'Autre hébergement',
-};
-
 const formatDate = (iso: string): string =>
   new Date(`${iso}T12:00:00`).toLocaleDateString('fr-FR', {
     day: 'numeric',
@@ -80,8 +74,9 @@ export class MyProfileComponent {
     return SKILL_LABELS[skill] ?? skill;
   }
 
-  hostingTypeLabel(hosting: VolunteerHosting): string {
-    return HOSTING_TYPE_LABELS[hosting.type] ?? hosting.type;
+  animatorLabel(animator: { firstName: string; lastName: string; role: string }): string {
+    const suffix = animator.role === 'PRIMARY' ? 'animateur référent' : 'animateur';
+    return `${animator.firstName} ${animator.lastName} (${suffix})`;
   }
 
   hostingPeriod(hosting: VolunteerHosting): string | null {

@@ -37,11 +37,10 @@ export interface ScannerGrant {
 export interface AccessAuditEntry {
   id: number;
   action: string;
-  userId: string | null;
-  badgeId: number | null;
-  participantId: number | null;
-  pointId: string | null;
-  detail: Record<string, unknown> | null;
+  userId: number | null;
+  entityType: string;
+  entityId: number | null;
+  details: Record<string, unknown> | null;
   createdAt: string;
 }
 
@@ -158,6 +157,10 @@ export class AccessControlApiService {
 
   listPoints(): Observable<ScanPointItem[]> {
     return this.http.get<ScanPointItem[]>(`${this.base}/config/points`);
+  }
+
+  updatePoint(id: number, dto: { active: boolean }): Observable<unknown> {
+    return this.http.patch(`${this.base}/config/points/${id}`, dto);
   }
 
   createPoint(dto: { zoneId: number; scanTypeId: number; name: string; serviceKey?: string }): Observable<unknown> {

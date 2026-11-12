@@ -20,6 +20,13 @@ const STATUS_LABELS: Record<AccessBadgeStatus, string> = {
         <span class="total">{{ total() }} badge(s)</span>
       </header>
 
+      @if (revokeTarget(); as b) {
+        <section class="panel" role="dialog" aria-modal="true" aria-label="Révoquer le badge">
+          <h2>Révoquer {{ b.code }}</h2>
+          <label>Motif<input type="text" [(ngModel)]="revokeReason" /></label>
+          <div class="row"><button tuiButton type="button" [disabled]="!revokeReason.trim()" (click)="confirmRevoke()">Confirmer la révocation</button><button tuiButton appearance="secondary" type="button" (click)="revokeTarget.set(null)">Annuler</button></div>
+        </section>
+      }
       <section class="panel">
         <h2>Enregistrer un lot</h2>
         <p class="hint">Un code par ligne (code opaque, sans nom). Le stock seul ne suffit pas : chaque badge doit ensuite être attribué.</p>
@@ -97,6 +104,9 @@ export class BadgesStockPage implements OnInit {
   readonly saving = signal(false);
   readonly stockMsg = signal<string | null>(null);
 
+  readonly revokeTarget = signal<AccessBadge | null>(null);
+  revokeReason = '';
+
   stockCodes = '';
   stockLot = '';
   statusFilter: AccessBadgeStatus | '' = '';
@@ -146,9 +156,10 @@ export class BadgesStockPage implements OnInit {
     });
   }
 
-  revoke(b: AccessBadge): void {
-    const reason = window.prompt(`Motif de révocation du badge ${b.code} :`);
-    if (!reason) return;
-    this.api.revokeBadge(b.id, reason).subscribe({ next: () => this.reload() });
+  revoke(b: AccessBadge): void { this.revokeReason = ''; this.revokeTarget.set(b); }
+  confirmRevoke(): void {
+    const b = this.revokeTarget();
+    if (!b || !this.revokeReason.trim()) return;
+    this.api.revokeBadge(b.id, this.revokeReason.trim()).subscribe({ next: () => { this.revokeTarget.set(null); this.reload(); } });
   }
 }

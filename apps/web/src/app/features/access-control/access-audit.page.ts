@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { AccessAuditEntry, AccessControlApiService } from './access-control-api.service';
 
-const ACTIONS = ['BADGE_STOCK_REGISTERED', 'BADGE_ASSIGNED', 'BADGE_REPLACED', 'BADGE_REVOKED', 'SCAN_UPLOADED', 'SCANNER_GRANTED', 'SCANNER_REVOKED', 'CONFIG_UPDATED'];
+export const ACCESS_AUDIT_ACTIONS = ['BADGE_STOCK_ADDED', 'BADGE_ASSIGNED', 'BADGE_REPLACED', 'BADGE_REVOKED', 'SCANNER_GRANTED', 'SCANNER_REVOKED', 'SCAN_SESSION_STARTED', 'SCAN_SESSION_CLOSED', 'UNKNOWN_CODE_LOOKUP', 'LOOKUP_RATE_LIMITED', 'CONFIG_CHANGED'];
 
 @Component({
   selector: 'app-access-audit',
@@ -13,24 +13,24 @@ const ACTIONS = ['BADGE_STOCK_REGISTERED', 'BADGE_ASSIGNED', 'BADGE_REPLACED', '
       <header class="head"><h1>Journal du contrôle d'accès</h1></header>
       <section class="panel">
         <div class="filters">
-          <select [(ngModel)]="action" (ngModelChange)="reload()">
+          <select [(ngModel)]="action" (ngModelChange)="filterChanged()">
             <option value="">Toutes actions</option>
             @for (a of actions; track a) { <option [value]="a">{{ a }}</option> }
           </select>
-          <input type="text" [(ngModel)]="userId" (ngModelChange)="reload()" placeholder="ID utilisateur" />
+          <input type="text" [(ngModel)]="userId" (ngModelChange)="filterChanged()" placeholder="ID utilisateur" />
         </div>
         @if (loading()) { <tui-loader size="l" /> }
         <table class="tbl">
-          <thead><tr><th>Date</th><th>Action</th><th>Utilisateur</th><th>Badge</th><th>Personne</th><th>Détail</th></tr></thead>
+          <thead><tr><th>Date</th><th>Action</th><th>Utilisateur</th><th>Objet</th><th>Identifiant</th><th>Détail</th></tr></thead>
           <tbody>
             @for (e of items(); track e.id) {
               <tr>
                 <td>{{ e.createdAt | date: 'dd/MM HH:mm:ss' }}</td>
                 <td><code>{{ e.action }}</code></td>
                 <td>{{ e.userId ?? '—' }}</td>
-                <td>{{ e.badgeId ?? '—' }}</td>
-                <td>{{ e.participantId ?? '—' }}</td>
-                <td class="detail">{{ e.detail ? (e.detail | json) : '—' }}</td>
+                <td>{{ e.entityType }}</td>
+                <td>{{ e.entityId ?? '—' }}</td>
+                <td class="detail">{{ e.details ? (e.details | json) : '—' }}</td>
               </tr>
             }
           </tbody>
@@ -54,14 +54,14 @@ const ACTIONS = ['BADGE_STOCK_REGISTERED', 'BADGE_ASSIGNED', 'BADGE_REPLACED', '
     .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid #eceef2; }
     .tbl td { padding: 8px; border-bottom: 1px solid #f4f5f7; vertical-align: top; }
     code { font-family: ui-monospace, monospace; font-size: 11px; }
-    .detail { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, monospace; font-size: 11px; }
+    .detail { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: normal; overflow-wrap: anywhere; font-family: ui-monospace, monospace; font-size: 11px; }
     .pager { display: flex; align-items: center; gap: 10px; justify-content: flex-end; font-size: 13px; color: var(--tui-text-secondary); }
     .hint { font-size: 13px; color: var(--tui-text-secondary); margin: 0; }
   `],
 })
 export class AccessAuditPage implements OnInit {
   private readonly api = inject(AccessControlApiService);
-  readonly actions = ACTIONS;
+  readonly actions = ACCESS_AUDIT_ACTIONS;
   readonly limit = 50;
 
   readonly items = signal<AccessAuditEntry[]>([]);
@@ -75,6 +75,8 @@ export class AccessAuditPage implements OnInit {
   ngOnInit(): void {
     this.reload();
   }
+
+  filterChanged(): void { this.offset.set(0); this.reload(); }
 
   reload(): void {
     this.loading.set(true);

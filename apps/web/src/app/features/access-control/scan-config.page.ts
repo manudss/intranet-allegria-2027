@@ -48,7 +48,7 @@ const DUPLICATE_RULES: { value: DuplicateRule; label: string }[] = [
           <tbody>
             @for (z of zones(); track z.id) {
               <tr>
-                <td>{{ z.name }}</td>
+                <td><button type="button" tuiButton appearance="flat" size="s" (click)="editZone(z)">{{ z.name }}</button></td>
                 <td>{{ z.allowedPersonTypes?.join(', ') ?? 'Tous' }}</td>
                 <td>{{ z.requiresOnlineValidation ? 'Oui' : 'Non' }}</td>
                 <td>{{ z.maxOfflineMinutes }} min</td>
@@ -63,8 +63,8 @@ const DUPLICATE_RULES: { value: DuplicateRule; label: string }[] = [
               <label class="chk"><input type="checkbox" [checked]="zoneTypes.has(t)" (change)="toggleType(t)" /> {{ t }}</label>
             }
           </span>
-          <input type="number" [(ngModel)]="zoneMaxOffline" placeholder="Hors-ligne max (min)" />
-          <button tuiButton size="s" type="button" (click)="addZone()" [disabled]="!zoneName.trim()">Ajouter</button>
+          <label class="chk"><input type="checkbox" [(ngModel)]="zoneOnline" /> Validation en ligne</label><input type="number" min="0" max="720" [(ngModel)]="zoneMaxOffline" placeholder="Hors-ligne max (min)" />
+          <button tuiButton size="s" type="button" (click)="addZone()" [disabled]="!zoneName.trim()">{{ editingZoneId ? 'Enregistrer' : 'Ajouter' }}</button>
         </div>
       </section>
 
@@ -76,10 +76,10 @@ const DUPLICATE_RULES: { value: DuplicateRule; label: string }[] = [
             @for (p of points(); track p.id) {
               <tr>
                 <td>{{ p.name }}</td>
-                <td>{{ p.zone?.name ?? p.zoneId }}</td>
-                <td>{{ p.scanType?.label ?? p.scanTypeId }}</td>
+                <td>{{ zoneLabel(p.zoneId) }}</td>
+                <td>{{ typeLabel(p.scanTypeId) }}</td>
                 <td>{{ p.serviceKey ?? '—' }}</td>
-                <td>{{ p.active ? 'Oui' : 'Non' }}</td>
+                <td><button type="button" tuiButton appearance="secondary" size="s" (click)="togglePoint(p)">{{ p.active ? 'Désactiver' : 'Activer' }}</button></td>
               </tr>
             }
           </tbody>
@@ -108,6 +108,7 @@ const DUPLICATE_RULES: { value: DuplicateRule; label: string }[] = [
     input, select { border: 1px solid #d7dbe3; border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
     .grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: center; }
     .grid5 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 8px; align-items: center; }
+    @media(max-width: 900px) { .grid4, .grid5 { grid-template-columns: 1fr 1fr; } }
     .chk { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; margin-right: 10px; }
     .ok-msg { color: #1a9e4b; font-size: 13px; margin: 0; }
   `],
@@ -123,12 +124,16 @@ export class ScanConfigPage implements OnInit {
   readonly msg = signal<string | null>(null);
 
   stCode = ''; stLabel = ''; stRule: DuplicateRule = 'ALLOW';
+  editingZoneId: number | null = null; zoneOnline = false;
   zoneName = ''; zoneTypes = new Set<string>(); zoneMaxOffline: number | null = 240;
   ptName = ''; ptZoneId: number | null = null; ptScanTypeId: number | null = null; ptServiceKey = '';
 
   ngOnInit(): void {
     this.reload();
   }
+
+  zoneLabel(id: number): string { return this.zones().find(z => z.id === id)?.name ?? String(id); }
+  typeLabel(id: number): string { return this.scanTypes().find(t => t.id === id)?.label ?? String(id); }
 
   ruleLabel(r: DuplicateRule): string {
     return DUPLICATE_RULES.find((x) => x.value === r)?.label ?? r;
@@ -153,16 +158,24 @@ export class ScanConfigPage implements OnInit {
   }
 
   addZone(): void {
-    this.api
-      .createZone({
+    const payload = {
         name: this.zoneName.trim(),
         allowedPersonTypes: this.zoneTypes.size > 0 ? [...this.zoneTypes] : undefined,
         maxOfflineMinutes: this.zoneMaxOffline ?? undefined,
-      })
-      .subscribe({
-        next: () => { this.zoneName = ''; this.zoneTypes = new Set(); this.flash('Zone ajoutée.'); this.reload(); },
+        requiresOnlineValidation: this.zoneOnline,
+      };
+    (this.editingZoneId ? this.api.updateZone(this.editingZoneId, payload) : this.api.createZone(payload)).subscribe({
+        next: () => { this.editingZoneId = null; this.zoneOnline = false; this.zoneName = ''; this.zoneTypes = new Set(); this.flash('Zone ajoutée.'); this.reload(); },
         error: (e) => this.flash(e?.error?.message ?? 'Échec.'),
       });
+  }
+
+  editZone(z: ZoneItem): void {
+    this.editingZoneId = z.id; this.zoneName = z.name; this.zoneTypes = new Set(z.allowedPersonTypes ?? []);
+    this.zoneMaxOffline = z.maxOfflineMinutes ?? 240; this.zoneOnline = z.requiresOnlineValidation ?? false;
+  }
+  togglePoint(p: ScanPointItem): void {
+    this.api.updatePoint(p.id, { active: !p.active }).subscribe({ next: () => this.reload(), error: () => this.flash('Échec de mise à jour.') });
   }
 
   addPoint(): void {

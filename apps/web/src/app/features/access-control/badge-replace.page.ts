@@ -91,6 +91,8 @@ export class BadgeReplacePage {
   readonly error = signal<string | null>(null);
   readonly done = signal<string | null>(null);
 
+  private operationId: string | null = null;
+
   query = '';
   newCode = '';
 
@@ -122,6 +124,7 @@ export class BadgeReplacePage {
     this.error.set(null);
     this.api.participantHistory(p.id).subscribe({
       next: (history) => {
+        this.operationId = null;
         this.person.set(p);
         this.results.set([]);
         this.history.set(history);
@@ -133,10 +136,10 @@ export class BadgeReplacePage {
 
   confirm(): void {
     const p = this.person();
-    if (!p) return;
+    if (!p || this.saving()) return;
     this.saving.set(true);
     this.error.set(null);
-    const opId = crypto.randomUUID();
+    const opId = this.operationId ??= crypto.randomUUID();
     const call = this.activeBadge()
       ? this.api.replace(p.id, this.newCode.trim(), opId)
       : this.api.assign(p.id, this.newCode.trim(), opId);
@@ -158,6 +161,7 @@ export class BadgeReplacePage {
   }
 
   reset(): void {
+    this.operationId = null;
     this.person.set(null);
     this.history.set([]);
     this.activeBadge.set(null);

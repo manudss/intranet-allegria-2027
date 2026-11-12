@@ -1,3 +1,4 @@
+import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { AccessControlApiService, ScannerGrant, ZoneItem } from './access-control-api.service';
@@ -13,7 +14,7 @@ import { AccessControlApiService, ScannerGrant, ZoneItem } from './access-contro
         <h2>Nouvelle habilitation</h2>
         <p class="hint">Donne le droit de scanner à un utilisateur, pour une zone précise ou toutes les zones, avec une fin de validité.</p>
         <div class="grid">
-          <input type="number" [(ngModel)]="userId" placeholder="ID utilisateur" />
+          <select [(ngModel)]="userId"><option [ngValue]="null">Choisir un utilisateur</option>@for (u of users(); track u.id) { <option [ngValue]="u.id">{{ u.firstName }} {{ u.lastName }} ({{ u.email }})</option> }</select>
           <select [(ngModel)]="zoneId">
             <option [ngValue]="null">Toutes les zones</option>
             @for (z of zones(); track z.id) { <option [ngValue]="z.id">{{ z.name }}</option> }
@@ -52,7 +53,9 @@ import { AccessControlApiService, ScannerGrant, ZoneItem } from './access-contro
     .panel { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 10px; }
     .panel h2 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--tui-text-secondary); }
     .hint { font-size: 13px; color: var(--tui-text-secondary); margin: 0; }
-    .grid { display: grid; grid-template-columns: 1fr 1.2fr 1fr 1fr auto; gap: 8px; }
+    .grid { display: grid; grid-template-columns: minmax(180px,1fr) minmax(180px,1fr); gap: 8px; }
+    .grid button { justify-self: start; min-width: 100px; }
+    @media(max-width: 700px) { .grid { grid-template-columns: 1fr; } }
     input, select { border: 1px solid #d7dbe3; border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
     .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
     .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid #eceef2; }
@@ -66,6 +69,8 @@ import { AccessControlApiService, ScannerGrant, ZoneItem } from './access-contro
 export class ScannerGrantsPage implements OnInit {
   private readonly api = inject(AccessControlApiService);
 
+  private readonly http = inject(HttpClient);
+  readonly users = signal<{id:number; firstName:string; lastName:string; email:string}[]>([]);
   readonly items = signal<ScannerGrant[]>([]);
   readonly zones = signal<ZoneItem[]>([]);
   readonly loading = signal(true);
@@ -78,6 +83,7 @@ export class ScannerGrantsPage implements OnInit {
 
   ngOnInit(): void {
     this.reload();
+    this.http.get<{id:number; firstName:string; lastName:string; email:string}[]>('/api/users').subscribe({next: u => this.users.set(u), error: () => this.msg.set('Chargement utilisateurs impossible.')});
     this.api.listZones().subscribe({ next: (z) => this.zones.set(z), error: () => undefined });
   }
 

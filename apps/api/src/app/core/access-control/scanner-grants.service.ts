@@ -20,6 +20,7 @@ export class ScannerGrantsService {
   list() {
     return this.grantsRepository.find({
       relations: { user: true, zone: true },
+      select: { id: true, userId: true, zoneId: true, startsAt: true, endsAt: true, createdByUserId: true, user: { id: true, email: true }, zone: { id: true, name: true } },
       order: { id: 'DESC' },
     });
   }

@@ -1,4 +1,10 @@
 <div class="shell">
+  @if (notice(); as n) {
+    <div class="notice" [class.error]="n.kind === 'error'" role="alert">
+      <span><strong>{{ n.label }}</strong> — {{ n.text }}</span>
+      <button type="button" aria-label="Fermer" (click)="dismissNotice()">×</button>
+    </div>
+  }
   <main class="shell-content">
     <router-outlet />
   </main>
@@ -16,14 +22,16 @@
       </svg>
       Accueil
     </a>
-    <a routerLink="/espace" routerLinkActive="active" class="tab">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="8" r="4" />
-        <path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" />
-      </svg>
-      Mon espace
-    </a>
+    @if (canAccessSpace()) {
+      <a routerLink="/espace" routerLinkActive="active" class="tab">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" />
+        </svg>
+        Mon espace
+      </a>
+    }
     <a routerLink="/programme" routerLinkActive="active" class="tab">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

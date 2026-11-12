@@ -2,16 +2,11 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TuiLoader } from '@taiga-ui/core';
 import { catchError, of } from 'rxjs';
-import { AuthService } from '../../core/auth.service';
+import { AuthService, MY_SPACE_ROLES } from '../../core/auth.service';
 import { ProgramApiService } from '../../services/api.services';
 import { ProgramDay, ProgramSequence } from '../../models/models';
 import { dayLabel, defaultDay } from '../../core/event-dates';
 
-/**
- * Rôles ouvrant l'accès à « Mon espace » : miroir de READ_ROLES dans
- * apps/api/src/app/core/my-space/my-space.controller.ts (sinon 403 côté API).
- */
-export const MY_SPACE_ROLES = ['ADMIN', 'COORDINATOR', 'HEALTH', 'VOLUNTEERS', 'LOGISTICS', 'VIEWER'];
 
 @Component({
   selector: 'app-home',

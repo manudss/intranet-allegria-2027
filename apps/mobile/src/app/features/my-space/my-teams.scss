@@ -1,0 +1,132 @@
+.hero {
+  background: var(--allegria-primary);
+  color: var(--allegria-on-primary);
+  padding: 1.25rem 1.25rem 1.75rem;
+  border-radius: 0 0 1.5rem 1.5rem;
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--allegria-on-primary);
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  opacity: 0.9;
+}
+.back svg {
+  width: 1rem;
+  height: 1rem;
+}
+.hero h1 {
+  margin: 0.5rem 0 0;
+  font-size: 1.5rem;
+}
+.hero-sub {
+  margin: 0.25rem 0 0;
+  opacity: 0.9;
+}
+.content {
+  padding: 1.25rem;
+  display: grid;
+  gap: 1rem;
+}
+.center {
+  display: grid;
+  place-items: center;
+  padding: 2rem 0;
+}
+.notice {
+  background: #fff;
+  border: 1px solid var(--tui-border-normal);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  color: var(--allegria-muted);
+}
+.card {
+  background: #fff;
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+.team-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.badge {
+  flex: none;
+  background: var(--allegria-secondary);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.6rem;
+}
+.meta {
+  color: var(--allegria-muted);
+  font-size: 0.85rem;
+}
+.description {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--allegria-muted);
+}
+.mates-title {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--allegria-muted);
+}
+.mates {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.mate {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--tui-border-normal);
+}
+.avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--tui-background-neutral-1);
+  color: var(--allegria-primary);
+  font-size: 0.7rem;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.mate-info {
+  display: grid;
+  flex: 1;
+}
+.mate-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.mate-role {
+  font-size: 0.75rem;
+  color: var(--allegria-muted);
+}
+.mate-contact {
+  display: flex;
+  gap: 0.6rem;
+}
+.mate-contact a {
+  color: var(--allegria-primary);
+  display: grid;
+  place-items: center;
+}
+.mate-contact svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}

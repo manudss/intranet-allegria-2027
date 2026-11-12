@@ -19,12 +19,13 @@ INSERT INTO access_scan_events VALUES
 (6,44,2,2,NULL,'2027-07-31 10:00Z','2027-07-31 10:00Z','ACCEPTED',false),
 (7,42,3,3,'lunch','2027-07-31 12:00Z','2027-07-31 12:00Z','ACCEPTED',false),
 (8,42,3,3,'lunch','2027-07-31 12:01Z','2027-07-31 12:01Z','DUPLICATE',false),
-(9,42,3,3,'lunch','2027-07-31 12:02Z','2027-07-31 15:00Z','REJECTED_EXPIRED_ASSIGNMENT',true);
+(9,42,3,3,'lunch','2027-07-31 12:02Z','2027-07-31 15:00Z','REJECTED_EXPIRED_ASSIGNMENT',true),
+(10,43,3,3,'lunch','2027-07-31 12:03Z','2027-07-31 15:00Z','ACCEPTED',true);
 `);
 const queries=[ACCESS_REPORT_SQL.counts,ACCESS_REPORT_SQL.presence,ACCESS_REPORT_SQL.metadata,ACCESS_REPORT_SQL.reviews];
-const counts=(await db.query(queries[0],['2027-07-31T00:00:00Z','2027-08-01T00:00:00Z',null])).rows;const meal=counts.find(r=>r.scanTypeId===3);assert.equal(meal.accepted,1);assert.equal(meal.duplicates,1);assert.equal(meal.rejected,1);
+const counts=(await db.query(queries[0],['2027-07-31T00:00:00Z','2027-08-01T00:00:00Z',null])).rows;const meal=counts.find(r=>r.scanTypeId===3);assert.equal(meal.accepted,1);assert.equal(meal.duplicates,1);assert.equal(meal.rejected,1);assert.equal(meal.uncertain,1);
 const presence=(await db.query(queries[1],['2027-08-01T00:00:00Z',null,1,2])).rows;assert.deepEqual(presence.map(r=>r.participantId).sort(),[42,43]);
-let meta=(await db.query(queries[2],[null])).rows[0];assert.equal(meta.pendingReviews,2);
-const review=(await db.query(queries[3],[null,50,0])).rows;assert.equal(review.length,2);assert.equal(review[0].firstName,'Ada');assert.ok(!('code' in review[0]));
-await db.exec('INSERT INTO access_scan_reviews VALUES(9)');meta=(await db.query(queries[2],[null])).rows[0];assert.equal(meta.pendingReviews,1);
+let meta=(await db.query(queries[2],[null])).rows[0];assert.equal(meta.pendingReviews,3);
+const review=(await db.query(queries[3],[null,50,0])).rows;assert.equal(review.length,3);assert.equal(review[0].firstName,'Louis');assert.ok(!('code' in review[0]));
+await db.exec('INSERT INTO access_scan_reviews VALUES(9)');meta=(await db.query(queries[2],[null])).rows[0];assert.equal(meta.pendingReviews,2);
 await db.close();}, 20000); });

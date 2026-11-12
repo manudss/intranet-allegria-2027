@@ -8,7 +8,8 @@ import { AccessReportQuery, ReviewListQuery } from './access-reporting.types';
 export const ACCESS_REPORT_SQL = {
   counts: `SELECT p.zone_id AS "zoneId", z.name AS "zoneName",
         e.scan_type_id AS "scanTypeId", t.label AS "scanTypeLabel", e.service_key AS "serviceKey",
-        count(*) FILTER (WHERE e.verdict = 'ACCEPTED')::int AS accepted,
+        count(*) FILTER (WHERE e.verdict = 'ACCEPTED' AND NOT e.needs_review)::int AS accepted,
+        count(*) FILTER (WHERE e.verdict = 'ACCEPTED' AND e.needs_review)::int AS uncertain,
         count(*) FILTER (WHERE e.verdict = 'DUPLICATE')::int AS duplicates,
         count(*) FILTER (WHERE e.verdict NOT IN ('ACCEPTED','DUPLICATE'))::int AS rejected
         FROM access_scan_events e JOIN access_scan_points p ON p.id=e.point_id

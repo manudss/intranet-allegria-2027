@@ -142,3 +142,19 @@ describe('ScanSessionsService', () => {
     expect(result.revokedAssignmentIds).toEqual([5]);
   });
 });
+
+describe('late collection and closure', () => {
+  it('allows owner to collect/close an expired session without renewing read access', async () => {
+    const { service, repos } = makeService();
+    const expired = { id: 11, userId: 1, expiresAt: new Date(0), closedAt: null };
+    repos.sessions.findOneBy.mockResolvedValue(expired);
+    await expect(service.findOwnedSession(11, 1)).resolves.toBe(expired);
+    await expect(service.getOrRenewKey(11, 1)).rejects.toBeInstanceOf(GoneException);
+    await expect(service.close(11, 1)).resolves.toMatchObject({ closed: true });
+  });
+  it('does not allow another user to collect an expired session', async () => {
+    const { service, repos } = makeService();
+    repos.sessions.findOneBy.mockResolvedValue({ id: 11, userId: 1, expiresAt: new Date(0) });
+    await expect(service.findOwnedSession(11, 2)).rejects.toThrow();
+  });
+});

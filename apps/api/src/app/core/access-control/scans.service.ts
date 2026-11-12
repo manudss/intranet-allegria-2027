@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   HttpException,
   HttpStatus,
   Injectable,
@@ -130,7 +131,7 @@ export class ScansService {
           relations: { participant: true },
         });
 
-    if (!assignment) {
+    if (!assignment || assignment.badgeId !== badge.id) {
       return {
         verdict:
           badge.status === AccessBadgeStatus.LOST || badge.status === AccessBadgeStatus.REVOKED
@@ -165,7 +166,7 @@ export class ScansService {
 
   /** Envoi par lots, idempotent : un clientEventId = un seul événement. */
   async upload(sessionId: number, userId: number, dto: UploadScansDto): Promise<ScanVerdictResult[]> {
-    const session = await this.sessionsService.findOpenSession(sessionId, userId);
+    const session = await this.sessionsService.findOwnedSession(sessionId, userId);
     const results: ScanVerdictResult[] = [];
 
     for (const scan of dto.scans ?? []) {
@@ -181,7 +182,11 @@ export class ScansService {
       }
 
       const context = await this.loadPointContext(scan.pointId);
+      if (session.zoneId != null && session.zoneId !== context.point.zoneId) {
+        throw new ForbiddenException('Point hors de la zone de session');
+      }
       const occurredAt = scan.occurredAtLocal ? new Date(scan.occurredAtLocal) : new Date();
+      if (Number.isNaN(occurredAt.getTime())) throw new BadRequestException('Horodatage invalide');
       const decision = await this.decide(
         context,
         scan.code,
@@ -205,7 +210,9 @@ export class ScansService {
             verdict: decision.verdict,
             serviceKey: this.serviceKeyOf(context, scan),
             clientEventId: scan.clientEventId,
-            needsReview: decision.needsReview,
+            needsReview: decision.needsReview || session.expiresAt <= new Date() || !!session.closedAt
+              || occurredAt < session.startedAt || occurredAt > session.expiresAt,
+
           }),
         );
         results.push({

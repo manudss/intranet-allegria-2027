@@ -194,7 +194,8 @@ export class ScanSessionsService {
   }
 
   async close(sessionId: number, userId: number) {
-    const session = await this.requireOpenSession(sessionId, userId);
+    const session = await this.findOwnedSession(sessionId, userId);
+    if (session.closedAt) return { closed: true, closedAt: session.closedAt };
     session.closedAt = new Date();
     const saved = await this.sessionsRepository.save(session);
     await this.auditService.record({
@@ -205,6 +206,15 @@ export class ScanSessionsService {
       details: null,
     });
     return { closed: true, closedAt: saved.closedAt };
+  }
+
+  /** Collection-only: expiration must not destroy unsent offline evidence.
+   * This grants no new snapshot, key, lookup or scan permission.
+   */
+  async findOwnedSession(sessionId: number, userId: number): Promise<AccessScanSession> {
+    const session = await this.sessionsRepository.findOneBy({ id: sessionId });
+    if (!session || session.userId !== userId) throw new NotFoundException('Session introuvable');
+    return session;
   }
 
   /** Utilisé par le service de scans pour rattacher les événements. */

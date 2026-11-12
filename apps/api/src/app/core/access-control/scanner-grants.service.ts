@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, LessThan, MoreThan, Or, Repository } from 'typeorm';
 import { AccessAuditAction, AccessScannerGrant, AccessZone, User } from '../entities';
@@ -25,6 +25,7 @@ export class ScannerGrantsService {
   }
 
   async create(dto: CreateScannerGrantDto, actorId: number | null) {
+    if (dto.endsAt && new Date(dto.endsAt) <= (dto.startsAt ? new Date(dto.startsAt) : new Date())) throw new BadRequestException('La fin doit suivre le début');
     const user = await this.usersRepository.findOneBy({ id: dto.userId });
     if (!user) {
       throw new NotFoundException(`Utilisateur ${dto.userId} introuvable`);

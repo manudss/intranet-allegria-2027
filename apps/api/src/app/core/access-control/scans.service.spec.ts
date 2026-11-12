@@ -42,7 +42,7 @@ const makeService = (point = makePoint()) => {
   };
   repos.points.findOne.mockResolvedValue(point);
 
-  const sessionsService = { findOpenSession: vi.fn().mockResolvedValue({ id: 11, userId: 1 }) };
+  const sessionsService = { findOwnedSession: vi.fn().mockResolvedValue({ id: 11, userId: 1 }) };
   const grantsService = { assertActiveGrant: vi.fn().mockResolvedValue(undefined) };
   const auditService = { record: vi.fn().mockResolvedValue(undefined) };
   const rateLimiter = new LookupRateLimiterService();
@@ -58,7 +58,7 @@ const makeService = (point = makePoint()) => {
     auditService as never,
     rateLimiter,
   );
-  return { service, repos, auditService, grantsService, rateLimiter };
+  return { service, repos, auditService, grantsService, rateLimiter, sessionsService };
 };
 
 const scan = (overrides?: Record<string, unknown>) => ({
@@ -255,5 +255,20 @@ describe('ScansService.lookup (repli en ligne sur code inconnu)', () => {
       expect.objectContaining({ action: 'LOOKUP_RATE_LIMITED' }),
     );
     rateLimiter.reset();
+  });
+});
+
+describe('late offline collection safeguards', () => {
+  it('collects an expired session and flags its events for review', async () => {
+    const { service, repos, sessionsService } = makeService();
+    sessionsService.findOwnedSession.mockResolvedValue({ id: 11, userId: 1, zoneId: 1, expiresAt: new Date(0), startedAt: new Date(0), closedAt: null });
+    repos.badges.findOneBy.mockResolvedValue(null);
+    await service.upload(11, 1, { scans: [scan()] });
+    expect(repos.events.save).toHaveBeenCalledWith(expect.objectContaining({ needsReview: true, sessionId: 11 }));
+  });
+  it('refuses a point outside the session zone', async () => {
+    const { service, sessionsService } = makeService();
+    sessionsService.findOwnedSession.mockResolvedValue({ id: 11, zoneId: 99 });
+    await expect(service.upload(11, 1, { scans: [scan()] })).rejects.toThrow('hors de la zone');
   });
 });

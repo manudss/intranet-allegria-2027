@@ -9,6 +9,8 @@ import {
   Query,
   Req,
   UseGuards,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthTokenGuard } from '../auth/auth-token.guard';
@@ -34,6 +36,7 @@ import {
   RevokeBadgeDto,
   StartScanSessionDto,
   UploadScansDto,
+  UpdateZoneDto,
 } from './access-control.types';
 import { AccessAuditAction } from '../entities';
 
@@ -45,6 +48,7 @@ const SCAN_ROLES = ['ADMIN', ACCESS_CONTROL_ROLES.scanner];
 @ApiTags('Access Control - Badges')
 @ApiBearerAuth('bearer')
 @UseGuards(AuthTokenGuard, RoleGuard)
+@UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
 @Controller('access-control/badges')
 export class AccessBadgesController {
   constructor(private readonly badgesService: BadgesService) {}
@@ -102,6 +106,7 @@ export class AccessBadgesController {
 @ApiTags('Access Control - Configuration')
 @ApiBearerAuth('bearer')
 @UseGuards(AuthTokenGuard, RoleGuard)
+@UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
 @Controller('access-control/config')
 export class AccessConfigController {
   constructor(private readonly configService: ScanConfigService) {}
@@ -137,7 +142,7 @@ export class AccessConfigController {
   @ApiOperation({ summary: 'Régler une zone' })
   @Roles(...MANAGE_ROLES)
   @Patch('zones/:id')
-  updateZone(@Param('id', ParseIntPipe) id: number, @Body() dto: Partial<CreateZoneDto>, @Req() req: UserRequest) {
+  updateZone(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateZoneDto, @Req() req: UserRequest) {
     return this.configService.updateZone(id, dto, req.user.id);
   }
 
@@ -159,6 +164,7 @@ export class AccessConfigController {
 @ApiTags('Access Control - Scanner grants')
 @ApiBearerAuth('bearer')
 @UseGuards(AuthTokenGuard, RoleGuard)
+@UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
 @Controller('access-control')
 export class AccessGrantsController {
   constructor(
@@ -203,6 +209,7 @@ export class AccessGrantsController {
 @ApiTags('Access Control - Scan')
 @ApiBearerAuth('bearer')
 @UseGuards(AuthTokenGuard, RoleGuard)
+@UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
 @Controller('access-control/scan')
 export class AccessScanningController {
   constructor(

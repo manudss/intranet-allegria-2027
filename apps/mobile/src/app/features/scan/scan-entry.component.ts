@@ -43,6 +43,10 @@ const SCAN_ROLES = ['SCANNER', 'BADGE_MANAGER', 'ADMIN'];
           </div>
         </section>
 
+        @if (canAssign()) {
+          <button class="cta assign" type="button" (click)="goAssign()">Attribuer / remplacer un badge</button>
+        }
+
         <button class="cta" type="button" [disabled]="!selected() || loading()" (click)="start()">
           {{ loading() ? 'Téléchargement…' : 'Démarrer le scan' }}
         </button>
@@ -69,6 +73,7 @@ const SCAN_ROLES = ['SCANNER', 'BADGE_MANAGER', 'ADMIN'];
     .type-btn.sel { border-color: #526ed3; background: #eef1fb; color: #526ed3; }
     .cta { height: 56px; border: none; border-radius: 14px; background: #526ed3; color: #fff; font-size: 17px; font-weight: 700; cursor: pointer; }
     .cta:disabled { opacity: .5; }
+    .cta.assign { background: #1a9e4b; }
     .error { color: #d8453a; font-size: 14px; }
     .hint { font-size: 12px; color: #6b7280; text-align: center; }
     .denied p { color: #6b7280; }
@@ -89,6 +94,7 @@ export class ScanEntryComponent implements OnInit {
 
   ngOnInit(): void {
     this.allowed.set(this.auth.hasAnyRole(SCAN_ROLES));
+    this.canAssign.set(this.auth.hasAnyRole(['BADGE_MANAGER', 'ADMIN']));
     if (!this.allowed()) return;
     this.api.listPoints().subscribe({
       next: (points) => this.points.set(points.filter((p) => p.active)),
@@ -98,6 +104,12 @@ export class ScanEntryComponent implements OnInit {
 
   select(p: ScanPointConfig): void {
     this.selected.set(p);
+  }
+
+  readonly canAssign = signal(false);
+
+  goAssign(): void {
+    void this.router.navigate(['/scan/attribuer']);
   }
 
   typeLabel(t: string): string {

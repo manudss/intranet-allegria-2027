@@ -52,11 +52,18 @@ export const appRoutes: Routes = [
         title: 'Mode scan - ALEGRIA',
       },
       {
+        path: 'attribuer',
+        loadComponent: () =>
+          import('./features/scan/badge-assign.component').then((m) => m.BadgeAssignComponent),
+        title: 'Attribuer un badge - ALEGRIA',
+      },
+      {
         path: ':pointId',
         loadComponent: () =>
           import('./features/scan/scanner.component').then((m) => m.ScannerComponent),
         title: 'Scanner - ALEGRIA',
       },
+
     ],
   },
   {

@@ -1,72 +1,70 @@
-/**
- * Persistance IndexedDB du mode scan :
- *  - store "kv"     : clé de chiffrement (raw), métadonnées (point, expiration…)
- *  - store "table"  : table chiffrée (un blob AES-GCM)
- *  - store "scans"  : scans en attente d'envoi (index localSeq)
- * Effacée intégralement après téléversement confirmé ou à l'expiration.
+/** IndexedDB: snapshot AES-GCM, session metadata/key and pending scan queue.
+ * Queue entries contain opaque badge codes, not names. Expiry never deletes
+ * unacknowledged events. All writes resolve on transaction commit, not request success.
  */
-
+import type { PendingScan } from './scan.models';
 export const SCAN_DB_NAME = 'alegria-scan';
-const SCAN_DB_VERSION = 1;
-
-export interface ScanSessionMeta {
-  pointId: string;
-  scanTypeCode: string;
-  generatedAt: string;
-  expiresAt: string;
-  downloadedAt: string;
-}
 
 export function openScanDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(SCAN_DB_NAME, SCAN_DB_VERSION);
+    const req = indexedDB.open(SCAN_DB_NAME, 1);
     req.onupgradeneeded = () => {
       const db = req.result;
-      if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
-      if (!db.objectStoreNames.contains('table')) db.createObjectStore('table');
-      if (!db.objectStoreNames.contains('scans')) db.createObjectStore('scans', { autoIncrement: true });
+      db.createObjectStore('kv');
+      db.createObjectStore('table');
+      db.createObjectStore('scans', { autoIncrement: true });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
 }
-
-function tx<T>(db: IDBDatabase, store: string, mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
+function read<T>(db: IDBDatabase, store: string, key: IDBValidKey): Promise<T | undefined> {
   return new Promise((resolve, reject) => {
-    const t = db.transaction(store, mode);
-    const req = run(t.objectStore(store));
-    req.onsuccess = () => resolve(req.result);
+    const req = db.transaction(store).objectStore(store).get(key);
+    req.onsuccess = () => resolve(req.result as T | undefined);
     req.onerror = () => reject(req.error);
   });
 }
-
-export const scanDb = {
-  setKv: (db: IDBDatabase, key: string, value: unknown) => tx(db, 'kv', 'readwrite', (s) => s.put(value, key)),
-  getKv: <T>(db: IDBDatabase, key: string) => tx<T | undefined>(db, 'kv', 'readonly', (s) => s.get(key) as IDBRequest<T | undefined>),
-  setTable: (db: IDBDatabase, blob: ArrayBuffer) => tx(db, 'table', 'readwrite', (s) => s.put(blob, 'current')),
-  getTable: (db: IDBDatabase) => tx<ArrayBuffer | undefined>(db, 'table', 'readonly', (s) => s.get('current') as IDBRequest<ArrayBuffer | undefined>),
-  addScan: (db: IDBDatabase, scan: unknown) => tx<number>(db, 'scans', 'readwrite', (s) => s.add(scan) as IDBRequest<number>),
-  clearScans: (db: IDBDatabase) => tx(db, 'scans', 'readwrite', (s) => s.clear()),
-  clearKvAndTable: async (db: IDBDatabase) => {
-    await tx(db, 'kv', 'readwrite', (s) => s.clear());
-    await tx(db, 'table', 'readwrite', (s) => s.clear());
-  },
-  clearAll: async (db: IDBDatabase) => {
-    await tx(db, 'kv', 'readwrite', (s) => s.clear());
-    await tx(db, 'table', 'readwrite', (s) => s.clear());
-    await tx(db, 'scans', 'readwrite', (s) => s.clear());
-  },
-};
-
-export interface StoredScanRow extends Record<string, unknown> {
-  id?: number;
+function write(db: IDBDatabase, stores: string[], run: (t: IDBTransaction) => void): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const t = db.transaction(stores, 'readwrite');
+    t.oncomplete = () => resolve();
+    t.onerror = () => reject(t.error);
+    t.onabort = () => reject(t.error ?? new Error('Transaction annulée'));
+    run(t);
+  });
 }
-
+export interface StoredScanRow { id: IDBValidKey; scan: PendingScan }
+export const scanDb = {
+  getKv: <T>(db: IDBDatabase, key: string) => read<T>(db, 'kv', key),
+  getTable: (db: IDBDatabase) => read<ArrayBuffer>(db, 'table', 'current'),
+  /** Atomically replaces snapshot, key and metadata; optionally queues a scan. */
+  save: (db: IDBDatabase, meta: unknown, sessionKey: string, blob: ArrayBuffer, scan?: PendingScan) =>
+    write(db, ['kv', 'table', 'scans'], (t) => {
+      t.objectStore('kv').put(meta, 'meta');
+      t.objectStore('kv').put(sessionKey, 'sessionKey');
+      t.objectStore('table').put(blob, 'current');
+      if (scan) t.objectStore('scans').add(scan);
+    }),
+  addScan: (db: IDBDatabase, scan: PendingScan) => write(db, ['scans'], (t) => { t.objectStore('scans').add(scan); }),
+  removeScans: (db: IDBDatabase, ids: IDBValidKey[]) => write(db, ['scans'], (t) => {
+    for (const id of ids) t.objectStore('scans').delete(id);
+  }),
+  clearTable: (db: IDBDatabase) => write(db, ['table'], (t) => { t.objectStore('table').clear(); }),
+  clearAll: (db: IDBDatabase) => write(db, ['kv', 'table', 'scans'], (t) => {
+    for (const store of ['kv', 'table', 'scans']) t.objectStore(store).clear();
+  }),
+};
 export function listScans(db: IDBDatabase): Promise<StoredScanRow[]> {
   return new Promise((resolve, reject) => {
-    const t = db.transaction('scans', 'readonly');
-    const req = t.objectStore('scans').getAll();
-    req.onsuccess = () => resolve(req.result as StoredScanRow[]);
+    const rows: StoredScanRow[] = [];
+    const req = db.transaction('scans').objectStore('scans').openCursor();
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (!cursor) { resolve(rows); return; }
+      rows.push({ id: cursor.primaryKey, scan: cursor.value as PendingScan });
+      cursor.continue();
+    };
     req.onerror = () => reject(req.error);
   });
 }

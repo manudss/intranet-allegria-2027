@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, AfterViewInit, OnDestroy, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { BrowserQRCodeReader, IScannerControls } from '@zxing/browser';
 import type { Result } from '@zxing/library';
@@ -147,7 +147,7 @@ type Step = 'scan' | 'search' | 'confirm' | 'done';
     .big-ok { font-size: 48px; color: #1a9e4b; }
   `],
 })
-export class BadgeAssignComponent implements OnInit, OnDestroy {
+export class BadgeAssignComponent implements AfterViewInit, OnDestroy {
   private readonly api = inject(BadgeAssignApiService);
   private readonly auth = inject(AuthService);
 
@@ -166,10 +166,11 @@ export class BadgeAssignComponent implements OnInit, OnDestroy {
   readonly doneLabel = signal('');
 
   private readonly query$ = new Subject<string>();
+  private operationId: string | null = null;
   private reader: BrowserQRCodeReader | null = null;
   private controls: IScannerControls | null = null;
 
-  ngOnInit(): void {
+  ngAfterViewInit(): void {
     this.allowed.set(this.auth.hasAnyRole(ASSIGN_ROLES));
     if (!this.allowed()) return;
     this.query$.pipe(debounceTime(300), distinctUntilChanged()).subscribe((q) => this.search(q));
@@ -263,6 +264,7 @@ export class BadgeAssignComponent implements OnInit, OnDestroy {
     this.error.set(null);
     this.api.participantHistory(p.id).subscribe({
       next: (history) => {
+        this.operationId = null;
         this.person.set(p);
         this.history.set(history);
         this.mode.set(deriveAssignMode(history));
@@ -279,10 +281,10 @@ export class BadgeAssignComponent implements OnInit, OnDestroy {
   confirm(): void {
     const p = this.person();
     const b = this.badge();
-    if (!p || !b) return;
+    if (!p || !b || this.submitting()) return;
     this.submitting.set(true);
     this.error.set(null);
-    const opId = crypto.randomUUID();
+    const opId = this.operationId ??= crypto.randomUUID();
     const call =
       this.mode() === 'replace'
         ? this.api.replace(p.id, b.code, opId, 'Remplacement badge perdu (mobile)')
@@ -305,6 +307,7 @@ export class BadgeAssignComponent implements OnInit, OnDestroy {
   }
 
   restart(): void {
+    this.operationId = null;
     this.badge.set(null);
     this.person.set(null);
     this.history.set([]);

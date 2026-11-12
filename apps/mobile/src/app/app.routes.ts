@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { scanRoleGuard } from './features/scan/scan-role.guard';
 import { authGuard } from './core/auth.guard';
 
 export const appRoutes: Routes = [
@@ -44,6 +45,7 @@ export const appRoutes: Routes = [
     // côté client (SCANNER / BADGE_MANAGER / ADMIN) dans les composants.
     path: 'scan',
     canActivate: [authGuard],
+    canActivateChild: [scanRoleGuard],
     children: [
       {
         path: '',

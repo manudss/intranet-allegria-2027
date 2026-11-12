@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, AfterViewInit, OnDestroy, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BrowserQRCodeReader, IScannerControls } from '@zxing/browser';
 import type { Result } from '@zxing/library';
@@ -20,6 +20,7 @@ const VERDICT_MS = 1600;
         <span class="pending" [class.warn]="store.pendingCount() > 0">{{ store.pendingCount() }} en attente</span>
       </header>
 
+      <div class="active-point">{{ store.activePoint()?.name }} · {{ store.activePoint()?.scanType?.label }}</div>
       <div class="viewer">
         <video #video muted playsinline></video>
         <div class="frame"></div>
@@ -30,7 +31,7 @@ const VERDICT_MS = 1600;
           <div class="v-title">{{ v.title }}</div>
           <div class="v-detail">{{ v.detail }}</div>
           @if (v.servedCount !== undefined) {
-            <div class="v-count">Service n° {{ v.servedCount }}</div>
+            <div class="v-count">Service · {{ v.servedCount }} sur ce poste</div>
           }
         </div>
       }
@@ -60,6 +61,7 @@ const VERDICT_MS = 1600;
     .chip.stale { background: #b8860b; }
     .pending { font-size: 12px; color: #9aa0ae; }
     .pending.warn { color: #ffd166; font-weight: 700; }
+    .active-point { padding: 0 16px 10px; text-align: center; font-weight: 600; }
     .viewer { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
     video { width: 100%; height: 100%; object-fit: cover; }
     .frame { position: absolute; width: 230px; height: 230px; border: 3px solid #7cffb2; border-radius: 20px; pointer-events: none; }
@@ -68,6 +70,8 @@ const VERDICT_MS = 1600;
     .verdict[data-kind='already'] { background: #b8860b; }
     .verdict[data-kind='ko'], .verdict[data-kind='unknown'], .verdict[data-kind='expired'], .verdict[data-kind='offline'] { background: #d8453a; }
     .v-title { font-size: 44px; font-weight: 800; }
+    .verdict[data-kind='ok'] .v-title { font-size: 32px; }
+    .verdict[data-kind='ok'] .v-detail { font-size: 42px; line-height: 1.15; overflow-wrap: anywhere; }
     .v-detail { font-size: 20px; font-weight: 600; opacity: .95; }
     .v-count { font-size: 18px; background: rgba(0,0,0,.25); border-radius: 12px; padding: 8px 16px; }
     .exit-error { margin: 0 16px 8px; color: #ffd166; font-size: 13px; }
@@ -76,7 +80,7 @@ const VERDICT_MS = 1600;
     .manual button { height: 48px; padding: 0 18px; border: none; border-radius: 12px; background: #526ed3; color: #fff; font-weight: 700; cursor: pointer; }
   `],
 })
-export class ScannerComponent implements OnInit, OnDestroy {
+export class ScannerComponent implements AfterViewInit, OnDestroy {
   readonly store = inject(ScanStore);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -89,11 +93,14 @@ export class ScannerComponent implements OnInit, OnDestroy {
   private busy = false;
   private verdictTimer: ReturnType<typeof setTimeout> | null = null;
 
-  async ngOnInit(): Promise<void> {
+  async ngAfterViewInit(): Promise<void> {
     await this.store.init();
     if (!this.store.ready()) {
       await this.router.navigate(['/scan']);
       return;
+    }
+    if (String(this.store.activePoint()?.id) !== this.route.snapshot.paramMap.get('pointId')) {
+      await this.router.navigate(['/scan']); return;
     }
     this.startCamera();
   }
@@ -132,8 +139,8 @@ export class ScannerComponent implements OnInit, OnDestroy {
     try {
       const v = await this.store.recordScan(code);
       this.showVerdict(v);
-    } finally {
-      this.busy = false;
+    } catch {
+      this.showVerdict({ kind: 'ko', title: 'Scan non enregistré', detail: 'Stockage indisponible. Ne pas laisser passer. Réessayez.' });
     }
   }
 
@@ -141,7 +148,7 @@ export class ScannerComponent implements OnInit, OnDestroy {
     this.verdict.set(v);
     if (this.verdictTimer) clearTimeout(this.verdictTimer);
     const sticky = v.kind === 'ko' || v.kind === 'unknown' || v.kind === 'expired';
-    this.verdictTimer = setTimeout(() => this.verdict.set(null), sticky ? VERDICT_MS * 2 : VERDICT_MS);
+    this.verdictTimer = setTimeout(() => { this.verdict.set(null); this.busy = false; }, sticky ? VERDICT_MS * 2 : VERDICT_MS);
   }
 
   readonly exitError = signal<string | null>(null);

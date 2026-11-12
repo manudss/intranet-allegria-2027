@@ -8,6 +8,9 @@
 </header>
 
 <main class="content">
+  @if (canScan()) {
+    <a class="tile" routerLink="/scan"><span class="tile-text"><strong>Mode scan</strong><span>Contrôle des badges et attribution</span></span><span class="chevron" aria-hidden="true">›</span></a>
+  }
   @if (changeCount() > 0) {
     <a class="changes" routerLink="/programme" role="status">
       {{ changeCount() }} modification(s) du programme aujourd'hui — voir le programme

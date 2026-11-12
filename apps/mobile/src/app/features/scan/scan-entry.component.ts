@@ -127,8 +127,8 @@ export class ScanEntryComponent implements OnInit {
       await this.store.init();
       await this.store.startSession(point);
       await this.router.navigate(['/scan', point.id]);
-    } catch {
-      this.error.set('Téléchargement de la table impossible. Vérifiez la connexion et votre habilitation, puis réessayez.');
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Téléchargement de la table impossible. Vérifiez la connexion et votre habilitation, puis réessayez.');
     } finally {
       this.loading.set(false);
     }

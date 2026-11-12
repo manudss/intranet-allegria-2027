@@ -23,8 +23,8 @@ const build = (overrides: Record<string, unknown> = {}) => {
 const teamWithMembers = {
   id: 45,
   name: 'Équipe des Lynx',
-  primaryAnimator: { id: 20, firstName: 'Sarah', lastName: 'Nguyen' },
-  secondaryAnimator: { id: 21, firstName: 'Marc', lastName: 'Duret' },
+  primaryAnimator: { id: 20, firstName: 'Sarah', lastName: 'Nguyen', phone: '+33645678901' },
+  secondaryAnimator: { id: 21, firstName: 'Marc', lastName: 'Duret', phone: null },
   members: [
     {
       participant: {
@@ -128,8 +128,8 @@ describe('VolunteerHostingService', () => {
 
     expect(view?.team).toEqual({ id: 45, name: 'Équipe des Lynx' });
     expect(view?.animators).toEqual([
-      { id: 20, firstName: 'Sarah', lastName: 'Nguyen', role: 'PRIMARY' },
-      { id: 21, firstName: 'Marc', lastName: 'Duret', role: 'SECONDARY' },
+      { id: 20, firstName: 'Sarah', lastName: 'Nguyen', role: 'PRIMARY', phone: '+33645678901' },
+      { id: 21, firstName: 'Marc', lastName: 'Duret', role: 'SECONDARY', phone: null },
     ]);
     // jeunes : prénoms triés, aucune autre donnée exposée
     expect(view?.youths).toEqual([{ firstName: 'Adam' }, { firstName: 'Léa' }, { firstName: 'Zoé' }]);

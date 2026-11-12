@@ -51,6 +51,7 @@ export class VolunteerHostingService {
         firstName: team.primaryAnimator.firstName,
         lastName: team.primaryAnimator.lastName,
         role: 'PRIMARY',
+        phone: team.primaryAnimator.phone,
       });
     }
     if (team.secondaryAnimator) {
@@ -59,6 +60,7 @@ export class VolunteerHostingService {
         firstName: team.secondaryAnimator.firstName,
         lastName: team.secondaryAnimator.lastName,
         role: 'SECONDARY',
+        phone: team.secondaryAnimator.phone,
       });
     }
 

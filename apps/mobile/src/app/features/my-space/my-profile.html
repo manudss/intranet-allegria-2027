@@ -101,7 +101,12 @@
               <strong>Logé avec l'équipe {{ h.team.name }}</strong>
             </div>
             @for (animator of h.animators; track animator.id) {
-              <span class="meta">{{ animatorLabel(animator) }}</span>
+              <span class="meta animator">
+                {{ animatorLabel(animator) }}
+                @if (animator.phone) {
+                  <a class="contact" [href]="'tel:' + animator.phone" [attr.aria-label]="'Appeler ' + animator.firstName">{{ animator.phone }}</a>
+                }
+              </span>
             }
             @if (h.youths.length > 0) {
               <div class="youths" aria-label="Jeunes de l'équipe">

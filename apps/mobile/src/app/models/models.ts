@@ -155,7 +155,7 @@ export interface VolunteerHosting {
   startAt: string | null;
   endAt: string | null;
   team: { id: number; name: string };
-  animators: { id: number; firstName: string; lastName: string; role: 'PRIMARY' | 'SECONDARY' }[];
+  animators: { id: number; firstName: string; lastName: string; role: 'PRIMARY' | 'SECONDARY'; phone: string | null }[];
   youths: { firstName: string }[];
   hostFamilies: {
     id: number;

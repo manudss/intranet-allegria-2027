@@ -27,7 +27,7 @@ const hosting: VolunteerHosting = {
   startAt: '2027-10-31',
   endAt: '2027-11-03',
   team: { id: 45, name: 'Équipe des Lynx' },
-  animators: [{ id: 20, firstName: 'Sarah', lastName: 'Nguyen', role: 'PRIMARY' }],
+  animators: [{ id: 20, firstName: 'Sarah', lastName: 'Nguyen', role: 'PRIMARY', phone: '+33645678901' }],
   youths: [{ firstName: 'Adam' }, { firstName: 'Léa' }, { firstName: 'Zoé' }],
   hostFamilies: [
     {
@@ -70,6 +70,7 @@ describe('MyProfileComponent', () => {
     expect(el.textContent).toContain('disponible');
     expect(el.textContent).toContain("Logé avec l'équipe Équipe des Lynx");
     expect(el.textContent).toContain('Sarah Nguyen (animateur référent)');
+    expect(el.querySelector('a[href="tel:+33645678901"]')).toBeTruthy();
     expect(el.textContent).toContain('Adam');
     expect(el.textContent).toContain('Zoé');
     expect(el.textContent).toContain('Famille Bernard');

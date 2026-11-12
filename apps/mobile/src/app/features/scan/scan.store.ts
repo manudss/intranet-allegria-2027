@@ -153,7 +153,7 @@ export class ScanStore implements OnDestroy {
         this.servedByService.set(scope, (this.servedByService.get(scope) ?? 0) + 1);
       }
       const scan: PendingScan = {
-        clientEventId: crypto.randomUUID(), code, pointId: point.id, assignmentId: entry?.assignmentId,
+        clientAccepted: verdict.kind === 'ok', clientEventId: crypto.randomUUID(), code, pointId: point.id, assignmentId: entry?.assignmentId,
         tableVersion: this.meta.snapshotVersion, occurredAtLocal: now.toISOString(), serviceKey: point.serviceKey ?? undefined,
       };
       // Unknown/refused scans are also retained for server review.

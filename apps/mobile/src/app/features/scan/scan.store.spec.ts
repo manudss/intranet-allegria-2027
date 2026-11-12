@@ -99,6 +99,24 @@ describe('ScanStore persisted workflow', () => {
     expect(JSON.stringify(raw)).not.toContain('aaa');
     expect((await listScans(db))[0].scan.code).toBe('aaa'); db.close();
   });
+  it('preserves a refused offline observation without claiming passage', async () => {
+    await store.startSession(point); api.lookupCode.mockReturnValue(throwError(() => new Error('offline')));
+    expect((await store.recordScan('unknown')).kind).not.toBe('ok');
+    const db = await openScanDb(); const rows = await listScans(db);
+    expect(rows[0].scan).toMatchObject({ code: 'unknown', clientAccepted: false }); db.close();
+  });
+  it('enforces the configured offline duration even before key expiry', async () => {
+    await store.startSession(point);
+    const db = await openScanDb(); const meta = await scanDb.getKv<Record<string, unknown>>(db, 'meta'); const blob = await scanDb.getTable(db);
+    await scanDb.save(db, {...meta, maxOfflineMinutes:1,lastRefreshAt:new Date(Date.now()-120000).toISOString()}, 'test-key-not-a-secret',blob as ArrayBuffer);
+    await store.restore(); expect(store.expired()).toBe(true); expect(store.ready()).toBe(false); db.close();
+  });
+  it('uploads the encrypted retained queue after expiry and can close the old session', async () => {
+    await store.startSession(point); await store.recordScan('aaa');
+    const db = await openScanDb(); const meta = await scanDb.getKv<Record<string,unknown>>(db,'meta');const blob = await scanDb.getTable(db);
+    await scanDb.save(db,{...meta, expiresAt:'2000-01-01T00:00:00Z'},'test-key-not-a-secret',blob as ArrayBuffer);
+    await store.restore(); expect(await store.exitSession()).toBe(true);expect(api.uploadScans).toHaveBeenCalledWith(7,[expect.objectContaining({code:'aaa'})]);db.close();
+  });
   it('uses the real session endpoints and metadata for upload', async () => {
     await store.startSession(point); await store.recordScan('aaa'); await store.uploadPending();
     expect(api.startSession).toHaveBeenCalledWith(1);

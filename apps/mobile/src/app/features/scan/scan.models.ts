@@ -61,6 +61,7 @@ export interface ScanDelta {
 }
 
 export interface PendingScan {
+  clientAccepted?: boolean;
   clientEventId: string;
   code: string;
   pointId: number;

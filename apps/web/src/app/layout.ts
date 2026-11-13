@@ -99,6 +99,7 @@ export class Layout {
       icon: '@tui.activity',
       items: [
         { label: 'Agenda & Ordonnancement', path: '/programme', icon: '@tui.calendar-clock' },
+        { label: 'Suivi des accès', path: '/acces/suivi', icon: '@tui.scan-line' },
         { label: 'Tableau de bord Jour J', path: '/jour-j', icon: '@tui.activity' },
         { label: 'Incidents & demandes', path: '/incidents', icon: '@tui.triangle-alert' },
         { label: 'Consignes & documents', path: '/consignes-docs', icon: '@tui.file-text' },

@@ -1,6 +1,7 @@
 /** Verdict serveur d'un scan ou d'une recherche de code inconnu. */
 export enum AccessScanVerdict {
   ACCEPTED = 'ACCEPTED',
+  REJECTED_NOT_EXPECTED = 'REJECTED_NOT_EXPECTED',
   DUPLICATE = 'DUPLICATE',
   REJECTED_UNKNOWN = 'REJECTED_UNKNOWN',
   REJECTED_REVOKED = 'REJECTED_REVOKED',

@@ -30,7 +30,7 @@ export const ACCESS_REPORT_SQL = {
         FROM access_scan_events e JOIN access_scan_points p ON p.id=e.point_id
         LEFT JOIN access_scan_reviews r ON r.event_id=e.id
         WHERE ($1::int IS NULL OR p.zone_id=$1)`,
-  reviews: `SELECT e.id,e.participant_id AS "participantId", p."firstName" AS "firstName",p."lastName" AS "lastName",
+  reviews: `SELECT e.id,e.participant_id AS "participantId", p."firstName" AS "firstName",CASE WHEN p.type='JEUNE' THEN NULL ELSE p."lastName" END AS "lastName",
       e.verdict,e.needs_review AS "needsReview",e.occurred_at_local AS "occurredAtLocal",e.received_at AS "receivedAt",
       e.point_id AS "pointId",pt.name AS "pointName",pt.zone_id AS "zoneId",count(*) OVER()::int AS "totalCount"
       FROM access_scan_events e LEFT JOIN participants p ON p.id=e.participant_id

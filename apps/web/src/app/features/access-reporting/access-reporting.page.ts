@@ -1,3 +1,4 @@
+import {RouterLink} from '@angular/router';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
 import { CommonModule } from '@angular/common';
@@ -15,10 +16,10 @@ export function reportFilters(from: string, to: string, zoneId: number | null, e
 }
 function localDate(): string { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 @Component({
-  selector: 'app-access-reporting', standalone: true, imports: [CommonModule, FormsModule, TuiButton, A11yModule],
+  selector: 'app-access-reporting', standalone: true, imports: [RouterLink, CommonModule, FormsModule, TuiButton, A11yModule],
   template: `
     <main class="page">
-      <header><h1>Suivi des accès</h1><p>Comptages reçus du terrain et scans à vérifier.</p></header>
+      <header><h1>Suivi des accès</h1><nav class="actions"><a routerLink="/acces/dashboard">Dashboard</a> <a routerLink="/acces/scannes">Scannés par lieu</a> <a routerLink="/acces/non-scannes">Non scannés · groupes attendus</a><a routerLink="/acces/groupes-exceptions">Exceptions des groupes</a></nav><p>Comptages reçus du terrain et scans à vérifier.</p></header>
       <form class="filters" (ngSubmit)="refresh()">
         <label>Zone<select name="zone" [(ngModel)]="zoneId"><option [ngValue]="null">Toutes les zones</option>@for (z of zones(); track z.id) { <option [ngValue]="z.id">{{ z.name }}</option> }</select></label>
         <label>Du<input name="from" type="date" [(ngModel)]="from" required /></label>

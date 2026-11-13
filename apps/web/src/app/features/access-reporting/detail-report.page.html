@@ -1,0 +1,220 @@
+<main class="page">
+  <header>
+    <h1>{{place?'Scannés par lieu':'Dashboard des accès'}}</h1>
+    <nav class="navigation" aria-label="Suivi des accès">
+      <a routerLink="/acces/dashboard" [class.active]="!place">Dashboard</a
+      ><a routerLink="/acces/scannes" [class.active]="place">Scannés par lieu</a
+      ><a routerLink="/acces/historique-personne">Historique personne</a><a routerLink="/acces/non-scannes">Non scannés</a
+      ><a routerLink="/acces/historique-groupe">Historique groupe</a><a routerLink="/acces/groupes-exceptions">Groupes attendus · exceptions</a
+      ><a routerLink="/acces/suivi">Vérifications</a>
+    </nav>
+  </header>
+  @if(!place){
+  <section class="refresh">
+    <b>● Actualisation {{automatic()?'automatique · 15 s':'en pause'}}</b
+    ><span
+      >Dernière réception : {{time(dashboard()?.totals?.lastReceivedAt)}} · Actualisé :
+      {{time(dashboard()?.fetchedAt)}}</span
+    ><button (click)="automatic.set(!automatic())">{{automatic()?'Pause':'Reprendre'}}</button
+    ><button (click)="refresh(false)" [disabled]="loading()">Actualiser</button>
+  </section>
+  }
+  <form class="filters" (ngSubmit)="refresh()">
+    <label>Du<input type="date" name="from" [(ngModel)]="from" /></label
+    ><label>Au (inclus)<input type="date" name="to" [(ngModel)]="to" /></label> @if(place){<label
+      >Lieu / point<select name="point" [(ngModel)]="pointId">
+        <option [ngValue]="null">Choisir un point</option>
+        @for(p of points;track p.id){
+        <option [ngValue]="p.id">{{p.name}}{{p.active?'':' (inactif)'}}</option>
+        }
+      </select></label
+    >}@else{<label
+      >Lieux<select name="zone" [(ngModel)]="zoneId">
+        <option [ngValue]="null">Tous les lieux</option>
+        @for(z of zones;track z.id){
+        <option [ngValue]="z.id">{{z.name}}</option>
+        }
+      </select></label
+    >}
+    <label
+      >Type de scan<select name="scanType" [(ngModel)]="scanTypeId">
+        <option [ngValue]="null">Tous les types</option>
+        @for(t of types;track t.id){
+        <option [ngValue]="t.id">{{t.label}}</option>
+        }
+      </select></label
+    >
+    @if(place){<label
+      >Service<input
+        name="service"
+        [(ngModel)]="serviceKey"
+        maxlength="120"
+        placeholder="Tous les services" /></label
+    ><label
+      >Équipe actuelle<select name="team" [(ngModel)]="teamId">
+        <option [ngValue]="null">Toutes les équipes</option>
+        @for(t of teams;track t.id){
+        <option [ngValue]="t.id">{{t.name}}</option>
+        }
+      </select></label
+    ><label
+      >Type de personne<select name="type" [(ngModel)]="personType">
+        <option value="">Tous les types</option>
+        <option value="JEUNE">Jeune</option>
+        <option value="ANIMATEUR">Animateur</option>
+        <option value="BENEVOLE">Bénévole</option>
+      </select></label
+    ><label
+      >Rechercher une personne<input
+        name="search"
+        [(ngModel)]="search"
+        maxlength="120"
+        placeholder="Prénom / nom adulte / identifiant" /></label
+    >} <button type="submit" [disabled]="loading()">{{loading()?'Chargement…':'Appliquer'}}</button>
+  </form>
+  @if(error()){
+  <p role="alert" class="error">{{error()}}<button (click)="refresh(false)">Réessayer</button></p>
+  }
+  <p class="note">
+    Scans reçus du terrain, pas un décompte d'évacuation. Les téléphones hors ligne peuvent manquer.
+    Une réception récente ne prouve pas que tous les postes sont connectés. Les vérifications
+    peuvent recouper les refus et doublons.
+  </p>
+  @if(dashboard();as d){
+  <section class="metrics">
+    <article>
+      <span>Personnes scannées</span><strong>{{d.totals.scannedPeople}}</strong
+      ><small>Personnes distinctes · passage confirmé</small>
+    </article>
+    <article>
+      <span>Scans acceptés</span><strong>{{d.totals.accepted}}</strong
+      ><small>Acceptés sans ambiguïté</small>
+    </article>
+    <article>
+      <span>Refus</span><strong>{{d.totals.rejected}}</strong><small>Tentatives refusées</small>
+    </article>
+    <article>
+      <span>Doublons</span><strong>{{d.totals.duplicates}}</strong
+      ><small>Tentatives répétées</small>
+    </article>
+    <article>
+      <span>À vérifier</span><strong>{{d.totals.needsReview}}</strong
+      ><small>Scans ambigus ou tardifs</small>
+    </article>
+  </section>
+  @if(!place){
+  <h2>Tous les lieux et points</h2>
+  <p class="hint">
+    Une ligne par point, y compris sans activité. Les personnes distinctes par point ne sont pas
+    additionnables.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Lieu / point</th>
+          <th>Personnes</th>
+          <th>Acceptés</th>
+          <th>Refus</th>
+          <th>Doublons</th>
+          <th>À vérifier</th>
+          <th>Dernière réception</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for(p of d.points;track p.pointId){
+        <tr>
+          <td>{{p.zoneName}}<b>{{p.pointName}}</b>@if(!p.active){<small>Point inactif</small>}</td>
+          <td>{{p.scannedPeople}}</td>
+          <td>{{p.accepted}}</td>
+          <td>{{p.rejected}}</td>
+          <td>{{p.duplicates}}</td>
+          <td>{{p.needsReview}}</td>
+          <td>{{time(p.lastReceivedAt)}}</td>
+          <td><a routerLink="/acces/scannes" [queryParams]="{pointId:p.pointId,from:from,to:to,scanTypeId:scanTypeId}">Détails →</a></td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <h2>Dernières anomalies</h2>
+  <p class="hint">
+    Dix dernières tentatives anormales sur la période ; les erreurs de collecte ne sont pas des
+    refus d'accès.
+  </p>
+  } @if(place){
+  <nav class="tabs">
+    <button [class.active]="mode==='scanned'" (click)="switchMode('scanned')">
+      Personnes scannées ({{d.totals.scannedPeople}})</button
+    ><button [class.active]="mode==='events'" (click)="switchMode('events')">
+      Toutes les tentatives ({{d.totals.attempts}})</button
+    ><button [class.active]="mode==='review'" (click)="switchMode('review')">
+      À vérifier ({{d.totals.needsReview}})</button
+    ><a routerLink="/acces/non-scannes">Non scannés attendus →</a>
+  </nav>
+  } @if(rows();as r){
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Personne</th>
+          <th>Date / heure Paris</th>
+          <th>Lieu / point</th>
+          <th>Type / service</th>
+          <th>Résultat</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for(p of r.items;track p.id){
+        <tr>
+          <td>
+            <b>{{name(p)}}</b
+            ><small>{{p.participantId?'#'+p.participantId:'Sans identité'}} · {{p.type}}</small
+            >@if(p.teams?.length){@for(t of p.teams;track t.id){<small>{{t.name}}</small>}}
+          </td>
+          <td>
+            {{time(p.occurredAtLocal??p.receivedAt)}}<small>Reçu : {{time(p.receivedAt)}}</small>
+          </td>
+          <td>{{p.zoneName}}<b>{{p.pointName}}</b></td>
+          <td>{{p.scanTypeLabel}}<small>{{p.serviceKey??'Sans service'}}</small></td>
+          <td>
+            {{verdict(p)}}@if(p.needsReview){<small
+              >À vérifier{{p.reviewClosed?' · vérification close':''}}</small
+            >}@if(p.exceptionId){<small class="exception">Exception</small>}
+          </td>
+          <td><button (click)="detail.set(p)">Détails →</button>@if(p.participantId){<a routerLink="/acces/historique-personne" [queryParams]="{participantId:p.participantId}">Historique →</a>}</td>
+        </tr>
+        }@empty{
+        <tr>
+          <td colspan="6">Aucun résultat pour ces filtres.</td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  @if(place){
+  <nav class="pager">
+    <button (click)="page(-1)" [disabled]="offset===0||loading()">Précédent</button
+    ><span
+      >{{resultOffset()+(r.items.length?1:0)}}–{{resultOffset()+r.items.length}} / {{r.total}}
+      {{mode==='scanned'?'personnes':'tentatives'}}</span
+    ><button (click)="page(1)" [disabled]="offset+50>=r.total||loading()">Suivant</button>
+  </nav>
+  }} @if(detail();as p){
+  <section class="note">
+    <h2>Événement #{{p.id}} · {{name(p)}}</h2>
+    <p>{{verdict(p)}} · {{p.pointName}} · {{time(p.occurredAtLocal??p.receivedAt)}}</p>
+    <p>Reçu le {{time(p.receivedAt)}}. Le verdict initial reste conservé.</p>
+    @if(p.exceptionReason){
+    <p>Exception : {{p.exceptionReason}}</p>
+    }<button (click)="detail.set(null)">Fermer</button>
+  </section>
+  }
+  <p class="hint">
+    Une ligne par personne dans « Personnes scannées », une par tentative dans le journal. Aucun nom
+    de jeune n'est affiché. Les données ne sont pas une preuve d'absence physique.
+  </p>
+  }
+</main>

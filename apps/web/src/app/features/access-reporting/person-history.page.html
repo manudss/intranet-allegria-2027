@@ -1,0 +1,149 @@
+<main class="page">
+  <header>
+    <h1>Historique d'une personne</h1>
+    <nav class="navigation" aria-label="Suivi des accès">
+      <a routerLink="/acces/dashboard">Dashboard</a
+      ><a routerLink="/acces/scannes">Scannés par lieu</a
+      ><a routerLink="/acces/non-scannes">Non scannés</a
+      ><a routerLink="/acces/historique-personne" class="active">Historique personne</a
+      ><a routerLink="/acces/historique-groupe">Historique groupe</a><a routerLink="/acces/groupes-exceptions">Groupes attendus · exceptions</a>
+    </nav>
+  </header>
+  <h2>Rechercher une personne</h2>
+  <p class="hint">
+    La recherche inclut les personnes sans badge et les bénévoles sans fiche participant. Les noms
+    des jeunes restent masqués.
+  </p>
+  <form class="search" (ngSubmit)="searchPeople()">
+    <label
+      >Prénom / nom adulte / identifiant<input
+        name="search"
+        [(ngModel)]="search"
+        maxlength="120"
+        placeholder="Rechercher une personne" /></label
+    ><button type="submit" [disabled]="searching()">
+      {{searching()?'Recherche…':'Rechercher'}}
+    </button>
+  </form>
+  @if(searchError()){
+  <p class="error" role="alert">{{searchError()}}</p>
+  } @if(people();as result){
+  <section class="list" aria-label="Résultats de recherche">
+    @for(p of result.items;track p.participantId??'v'+p.volunteerId){
+    <article class="person-choice">
+      <b>{{name(p)}}</b> · {{p.type}} · {{p.participantId?'#'+p.participantId:'Bénévole
+      #'+p.volunteerId}}<button (click)="choose(p)">Historique →</button>
+    </article>
+    }@empty{
+    <p>Aucune personne trouvée pour cette recherche.</p>
+    }
+  </section>
+  <nav class="pager">
+    <button (click)="searchPage(-1)" [disabled]="searchOffset===0||searching()">
+      Précédent (recherche)</button
+    ><span
+      >{{searchOffset+(result.items.length?1:0)}}–{{searchOffset+result.items.length}} /
+      {{result.total}} personnes</span
+    ><button (click)="searchPage(1)" [disabled]="searchOffset+50>=result.total||searching()">
+      Suivant (recherche)
+    </button>
+  </nav>
+  } @if(selected();as person){
+  <button type="button" (click)="close()">Fermer l'historique</button>
+  <h2>
+    Historique de {{name(person)}} · {{person.participantId?'#'+person.participantId:'Bénévole
+    #'+person.volunteerId}}
+  </h2>
+  @if(!person.participantId){
+  <p class="note">
+    Ce bénévole n'a pas de fiche participant ni d'affectation de badge. Aucun événement de scan ne
+    peut lui être rattaché pour le moment. Cette consultation ne crée aucune fiche.
+  </p>
+  }@else{
+  <form class="filters" (ngSubmit)="refresh()">
+    <label>Du<input name="from" type="date" [(ngModel)]="from" /></label
+    ><label>Au (inclus)<input name="to" type="date" [(ngModel)]="to" /></label
+    ><label
+      >Point<select name="point" [(ngModel)]="pointId">
+        <option [ngValue]="null">Tous les points</option>
+        @for(p of points;track p.id){
+        <option [ngValue]="p.id">{{p.name}}</option>
+        }
+      </select></label
+    ><label
+      >Type de scan<select name="scanType" [(ngModel)]="scanTypeId">
+        <option [ngValue]="null">Tous les types</option>
+        @for(t of types;track t.id){
+        <option [ngValue]="t.id">{{t.label}}</option>
+        }
+      </select></label
+    ><label
+      >Résultat<select name="verdict" [(ngModel)]="verdictFilter">
+        <option value="">Tous les résultats</option>
+        <option value="ACCEPTED">Accepté</option>
+        <option value="DUPLICATE">Doublon</option>
+        <option value="REJECTED_REVOKED">Badge révoqué</option>
+        <option value="REJECTED_EXPIRED_ASSIGNMENT">Badge remplacé / expiré</option>
+        <option value="REJECTED_NO_RIGHT">Droit refusé</option>
+        <option value="REJECTED_NOT_EXPECTED">Hors groupe attendu</option>
+      </select></label
+    ><button type="submit" [disabled]="loading()">{{loading()?'Chargement…':'Actualiser'}}</button>
+  </form>
+  <p class="note">
+    Tous les événements reçus de cette personne, même après remplacement du badge : acceptés,
+    refusés, doublons et scans à vérifier. Filtres indépendants des autres pages. Période de 1 à 31
+    jours. Les scans hors ligne non reçus n'apparaissent pas encore.
+  </p>
+  @if(error()){
+  <p class="error" role="alert">{{error()}}</p>
+  } @if(events();as r){
+  <p class="hint">Sur petit écran, faites défiler le tableau horizontalement pour lire le résultat.</p>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Événements de la personne, tableau défilant">
+    <table>
+      <thead>
+        <tr>
+          <th>Date / heure Paris</th>
+          <th>Lieu / point</th>
+          <th>Type / service</th>
+          <th>Résultat</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for(e of r.items;track e.id){
+        <tr>
+          <td>
+            <b>{{time(e.occurredAtLocal??e.receivedAt)}}</b
+            ><small>Reçu le {{time(e.receivedAt)}}</small><small>Événement #{{e.id}}</small>
+          </td>
+          <td>{{e.zoneName}}<b>{{e.pointName}}</b></td>
+          <td>{{e.scanTypeLabel}}<small>{{e.serviceKey??'Sans service'}}</small></td>
+          <td>
+            {{verdict(e.verdict)}}@if(e.needsReview){<small
+              >À vérifier{{e.reviewClosed?' · vérification close':''}}</small
+            >}@if(e.exceptionId){<small class="exception">Exception</small
+            ><small>{{e.exceptionReason}}</small>}
+          </td>
+        </tr>
+        }@empty{
+        <tr>
+          <td colspan="4">Aucun événement reçu pour cette personne et ces filtres.</td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <nav class="pager">
+    <button (click)="page(-1)" [disabled]="offset===0||loading()">Précédent (historique)</button
+    ><span
+      >{{resultOffset()+(r.items.length?1:0)}}–{{resultOffset()+r.items.length}} / {{r.total}}
+      événements</span
+    ><button (click)="page(1)" [disabled]="offset+50>=r.total||loading()">
+      Suivant (historique)
+    </button>
+  </nav>
+  <p class="hint">
+    Plus récent en premier. Actualisé le {{time(r.fetchedAt)}}. Une clôture de vérification ne
+    supprime pas l'événement ni son verdict.
+  </p>
+  } }}
+</main>

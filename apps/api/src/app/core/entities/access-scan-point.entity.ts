@@ -33,6 +33,9 @@ export class AccessScanPoint {
   @Column({ name: 'service_key', type: 'varchar', length: 120, nullable: true })
   serviceKey!: string | null;
 
+  @Column({ name: 'expected_online_required', type: 'boolean', default: false })
+  expectedOnlineRequired!: boolean;
+
   @Column({ type: 'boolean', default: true })
   active!: boolean;
 }

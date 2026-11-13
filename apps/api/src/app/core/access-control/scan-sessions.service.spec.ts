@@ -4,6 +4,7 @@ import { PersonType } from '../entities';
 import { ScanSessionsService } from './scan-sessions.service';
 
 const makeRepo = () => ({
+  manager: { query: vi.fn().mockResolvedValue([]) },
   findOneBy: vi.fn(),
   findOne: vi.fn(),
   find: vi.fn(),
@@ -46,6 +47,12 @@ const makeService = () => {
 };
 
 describe('ScanSessionsService', () => {
+  it('forces online validation when a point in the session zone has expected-group policy', async () => {
+    const { service, repos } = makeService();
+    repos.sessions.manager.query.mockResolvedValue([{ id: 1 }]);
+    expect((await service.start(1, {})).requiresOnlineValidation).toBe(true);
+  });
+
   it('refuse par défaut : sans habilitation active, pas de session', async () => {
     const { service, grantsService, repos } = makeService();
     grantsService.assertActiveGrant.mockRejectedValue(new ForbiddenException('nope'));
@@ -62,7 +69,9 @@ describe('ScanSessionsService', () => {
     expect(result.snapshotVersion).toBe(41);
     expect(result.sessionKey).toBeTruthy();
     expect(new Date(result.keyExpiresAt).getTime()).toBeLessThanOrEqual(Date.now() + 31 * 60_000);
-    expect(new Date(result.expiresAt).getTime()).toBeGreaterThan(new Date(result.keyExpiresAt).getTime());
+    expect(new Date(result.expiresAt).getTime()).toBeGreaterThan(
+      new Date(result.keyExpiresAt).getTime(),
+    );
     expect(repos.sessions.save).toHaveBeenCalled();
     expect(auditService.record).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'SCAN_SESSION_STARTED' }),
@@ -129,7 +138,12 @@ describe('ScanSessionsService', () => {
     });
     repos.assignments.find
       .mockResolvedValueOnce([
-        { id: 9, badge: { code: 'c1' }, participant: { firstName: 'A', lastName: 'B', type: PersonType.JEUNE }, version: 2 },
+        {
+          id: 9,
+          badge: { code: 'c1' },
+          participant: { firstName: 'A', lastName: 'B', type: PersonType.JEUNE },
+          version: 2,
+        },
       ])
       .mockResolvedValueOnce([{ id: 5 }]);
 
@@ -137,7 +151,14 @@ describe('ScanSessionsService', () => {
 
     expect(result.version).toBe(41);
     expect(result.upserts).toEqual([
-      { assignmentId: 9, code: 'c1', firstName: 'A', lastName: 'B', personType: PersonType.JEUNE, version: 2 },
+      {
+        assignmentId: 9,
+        code: 'c1',
+        firstName: 'A',
+        lastName: 'B',
+        personType: PersonType.JEUNE,
+        version: 2,
+      },
     ]);
     expect(result.revokedAssignmentIds).toEqual([5]);
   });

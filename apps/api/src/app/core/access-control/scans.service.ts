@@ -1,3 +1,4 @@
+import { ExpectedScanPolicyService } from './expected-scan-policy.service';
 import {
   BadRequestException,
   ForbiddenException,
@@ -20,7 +21,12 @@ import {
   AccessScanVerdict,
 } from '../entities';
 import { AccessAuditService } from './access-audit.service';
-import { LookupResult, ScanBatchItemDto, ScanVerdictResult, UploadScansDto } from './access-control.types';
+import {
+  LookupResult,
+  ScanBatchItemDto,
+  ScanVerdictResult,
+  UploadScansDto,
+} from './access-control.types';
 import { UNKNOWN_CODE_BURST_WINDOW_MINUTES } from './access-control.constants';
 import { LookupRateLimiterService } from './lookup-rate-limiter.service';
 import { ScannerGrantsService } from './scanner-grants.service';
@@ -51,6 +57,7 @@ export class ScansService {
     private readonly grantsService: ScannerGrantsService,
     private readonly auditService: AccessAuditService,
     private readonly rateLimiter: LookupRateLimiterService,
+    private readonly expected: ExpectedScanPolicyService,
   ) {}
 
   private async loadPointContext(pointId: number): Promise<PointContext> {
@@ -63,7 +70,9 @@ export class ScansService {
     }
     return {
       point,
-      zoneAllowedTypes: point.zone?.allowedPersonTypes?.length ? point.zone.allowedPersonTypes : null,
+      zoneAllowedTypes: point.zone?.allowedPersonTypes?.length
+        ? point.zone.allowedPersonTypes
+        : null,
       duplicateRule: point.scanType.duplicateRule,
     };
   }
@@ -120,7 +129,12 @@ export class ScansService {
     serviceKey: string | null,
     occurredAt: Date,
     events = this.eventsRepository,
-  ): Promise<{ verdict: AccessScanVerdict; assignment: AccessBadgeAssignment | null; duplicateOf?: AccessScanEvent; needsReview: boolean }> {
+  ): Promise<{
+    verdict: AccessScanVerdict;
+    assignment: AccessBadgeAssignment | null;
+    duplicateOf?: AccessScanEvent;
+    needsReview: boolean;
+  }> {
     const badge = await this.badgesRepository.findOneBy({ code });
     if (!badge) {
       return { verdict: AccessScanVerdict.REJECTED_UNKNOWN, assignment: null, needsReview: true };
@@ -157,34 +171,89 @@ export class ScansService {
       };
     }
 
-    if (context.zoneAllowedTypes && !context.zoneAllowedTypes.includes(assignment.participant.type)) {
+    if (
+      context.zoneAllowedTypes &&
+      !context.zoneAllowedTypes.includes(assignment.participant.type)
+    ) {
       return { verdict: AccessScanVerdict.REJECTED_NO_RIGHT, assignment, needsReview: false };
     }
 
-    const duplicate = await this.findDuplicate(context, assignment.participantId, serviceKey, occurredAt, events);
+    const duplicate = await this.findDuplicate(
+      context,
+      assignment.participantId,
+      serviceKey,
+      occurredAt,
+      events,
+    );
     if (duplicate) {
-      return { verdict: AccessScanVerdict.DUPLICATE, assignment, duplicateOf: duplicate, needsReview: false };
+      return {
+        verdict: AccessScanVerdict.DUPLICATE,
+        assignment,
+        duplicateOf: duplicate,
+        needsReview: false,
+      };
     }
 
+    if (
+      !(await this.expected.check(
+        context.point.id,
+        context.point.scanTypeId,
+        serviceKey,
+        assignment.participantId,
+        occurredAt,
+        events.manager,
+      ))
+    )
+      return { verdict: AccessScanVerdict.REJECTED_NOT_EXPECTED, assignment, needsReview: false };
     return { verdict: AccessScanVerdict.ACCEPTED, assignment, needsReview: false };
   }
 
+  async online(sessionId: number, userId: number, scan: ScanBatchItemDto) {
+    const session = await this.sessionsService.findOpenSession(sessionId, userId);
+    const context = await this.loadPointContext(scan.pointId);
+    if (session.zoneId != null && session.zoneId !== context.point.zoneId)
+      throw new ForbiddenException('Point hors de la zone de session');
+    await this.grantsService.assertActiveGrant(userId, context.point.zoneId);
+    const [result] = await this.upload(sessionId, userId, {
+      scans: [{ ...scan, occurredAtLocal: new Date().toISOString(), clientAccepted: undefined }],
+    });
+    return result;
+  }
+
   /** Envoi par lots, idempotent : un clientEventId = un seul événement. */
-  async upload(sessionId: number, userId: number, dto: UploadScansDto): Promise<ScanVerdictResult[]> {
+  async upload(
+    sessionId: number,
+    userId: number,
+    dto: UploadScansDto,
+  ): Promise<ScanVerdictResult[]> {
     // Shared database locks, not in-process mutexes: works across API replicas.
     // Lock scan types in a fixed order to avoid cross-batch deadlocks.
-    return this.eventsRepository.manager.transaction(async manager => {
-      const contexts = await Promise.all([...new Set(dto.scans.map(s => s.pointId))].map(id => this.loadPointContext(id)));
-      const typeIds = [...new Set(contexts.filter(c => c.duplicateRule !== AccessScanDuplicateRule.ALLOW).map(c => c.point.scanTypeId))].sort((a, b) => a - b);
-      for (const typeId of typeIds) await manager.query('SELECT pg_advisory_xact_lock($1, $2)', [21027, typeId]);
-      for (const id of [...new Set(dto.scans.map(s => s.clientEventId))].sort()) {
+    return this.eventsRepository.manager.transaction(async (manager) => {
+      const contexts = await Promise.all(
+        [...new Set(dto.scans.map((s) => s.pointId))].map((id) => this.loadPointContext(id)),
+      );
+      const typeIds = [
+        ...new Set(
+          contexts
+            .filter((c) => c.duplicateRule !== AccessScanDuplicateRule.ALLOW)
+            .map((c) => c.point.scanTypeId),
+        ),
+      ].sort((a, b) => a - b);
+      for (const typeId of typeIds)
+        await manager.query('SELECT pg_advisory_xact_lock($1, $2)', [21027, typeId]);
+      for (const id of [...new Set(dto.scans.map((s) => s.clientEventId))].sort()) {
         await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [id]);
       }
       return this.uploadBatch(sessionId, userId, dto, manager.getRepository(AccessScanEvent));
     });
   }
 
-  private async uploadBatch(sessionId: number, userId: number, dto: UploadScansDto, events: Repository<AccessScanEvent>): Promise<ScanVerdictResult[]> {
+  private async uploadBatch(
+    sessionId: number,
+    userId: number,
+    dto: UploadScansDto,
+    events: Repository<AccessScanEvent>,
+  ): Promise<ScanVerdictResult[]> {
     const session = await this.sessionsService.findOwnedSession(sessionId, userId);
     const results: ScanVerdictResult[] = [];
 
@@ -195,8 +264,31 @@ export class ScansService {
 
       const existing = await events.findOneBy({ clientEventId: scan.clientEventId });
       if (existing) {
+        if (existing.sessionId !== sessionId)
+          throw new ForbiddenException('Identifiant de scan appartenant à une autre session');
         // Répétition réseau du téléphone : on renvoie le verdict déjà tranché.
-        results.push({ clientEventId: scan.clientEventId, verdict: existing.verdict });
+        results.push({
+          clientEventId: scan.clientEventId,
+          verdict: existing.verdict,
+          eventId: existing.id,
+          needsReview: existing.needsReview,
+          ...(existing.verdict === AccessScanVerdict.REJECTED_NOT_EXPECTED
+            ? {
+                exceptionAllowed: await this.expected.canOverride(
+                  userId,
+                  existing.pointId,
+                  events.manager,
+                ),
+                passages: await this.expected.candidates(
+                  existing.pointId,
+                  existing.scanTypeId,
+                  existing.serviceKey,
+                  new Date(),
+                  events.manager,
+                ),
+              }
+            : {}),
+        });
         continue;
       }
 
@@ -230,14 +322,36 @@ export class ScansService {
             verdict: decision.verdict,
             serviceKey: this.serviceKeyOf(context, scan),
             clientEventId: scan.clientEventId,
-            needsReview: scan.clientAccepted === false || decision.needsReview || session.expiresAt <= new Date() || !!session.closedAt
-              || occurredAt < session.startedAt || occurredAt > session.expiresAt,
-
+            needsReview:
+              scan.clientAccepted === false ||
+              decision.needsReview ||
+              session.expiresAt <= new Date() ||
+              !!session.closedAt ||
+              occurredAt < session.startedAt ||
+              occurredAt > session.expiresAt,
           }),
         );
         results.push({
           clientEventId: scan.clientEventId,
           verdict: event.verdict,
+          eventId: event.id,
+          needsReview: event.needsReview,
+          ...(event.verdict === AccessScanVerdict.REJECTED_NOT_EXPECTED
+            ? {
+                exceptionAllowed: await this.expected.canOverride(
+                  userId,
+                  event.pointId,
+                  events.manager,
+                ),
+                passages: await this.expected.candidates(
+                  context.point.id,
+                  context.point.scanTypeId,
+                  context.point.serviceKey,
+                  new Date(),
+                  events.manager,
+                ),
+              }
+            : {}),
           duplicateOfEventId: decision.duplicateOf?.id,
         });
       } catch (error) {
@@ -274,12 +388,21 @@ export class ScansService {
     const context = await this.loadPointContext(pointId);
     await this.grantsService.assertActiveGrant(userId, context.point.zoneId);
 
-    const decision = await this.decide(context, code, undefined, context.point.serviceKey, new Date());
+    const decision = await this.decide(
+      context,
+      code,
+      undefined,
+      context.point.serviceKey,
+      new Date(),
+    );
 
     if (decision.verdict === AccessScanVerdict.REJECTED_UNKNOWN) {
       const since = new Date(Date.now() - UNKNOWN_CODE_BURST_WINDOW_MINUTES * 60_000);
       const recentUnknowns = await this.auditRepository.count({
-        where: { action: AccessAuditAction.UNKNOWN_CODE_LOOKUP, createdAt: Between(since, new Date()) },
+        where: {
+          action: AccessAuditAction.UNKNOWN_CODE_LOOKUP,
+          createdAt: Between(since, new Date()),
+        },
       });
       // Un code inconnu répété est remonté au journal (détail "repeated").
       await this.auditService.record({

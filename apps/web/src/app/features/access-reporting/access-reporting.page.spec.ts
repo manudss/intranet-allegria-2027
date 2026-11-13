@@ -1,3 +1,4 @@
+import {provideRouter} from '@angular/router';
 import { TestBed } from '@angular/core/testing';
 import { describe, it, expect, vi } from 'vitest';
 import { of, Subject, throwError } from 'rxjs';
@@ -7,7 +8,7 @@ const row:ScanReviewItem={id:7,participantId:42,firstName:'Ada',lastName:'Test',
 const summary:AccessSummary={from:'2027-07-31T00:00:00Z',to:'2027-08-01T00:00:00Z',zoneId:null,counts:[{zoneId:1,zoneName:'Repas',scanTypeId:3,scanTypeLabel:'Repas',serviceKey:'midi',accepted:215,uncertain:4,duplicates:2,rejected:1}],presence:{estimatedPresent:248,byZone:[{zoneId:1,present:248}]},pendingReviews:3,lastReceivedAt:'2027-07-31T12:42:00Z',fetchedAt:'2027-07-31T12:43:00Z',caveat:''};
 function setup() {
   const api={zones:vi.fn(()=>of([{id:1,name:'Repas'}])),types:vi.fn(()=>of([{id:1,code:'ENTREE',label:'Entrée'},{id:2,code:'SORTIE',label:'Sortie'},{id:3,code:'REPAS',label:'Repas'}])),summary:vi.fn(()=>of(summary)),reviews:vi.fn(()=>of({items:[row],total:51})),closeReview:vi.fn(()=>of({}))};
-  TestBed.configureTestingModule({imports:[AccessReportingPage],providers:[{provide:AccessReportingApi,useValue:api}]});
+  TestBed.configureTestingModule({imports:[AccessReportingPage],providers:[provideRouter([]),{provide:AccessReportingApi,useValue:api}]});
   const fixture=TestBed.createComponent(AccessReportingPage);fixture.detectChanges();
   return {api,fixture,page:fixture.componentInstance};
 }

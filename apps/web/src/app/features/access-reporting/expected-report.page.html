@@ -1,0 +1,197 @@
+<main class="page">
+  <header>
+    <h1>{{groupsView?'Groupe attendu · exceptions':'Non scannés · exceptions visibles'}}</h1>
+    <nav class="navigation" aria-label="Suivi des accès">
+      <a routerLink="/acces/dashboard">Dashboard</a><a routerLink="/acces/scannes">Scannés par lieu</a><a routerLink="/acces/suivi">Vérifications</a
+      ><a routerLink="/acces/historique-personne">Historique personne</a><a routerLink="/acces/non-scannes" [class.active]="!groupsView">Non scannés</a
+      ><a routerLink="/acces/historique-groupe">Historique groupe</a><a routerLink="/acces/groupes-exceptions" [class.active]="groupsView"
+        >Groupes attendus · exceptions</a
+      >
+    </nav>
+  </header>
+  <div class="filters">
+    <label
+      >Passage / groupe attendu<select
+        [(ngModel)]="passageId"
+        (ngModelChange)="changePassage()"
+        [disabled]="configLoading()"
+      >
+        @for(p of passages();track p.id){
+        <option [ngValue]="p.id">{{p.groupName}} · {{p.label}} · {{time(p.starts_at)}}</option>
+        }
+      </select></label
+    >@if(selected();as p){
+    <div class="point">
+      <span>Point</span><strong>{{p.pointName}}</strong
+      ><small>{{time(p.starts_at)}}–{{time(p.ends_at)}} · {{p.timezone}}</small>
+    </div>
+    }<button (click)="refresh()" [disabled]="loading()||!passageId">
+      {{loading()?'Chargement…':'Actualiser'}}
+    </button>
+  </div>
+  @if(passages().length < passageTotal()){<button
+    (click)="morePassages()"
+    [disabled]="configLoading()"
+  >
+    Charger d'autres passages ({{passages().length}} / {{passageTotal()}})</button
+  >} @if(error()){
+  <p role="alert" class="error">
+    {{error()}}<button (click)="passageId?refresh():loadPassages()">Réessayer</button>
+  </p>
+  } @if(!passages().length&&!configLoading()&&!error()){
+  <section class="note">
+    Aucun groupe attendu n'est défini. Aucun nombre de non scannés ne peut être calculé sans passage
+    attendu.
+  </section>
+  } @if(result();as r){
+  <section class="metrics" aria-label="Avancement attendu">
+    @if(groupsView){
+    <article>
+      <span>Composition normale</span><strong>{{r.counts.expected-r.counts.exceptions}}</strong
+      ><small>Équipes / types / sélection actuels</small>
+    </article>
+    <article>
+      <span>Exceptions ajoutées</span><strong>{{r.counts.exceptions}}</strong
+      ><small>Pour ce passage seulement</small>
+    </article>
+    <article>
+      <span>Total attendu effectif</span><strong>{{r.counts.expected}}</strong
+      ><small>Personnes distinctes</small>
+    </article>
+    <article>
+      <span>Passages confirmés</span><strong>{{r.counts.confirmed}}</strong
+      ><small>Exceptions incluses</small>
+    </article>
+    } @else {
+    <article>
+      <span>Attendus effectifs</span><strong>{{r.counts.expected}}</strong
+      ><small>Dont {{r.counts.exceptions}} exception(s)</small>
+    </article>
+    <article>
+      <span>Confirmés</span><strong>{{r.counts.confirmed}}</strong
+      ><small>Acceptés sans ambiguïté</small>
+    </article>
+    <article>
+      <span>À vérifier seuls</span><strong>{{r.counts.reviewOnly}}</strong
+      ><small>Sans passage confirmé</small>
+    </article>
+    <article>
+      <span>Sans passage confirmé</span><strong>{{r.counts.notConfirmed}}</strong
+      ><small>Dont refusés et sans badge</small>
+    </article>
+    }
+  </section>
+  <p class="note">
+    Composition actuelle. Les téléphones hors ligne non reçus ne sont pas comptés. L'absence de
+    passage confirmé n'est pas un constat d'absence physique. Le refus initial reste dans
+    l'historique après une exception.
+  </p>
+  <nav class="tabs" aria-label="État des personnes">
+    <button [class.active]="status==='NOT_CONFIRMED'" (click)="selectStatus('NOT_CONFIRMED')">
+      Sans passage confirmé ({{r.counts.notConfirmed}})</button
+    ><button [class.active]="status==='REVIEW_ONLY'" (click)="selectStatus('REVIEW_ONLY')">
+      À vérifier seuls ({{r.counts.reviewOnly}})</button
+    ><button [class.active]="status==='CONFIRMED'" (click)="selectStatus('CONFIRMED')">
+      Confirmés ({{r.counts.confirmed}})</button
+    ><button [class.active]="status===''" (click)="selectStatus('')">
+      Tous les attendus ({{r.counts.expected}})</button
+    ><button [class.active]="status==='EXCEPTION'" (click)="selectStatus('EXCEPTION')">
+      Exceptions ({{r.counts.exceptions}})
+    </button>
+  </nav>
+  <form class="search" (ngSubmit)="refresh()">
+    <label
+      >Rechercher une personne<input
+        [(ngModel)]="search"
+        name="search"
+        maxlength="120"
+        placeholder="Prénom / nom adulte / identifiant" /></label
+    ><button type="submit" [disabled]="loading()">Rechercher</button>
+  </form>
+  @if(groupsView){
+  <h2>{{status==='EXCEPTION'?'Membres ajoutés par exception':'Personnes attendues'}}</h2>
+  }
+  <section class="list" aria-label="Personnes attendues">
+    <div class="row head">
+      <span>Personne</span><span>Origine dans le groupe</span><span>État du passage</span
+      ><span>{{groupsView?'Autorisation / motif':'Dernière trace reçue'}}</span>
+    </div>
+    @for(p of r.items;track p.personKey){
+    <article class="row">
+      <div>
+        <span class="mobile-label">Personne</span><b>{{name(p)}}</b
+        ><small
+          >{{p.participantId?'#'+p.participantId:'Bénévole #'+p.volunteerId}} ·
+          {{typeLabel(p)}}</small
+        >
+      </div>
+      <div>
+        <span class="mobile-label">Origine</span>@if(p.isException){<b class="exception"
+          >Exception</b
+        ><small>Ajouté le {{time(p.exception?.createdAt)}}</small>}@else{Membre normal<small
+          >Composition actuelle</small
+        >}
+      </div>
+      <div>
+        <span class="mobile-label">État</span>{{state(p)}}@if(p.lastAttempt){<small
+          >{{verdict(p.lastAttempt.verdict)}} ·
+          {{time(p.lastAttempt.occurredAtLocal??p.lastAttempt.receivedAt)}}</small
+        >}
+      </div>
+      <div>
+        <span class="mobile-label">Trace / motif</span>@if(p.exception){<b
+          >{{p.exception.authorizedEmail}}</b
+        ><small>{{p.exception.reason}}</small>@if(groupsView){<button
+          class="history"
+          (click)="selectedException.set(p)"
+        >
+          Historique de cette décision →</button
+        >}}@else if(p.lastReceivedAt){Reçu le {{time(p.lastReceivedAt)}}}@else{Aucun scan reçu}
+      </div>
+    </article>
+    }@empty{
+    <p class="empty">Aucune personne dans ce filtre.</p>
+    }
+  </section>
+  <nav class="pager" aria-label="Pagination">
+    <button (click)="page(-1)" [disabled]="offset===0||loading()">Précédent</button
+    ><span>{{offset+(r.items.length?1:0)}}–{{offset+r.items.length}} / {{r.total}} personnes</span
+    ><button (click)="page(1)" [disabled]="offset+50>=r.total||loading()">Suivant</button>
+  </nav>
+  @if(groupsView && selectedException();as p){@if(p.exception;as ex){
+  <section class="decision">
+    <h2>Historique de cette décision · {{name(p)}}</h2>
+    <div class="decision-row">
+      <time>{{time(ex.refusedAt,true)}}</time><span>Scan individuel</span
+      ><span>Refusé · hors groupe attendu</span>
+    </div>
+    <div class="decision-row">
+      <time>{{time(ex.acceptedAt,true)}}</time
+      ><span>Dérogation confirmée par {{ex.authorizedEmail}} · session #{{ex.sessionId}}</span
+      ><span>Membre exception ajouté + passage accepté</span>
+    </div>
+    <p class="hint">{{ex.reason}}. Pour ce passage seulement. Le refus initial reste inchangé.</p>
+  </section>
+  }} @if(!groupsView){
+  <section class="impact">
+    <h2>Impact dashboard · ce passage</h2>
+    <div class="impact-row">
+      <span>Normaux <b>{{r.counts.expected-r.counts.exceptions}}</b></span
+      ><span>Exceptions <b>{{r.counts.exceptions}}</b></span
+      ><span>Confirmés <b>{{r.counts.confirmed}}</b></span
+      ><span>À vérifier seuls <b>{{r.counts.reviewOnly}}</b></span
+      ><span>Sans passage <b>{{r.counts.notConfirmed}}</b></span>
+    </div>
+    <p class="hint">
+      Une personne reste comptée une seule fois. Un refus puis une acceptation par exception ne sont
+      pas deux personnes.
+    </p>
+  </section>
+  }
+  <p class="hint">
+    {{r.counts.confirmed}} confirmés + {{r.counts.reviewOnly}} à vérifier seuls +
+    {{r.counts.notConfirmed}} sans passage = {{r.counts.expected}} attendus. L'exception n'ajoute
+    aucun droit permanent aux autres services.
+  </p>
+  }
+</main>

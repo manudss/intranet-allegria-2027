@@ -13,10 +13,7 @@ import {
 } from '../entities';
 import { AccessAuditService } from './access-audit.service';
 import { SnapshotEntry, StartScanSessionDto } from './access-control.types';
-import {
-  SCAN_SESSION_KEY_TTL_MINUTES,
-  SCAN_SESSION_TTL_MINUTES,
-} from './access-control.constants';
+import { SCAN_SESSION_KEY_TTL_MINUTES, SCAN_SESSION_TTL_MINUTES } from './access-control.constants';
 import { ScannerGrantsService } from './scanner-grants.service';
 
 const newSessionKey = (): string => randomBytes(24).toString('base64url');
@@ -72,6 +69,17 @@ export class ScanSessionsService {
     return qb.getRawMany<SnapshotEntry>();
   }
 
+  private async expectedOnline(zoneId: number | null): Promise<boolean> {
+    return (
+      (
+        await this.sessionsRepository.manager.query(
+          `SELECT 1 FROM access_scan_points pt WHERE ($1::int IS NULL OR pt.zone_id=$1) AND pt.expected_online_required LIMIT 1`,
+          [zoneId],
+        )
+      ).length > 0
+    );
+  }
+
   async start(userId: number, dto: StartScanSessionDto) {
     const zoneId = dto.zoneId ?? null;
     let zone: AccessZone | null = null;
@@ -116,7 +124,8 @@ export class ScanSessionsService {
       sessionKey: session.sessionKey,
       snapshotVersion,
       maxOfflineMinutes: zone?.maxOfflineMinutes ?? 240,
-      requiresOnlineValidation: zone?.requiresOnlineValidation ?? false,
+      requiresOnlineValidation:
+        (zone?.requiresOnlineValidation ?? false) || (await this.expectedOnline(zoneId)),
       snapshot,
     };
   }
@@ -189,6 +198,8 @@ export class ScanSessionsService {
     return {
       version: await this.currentMetaVersion(),
       upserts,
+      requiresOnlineValidation:
+        (zone?.requiresOnlineValidation ?? false) || (await this.expectedOnline(session.zoneId)),
       revokedAssignmentIds: revoked.map((assignment) => assignment.id),
     };
   }

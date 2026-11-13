@@ -1,3 +1,4 @@
+import {seedAccessExpectedDemo} from './access-expected-demo';
 import { randomBytes } from 'crypto';
 import { DataSource } from 'typeorm';
 import { AccessBadge, AccessBadgeAssignment, AccessBadgeStatus, AccessScanEvent, AccessScanPoint, AccessScanSession, AccessScanType, AccessScanVerdict, AccessScannerGrant, AccessZone, Participant, PersonType, Role, User, UserRole, Volunteer, MejAgeGroup } from '../../app/core/entities';
@@ -59,6 +60,14 @@ export async function seedAccessTestkit(ds:DataSource, admin:User, passwordHash:
   await add(10,meal,AccessScanVerdict.ACCEPTED,-30);await add(10,meal,AccessScanVerdict.DUPLICATE,-29,false,b);
   const closed=await add(10,meal,AccessScanVerdict.DUPLICATE,-28,false,b);await repo(AccessScanReview).save({eventId:closed.id,reviewerId:admin.id,note:'DEMO : vérification déjà close, verdict conservé.'});
   await add(11,meal,AccessScanVerdict.ACCEPTED,-30,true,expired);
+  // Dedicated expected passage: leaves the existing meal/entry testkit untouched.
+  const groupPoint=await repo(AccessScanPoint).save(repo(AccessScanPoint).create({zoneId:zone.id,scanTypeId:meal.scanTypeId,name:'QR-DEMO · Groupe attendu (en ligne)',serviceKey:'qr-demo-groupe',expectedOnlineRequired:true}));
+  await add(0,groupPoint,AccessScanVerdict.ACCEPTED,-20);
+  await add(11,groupPoint,AccessScanVerdict.ACCEPTED,-19,true,expired);
+  await add(6,groupPoint,AccessScanVerdict.REJECTED_REVOKED,-18);
+  const refused=await add(2,groupPoint,AccessScanVerdict.REJECTED_NOT_EXPECTED,-17);
+  const accepted=await add(2,groupPoint,AccessScanVerdict.ACCEPTED,-16);
+  await seedAccessExpectedDemo(ds,{adminId:admin.id,scannerId:users[1].id,pointId:groupPoint.id,scanTypeId:groupPoint.scanTypeId,sessionId:a.id,memberIds:[0,1,3,6,11].map(i=>people[i].id),exceptionParticipantId:people[2].id,refusedEventId:refused.id,acceptedEventId:accepted.id,now});
   // Additional points expose configured daily and bus modes as well as inactive controls.
   await repo(AccessScanPoint).save([
     repo(AccessScanPoint).create({zoneId:entry.zoneId,scanTypeId:types.find(t=>t.code==='APPEL')!.id,name:'QR testkit - Appel quotidien'}),

@@ -1,5 +1,20 @@
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsEnum, IsInt, IsISO8601, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min, ValidateNested } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsISO8601,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
   AccessBadgeStatus,
@@ -28,7 +43,10 @@ export class RegisterBadgeStockDto {
   @IsNotEmpty({ each: true })
   codes?: string[];
 
-  @ApiPropertyOptional({ example: 100, description: 'Nombre de codes opaques à générer pour le lot.' })
+  @ApiPropertyOptional({
+    example: 100,
+    description: 'Nombre de codes opaques à générer pour le lot.',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -77,7 +95,10 @@ export class ReplaceBadgeDto {
   @Min(1)
   participantId!: number;
 
-  @ApiProperty({ example: 'ab12cd34ef56ab78cd34ef56', description: 'Code du badge neuf (disponible).' })
+  @ApiProperty({
+    example: 'ab12cd34ef56ab78cd34ef56',
+    description: 'Code du badge neuf (disponible).',
+  })
   @IsString()
   @MaxLength(64)
   @IsNotEmpty()
@@ -157,7 +178,10 @@ export class CreateScanTypeDto {
   @MaxLength(300)
   description?: string;
 
-  @ApiPropertyOptional({ enum: AccessScanDuplicateRule, example: AccessScanDuplicateRule.UNIQUE_PER_SERVICE })
+  @ApiPropertyOptional({
+    enum: AccessScanDuplicateRule,
+    example: AccessScanDuplicateRule.UNIQUE_PER_SERVICE,
+  })
   @IsOptional()
   @IsEnum(AccessScanDuplicateRule)
   duplicateRule?: AccessScanDuplicateRule;
@@ -176,7 +200,11 @@ export class CreateZoneDto {
   @MaxLength(300)
   description?: string;
 
-  @ApiPropertyOptional({ enum: PersonType, isArray: true, example: [PersonType.BENEVOLE, PersonType.ANIMATEUR] })
+  @ApiPropertyOptional({
+    enum: PersonType,
+    isArray: true,
+    example: [PersonType.BENEVOLE, PersonType.ANIMATEUR],
+  })
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(3)
@@ -255,7 +283,10 @@ export class CreateScannerGrantDto {
 }
 
 export class StartScanSessionDto {
-  @ApiPropertyOptional({ example: 1, description: 'Zone couverte ; absent = toutes les zones du grant.' })
+  @ApiPropertyOptional({
+    example: 1,
+    description: 'Zone couverte ; absent = toutes les zones du grant.',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -286,7 +317,10 @@ export class ScanBatchItemDto {
   @Min(1)
   pointId!: number;
 
-  @ApiPropertyOptional({ example: 128, description: 'Affectation connue de la table locale, si présente.' })
+  @ApiPropertyOptional({
+    example: 128,
+    description: 'Affectation connue de la table locale, si présente.',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -349,6 +383,10 @@ export type SnapshotEntry = {
 };
 
 export type ScanVerdictResult = {
+  eventId?: number;
+  needsReview?: boolean;
+  exceptionAllowed?: boolean;
+  passages?: { id: number; groupId: number; groupName: string }[];
   clientEventId: string;
   verdict: AccessScanVerdict;
   duplicateOfEventId?: number;

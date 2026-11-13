@@ -1,3 +1,5 @@
+import { ExpectedScanPolicyController } from './expected-scan-policy.controller';
+import { ExpectedScanPolicyService } from './expected-scan-policy.service';
 import { BadgeSelectionController } from './badge-selection.controller';
 import { JeunesRepartitionModule } from '../jeunes-repartition/jeunes-repartition.module';
 import { TeamBenevolesModule } from '../team-benevoles/team-benevoles.module';
@@ -56,6 +58,7 @@ import {
   ],
   controllers: [
     BadgePrintController,
+    ExpectedScanPolicyController,
     BadgeSelectionController,
     AccessBadgesController,
     AccessConfigController,
@@ -64,6 +67,7 @@ import {
   ],
   providers: [
     BadgePrintService,
+    ExpectedScanPolicyService,
     AccessAuditService,
     BadgesService,
     ScanConfigService,

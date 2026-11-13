@@ -35,6 +35,30 @@ export class AccessExpectedGroupsService {
       details: { version },
     });
   }
+  async dashboard(from: string, to: string) {
+    const start = Date.parse(from),
+      end = Date.parse(to);
+    if (
+      !Number.isFinite(start) ||
+      !Number.isFinite(end) ||
+      end <= start ||
+      end - start > 31 * 86400000
+    )
+      throw new BadRequestException('Période invalide');
+    const statusCte = EXPECTED_PASSAGE_STATUS_CTE.split('$1')
+      .join('ep.group_id')
+      .split('$2')
+      .join('ep.id');
+    return this.db.query(
+      `SELECT ep.id,ep.group_id AS "groupId",g.name AS "groupName",ep.point_id AS "pointId",pt.name AS "pointName",ep.label,ep.starts_at AS "startsAt",ep.ends_at AS "endsAt",c.*
+      FROM access_expected_passages ep JOIN access_expected_groups g ON g.id=ep.group_id JOIN access_scan_points pt ON pt.id=ep.point_id
+      CROSS JOIN LATERAL (${statusCte} SELECT count(*)::int AS expected,count(*) FILTER(WHERE status='CONFIRMED')::int AS confirmed,
+      count(*) FILTER(WHERE status='REVIEW_ONLY')::int AS "reviewOnly",count(*) FILTER(WHERE status='NOT_CONFIRMED')::int AS "notConfirmed",count(*) FILTER(WHERE "isException")::int AS exceptions FROM statuses) c
+      WHERE ep.starts_at<$2 AND ep.ends_at>$1 AND ep.archived_at IS NULL AND g.archived_at IS NULL ORDER BY ep.starts_at,ep.id`,
+      [from, to],
+    );
+  }
+
   async groups(q: ExpectedPageQuery) {
     const term = q.q?.trim();
     const params = [term ? `%${term.replace(/[!%_]/g, '!$&')}%` : null];

@@ -57,7 +57,7 @@ export function groupEventFilter(groupId: number | null): string {
   const membership = EXPECTED_GROUP_MEMBERS_CTE.replace('src.group_id=$1', 'src.group_id=$14');
   return (
     REPORT_EVENT_FILTER +
-    ` AND e.participant_id IN (${membership} SELECT "participantId" FROM members WHERE "participantId" IS NOT NULL)`
+    ` AND e.participant_id IN (${membership} SELECT "participantId" FROM members WHERE "participantId" IS NOT NULL UNION SELECT ex.participant_id FROM access_passage_exceptions ex JOIN access_expected_passages xp ON xp.id=ex.passage_id WHERE xp.group_id=$14)`
   );
 }
 

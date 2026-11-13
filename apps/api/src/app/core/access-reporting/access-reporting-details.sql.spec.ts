@@ -18,7 +18,7 @@ describe('Reporting detail bound PostgreSQL queries', () => {
       CREATE TABLE access_scan_types(id int,label text);
       CREATE TABLE volunteers(id int,"firstName" text,"lastName" text); CREATE TABLE access_expected_group_sources(group_id int,team_id int,person_type text,participant_id int,volunteer_id int); CREATE TABLE teams(id int,name text,primary_animator_id int,secondary_animator_id int); CREATE TABLE participants(id int,"firstName" text,"lastName" text,type text,status text DEFAULT 'CONFIRMED',volunteer_id int);
       CREATE TABLE team_participants(participant_id int,team_id int);
-      CREATE TABLE access_scan_reviews(event_id int); CREATE TABLE access_passage_exceptions(id int,accepted_event_id int,reason text);
+      CREATE TABLE access_scan_reviews(event_id int); CREATE TABLE access_expected_passages(id int,group_id int); CREATE TABLE access_passage_exceptions(id int,accepted_event_id int,reason text,participant_id int,passage_id int);
       CREATE TABLE access_scan_events(id int,participant_id int,point_id int,scan_type_id int,service_key text,occurred_at_local timestamptz,received_at timestamptz,verdict text,needs_review bool);
       INSERT INTO access_zones VALUES(1,'Accueil'),(2,'Repas');
       INSERT INTO access_scan_points VALUES(1,'Porte A',1,true),(2,'Réfectoire',2,true),(3,'Point vide',2,true);

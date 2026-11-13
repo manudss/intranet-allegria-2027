@@ -1,6 +1,7 @@
 import { PGlite } from '@electric-sql/pglite';
 import { describe, it, expect } from 'vitest';
 import { CreateAccessExpectedGroups1789800000000 } from '../../../database/migrations/1789800000000-CreateAccessExpectedGroups';
+import { AccessExpectedGroupsService } from './access-expected-groups.service';
 import { EXPECTED_GROUP_SQL } from './access-expected-groups.sql';
 
 describe('Expected groups data model', () => {
@@ -13,11 +14,11 @@ describe('Expected groups data model', () => {
    CREATE TABLE participants(id int PRIMARY KEY,volunteer_id int UNIQUE,"firstName" text,"lastName" text,type person_type_enum,status text);
    CREATE TABLE teams(id int PRIMARY KEY,primary_animator_id int,secondary_animator_id int);
    CREATE TABLE team_participants(team_id int,participant_id int);
-   CREATE TABLE access_scan_points(id int PRIMARY KEY);
+   CREATE TABLE access_scan_points(id int PRIMARY KEY,name text);
    CREATE TABLE access_scan_types(id int PRIMARY KEY);
    CREATE TABLE access_passage_exceptions(passage_id int,participant_id int);
    CREATE TABLE access_scan_events(id int PRIMARY KEY,participant_id int,point_id int,scan_type_id int,service_key text,occurred_at_local timestamptz,received_at timestamptz,verdict text,needs_review bool);
-   INSERT INTO access_scan_points VALUES(1),(2); INSERT INTO access_scan_types VALUES(1);
+   INSERT INTO access_scan_points VALUES(1,'Repas'),(2,'Autre'); INSERT INTO access_scan_types VALUES(1);
    INSERT INTO volunteers VALUES(10,'Volunteer','Sans badge'),(11,'Volunteer','Projeté');
    INSERT INTO participants VALUES(42,NULL,'Ada','Privé','JEUNE','CONFIRMED'),(43,NULL,'Noé','Privé','JEUNE','CONFIRMED'),(44,NULL,'Louis','Exemple','ANIMATEUR','CONFIRMED'),(45,11,'Volunteer','Projeté','BENEVOLE','CONFIRMED'),(46,NULL,'Pending','Privé','JEUNE','PENDING');
    INSERT INTO teams VALUES(8,10,NULL); INSERT INTO team_participants VALUES(8,42),(8,43);
@@ -40,6 +41,17 @@ describe('Expected groups data model', () => {
    (6,44,1,1,'midi','2027-07-31 10:35Z','2027-07-31 10:35Z','REJECTED_REVOKED',false),
    (7,45,1,1,'midi','2027-07-31 12:00Z','2027-07-31 12:00Z','ACCEPTED',false);`);
       const members = (await db.query(EXPECTED_GROUP_SQL.members, [1, 50, 0])).rows;
+      const service = new AccessExpectedGroupsService({
+        query: async (sql: string, args: unknown[]) => (await db.query(sql, args)).rows,
+      } as never);
+      const dashboard = await service.dashboard('2027-07-31T00:00:00Z', '2027-08-01T00:00:00Z');
+      expect(dashboard[0]).toMatchObject({
+        expected: 5,
+        confirmed: 1,
+        reviewOnly: 1,
+        notConfirmed: 3,
+        exceptions: 0,
+      });
       expect(members).toHaveLength(5); // sources are a union, not multiplied
       expect(members.find((r) => r.participantId === 42)?.lastName).toBeNull();
       expect(members.find((r) => r.volunteerId === 10)).toMatchObject({

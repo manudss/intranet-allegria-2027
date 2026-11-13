@@ -29,7 +29,7 @@ export const EXPECTED_PASSAGE_STATUS_CTE = `${EXPECTED_GROUP_MEMBERS_CTE}, passa
 ), effective_members AS (
   SELECT * FROM members
   UNION
-  SELECT 'participant:'||p.id,p.id,p.volunteer_id,p."firstName",CASE WHEN p.type='JEUNE' THEN NULL ELSE p."lastName" END,p.type::text
+  SELECT CASE WHEN p.volunteer_id IS NULL THEN 'participant:'||p.id ELSE 'volunteer:'||p.volunteer_id END,p.id,p.volunteer_id,p."firstName",CASE WHEN p.type='JEUNE' THEN NULL ELSE p."lastName" END,p.type::text
   FROM access_passage_exceptions ex JOIN participants p ON p.id=ex.participant_id
   WHERE ex.passage_id=$2 AND NOT EXISTS(SELECT 1 FROM members m WHERE m."participantId"=p.id)
 ), statuses AS (

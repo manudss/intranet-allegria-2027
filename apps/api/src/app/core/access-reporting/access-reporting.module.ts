@@ -1,3 +1,5 @@
+import { AccessExpectedGroupsService } from './access-expected-groups.service';
+import { AccessExpectedGroupsController } from './access-expected-groups.controller';
 import { AccessReportingDetailsService } from './access-reporting-details.service';
 import { ReportDetailQuery } from './access-reporting-details.types';
 import {
@@ -53,7 +55,7 @@ export class AccessReportingController {
 }
 @Module({
   imports: [AuthModule, TypeOrmModule.forFeature([AccessScanReview])],
-  controllers: [AccessReportingController],
-  providers: [AccessReportingService, AccessReportingDetailsService],
+  controllers: [AccessReportingController, AccessExpectedGroupsController],
+  providers: [AccessReportingService, AccessReportingDetailsService, AccessExpectedGroupsService],
 })
 export class AccessReportingModule {}

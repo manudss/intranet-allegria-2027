@@ -4,6 +4,27 @@ import { validate } from 'class-validator';
 import { AccessExpectedGroupsService } from './access-expected-groups.service';
 import { SaveExpectedGroupDto, SaveExpectedPassageDto } from './access-expected-groups.types';
 describe('Expected groups management', () => {
+  it('rejects unbounded overview periods and uses one repeatable snapshot for filtered rows and deduplicated slots', async () => {
+    const query = vi.fn().mockResolvedValue([]);
+    const transaction = vi.fn((_: unknown, f: (m: unknown) => unknown) => f({ query }));
+    const s = new AccessExpectedGroupsService({ transaction } as never);
+    await expect(
+      s.overview({ from: '2027-01-01T00:00Z', to: '2028-01-01T00:00Z', limit: 50, offset: 0 }),
+    ).rejects.toThrow();
+    expect(transaction).not.toHaveBeenCalled();
+    await s.overview({
+      from: '2027-07-31T00:00Z',
+      to: '2027-08-01T00:00Z',
+      zoneId: 2,
+      scanTypeId: 3,
+      serviceKey: 'midi',
+      limit: 50,
+      offset: 0,
+    });
+    expect(transaction.mock.calls[0][0]).toBe('REPEATABLE READ');
+    for (const call of query.mock.calls)
+      expect(call[1]).toEqual(['2027-07-31T00:00Z', '2027-08-01T00:00Z', 2, 3, 'midi']);
+  });
   it('filters passage rows and count by the exact same group with bounded pagination', async () => {
     const query = vi
       .fn()

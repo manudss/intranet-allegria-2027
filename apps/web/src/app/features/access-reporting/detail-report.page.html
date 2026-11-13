@@ -4,8 +4,11 @@
     <nav class="navigation" aria-label="Suivi des accès">
       <a routerLink="/acces/dashboard" [class.active]="!place">Dashboard</a
       ><a routerLink="/acces/scannes" [class.active]="place">Scannés par lieu</a
-      ><a routerLink="/acces/historique-personne">Historique personne</a><a routerLink="/acces/non-scannes">Non scannés</a
-      ><a routerLink="/acces/historique-groupe">Historique groupe</a><a routerLink="/acces/groupes">Gérer les groupes attendus</a><a routerLink="/acces/groupes-exceptions">Groupes attendus · exceptions</a
+      ><a routerLink="/acces/historique-personne">Historique personne</a
+      ><a routerLink="/acces/non-scannes">Non scannés</a
+      ><a routerLink="/acces/historique-groupe">Historique groupe</a
+      ><a routerLink="/acces/groupes">Gérer les groupes attendus</a
+      ><a routerLink="/acces/groupes-exceptions">Groupes attendus · exceptions</a
       ><a routerLink="/acces/suivi">Vérifications</a>
     </nav>
   </header>
@@ -44,13 +47,14 @@
         }
       </select></label
     >
-    @if(place){<label
+    <label
       >Service<input
         name="service"
         [(ngModel)]="serviceKey"
         maxlength="120"
-        placeholder="Tous les services" /></label
-    ><label
+        placeholder="Tous les services"
+    /></label>
+    @if(place){<label
       >Équipe actuelle<select name="team" [(ngModel)]="teamId">
         <option [ngValue]="null">Toutes les équipes</option>
         @for(t of teams;track t.id){
@@ -80,7 +84,107 @@
     Une réception récente ne prouve pas que tous les postes sont connectés. Les vérifications
     peuvent recouper les refus et doublons.
   </p>
-  @if(dashboard();as d){
+  @if(!place){@if(expected();as x){
+  <h2>Passages attendus sur la période</h2>
+  <p class="hint">
+    Composition actuelle des groupes explicitement attendus. Les compteurs globaux de tentatives
+    ci-dessous restent indépendants.
+  </p>
+  <div
+    class="table-wrap"
+    tabindex="0"
+    role="region"
+    aria-label="Passages attendus, tableau défilant"
+  >
+    <table>
+      <thead>
+        <tr>
+          <th>Lieu / service</th>
+          <th>Groupe attendu</th>
+          <th>Attendus</th>
+          <th>Confirmés</th>
+          <th>À vérifier seuls</th>
+          <th>Sans passage confirmé</th>
+          <th>Détails</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for(p of x.passages;track p.id){
+        <tr>
+          <td>
+            <b>{{p.pointName}}</b>{{p.label}}<small
+              >{{time(p.startsAt)}}–{{time(p.endsAt)}} · Europe/Paris</small
+            >
+          </td>
+          <td>{{p.groupName}}</td>
+          <td>{{p.expected}}</td>
+          <td>{{p.confirmed}}</td>
+          <td>{{p.reviewOnly}}</td>
+          <td>{{p.notConfirmed}}</td>
+          <td>
+            <a routerLink="/acces/non-scannes" [queryParams]="{passageId:p.id}"
+              >Voir les détails →</a
+            >
+          </td>
+        </tr>
+        }@for(p of pointsWithoutExpected();track p.pointId){
+        <tr>
+          <td>{{p.pointName}}</td>
+          <td>Aucun groupe attendu défini pour ces filtres</td>
+          <td>–</td>
+          <td>–</td>
+          <td>–</td>
+          <td>–</td>
+          <td><a routerLink="/acces/groupes">Définir un groupe →</a></td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <p class="note">
+    Sans groupe attendu, aucun nombre de non-scannés n'est inventé. Une même personne peut
+    appartenir à plusieurs groupes. Le récapitulatif déduplique les personnes pour un même point,
+    type, service et créneau exact. Les créneaux différents restent séparés et ne s'additionnent
+    pas.
+  </p>
+  @if(x.slots.length){
+  <h2>Récapitulatif du point / service / créneau sélectionné</h2>
+  <label
+    >Créneau<select [(ngModel)]="slotKey">
+      <option value="">Choisir un créneau</option>
+      @for(s of x.slots;track s.slotKey){
+      <option [value]="s.slotKey">
+        {{s.pointName}} · {{s.serviceKey??s.scanTypeLabel}} ·
+        {{time(s.startsAt)}}–{{time(s.endsAt)}}
+      </option>
+      }
+    </select></label
+  >@if(selectedSlot();as s){
+  <section class="metrics">
+    <article>
+      Personnes attendues<strong>{{s.expected}}</strong
+      ><small>Distinctes dans ce créneau au point attendu</small>
+    </article>
+    <article>
+      Passage confirmé<strong>{{s.confirmed}}</strong
+      ><small>Au moins un accepté sans ambiguïté</small>
+    </article>
+    <article>
+      À vérifier seulement<strong>{{s.reviewOnly}}</strong><small>Sans confirmation acceptée</small>
+    </article>
+    <article>
+      Sans passage confirmé<strong>{{s.notConfirmed}}</strong
+      ><small>Ni confirmation ni tentative ambiguë</small>
+    </article>
+  </section>
+  }}
+  <p class="hint">
+    Actualisé le {{time(x.fetchedAt)}}. Les exceptions de passage sont incluses. Un scan reçu
+    ailleurs ne confirme pas le point attendu. Les téléphones hors ligne non reçus ne sont pas
+    comptés. Pas un constat d'absence physique.
+  </p>
+  <a routerLink="/acces/groupes">Gérer les groupes attendus →</a>
+  }} @if(dashboard();as d){
   <section class="metrics">
     <article>
       <span>Personnes scannées</span><strong>{{d.totals.scannedPeople}}</strong
@@ -132,7 +236,13 @@
           <td>{{p.duplicates}}</td>
           <td>{{p.needsReview}}</td>
           <td>{{time(p.lastReceivedAt)}}</td>
-          <td><a routerLink="/acces/scannes" [queryParams]="{pointId:p.pointId,from:from,to:to,scanTypeId:scanTypeId}">Détails →</a></td>
+          <td>
+            <a
+              routerLink="/acces/scannes"
+              [queryParams]="{pointId:p.pointId,from:from,to:to,scanTypeId:scanTypeId}"
+              >Détails →</a
+            >
+          </td>
         </tr>
         }
       </tbody>
@@ -184,7 +294,13 @@
               >À vérifier{{p.reviewClosed?' · vérification close':''}}</small
             >}@if(p.exceptionId){<small class="exception">Exception</small>}
           </td>
-          <td><button (click)="detail.set(p)">Détails →</button>@if(p.participantId){<a routerLink="/acces/historique-personne" [queryParams]="{participantId:p.participantId}">Historique →</a>}</td>
+          <td>
+            <button (click)="detail.set(p)">Détails →</button>@if(p.participantId){<a
+              routerLink="/acces/historique-personne"
+              [queryParams]="{participantId:p.participantId}"
+              >Historique →</a
+            >}
+          </td>
         </tr>
         }@empty{
         <tr>

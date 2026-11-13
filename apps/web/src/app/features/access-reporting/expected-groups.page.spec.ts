@@ -54,6 +54,18 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 describe('Validated group composition management', () => {
+  it('guards navigation and browser close with unsaved or pending work', () => {
+    const { c } = make();
+    c.dirty.set(true);
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    expect(c.canDeactivate()).toBe(false);
+    const event = { preventDefault: vi.fn(), returnValue: undefined };
+    c.warnBeforeUnload(event as unknown as BeforeUnloadEvent);
+    expect(event.preventDefault).toHaveBeenCalled();
+    c.dirty.set(false);
+    c.saving.set(true);
+    expect(c.canDeactivate()).toBe(false);
+  });
   it('asks before discarding an unsaved passage', () => {
     const { c } = make();
     c.choose(2);

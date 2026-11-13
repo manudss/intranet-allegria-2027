@@ -20,6 +20,9 @@ const dashboard = {
 };
 function make(mode = 'dashboard') {
   const api = {
+    expected: vi.fn(() =>
+      of({ passages: [], slots: [], fetchedAt: '2026-11-13T14:00Z', membershipBasis: 'CURRENT' }),
+    ),
     points: vi.fn(() => of([{ id: 1, name: 'Porte', active: true, zoneId: 1 }])),
     zones: vi.fn(() => of([])),
     types: vi.fn(() => of([])),
@@ -50,6 +53,18 @@ afterEach(() => {
   vi.useRealTimers();
 });
 describe('Validated detail reporting screens', () => {
+  it('loads current expected groups separately from attempts and transmits service filters', () => {
+    const { c, api } = make();
+    expect(api.expected).toHaveBeenCalled();
+    c.serviceKey = 'midi';
+    c.refresh();
+    expect(api.expected).toHaveBeenLastCalledWith(expect.objectContaining({ serviceKey: 'midi' }));
+    expect(c.pointsWithoutExpected()).toEqual([]);
+  });
+  it('does not request expected-group overview on the per-place screen', () => {
+    const { api } = make('place');
+    expect(api.expected).not.toHaveBeenCalled();
+  });
   it('requests bounded anomalies and keeps distinct counters separate', () => {
     const { api, fixture } = make();
     expect(api.events).toHaveBeenLastCalledWith(
@@ -66,7 +81,9 @@ describe('Validated detail reporting screens', () => {
     c.switchMode('review');
     expect(api.events).toHaveBeenLastCalledWith(expect.objectContaining({ reviewOnly: 'true' }));
     c.switchMode('events');
-    expect(api.events).toHaveBeenLastCalledWith(expect.not.objectContaining({reviewOnly:'true'}));
+    expect(api.events).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ reviewOnly: 'true' }),
+    );
   });
   it('pages by 50 and resets to first page on filter changes', () => {
     const { c, api } = make('place');

@@ -24,11 +24,11 @@ describe('Expected groups data model', () => {
    CREATE TABLE participants(id int PRIMARY KEY,volunteer_id int UNIQUE,"firstName" text,"lastName" text,type person_type_enum,status text);
    CREATE TABLE teams(id int PRIMARY KEY,name text,primary_animator_id int,secondary_animator_id int);
    CREATE TABLE team_participants(team_id int,participant_id int);
-   CREATE TABLE access_scan_points(id int PRIMARY KEY,name text);
-   CREATE TABLE access_scan_types(id int PRIMARY KEY);
+   CREATE TABLE access_scan_points(id int PRIMARY KEY,name text,zone_id int);
+   CREATE TABLE access_scan_types(id int PRIMARY KEY,label text);
    CREATE TABLE access_passage_exceptions(id int,passage_id int,participant_id int,authorized_by int,created_at timestamptz,reason text,accepted_event_id int,refused_event_id int,session_id int);
    CREATE TABLE access_scan_events(id int PRIMARY KEY,participant_id int,point_id int,scan_type_id int,service_key text,occurred_at_local timestamptz,received_at timestamptz,verdict text,needs_review bool);
-   INSERT INTO access_scan_points VALUES(1,'Repas'),(2,'Autre'); INSERT INTO access_scan_types VALUES(1);
+   INSERT INTO access_scan_points VALUES(1,'Repas',1),(2,'Autre',2); INSERT INTO access_scan_types VALUES(1,'Repas');
    INSERT INTO volunteers VALUES(10,'Volunteer','Sans badge'),(11,'Volunteer','Projeté');
    INSERT INTO participants VALUES(42,NULL,'Ada','Privé','JEUNE','CONFIRMED'),(43,NULL,'Noé','Privé','JEUNE','CONFIRMED'),(44,NULL,'Louis','Exemple','ANIMATEUR','CONFIRMED'),(45,11,'Volunteer','Projeté','BENEVOLE','CONFIRMED'),(46,NULL,'Pending','Privé','JEUNE','PENDING');
    INSERT INTO teams VALUES(8,'Équipe A',10,NULL); INSERT INTO team_participants VALUES(8,42),(8,43);
@@ -82,6 +82,43 @@ describe('Expected groups data model', () => {
         notConfirmed: 3,
         exceptions: 0,
       });
+      await db.exec(`INSERT INTO access_expected_groups(id,name,created_by) VALUES(2,'Jeunes',1),(3,'Vide',1); INSERT INTO access_expected_group_sources(group_id,person_type) VALUES(2,'JEUNE');
+        INSERT INTO access_expected_passages(id,group_id,point_id,scan_type_id,service_key,label,starts_at,ends_at,created_by) VALUES
+        (2,2,1,1,'midi','Même créneau','2027-07-31 10:00Z','2027-07-31 12:00Z',1),
+        (3,3,2,1,NULL,'Groupe vide','2027-07-31 10:00Z','2027-07-31 12:00Z',1),
+        (4,2,1,1,'midi','Autre créneau','2027-07-31 14:00Z','2027-07-31 15:00Z',1);`);
+      const query = {
+        from: '2027-07-31T00:00:00Z',
+        to: '2027-08-01T00:00:00Z',
+        limit: 50,
+        offset: 0,
+      };
+      const overview = await groupReader.overview(query);
+      expect(overview.passages).toHaveLength(4);
+      expect(overview.slots).toHaveLength(3);
+      expect(
+        overview.slots.find(
+          (s: { startsAt: string; pointId: number }) =>
+            s.pointId === 1 && new Date(s.startsAt).getUTCHours() === 10,
+        ),
+      ).toMatchObject({ expected: 5, confirmed: 1, reviewOnly: 1, notConfirmed: 3 });
+      expect(overview.slots.find((s: { pointId: number }) => s.pointId === 2)).toMatchObject({
+        expected: 0,
+        confirmed: 0,
+        reviewOnly: 0,
+        notConfirmed: 0,
+      });
+      const filtered = await groupReader.overview({
+        ...query,
+        zoneId: 1,
+        scanTypeId: 1,
+        serviceKey: 'midi',
+      });
+      expect(filtered.passages).toHaveLength(3);
+      expect((await groupReader.overview({ ...query, serviceKey: 'absent' })).slots).toEqual([]);
+      await db.exec(
+        'DELETE FROM access_expected_passages WHERE id>1; DELETE FROM access_expected_group_sources WHERE group_id>1; DELETE FROM access_expected_groups WHERE id>1',
+      );
       expect(members).toHaveLength(5); // sources are a union, not multiplied
       expect(members.find((r) => r.participantId === 42)?.lastName).toBeNull();
       expect(members.find((r) => r.volunteerId === 10)).toMatchObject({

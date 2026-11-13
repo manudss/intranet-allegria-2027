@@ -1,3 +1,4 @@
+import { ReportDetailQuery } from './access-reporting-details.types';
 import { AccessReportQuery } from './access-reporting.types';
 import {
   Body,
@@ -28,6 +29,9 @@ import {
 @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
 export class AccessExpectedGroupsController {
   constructor(private readonly service: AccessExpectedGroupsService) {}
+  @Get('overview') overview(@Query() q: ReportDetailQuery) {
+    return this.service.overview(q);
+  }
   @Get('dashboard') dashboard(@Query() q: AccessReportQuery) {
     return this.service.dashboard(q.from, q.to);
   }

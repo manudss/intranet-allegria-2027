@@ -1,3 +1,4 @@
+import type {ExpectedGroupsPage} from './features/access-reporting/expected-groups.page';
 import { Route } from '@angular/router';
 import { authGuard } from './core/auth.guard';
 import { roleGuard } from './core/role.guard';
@@ -193,7 +194,7 @@ export const appRoutes: Route[] = [
         data: { roles: ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'LOGISTICS', 'VIEWER'] },
         loadComponent: () => import('./pages/jour-j').then((m) => m.JourJ),
       },
-      {path:'acces/groupes',title:'Groupes attendus',canActivate:[roleGuard],data:{roles:['ADMIN','BADGE_MANAGER']},loadComponent:()=>import('./features/access-reporting/expected-groups.page').then(m=>m.ExpectedGroupsPage)},
+      {path:'acces/groupes',title:'Groupes attendus',canActivate:[roleGuard],canDeactivate:[(component:ExpectedGroupsPage)=>component.canDeactivate()],data:{roles:['ADMIN','BADGE_MANAGER']},loadComponent:()=>import('./features/access-reporting/expected-groups.page').then(m=>m.ExpectedGroupsPage)},
       {path:'acces/historique-groupe',title:'Historique groupe',canActivate:[roleGuard],data:{roles:['ADMIN','BADGE_MANAGER']},loadComponent:()=>import('./features/access-reporting/group-history.page').then(m=>m.GroupHistoryPage)},
       {path:'acces/historique-personne',title:'Historique personne',canActivate:[roleGuard],data:{roles:['ADMIN','BADGE_MANAGER']},loadComponent:()=>import('./features/access-reporting/person-history.page').then(m=>m.PersonHistoryPage)},
       {path:'acces/dashboard',title:'Dashboard des accès',canActivate:[roleGuard],data:{roles:['ADMIN','BADGE_MANAGER']},loadComponent:()=>import('./features/access-reporting/detail-report.page').then(m=>m.DetailReportPage)},

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Subscription, forkJoin } from 'rxjs';
@@ -101,6 +101,15 @@ export class ExpectedGroupsPage implements OnInit, OnDestroy {
     this.membersRequest?.unsubscribe();
     this.passagesRequest?.unsubscribe();
     this.requests.forEach((s) => s.unsubscribe());
+  }
+  canDeactivate() {
+    return this.saving() || this.passageSaving() ? false : this.canLeave();
+  }
+  @HostListener('window:beforeunload', ['$event']) warnBeforeUnload(event: BeforeUnloadEvent) {
+    if (this.dirty() || this.passageDirty() || this.saving() || this.passageSaving()) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
   }
   private canLeave() {
     return (

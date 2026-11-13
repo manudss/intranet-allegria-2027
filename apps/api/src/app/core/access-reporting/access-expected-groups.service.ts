@@ -1,3 +1,6 @@
+import { ReportDetailQuery } from './access-reporting-details.types';
+import { validateReportRange } from './access-reporting.service';
+import { EXPECTED_OVERVIEW_ROWS, EXPECTED_OVERVIEW_SLOTS } from './access-expected-overview.sql';
 import {
   BadRequestException,
   ConflictException,
@@ -33,6 +36,15 @@ export class AccessExpectedGroupsService {
       entityType,
       entityId,
       details: { version },
+    });
+  }
+  async overview(q: ReportDetailQuery) {
+    validateReportRange(q);
+    return this.db.transaction('REPEATABLE READ', async (m) => {
+      const params = [q.from, q.to, q.zoneId ?? null, q.scanTypeId ?? null, q.serviceKey ?? null];
+      const passages = await m.query(EXPECTED_OVERVIEW_ROWS, params);
+      const slots = await m.query(EXPECTED_OVERVIEW_SLOTS, params);
+      return { passages, slots, fetchedAt: new Date().toISOString(), membershipBasis: 'CURRENT' };
     });
   }
   async dashboard(from: string, to: string) {

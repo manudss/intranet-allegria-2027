@@ -6,6 +6,8 @@ const login=async email=>(await call('POST','/auth/login',null,{email,password:'
 const manager=await login('qr.manager@allegria.local'),scanner=await login('qr.scanner.a@allegria.local'),admin=await login('admin@allegria.local');
 const people=await call('GET','/access-control/printing/participants?q=QR-DEMO&limit=100',manager);assert.equal(people.items.length,12);assert.ok(people.items.every(p=>Object.keys(p).every(k=>['id','firstName','lastName','type','badgeId','code'].includes(k))));
 const noBadge=people.items.find(p=>p.firstName==='SansBadge'),valid=people.items.find(p=>p.firstName==='Jeune');assert.equal(noBadge.badgeId,null);assert.ok(valid.code);
+const preview=await call('POST','/access-control/printing/participants/preview',manager,{participantIds:[noBadge.id,valid.id]});assert.equal(preview.created,1);assert.equal(preview.reused,1);assert.ok(preview.items.every(p=>p.type!=='JEUNE'||p.lastName===null));
+const afterPreview=await call('GET','/access-control/printing/participants?q=SansBadge',manager);assert.equal(afterPreview.items[0].badgeId,null);
 const prepare=()=>call('POST','/access-control/printing/participants/prepare',manager,{participantIds:[noBadge.id,valid.id]});
 const results=await Promise.all([prepare(),prepare()]);assert.equal(results.reduce((sum,r)=>sum+r.created,0),1);assert.equal(results[0].items.find(p=>p.id===valid.id).code,valid.code);assert.equal(results[0].items.find(p=>p.id===noBadge.id).code,results[1].items.find(p=>p.id===noBadge.id).code);
 await call('GET','/access-control/printing/participants',scanner,undefined,403);
@@ -16,6 +18,7 @@ await call('GET','/access-control/printing/selection/volunteers?poleId=0',manage
 const volunteerFilters=await call('GET','/access-control/printing/selection/volunteers/filters',manager);assert.deepEqual(Object.keys(volunteerFilters).sort(),['poles','skills','tags']);
 const volunteers=await call('GET','/access-control/printing/selection/volunteers?search=BenevoleSansFiche&assignment=unassigned',manager);assert.equal(volunteers.total,1);
 const volunteerId=volunteers.volunteers[0].id;
+const volunteerPreview=await call('POST','/access-control/printing/participants/preview',manager,{volunteerIds:[volunteerId]});assert.equal(volunteerPreview.items[0].id,null);assert.equal(volunteerPreview.created,1);
 const generateVolunteer=()=>call('POST','/access-control/printing/participants/prepare',manager,{volunteerIds:[volunteerId]});
 const volunteerResults=await Promise.all([generateVolunteer(),generateVolunteer()]);assert.equal(volunteerResults.reduce((n,r)=>n+r.created,0),1);assert.equal(volunteerResults[0].items[0].code,volunteerResults[1].items[0].code);assert.equal(volunteerResults[0].items[0].volunteerId,volunteerId);
 const mixed=await call('POST','/access-control/printing/participants/prepare',manager,{participantIds:[volunteerResults[0].items[0].id],volunteerIds:[volunteerId]});assert.equal(mixed.items.length,1);assert.equal(mixed.reused,1);

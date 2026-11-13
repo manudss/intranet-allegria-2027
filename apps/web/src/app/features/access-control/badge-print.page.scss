@@ -1,0 +1,146 @@
+:host {
+  display: block;
+}
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+}
+.stock {
+  margin-top: 1rem;
+}
+.stock-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  align-items: end;
+}
+.stock-form label {
+  display: grid;
+  gap: 0.3rem;
+  flex: 1 1 10rem;
+}
+.stock-form input,
+.stock-form select {
+  font: inherit;
+  border: 1px solid #d9dbe3;
+  border-radius: 0.5rem;
+  padding: 0.65rem;
+  min-width: 0;
+  width: 100%;
+}
+.table-scroll {
+  overflow: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+th,
+td {
+  text-align: left;
+  padding: 0.8rem 0.5rem;
+  border-bottom: 1px solid #eee;
+}
+code {
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+.recap {
+  margin-top: 1rem;
+}
+.recap ul {
+  max-height: 12rem;
+  overflow: auto;
+}
+.print-preview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 794px;
+  margin: 1.5rem auto;
+  background: white;
+  border: 1px solid #ddd;
+}
+.print-card {
+  border: 1px dashed #ccc;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+.qr {
+  width: 100%;
+  max-width: 195px;
+  aspect-ratio: 1;
+}
+.band {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem;
+  min-height: 48px;
+  print-color-adjust: exact;
+}
+.band > div {
+  flex: 1;
+  text-align: center;
+  min-width: 0;
+}
+.band strong {
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+.band span {
+  display: block;
+  font-size: 0.78rem;
+}
+.branch {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+.print-card small {
+  word-break: break-all;
+  font-size: 0.6rem;
+}
+button[disabled] {
+  cursor: not-allowed;
+}
+.footer button {
+  white-space: normal;
+}
+app-select-field {
+  min-width: 0 !important;
+}
+.panels {
+  margin-top: 0.8rem;
+}
+@media (max-width: 640px) {
+  .print-preview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .band strong {
+    font-size: 0.75rem;
+  }
+  .branch {
+    width: 30px;
+    height: 30px;
+  }
+  .stock-form {
+    align-items: stretch;
+  }
+  .footer > button {
+    width: 100%;
+  }
+  .row {
+    gap: 0.3rem;
+  }
+  .row button {
+    padding-inline: 0.5rem;
+  }
+}

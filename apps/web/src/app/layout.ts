@@ -109,6 +109,7 @@ export class Layout {
       label: "Contrôle d'accès",
       icon: '@tui.scan-line',
       items: [
+        {label:'Badges et impression',path:'/acces/impression',icon:'@tui.printer'},
         { label: 'Stock des badges', path: '/acces/badges', icon: '@tui.credit-card' },
         { label: 'Attribution & remplacement', path: '/acces/attribution', icon: '@tui.repeat' },
         { label: 'Habilitations scan', path: '/acces/habilitations', icon: '@tui.shield-check' },

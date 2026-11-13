@@ -10,7 +10,8 @@ import { TeamBenevolesService } from '../team-benevoles/team-benevoles.service';
 
 class SelectionPageQuery {
   @IsOptional() @IsString() @MaxLength(120) search?: string;
-  @IsOptional() @IsIn(['all', 'unassigned', 'assigned']) assignment?: 'all' | 'unassigned' | 'assigned';
+  @IsOptional() @IsIn(['all', 'unassigned', 'assigned']) assignment?:
+    'all' | 'unassigned' | 'assigned';
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limit = 100;
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) offset = 0;
 }
@@ -33,12 +34,21 @@ export class SelectPrintVolunteersQuery extends SelectionPageQuery {
 @Roles('ADMIN', 'BADGE_MANAGER')
 @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
 export class BadgeSelectionController {
-  constructor(private readonly jeunes: JeunesRepartitionService, private readonly volunteers: TeamBenevolesService) {}
-  @Get('participants/filters') participantFilters() { return this.jeunes.repartitionFilters(); }
-  @Get('participants') participants(@Query() query: SelectPrintParticipantsQuery) { return this.jeunes.searchParticipants(query); }
+  constructor(
+    private readonly jeunes: JeunesRepartitionService,
+    private readonly volunteers: TeamBenevolesService,
+  ) {}
+  @Get('participants/filters') participantFilters() {
+    return this.jeunes.repartitionFilters();
+  }
+  @Get('participants') participants(@Query() query: SelectPrintParticipantsQuery) {
+    return this.jeunes.searchParticipants(query);
+  }
   @Get('volunteers/filters') async volunteerFilters() {
     const { poles, skills, tags } = await this.volunteers.repartitionFilters();
     return { poles, skills, tags };
   }
-  @Get('volunteers') volunteerRows(@Query() query: SelectPrintVolunteersQuery) { return this.volunteers.searchRepartitionVolunteers(query); }
+  @Get('volunteers') volunteerRows(@Query() query: SelectPrintVolunteersQuery) {
+    return this.volunteers.searchRepartitionVolunteers(query);
+  }
 }

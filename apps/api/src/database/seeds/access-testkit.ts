@@ -1,6 +1,6 @@
 import { randomBytes } from 'crypto';
 import { DataSource } from 'typeorm';
-import { AccessBadge, AccessBadgeAssignment, AccessBadgeStatus, AccessScanEvent, AccessScanPoint, AccessScanSession, AccessScanType, AccessScanVerdict, AccessScannerGrant, AccessZone, Participant, PersonType, Role, User, UserRole, Volunteer } from '../../app/core/entities';
+import { AccessBadge, AccessBadgeAssignment, AccessBadgeStatus, AccessScanEvent, AccessScanPoint, AccessScanSession, AccessScanType, AccessScanVerdict, AccessScannerGrant, AccessZone, Participant, PersonType, Role, User, UserRole, Volunteer, MejAgeGroup } from '../../app/core/entities';
 import { AccessScanReview } from '../../app/core/access-reporting/access-scan-review.entity';
 
 /** Every invocation is part of the existing full fictitious-data reseed. */
@@ -38,7 +38,7 @@ export async function seedAccessTestkit(ds:DataSource, admin:User, passwordHash:
   const people:Participant[]=[],assignments:AccessBadgeAssignment[]=[];
   const badges=await repo(AccessBadge).save(Array.from({length:24},()=>repo(AccessBadge).create({code:randomBytes(16).toString('hex'),lot:'QR-TESTKIT',status:AccessBadgeStatus.AVAILABLE})));
   for(const [i,[first,last,type]] of fixtures.entries()) {
-    const person=await repo(Participant).save(repo(Participant).create({firstName:first,lastName:`QR-DEMO-${last}`,type,dateOfBirth:type===PersonType.JEUNE?'2013-06-15':null}));people.push(person);
+    const person=await repo(Participant).save(repo(Participant).create({firstName:first,lastName:`QR-DEMO-${last}`,type,mejAgeGroup:type===PersonType.BENEVOLE?null:i%2?MejAgeGroup.ES:MejAgeGroup.TA,dateOfBirth:type===PersonType.JEUNE?'2013-06-15':null}));people.push(person);
     if(i===3)continue;
     const ended=[5,6,7].includes(i),status=i===5?AccessBadgeStatus.LOST:i===6?AccessBadgeStatus.REVOKED:AccessBadgeStatus.ASSIGNED;
     const a=await repo(AccessBadgeAssignment).save(repo(AccessBadgeAssignment).create({participantId:person.id,badgeId:badges[i].id,startsAt:d.started,endsAt:ended?d.replaced:null,version:1,metaCreatedVersion:1,metaClosedVersion:ended?2:null,createdByUserId:admin.id,reason:'QR testkit: '+last}));assignments[i]=a;

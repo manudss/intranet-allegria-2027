@@ -56,3 +56,15 @@ Un seed serveur ne simule ni un téléphone déconnecté ni sa caméra. Le test 
 Les routes `GET /api/access-control/printing/selection/participants` et `.../volunteers` réutilisent les services des affectations, avec les mêmes filtres. Leurs routes `/filters` fournissent les valeurs de filtres. Ces routes sont en lecture seule, ADMIN/BADGE_MANAGER, limitées à 100 résultats par page ; les noms des mineurs restent masqués.
 
 Le pool distingue les identifiants participants et bénévoles. `POST .../printing/participants/prepare` accepte `participantIds` et/ou `volunteerIds`, au maximum 100 références au total. Un bénévole sans fiche participant peut être sélectionné ; sa projection BENEVOLE n'est créée qu'à la génération, sans l'affecter à une équipe. Un badge déjà actif est réutilisé. La fixture `BenevoleSansFiche QR-PRINT-DEMO` couvre ce chemin. La CI teste deux générations concurrentes, le mélange des deux identifiants d'une même personne et l'absence d'affectation créée par impression.
+
+## Interface génération / impression
+
+Page `/acces/impression`, menu Contrôle d'accès, ADMIN et BADGE_MANAGER.
+
+1. Participants et badges : filtres identiques aux affectations, pool commun jeunes/animateurs/bénévoles, pagination et « Tout ajouter ». Limite explicite de 100 personnes par génération, pas de troncature silencieuse. Aucun badge ni fiche bénévole créé pendant la sélection.
+2. Récapitulatif en lecture seule : liste et compte des badges existants/nouveaux. Confirmation distincte pour générer et attribuer. Réessayer après une réponse incertaine réutilise le badge actif, sans remplacement.
+3. QR noirs avec repères rouges, favicon central, correction H et marge libre de 4 modules. Bandeaux TA rouge, ES turquoise, animateurs en nuances foncées, bénévoles jaune. Logos TA/ES fournis par l'utilisateur. Pas de JT ; aucune branche déduite de l'âge. Branche absente : bandeau neutre explicite.
+4. Impression A4, 12 badges/page, taille 100 %, sans en-têtes/pieds navigateur. Activer les arrière-plans pour les bandeaux. « Enregistrer en PDF » passe par la boîte d'impression du navigateur. Mode noir/blanc sans logo disponible en secours. Les noms de famille des jeunes ne sont ni rendus ni imprimés.
+5. Stock : génération de 1 à 100 codes opaques avec lot, sélection/pagination, revalidation du statut avant préparation. Les codes d'un enregistrement au résultat incertain sont conservés pour une nouvelle tentative identique. Pas d'impression des badges perdus/révoqués.
+
+Tests visuels effectués sur le build réel : parcours mixte sur ordinateur et mobile390px, aperçu et document imprimable PDF. Décodage automatisé des QR du PDF par un décodeur indépendant ; cela ne remplace pas un essai téléphone + papier. Les captures de validation utilisent uniquement des données fictives.

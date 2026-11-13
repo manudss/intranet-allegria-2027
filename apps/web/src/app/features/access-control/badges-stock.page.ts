@@ -1,3 +1,4 @@
+import { RouterLink } from '@angular/router';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { AccessBadge, AccessBadgeStatus, AccessControlApiService } from './access-control-api.service';
@@ -12,12 +13,12 @@ const STATUS_LABELS: Record<AccessBadgeStatus, string> = {
 @Component({
   selector: 'app-badges-stock',
   standalone: true,
-  imports: [...SHARED_IMPORTS],
+  imports: [...SHARED_IMPORTS,RouterLink],
   template: `
     <main class="page">
       <header class="head">
         <h1>Badges — stock</h1>
-        <span class="total">{{ total() }} badge(s)</span>
+        <a tuiButton appearance="secondary" size="s" routerLink="/acces/impression">Générer / Imprimer</a><span class="total">{{ total() }} badge(s)</span>
       </header>
 
       @if (revokeTarget(); as b) {

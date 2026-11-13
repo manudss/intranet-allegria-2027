@@ -51,29 +51,33 @@ Les scans hors ligne non reçus ne peuvent pas être comptés. Ces listes ne
 constituent pas une preuve d'absence, une recherche de personne ou un décompte
 d'évacuation.
 
+## Implémenté dans la PR32 (non déployé)
+
+- Gestion API des groupes, sources et rattachements avec audit transactionnel et
+  contrôle de version ; validation point/type/service, fenêtre et fuseau.
+- Refus hors groupe et dérogation transactionnelle : droit explicite par point,
+  motif obligatoire, connexion requise, ajout pour ce passage seulement, choix
+  du groupe par le contrôleur. Aucun contournement de badge révoqué/inconnu,
+  doublon de repas ou restriction de sécurité. Le refus initial reste inchangé.
+- Trace auteur, date, motif, session, événements initial et accepté, opération
+  idempotente. L'exception est distincte de l'état du passage.
+- Parcours mobile V5 et lectures web V5 exceptions / non scannés, avec compteurs,
+  filtres, recherche et pagination serveur. Les noms des jeunes restent masqués.
+- Les lectures de listes et compteurs utilisent un même snapshot transactionnel.
+
 ## Suite avant utilisation
 
-- Valider la maquette V5 et les paramètres de dérogation : contrôleurs autorisés,
-  motif obligatoire ou non, portée permanente ou par passage et mode hors ligne.
-- Ajouter un refus hors groupe attendu et une dérogation transactionnelle qui
-  conserve le refus initial et crée le passage accepté avec statut exception.
-  Cette exception ne doit pas contourner les badges révoqués, codes inconnus,
-  repas déjà servis et restrictions de sécurité.
-- Étendre le modèle par la trace des exceptions (qui, quand, pourquoi, passage,
-  événement initial, événement accepté et clé idempotente). La portée reste
-  proposée par passage et ne doit pas être codée comme une décision acquise.
-- Endpoints administrateurs de gestion, audit transactionnel et contrôle de
-  version pour éviter les écrasements concurrents.
-- Valider les correspondances point/type/service et les fuseaux côté API.
-- Listes, filtres et totaux cohérents dans un snapshot de lecture.
-- Ne pas additionner les effectifs de groupes qui se recoupent : dédupliquer par
-  personne et passage attendu au niveau des agrégats dashboard.
+- Vérifier le parcours intégré sur une vraie base et plusieurs appareils,
+  les reprises réseau et un essai papier/caméra. Les contrôles de rendu locaux
+  utilisent des données fictives et ne remplacent pas ces essais.
+- Obtenir validation des autres écrans V3/V4 avant toute UI correspondante.
+- Ne pas additionner les effectifs de groupes qui se recoupent. Le bloc impact
+  V5 concerne seulement le passage sélectionné, pas un total intergroupes.
 - Pour une même personne attendue à plusieurs points du même service, signaler
   la contradiction à l'admin, ne pas choisir silencieusement.
 
-La migration n'est pas appliquée à une preview par ce commit. Ses montées et
-descentes sont testées dans PostgreSQL/PGlite sans modifier les scans existants.
-
+Les migrations ne sont pas appliquées à une preview par ce commit. Aucun merge
+ni nouvelle preview sans demande.
 
 ## Activation et appareils hors ligne
 

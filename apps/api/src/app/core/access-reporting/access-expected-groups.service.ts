@@ -245,7 +245,7 @@ export class AccessExpectedGroupsService {
       ]);
       if (!x) throw new NotFoundException('Passage introuvable');
       const [counts] = await m.query(EXPECTED_GROUP_SQL.statusCounts, [x.group_id, id]);
-      const where = `WHERE ($3::text IS NULL OR status=$3) AND ($4::text IS NULL OR concat_ws(' ',"personKey","firstName","lastName") ILIKE $4 ESCAPE '!')`;
+      const where = `WHERE ($3::text IS NULL OR status=$3 OR ($3='EXCEPTION' AND "isException")) AND ($4::text IS NULL OR concat_ws(' ',"personKey","firstName","lastName") ILIKE $4 ESCAPE '!')`;
       const args = [x.group_id, id, q.status ?? null, this.searchTerm(q)];
       const [c] = await m.query(
         `${EXPECTED_PASSAGE_STATUS_CTE} SELECT count(*)::int AS total FROM statuses ${where}`,

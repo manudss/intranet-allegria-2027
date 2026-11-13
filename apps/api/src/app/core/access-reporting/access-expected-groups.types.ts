@@ -49,6 +49,11 @@ export class ExpectedPageQuery {
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(1000000) offset = 0;
   @IsOptional() @IsString() @MaxLength(120) q?: string;
   @IsOptional()
-  @IsEnum({ CONFIRMED: 'CONFIRMED', REVIEW_ONLY: 'REVIEW_ONLY', NOT_CONFIRMED: 'NOT_CONFIRMED' })
+  @IsEnum({
+    CONFIRMED: 'CONFIRMED',
+    REVIEW_ONLY: 'REVIEW_ONLY',
+    NOT_CONFIRMED: 'NOT_CONFIRMED',
+    EXCEPTION: 'EXCEPTION',
+  })
   status?: string;
 }

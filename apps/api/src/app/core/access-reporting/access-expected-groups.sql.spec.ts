@@ -1,3 +1,6 @@
+import 'reflect-metadata';
+import { validateSync } from 'class-validator';
+import { ExpectedPageQuery } from './access-expected-groups.types';
 import { PGlite } from '@electric-sql/pglite';
 import { describe, it, expect } from 'vitest';
 import { CreateAccessExpectedGroups1789800000000 } from '../../../database/migrations/1789800000000-CreateAccessExpectedGroups';
@@ -5,18 +8,25 @@ import { AccessExpectedGroupsService } from './access-expected-groups.service';
 import { EXPECTED_GROUP_SQL } from './access-expected-groups.sql';
 
 describe('Expected groups data model', () => {
+  it('accepts the EXCEPTION server filter and rejects unknown statuses', () => {
+    const q = new ExpectedPageQuery();
+    q.status = 'EXCEPTION';
+    expect(validateSync(q)).toHaveLength(0);
+    q.status = 'UNSAFE';
+    expect(validateSync(q)).not.toHaveLength(0);
+  });
   it('migrates both ways and resolves current sources, unbadged volunteers and individual service attendance', async () => {
     const db = new PGlite();
     try {
       await db.exec(`CREATE TYPE person_type_enum AS ENUM('JEUNE','ANIMATEUR','BENEVOLE');
-   CREATE TABLE users(id int PRIMARY KEY); INSERT INTO users VALUES(1);
+   CREATE TABLE users(id int PRIMARY KEY,email text); INSERT INTO users VALUES(1,'admin@test');
    CREATE TABLE volunteers(id int PRIMARY KEY,"firstName" text,"lastName" text);
    CREATE TABLE participants(id int PRIMARY KEY,volunteer_id int UNIQUE,"firstName" text,"lastName" text,type person_type_enum,status text);
    CREATE TABLE teams(id int PRIMARY KEY,primary_animator_id int,secondary_animator_id int);
    CREATE TABLE team_participants(team_id int,participant_id int);
    CREATE TABLE access_scan_points(id int PRIMARY KEY,name text);
    CREATE TABLE access_scan_types(id int PRIMARY KEY);
-   CREATE TABLE access_passage_exceptions(passage_id int,participant_id int);
+   CREATE TABLE access_passage_exceptions(id int,passage_id int,participant_id int,authorized_by int,created_at timestamptz,reason text,accepted_event_id int,refused_event_id int,session_id int);
    CREATE TABLE access_scan_events(id int PRIMARY KEY,participant_id int,point_id int,scan_type_id int,service_key text,occurred_at_local timestamptz,received_at timestamptz,verdict text,needs_review bool);
    INSERT INTO access_scan_points VALUES(1,'Repas'),(2,'Autre'); INSERT INTO access_scan_types VALUES(1);
    INSERT INTO volunteers VALUES(10,'Volunteer','Sans badge'),(11,'Volunteer','Projeté');
@@ -60,6 +70,7 @@ describe('Expected groups data model', () => {
       });
       expect((await db.query(EXPECTED_GROUP_SQL.statusCounts, [1, 1])).rows[0]).toEqual({
         expected: 5,
+        exceptions: 0,
         confirmed: 1,
         reviewOnly: 1,
         notConfirmed: 3,
@@ -93,9 +104,33 @@ describe('Expected groups data model', () => {
       await expect(
         db.exec(`INSERT INTO access_expected_group_sources(group_id,team_id) VALUES(1,8)`),
       ).rejects.toThrow();
+      await db.exec(`INSERT INTO access_scan_events VALUES
+        (8,44,1,1,'midi','2027-07-31 10:40Z','2027-07-31 10:40Z','REJECTED_NOT_EXPECTED',false),
+        (9,44,1,1,'midi','2027-07-31 10:41Z','2027-07-31 10:41Z','ACCEPTED',false);
+        INSERT INTO access_passage_exceptions VALUES(1,1,44,1,'2027-07-31 10:41Z','Accompagne le groupe',9,8,3);`);
+      const exceptions = (await db.query(EXPECTED_GROUP_SQL.statusRows, [1, 1, 'EXCEPTION', 50, 0]))
+        .rows;
+      expect(exceptions).toHaveLength(1);
+      expect(exceptions[0]).toMatchObject({
+        participantId: 44,
+        status: 'CONFIRMED',
+        isException: true,
+        exception: {
+          authorizedEmail: 'admin@test',
+          reason: 'Accompagne le groupe',
+          eventId: 9,
+          sessionId: 3,
+        },
+        lastAttempt: { verdict: 'ACCEPTED', needsReview: false },
+      });
+      expect(exceptions[0].exception).toHaveProperty('refusedAt');
+      expect((await db.query(EXPECTED_GROUP_SQL.statusCounts, [1, 1])).rows[0]).toMatchObject({
+        exceptions: 1,
+        confirmed: 2,
+      });
       await migration.down(runner as never);
       expect((await db.query('SELECT count(*)::int AS n FROM access_scan_events')).rows[0].n).toBe(
-        7,
+        9,
       );
     } finally {
       await db.close();

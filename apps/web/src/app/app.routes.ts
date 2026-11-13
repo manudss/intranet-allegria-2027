@@ -193,6 +193,8 @@ export const appRoutes: Route[] = [
         data: { roles: ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'LOGISTICS', 'VIEWER'] },
         loadComponent: () => import('./pages/jour-j').then((m) => m.JourJ),
       },
+      {path:'acces/non-scannes',title:'Non scannés · groupes attendus',canActivate:[roleGuard],data:{roles:['ADMIN','BADGE_MANAGER'],mode:'missing'},loadComponent:()=>import('./features/access-reporting/expected-report.page').then(m=>m.ExpectedReportPage)},
+      {path:'acces/groupes-exceptions',title:'Groupes attendus · exceptions',canActivate:[roleGuard],data:{roles:['ADMIN','BADGE_MANAGER'],mode:'groups'},loadComponent:()=>import('./features/access-reporting/expected-report.page').then(m=>m.ExpectedReportPage)},
       {
         path: 'acces/suivi',
         title: 'Suivi des accès',

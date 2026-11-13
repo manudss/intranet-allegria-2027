@@ -132,20 +132,16 @@ export class BadgePrintPage implements OnInit, OnDestroy {
     return [{ value: '', label: all }, ...values.map((value) => ({ value, label: value }))];
   }
   ngOnInit() {
-    this.api
-      .youthFilters()
-      .subscribe({
-        next: (r) => this.youthFilters.set(r),
-        error: () =>
-          this.error.set('Filtres jeunes indisponibles. Réessayez en rechargeant la page.'),
-      });
-    this.api
-      .volunteerFilters()
-      .subscribe({
-        next: (r) => this.volFilters.set(r),
-        error: () =>
-          this.error.set('Filtres bénévoles indisponibles. Réessayez en rechargeant la page.'),
-      });
+    this.api.youthFilters().subscribe({
+      next: (r) => this.youthFilters.set(r),
+      error: () =>
+        this.error.set('Filtres jeunes indisponibles. Réessayez en rechargeant la page.'),
+    });
+    this.api.volunteerFilters().subscribe({
+      next: (r) => this.volFilters.set(r),
+      error: () =>
+        this.error.set('Filtres bénévoles indisponibles. Réessayez en rechargeant la page.'),
+    });
     void this.find();
   }
   ngOnDestroy() {
@@ -405,7 +401,7 @@ export class BadgePrintPage implements OnInit, OnDestroy {
       this.cards.set(
         checked.map((p) => ({
           id: p.id,
-          firstName: 'Badge disponible',
+          firstName: 'Badge',
           lastName: null,
           type: '',
           badgeId: p.id,

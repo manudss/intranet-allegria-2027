@@ -1,3 +1,5 @@
+import { RoleGuard } from '../auth/role.guard';
+import { Roles } from '../auth/roles.decorator';
 import {
   Body,
   Controller,
@@ -8,6 +10,7 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ParticipantsService } from './participants.service';
@@ -22,6 +25,8 @@ import {
 export class ParticipantsController {
   constructor(private readonly participantsService: ParticipantsService) {}
 
+  @UseGuards(RoleGuard)
+  @Roles('ADMIN', 'BADGE_MANAGER', 'COORDINATOR', 'LOGISTICS', 'HEALTH', 'VOLUNTEERS')
   @Get('search')
   @ApiOperation({ summary: 'Rechercher des participants disponibles' })
   search(@Query() query: SearchParticipantsQuery) {

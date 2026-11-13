@@ -2,7 +2,17 @@ import 'dotenv/config';
 import { fakerFR as faker } from '@faker-js/faker';
 import type { DataSource } from 'typeorm';
 import { hashPassword } from '../../app/core/auth/password.util';
+import { randomBytes } from 'crypto';
 import {
+  AccessBadge,
+  AccessBadgeAssignment,
+  AccessBadgeStatus,
+  AccessControlMeta,
+  AccessScanDuplicateRule,
+  AccessScanPoint,
+  AccessScanType,
+  AccessScannerGrant,
+  AccessZone,
   AssignmentStatus,
   Group,
   HostFamily,
@@ -283,6 +293,8 @@ const hostFamilyStatuses = [
 
 const ROLE_CODES = {
   admin: 'ADMIN',
+  scanner: 'SCANNER',
+  badgeManager: 'BADGE_MANAGER',
   coordinator: 'COORDINATOR',
   health: 'HEALTH',
   animator: 'ANIMATOR',
@@ -293,6 +305,8 @@ const ROLE_CODES = {
 
 const roleLabels: Record<string, string> = {
   ADMIN: 'Administrateur',
+  SCANNER: 'Scanner (controle d acces)',
+  BADGE_MANAGER: 'Gestion des badges',
   COORDINATOR: 'Coordinateur',
   HEALTH: 'Equipe sante',
   ANIMATOR: 'Animateur',
@@ -535,6 +549,125 @@ async function seedProgram(
   }
 }
 
+
+/** Données de démo du contrôle d'accès QR (plan validé le 12/11/2026). */
+async function seedAccessControl(
+  dataSource: DataSource,
+  args: {
+    adminUser: User;
+    scannerUsers: User[];
+    youngParticipants: Participant[];
+    adultParticipants: Participant[];
+  },
+): Promise<{ badges: number; assignments: number }> {
+  const badgeRepository = dataSource.getRepository(AccessBadge);
+  const assignmentRepository = dataSource.getRepository(AccessBadgeAssignment);
+  const scanTypeRepository = dataSource.getRepository(AccessScanType);
+  const zoneRepository = dataSource.getRepository(AccessZone);
+  const pointRepository = dataSource.getRepository(AccessScanPoint);
+  const grantRepository = dataSource.getRepository(AccessScannerGrant);
+  const metaRepository = dataSource.getRepository(AccessControlMeta);
+
+  const scanTypes = await scanTypeRepository.save([
+    scanTypeRepository.create({ code: 'ENTREE', label: 'Entree', duplicateRule: AccessScanDuplicateRule.ALLOW }),
+    scanTypeRepository.create({ code: 'SORTIE', label: 'Sortie', duplicateRule: AccessScanDuplicateRule.ALLOW }),
+    scanTypeRepository.create({
+      code: 'REPAS',
+      label: 'Repas',
+      description: 'Un seul passage par service.',
+      duplicateRule: AccessScanDuplicateRule.UNIQUE_PER_SERVICE,
+    }),
+    scanTypeRepository.create({
+      code: 'APPEL',
+      label: 'Appel du matin',
+      duplicateRule: AccessScanDuplicateRule.UNIQUE_PER_DAY,
+    }),
+    scanTypeRepository.create({ code: 'BUS', label: 'Montee bus', duplicateRule: AccessScanDuplicateRule.ALLOW }),
+  ]);
+  const scanTypeByCode = new Map(scanTypes.map((scanType) => [scanType.code, scanType]));
+
+  const zones = await zoneRepository.save([
+    zoneRepository.create({ name: 'Salle pleniere', description: 'Entrees et sorties libres.' }),
+    zoneRepository.create({ name: 'Restauration', description: 'Points repas.' }),
+    zoneRepository.create({
+      name: 'Backstage benevoles',
+      description: 'Zone sensible reservee aux adultes.',
+      allowedPersonTypes: [PersonType.BENEVOLE, PersonType.ANIMATEUR],
+      requiresOnlineValidation: true,
+      maxOfflineMinutes: 60,
+    }),
+  ]);
+  const zoneByName = new Map(zones.map((zone) => [zone.name, zone]));
+
+  await pointRepository.save([
+    pointRepository.create({
+      zoneId: zoneByName.get('Salle pleniere')!.id,
+      scanTypeId: scanTypeByCode.get('ENTREE')!.id,
+      name: 'Porte A',
+    }),
+    pointRepository.create({
+      zoneId: zoneByName.get('Salle pleniere')!.id,
+      scanTypeId: scanTypeByCode.get('SORTIE')!.id,
+      name: 'Porte A (sortie)',
+    }),
+    pointRepository.create({
+      zoneId: zoneByName.get('Restauration')!.id,
+      scanTypeId: scanTypeByCode.get('REPAS')!.id,
+      name: 'Refertoire midi',
+      serviceKey: 'repas-midi',
+    }),
+    pointRepository.create({
+      zoneId: zoneByName.get('Backstage benevoles')!.id,
+      scanTypeId: scanTypeByCode.get('ENTREE')!.id,
+      name: 'Sas backstage',
+    }),
+  ]);
+
+  // Stock pré-imprimé de démo : un lot de 120 codes opaques.
+  const lot = 'L2027-A';
+  const badgesToCreate = Array.from({ length: 120 }, () =>
+    badgeRepository.create({ code: randomBytes(16).toString('hex'), lot, status: AccessBadgeStatus.AVAILABLE }),
+  );
+  const badges = await badgeRepository.save(badgesToCreate, { chunk: 500 });
+
+  // Badges attribués : les premiers jeunes et les fiches bénévoles adultes.
+  const holders = [
+    ...args.youngParticipants.slice(0, Math.min(60, args.youngParticipants.length)),
+    ...args.adultParticipants.slice(0, Math.min(20, args.adultParticipants.length)),
+  ];
+  const assignmentsToCreate = holders.map((participant, index) =>
+    assignmentRepository.create({
+      badgeId: badges[index].id,
+      participantId: participant.id,
+      version: 1,
+      metaCreatedVersion: 1,
+      reason: 'Attribution initiale (seed de demo)',
+      createdByUserId: args.adminUser.id,
+    }),
+  );
+  const assignments = await assignmentRepository.save(assignmentsToCreate, { chunk: 500 });
+  await badgeRepository.update(
+    assignments.map((assignment) => assignment.badgeId),
+    { status: AccessBadgeStatus.ASSIGNED },
+  );
+  await metaRepository.save(metaRepository.create({ id: 1, version: 1 }));
+
+  // Habilitations de scan de démo : toutes zones, pendant l'événement.
+  await grantRepository.save(
+    args.scannerUsers.map((user) =>
+      grantRepository.create({
+        userId: user.id,
+        zoneId: null,
+        startsAt: new Date('2027-10-30T00:00:00.000Z'),
+        endsAt: new Date('2027-11-04T23:59:59.000Z'),
+        createdByUserId: args.adminUser.id,
+      }),
+    ),
+  );
+
+  return { badges: badges.length, assignments: assignments.length };
+}
+
 async function run(): Promise<void> {
   const profileName = parseProfile();
   const profile = PROFILES[profileName];
@@ -551,6 +684,16 @@ async function run(): Promise<void> {
     try {
       await queryRunner.query(`
         TRUNCATE TABLE
+          "access_scan_events",
+          "access_scan_sessions",
+          "access_badge_assignments",
+          "access_badges",
+          "access_scan_points",
+          "access_zones",
+          "access_scan_types",
+          "access_scanner_grants",
+          "access_audit_logs",
+          "access_control_meta",
           "program_change_logs",
           "program_sequences",
           "volunteer_applications",
@@ -677,6 +820,10 @@ async function run(): Promise<void> {
     pushRole(userRoles, adminUser, ROLE_CODES.admin);
     pushRole(userRoles, adminUser, ROLE_CODES.coordinator);
     pushRole(userRoles, adminUser, ROLE_CODES.health);
+    // Controle d'acces : toi et la logistique gerent les badges ; quelques
+    // comptes ont le role scanner pour les demos (grants crees plus bas).
+    pushRole(userRoles, adminUser, ROLE_CODES.badgeManager);
+    pushRole(userRoles, adminUser, ROLE_CODES.scanner);
     pushRole(userRoles, healthUser, ROLE_CODES.health);
     pushRole(userRoles, coordinatorUser, ROLE_CODES.coordinator);
 
@@ -692,9 +839,18 @@ async function run(): Promise<void> {
 
     for (const logisticUser of logisticUsers) {
       pushRole(userRoles, logisticUser, ROLE_CODES.logistics);
+      pushRole(userRoles, logisticUser, ROLE_CODES.badgeManager);
       if (chance(0.22)) {
         pushRole(userRoles, logisticUser, ROLE_CODES.viewer);
       }
+    }
+    // Scanners de demo : la moitie des comptes logistique et quelques animateurs.
+    const scannerUsers = [
+      ...logisticUsers.slice(0, Math.ceil(logisticUsers.length / 2)),
+      ...animatorUsers.slice(0, 3),
+    ];
+    for (const scannerUser of scannerUsers) {
+      pushRole(userRoles, scannerUser, ROLE_CODES.scanner);
     }
 
     await userRoleRepository.save(userRoles, { chunk: 1000 });
@@ -1531,6 +1687,13 @@ async function run(): Promise<void> {
 
     await seedProgram(dataSource, users, savedVolunteerTeams);
 
+    const accessControlSeed = await seedAccessControl(dataSource, {
+      adminUser,
+      scannerUsers,
+      youngParticipants: participants,
+      adultParticipants: savedAdultParticipants,
+    });
+
     console.log('Seed termine.');
     console.log(`Profil: ${profileName}`);
     console.log(`Users: ${users.length}`);
@@ -1548,6 +1711,9 @@ async function run(): Promise<void> {
     console.log(`Assignments: ${assignmentsToCreate.length}`);
     console.log(`Health records: ${participantHealthToCreate.length}`);
     console.log(
+      `Access control: ${accessControlSeed.badges} badges (lot L2027-A), ${accessControlSeed.assignments} attributions`,
+    );
+    console.log(
       `Unassigned participants (team): ${participants.length - teamParticipantsToCreate.length}`,
     );
     console.log(`Mot de passe commun des comptes de demo: ${DEMO_PASSWORD}`);
@@ -1556,7 +1722,7 @@ async function run(): Promise<void> {
     console.log('- sante@allegria.local (sante)');
     console.log('- coordination@allegria.local (coordination)');
     console.log('- animator.1@allegria.local, animator.2@allegria.local, ... (benevoles lies a leur fiche, acces Mon espace)');
-    console.log('- logistic.1@allegria.local, logistic.2@allegria.local, ... (logistique)');
+    console.log('- logistic.1@allegria.local, logistic.2@allegria.local, ... (logistique, gestion badges; les premiers ont aussi le role scanner)');
   } finally {
     await dataSource.destroy();
   }

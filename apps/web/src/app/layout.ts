@@ -106,6 +106,17 @@ export class Layout {
       ],
     },
     {
+      label: "Contrôle d'accès",
+      icon: '@tui.scan-line',
+      items: [
+        { label: 'Stock des badges', path: '/acces/badges', icon: '@tui.credit-card' },
+        { label: 'Attribution & remplacement', path: '/acces/attribution', icon: '@tui.repeat' },
+        { label: 'Habilitations scan', path: '/acces/habilitations', icon: '@tui.shield-check' },
+        { label: 'Configuration', path: '/acces/configuration', icon: '@tui.settings' },
+        { label: 'Journal des accès', path: '/acces/journal', icon: '@tui.file-text' },
+      ],
+    },
+    {
       label: 'Administration',
       icon: '@tui.settings',
       items: [

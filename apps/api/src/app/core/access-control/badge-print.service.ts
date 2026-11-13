@@ -8,15 +8,16 @@ export interface PrintPerson { id:number;firstName:string;lastName:string;type:P
 export class BadgePrintService {
   constructor(private readonly db:DataSource,private readonly audit:AccessAuditService) {}
   async people(q:{q?:string;type?:PersonType;limit?:number;offset?:number}) {
-    const qb=this.db.getRepository(Participant).createQueryBuilder('p')
-      .leftJoin(AccessBadgeAssignment,'a','a.participant_id=p.id AND a.endsAt IS NULL')
-      .leftJoin(AccessBadge,'b','b.id=a.badge_id AND b.status=:assigned',{assigned:AccessBadgeStatus.ASSIGNED})
-      .select(['p.id AS id','p.firstName AS "firstName"','p.lastName AS "lastName"','p.type AS type','b.id AS "badgeId"','b.code AS code'])
-      .orderBy('p.lastName','ASC').addOrderBy('p.firstName','ASC').addOrderBy('p.id','ASC');
-    if(q.type)qb.andWhere('p.type=:type',{type:q.type});
-    if(q.q?.trim())qb.andWhere("concat_ws(' ',p.firstName,p.lastName) ILIKE :q",{q:`%${q.q.trim()}%`});
-    const total=await qb.getCount();const items=await qb.limit(q.limit??50).offset(q.offset??0).getRawMany<PrintPerson>();return {items,total};
+    const params=[q.type??null,q.q?.trim()?`%${q.q.trim()}%`:null,q.limit??50,q.offset??0];
+    const where=`WHERE ($1::text IS NULL OR p.type::text=$1) AND ($2::text IS NULL OR concat_ws(' ',p."firstName",p."lastName") ILIKE $2)`;
+    const [count]=await this.db.query(`SELECT count(*)::int AS total FROM participants p ${where}`,params.slice(0,2));
+    const items=await this.db.query(`SELECT p.id,p."firstName",p."lastName",p.type,b.id AS "badgeId",b.code
+      FROM participants p LEFT JOIN access_badge_assignments a ON a.participant_id=p.id AND a."endsAt" IS NULL
+      LEFT JOIN access_badges b ON b.id=a.badge_id AND b.status='ASSIGNED'
+      ${where} ORDER BY p."lastName",p."firstName",p.id LIMIT $3 OFFSET $4`,params);
+    return {items,total:count.total};
   }
+
   async prepare(participantIds:number[],actorId:number) {
     const ids=[...new Set(participantIds)].sort((a,b)=>a-b);
     if(!ids.length||ids.length>100)throw new BadRequestException('Sélectionnez de 1 à 100 personnes');

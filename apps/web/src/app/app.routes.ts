@@ -112,6 +112,13 @@ export const appRoutes: Route[] = [
           ),
       },
       {
+        path: 'acces/suivi',
+        title: 'Suivi des accès',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
+        loadComponent: () => import('./features/access-reporting/access-reporting.page').then(m => m.AccessReportingPage),
+      },
+      {
         path: 'hebergement/carte',
         title: 'Hebergement - Carte',
         loadComponent: () =>

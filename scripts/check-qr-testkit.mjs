@@ -9,8 +9,22 @@ const noBadge=people.items.find(p=>p.firstName==='SansBadge'),valid=people.items
 const prepare=()=>call('POST','/access-control/printing/participants/prepare',manager,{participantIds:[noBadge.id,valid.id]});
 const results=await Promise.all([prepare(),prepare()]);assert.equal(results.reduce((sum,r)=>sum+r.created,0),1);assert.equal(results[0].items.find(p=>p.id===valid.id).code,valid.code);assert.equal(results[0].items.find(p=>p.id===noBadge.id).code,results[1].items.find(p=>p.id===noBadge.id).code);
 await call('GET','/access-control/printing/participants',scanner,undefined,403);
+const youthFilters=await call('GET','/access-control/printing/selection/participants/filters',manager);assert.ok(Array.isArray(youthFilters.groups));
+const youth=await call('GET','/access-control/printing/selection/participants?search=Jeune&type=JEUNE&assignment=all&limit=100',manager);assert.ok(youth.participants.length>0);assert.ok(youth.participants.every(p=>p.type==='JEUNE'&&p.lastName===null));
+await call('GET','/access-control/printing/selection/participants?limit=101',manager,undefined,400);
+await call('GET','/access-control/printing/selection/volunteers?poleId=0',manager,undefined,400);
+const volunteerFilters=await call('GET','/access-control/printing/selection/volunteers/filters',manager);assert.deepEqual(Object.keys(volunteerFilters).sort(),['poles','skills','tags']);
+const volunteers=await call('GET','/access-control/printing/selection/volunteers?search=BenevoleSansFiche&assignment=unassigned',manager);assert.equal(volunteers.total,1);
+const volunteerId=volunteers.volunteers[0].id;
+const generateVolunteer=()=>call('POST','/access-control/printing/participants/prepare',manager,{volunteerIds:[volunteerId]});
+const volunteerResults=await Promise.all([generateVolunteer(),generateVolunteer()]);assert.equal(volunteerResults.reduce((n,r)=>n+r.created,0),1);assert.equal(volunteerResults[0].items[0].code,volunteerResults[1].items[0].code);assert.equal(volunteerResults[0].items[0].volunteerId,volunteerId);
+const mixed=await call('POST','/access-control/printing/participants/prepare',manager,{participantIds:[volunteerResults[0].items[0].id],volunteerIds:[volunteerId]});assert.equal(mixed.items.length,1);assert.equal(mixed.reused,1);
+const stillUnassigned=await call('GET','/access-control/printing/selection/volunteers?search=BenevoleSansFiche&assignment=unassigned',manager);assert.equal(stillUnassigned.total,1);
+await call('GET','/access-control/printing/selection/participants',scanner,undefined,403);
+await call('GET','/access-control/printing/selection/volunteers',scanner,undefined,403);
+
 const points=await call('GET','/access-control/config/points',admin);const meal=points.find(p=>p.scanType.code==='REPAS');const gate=points.find(p=>p.name==='Porte A');
 for(const email of ['qr.scanner.a@allegria.local','qr.scanner.b@allegria.local','qr.zone@allegria.local']){const token=await login(email);await call('POST','/access-control/scan/sessions',token,{zoneId:meal.zoneId});if(email.includes('zone@'))await call('POST','/access-control/scan/sessions',token,{zoneId:gate.zoneId},403);}
 for(const email of ['qr.expired@allegria.local','qr.revoked@allegria.local','qr.no-grant@allegria.local','qr.no-role@allegria.local']){const token=await login(email);await call('POST','/access-control/scan/sessions',token,{zoneId:meal.zoneId},403);}
 const review=await call('GET','/access-control/reporting/reviews?limit=100',manager);assert.ok(review.items.some(r=>r.verdict==='DUPLICATE'));assert.ok(review.items.some(r=>r.needsReview));
-console.log('QR testkit: seed fixtures, configured role/grant cases, minimal print projection, concurrent create-or-reuse: PASS');
+console.log('QR testkit: seed fixtures, configured role/grant cases, minimal print projection, real assignment selectors, volunteers without projections, concurrent create-or-reuse: PASS');

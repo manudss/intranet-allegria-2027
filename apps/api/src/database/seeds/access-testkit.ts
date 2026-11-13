@@ -1,6 +1,6 @@
 import { randomBytes } from 'crypto';
 import { DataSource } from 'typeorm';
-import { AccessBadge, AccessBadgeAssignment, AccessBadgeStatus, AccessScanEvent, AccessScanPoint, AccessScanSession, AccessScanType, AccessScanVerdict, AccessScannerGrant, AccessZone, Participant, PersonType, Role, User, UserRole } from '../../app/core/entities';
+import { AccessBadge, AccessBadgeAssignment, AccessBadgeStatus, AccessScanEvent, AccessScanPoint, AccessScanSession, AccessScanType, AccessScanVerdict, AccessScannerGrant, AccessZone, Participant, PersonType, Role, User, UserRole, Volunteer } from '../../app/core/entities';
 import { AccessScanReview } from '../../app/core/access-reporting/access-scan-review.entity';
 
 /** Every invocation is part of the existing full fictitious-data reseed. */
@@ -45,6 +45,8 @@ export async function seedAccessTestkit(ds:DataSource, admin:User, passwordHash:
     await repo(AccessBadge).update(badges[i].id,{status});
     if(i===5) {const replacement=await repo(AccessBadgeAssignment).save(repo(AccessBadgeAssignment).create({participantId:person.id,badgeId:badges[12].id,startsAt:d.replaced,version:1,metaCreatedVersion:2,createdByUserId:admin.id,reason:'QR testkit: remplacement après repas'}));await repo(AccessBadge).update(badges[12].id,{status:AccessBadgeStatus.ASSIGNED});void replacement;}
   }
+  // A real volunteer without any participant projection exercises the complete selector.
+  await repo(Volunteer).save(repo(Volunteer).create({firstName:'BenevoleSansFiche',lastName:'QR-PRINT-DEMO'}));
   await ds.query('UPDATE access_control_meta SET version=2 WHERE id=1');
   const makeSession=(user:User,expired=false)=>repo(AccessScanSession).save(repo(AccessScanSession).create({userId:user.id,zoneId:zone.id,startedAt:d.started,expiresAt:expired?d.expired:d.sessionUntil,keyExpiresAt:expired?d.expired:d.activeUntil,snapshotVersion:1,sessionKey:randomBytes(32).toString('hex')}));
   const a=await makeSession(users[1]),b=await makeSession(users[2]),expired=await makeSession(users[1],true);

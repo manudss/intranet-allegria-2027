@@ -1,3 +1,6 @@
+import { BadgeSelectionController } from './badge-selection.controller';
+import { JeunesRepartitionModule } from '../jeunes-repartition/jeunes-repartition.module';
+import { TeamBenevolesModule } from '../team-benevoles/team-benevoles.module';
 import { BadgePrintService } from './badge-print.service';
 import { BadgePrintController } from './badge-print.controller';
 import { Module } from '@nestjs/common';
@@ -34,6 +37,8 @@ import {
 @Module({
   imports: [
     AuthModule,
+    JeunesRepartitionModule,
+    TeamBenevolesModule,
     TypeOrmModule.forFeature([
       AccessBadge,
       AccessBadgeAssignment,
@@ -51,6 +56,7 @@ import {
   ],
   controllers: [
     BadgePrintController,
+    BadgeSelectionController,
     AccessBadgesController,
     AccessConfigController,
     AccessGrantsController,

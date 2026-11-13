@@ -34,5 +34,6 @@ import { TeamBenevolesService } from './team-benevoles.service';
   ],
   controllers: [TeamBenevolesController],
   providers: [TeamBenevolesService],
+  exports: [TeamBenevolesService],
 })
 export class TeamBenevolesModule {}

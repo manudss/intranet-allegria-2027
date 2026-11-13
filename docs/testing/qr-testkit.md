@@ -49,3 +49,10 @@ Porte A et Porte A (sortie), Réfectoire midi, sas backstage (adultes uniquement
 ## Limites honnêtes
 
 Un seed serveur ne simule ni un téléphone déconnecté ni sa caméra. Le test réel papier/caméra, l'impression à 100 %, le contraste et les deux appareils sont à exercer avant usage. L'application ne peut pas forcer une imprimante physique : elle prépare la page, puis ouvre l'impression du navigateur ou l'enregistrement PDF. Les statistiques restent des estimations sur scans reçus, pas un décompte d'évacuation.
+
+
+## Sélection comme les affectations
+
+Les routes `GET /api/access-control/printing/selection/participants` et `.../volunteers` réutilisent les services des affectations, avec les mêmes filtres. Leurs routes `/filters` fournissent les valeurs de filtres. Ces routes sont en lecture seule, ADMIN/BADGE_MANAGER, limitées à 100 résultats par page ; les noms des mineurs restent masqués.
+
+Le pool distingue les identifiants participants et bénévoles. `POST .../printing/participants/prepare` accepte `participantIds` et/ou `volunteerIds`, au maximum 100 références au total. Un bénévole sans fiche participant peut être sélectionné ; sa projection BENEVOLE n'est créée qu'à la génération, sans l'affecter à une équipe. Un badge déjà actif est réutilisé. La fixture `BenevoleSansFiche QR-PRINT-DEMO` couvre ce chemin. La CI teste deux générations concurrentes, le mélange des deux identifiants d'une même personne et l'absence d'affectation créée par impression.

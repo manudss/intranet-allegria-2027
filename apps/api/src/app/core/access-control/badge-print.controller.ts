@@ -13,7 +13,8 @@ export class PrintPeopleQuery {
   @IsOptional() @Type(()=>Number) @IsInt() @Min(0) offset=0;
 }
 export class PreparePrintDto {
-  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(100) @ArrayUnique() @IsInt({each:true}) @Min(1,{each:true}) participantIds!:number[];
+  @IsOptional() @IsArray() @ArrayMinSize(0) @ArrayMaxSize(100) @ArrayUnique() @IsInt({each:true}) @Min(1,{each:true}) participantIds:number[] = [];
+  @IsOptional() @IsArray() @ArrayMinSize(0) @ArrayMaxSize(100) @ArrayUnique() @IsInt({each:true}) @Min(1,{each:true}) volunteerIds:number[] = [];
 }
 @Controller('access-control/printing')
 @UseGuards(AuthTokenGuard,RoleGuard)
@@ -22,5 +23,5 @@ export class PreparePrintDto {
 export class BadgePrintController {
   constructor(private readonly service:BadgePrintService) {}
   @Get('participants') people(@Query() q:PrintPeopleQuery){return this.service.people(q);}
-  @Post('participants/prepare') prepare(@Body() dto:PreparePrintDto,@Req() req:{user:{id:number}}){return this.service.prepare(dto.participantIds,req.user.id);}
+  @Post('participants/prepare') prepare(@Body() dto:PreparePrintDto,@Req() req:{user:{id:number}}){return this.service.prepare(dto.participantIds,req.user.id,dto.volunteerIds);}
 }

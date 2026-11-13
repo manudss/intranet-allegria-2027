@@ -1,3 +1,4 @@
+import { EXPECTED_GROUP_MEMBERS_CTE } from './access-expected-groups.sql';
 /** Read-only, bound reporting queries. Event identity is immutable; group membership is current. */
 export const REPORT_EVENT_FILTER = `
   FROM access_scan_events e
@@ -49,3 +50,22 @@ export const REPORT_DETAIL_SQL = {
     count(*) FILTER(WHERE e.needs_review)::int AS "needsReview",max(e.received_at) AS "lastReceivedAt"
     ${REPORT_EVENT_FILTER}`,
 };
+
+export function groupEventFilter(groupId: number | null): string {
+  if (groupId == null) return REPORT_EVENT_FILTER;
+  // The outer event filter binds $1/$2 to dates. A separate CTE uses $14 for group identity.
+  const membership = EXPECTED_GROUP_MEMBERS_CTE.replace('src.group_id=$1', 'src.group_id=$14');
+  return (
+    REPORT_EVENT_FILTER +
+    ` AND e.participant_id IN (${membership} SELECT "participantId" FROM members WHERE "participantId" IS NOT NULL)`
+  );
+}
+
+export const SCANNED_PEOPLE_CTE = `WITH matched AS (
+ SELECT e.id,e.participant_id AS "participantId",p."firstName",CASE WHEN p.type='JEUNE' THEN NULL ELSE p."lastName" END AS "lastName",p.type,
+ e.point_id AS "pointId",pt.name AS "pointName",z.name AS "zoneName",e.service_key AS "serviceKey",e.scan_type_id AS "scanTypeId",st.label AS "scanTypeLabel",
+ e.occurred_at_local AS "occurredAtLocal",e.received_at AS "receivedAt",e.verdict,e.needs_review AS "needsReview",
+ coalesce((SELECT jsonb_agg(jsonb_build_object('id',t.id,'name',t.name) ORDER BY t.id) FROM teams t JOIN team_participants tp ON tp.team_id=t.id WHERE tp.participant_id=e.participant_id),'[]'::jsonb) AS teams
+ ${REPORT_EVENT_FILTER} AND e.participant_id IS NOT NULL AND e.verdict='ACCEPTED' AND NOT e.needs_review
+), latest AS (SELECT DISTINCT ON("participantId") * FROM matched ORDER BY "participantId",coalesce("occurredAtLocal","receivedAt") DESC,id DESC)
+`;

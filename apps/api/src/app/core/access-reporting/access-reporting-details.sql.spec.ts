@@ -1,6 +1,11 @@
 import { PGlite } from '@electric-sql/pglite';
 import { describe, it, expect } from 'vitest';
-import { REPORT_DETAIL_SQL } from './access-reporting-details.sql';
+import {
+  REPORT_DETAIL_SQL,
+  REPORT_EVENT_FILTER,
+  groupEventFilter,
+  SCANNED_PEOPLE_CTE,
+} from './access-reporting-details.sql';
 import { detailParameters } from './access-reporting-details.service';
 import { ReportDetailQuery } from './access-reporting-details.types';
 
@@ -11,14 +16,14 @@ describe('Reporting detail bound PostgreSQL queries', () => {
       await db.exec(`CREATE TABLE access_zones(id int,name text);
       CREATE TABLE access_scan_points(id int,name text,zone_id int,active bool);
       CREATE TABLE access_scan_types(id int,label text);
-      CREATE TABLE participants(id int,"firstName" text,"lastName" text,type text);
+      CREATE TABLE volunteers(id int,"firstName" text,"lastName" text); CREATE TABLE access_expected_group_sources(group_id int,team_id int,person_type text,participant_id int,volunteer_id int); CREATE TABLE teams(id int,name text,primary_animator_id int,secondary_animator_id int); CREATE TABLE participants(id int,"firstName" text,"lastName" text,type text,status text DEFAULT 'CONFIRMED',volunteer_id int);
       CREATE TABLE team_participants(participant_id int,team_id int);
       CREATE TABLE access_scan_reviews(event_id int); CREATE TABLE access_passage_exceptions(id int,accepted_event_id int,reason text);
       CREATE TABLE access_scan_events(id int,participant_id int,point_id int,scan_type_id int,service_key text,occurred_at_local timestamptz,received_at timestamptz,verdict text,needs_review bool);
       INSERT INTO access_zones VALUES(1,'Accueil'),(2,'Repas');
       INSERT INTO access_scan_points VALUES(1,'Porte A',1,true),(2,'Réfectoire',2,true),(3,'Point vide',2,true);
       INSERT INTO access_scan_types VALUES(1,'Entrée'),(2,'Repas');
-      INSERT INTO participants VALUES(42,'Ada','Privé','JEUNE'),(43,'Louis','Exemple','ANIMATEUR');
+      INSERT INTO participants(id,"firstName","lastName",type) VALUES(42,'Ada','Privé','JEUNE'),(43,'Louis','Exemple','ANIMATEUR');
       INSERT INTO team_participants VALUES(42,8),(42,9),(43,9);
       INSERT INTO access_scan_events VALUES
       (1,42,1,1,NULL,'2027-07-31 08:00Z','2027-07-31 08:00Z','ACCEPTED',false),
@@ -31,6 +36,10 @@ describe('Reporting detail bound PostgreSQL queries', () => {
       const q = { from: '2027-07-31T00:00:00Z', to: '2027-08-01T00:00:00Z' } as ReportDetailQuery;
       const args = detailParameters(q);
       const totals = (await db.query(REPORT_DETAIL_SQL.totals, args)).rows[0];
+      expect(
+        (await db.query(`${SCANNED_PEOPLE_CTE} SELECT count(*)::int AS n FROM latest`, args))
+          .rows[0].n,
+      ).toBe(1);
       expect(totals).toMatchObject({
         attempts: 5,
         scannedPeople: 1,
@@ -75,6 +84,16 @@ describe('Reporting detail bound PostgreSQL queries', () => {
         (await db.query(REPORT_DETAIL_SQL.eventCount, detailParameters({ ...q, q: '%' }))).rows[0]
           .total,
       ).toBe(0);
+      await db.exec('INSERT INTO access_expected_group_sources(group_id,team_id) VALUES(2,8)');
+      const filter = groupEventFilter(2).split('$14').join('$12');
+      expect(
+        (
+          await db.query(REPORT_DETAIL_SQL.eventCount.replace(REPORT_EVENT_FILTER, filter), [
+            ...args,
+            2,
+          ])
+        ).rows[0].total,
+      ).toBe(3);
       // Out-of-range pagination still has a usable independent total.
       expect((await db.query(REPORT_DETAIL_SQL.events, [...args, 50, 500])).rows).toEqual([]);
       expect((await db.query(REPORT_DETAIL_SQL.eventCount, args)).rows[0].total).toBe(5);

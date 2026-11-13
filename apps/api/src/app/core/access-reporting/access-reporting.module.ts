@@ -1,3 +1,5 @@
+import { AccessReportingPeopleService } from './access-reporting-people.service';
+import { ExpectedPageQuery } from './access-expected-groups.types';
 import { AccessExpectedGroupsService } from './access-expected-groups.service';
 import { AccessExpectedGroupsController } from './access-expected-groups.controller';
 import { AccessReportingDetailsService } from './access-reporting-details.service';
@@ -32,9 +34,16 @@ export class AccessReportingController {
   constructor(
     private readonly service: AccessReportingService,
     private readonly details: AccessReportingDetailsService,
+    private readonly peopleService: AccessReportingPeopleService,
   ) {}
+  @Get('people') people(@Query() q: ExpectedPageQuery) {
+    return this.peopleService.people(q);
+  }
   @Get('dashboard') dashboard(@Query() q: ReportDetailQuery) {
     return this.details.dashboard(q);
+  }
+  @Get('scanned') scanned(@Query() q: ReportDetailQuery) {
+    return this.details.scanned(q);
   }
   @Get('events') events(@Query() q: ReportDetailQuery) {
     return this.details.events(q);
@@ -56,6 +65,11 @@ export class AccessReportingController {
 @Module({
   imports: [AuthModule, TypeOrmModule.forFeature([AccessScanReview])],
   controllers: [AccessReportingController, AccessExpectedGroupsController],
-  providers: [AccessReportingService, AccessReportingDetailsService, AccessExpectedGroupsService],
+  providers: [
+    AccessReportingService,
+    AccessReportingDetailsService,
+    AccessExpectedGroupsService,
+    AccessReportingPeopleService,
+  ],
 })
 export class AccessReportingModule {}

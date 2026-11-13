@@ -69,6 +69,17 @@ export class ScanSessionsService {
     return qb.getRawMany<SnapshotEntry>();
   }
 
+  private async expectedOnline(zoneId: number | null): Promise<boolean> {
+    return (
+      (
+        await this.sessionsRepository.manager.query(
+          `SELECT 1 FROM access_expected_passages x JOIN access_scan_points pt ON pt.id=x.point_id WHERE ($1::int IS NULL OR pt.zone_id=$1) AND x.archived_at IS NULL LIMIT 1`,
+          [zoneId],
+        )
+      ).length > 0
+    );
+  }
+
   async start(userId: number, dto: StartScanSessionDto) {
     const zoneId = dto.zoneId ?? null;
     let zone: AccessZone | null = null;
@@ -114,13 +125,7 @@ export class ScanSessionsService {
       snapshotVersion,
       maxOfflineMinutes: zone?.maxOfflineMinutes ?? 240,
       requiresOnlineValidation:
-        (zone?.requiresOnlineValidation ?? false) ||
-        (
-          await this.sessionsRepository.manager.query(
-            `SELECT 1 FROM access_expected_passages x JOIN access_scan_points pt ON pt.id=x.point_id WHERE ($1::int IS NULL OR pt.zone_id=$1) AND x.archived_at IS NULL AND x.ends_at>now() LIMIT 1`,
-            [zoneId],
-          )
-        ).length > 0,
+        (zone?.requiresOnlineValidation ?? false) || (await this.expectedOnline(zoneId)),
       snapshot,
     };
   }
@@ -193,6 +198,8 @@ export class ScanSessionsService {
     return {
       version: await this.currentMetaVersion(),
       upserts,
+      requiresOnlineValidation:
+        (zone?.requiresOnlineValidation ?? false) || (await this.expectedOnline(session.zoneId)),
       revokedAssignmentIds: revoked.map((assignment) => assignment.id),
     };
   }

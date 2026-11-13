@@ -112,6 +112,46 @@ export const appRoutes: Route[] = [
           ),
       },
       {
+        path: 'acces/badges',
+        title: 'Stock badges',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
+        loadComponent: () =>
+          import('./features/access-control/badges-stock.page').then((m) => m.BadgesStockPage),
+      },
+      {
+        path: 'acces/attribution',
+        title: 'Attribution badges',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
+        loadComponent: () =>
+          import('./features/access-control/badge-replace.page').then((m) => m.BadgeReplacePage),
+      },
+      {
+        path: 'acces/habilitations',
+        title: 'Habilitations scan',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
+        loadComponent: () =>
+          import('./features/access-control/scanner-grants.page').then((m) => m.ScannerGrantsPage),
+      },
+      {
+        path: 'acces/configuration',
+        title: "Configuration acces",
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
+        loadComponent: () =>
+          import('./features/access-control/scan-config.page').then((m) => m.ScanConfigPage),
+      },
+      {
+        path: 'acces/journal',
+        title: "Journal acces",
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
+        loadComponent: () =>
+          import('./features/access-control/access-audit.page').then((m) => m.AccessAuditPage),
+      },
+      {
         path: 'hebergement/carte',
         title: 'Hebergement - Carte',
         loadComponent: () =>

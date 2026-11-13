@@ -7,6 +7,8 @@ export default defineConfig(() => ({
   plugins: [tsconfigPaths()],
   test: {
     name: 'api',
+    // Keep the PostgreSQL WASM test from competing with dozens of forks.
+    maxWorkers: 2,
     watch: false,
     globals: true,
     environment: 'node',

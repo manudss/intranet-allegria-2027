@@ -56,6 +56,9 @@ export class AccessExpectedGroupsController {
   @Get('passages') passages(@Query() q: ExpectedPageQuery) {
     return this.service.passages(q);
   }
+  @Get('passages/:id') passage(@Param('id', ParseIntPipe) id: number) {
+    return this.service.passage(id);
+  }
   @Post('passages') createPassage(
     @Body() dto: SaveExpectedPassageDto,
     @Req() req: { user: { id: number } },

@@ -45,6 +45,7 @@ export class SaveExpectedPassageDto {
   @IsOptional() @IsBoolean() archived?: boolean;
 }
 export class ExpectedPageQuery {
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) groupId?: number;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limit = 50;
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(1000000) offset = 0;
   @IsOptional() @IsString() @MaxLength(120) q?: string;

@@ -21,6 +21,7 @@ export class ExpectedReportPage implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private sub?: Subscription;
   private configSub?: Subscription;
+  private linkSub?: Subscription;
   readonly groupsView = this.route.snapshot.data['mode'] === 'groups';
   readonly passages = signal<ExpectedPassage[]>([]);
   readonly selectedException = signal<ExpectedPerson | null>(null);
@@ -36,11 +37,26 @@ export class ExpectedReportPage implements OnInit, OnDestroy {
   passageOffset = 0;
   ngOnInit() {
     this.status = this.groupsView ? 'EXCEPTION' : '';
+    const id = Number(this.route.snapshot.queryParamMap?.get('passageId'));
+    if (Number.isInteger(id) && id > 0) this.passageId = id;
     this.loadPassages();
+    if (Number.isInteger(id) && id > 0) {
+      this.linkSub = this.api.passage(id).subscribe({
+        next: (p) => {
+          this.passages.update((old) => (old.some((x) => x.id === p.id) ? old : [p, ...old]));
+          this.refresh();
+        },
+        error: () =>
+          this.error.set(
+            'Passage lié introuvable ou inaccessible. Choisissez un autre passage. Aucun passage de remplacement n’a été sélectionné.',
+          ),
+      });
+    }
   }
   ngOnDestroy() {
     this.sub?.unsubscribe();
     this.configSub?.unsubscribe();
+    this.linkSub?.unsubscribe();
   }
   loadPassages() {
     this.configLoading.set(true);
@@ -48,7 +64,13 @@ export class ExpectedReportPage implements OnInit, OnDestroy {
     this.configSub?.unsubscribe();
     this.configSub = this.api.passages(this.passageOffset).subscribe({
       next: (page) => {
-        this.passages.update((old) => (this.passageOffset ? [...old, ...page.items] : page.items));
+        this.passages.update((old) => {
+          const selected = old.find((p) => p.id === this.passageId);
+          const result = this.passageOffset ? [...old, ...page.items] : page.items;
+          return [
+            ...new Map((selected ? [selected, ...result] : result).map((p) => [p.id, p])).values(),
+          ];
+        });
         this.passageTotal.set(page.total);
         this.configLoading.set(false);
         if (!this.passageId && page.items.length) {

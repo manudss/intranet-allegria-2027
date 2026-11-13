@@ -4,6 +4,29 @@ import { validate } from 'class-validator';
 import { AccessExpectedGroupsService } from './access-expected-groups.service';
 import { SaveExpectedGroupDto, SaveExpectedPassageDto } from './access-expected-groups.types';
 describe('Expected groups management', () => {
+  it('filters passage rows and count by the exact same group with bounded pagination', async () => {
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce([{ total: 3 }])
+      .mockResolvedValueOnce([]);
+    const s = new AccessExpectedGroupsService({
+      transaction: (_isolation: unknown, f: (m: unknown) => unknown) => f({ query }),
+    } as never);
+    const result = await s.passages({ groupId: 8, limit: 50, offset: 100 });
+    expect(result).toEqual({ items: [], total: 3 });
+    expect(query.mock.calls[0][1]).toEqual([8]);
+    expect(query.mock.calls[1][1]).toEqual([8, 50, 100]);
+    expect(query.mock.calls[1][0]).toContain('x.group_id=$1');
+  });
+  it('resolves the exact passage for deep links and rejects a missing passage', async () => {
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce([{ id: 9 }])
+      .mockResolvedValueOnce([]);
+    const s = new AccessExpectedGroupsService({ query } as never);
+    expect(await s.passage(9)).toEqual({ id: 9 });
+    await expect(s.passage(99)).rejects.toThrow('introuvable');
+  });
   it('requires exactly one source and a nonblank name before write', async () => {
     const transaction = vi.fn();
     const s = new AccessExpectedGroupsService({ transaction } as never);

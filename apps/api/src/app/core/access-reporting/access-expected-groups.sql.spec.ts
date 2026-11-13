@@ -22,7 +22,7 @@ describe('Expected groups data model', () => {
    CREATE TABLE users(id int PRIMARY KEY,email text); INSERT INTO users VALUES(1,'admin@test');
    CREATE TABLE volunteers(id int PRIMARY KEY,"firstName" text,"lastName" text);
    CREATE TABLE participants(id int PRIMARY KEY,volunteer_id int UNIQUE,"firstName" text,"lastName" text,type person_type_enum,status text);
-   CREATE TABLE teams(id int PRIMARY KEY,primary_animator_id int,secondary_animator_id int);
+   CREATE TABLE teams(id int PRIMARY KEY,name text,primary_animator_id int,secondary_animator_id int);
    CREATE TABLE team_participants(team_id int,participant_id int);
    CREATE TABLE access_scan_points(id int PRIMARY KEY,name text);
    CREATE TABLE access_scan_types(id int PRIMARY KEY);
@@ -31,7 +31,7 @@ describe('Expected groups data model', () => {
    INSERT INTO access_scan_points VALUES(1,'Repas'),(2,'Autre'); INSERT INTO access_scan_types VALUES(1);
    INSERT INTO volunteers VALUES(10,'Volunteer','Sans badge'),(11,'Volunteer','Projeté');
    INSERT INTO participants VALUES(42,NULL,'Ada','Privé','JEUNE','CONFIRMED'),(43,NULL,'Noé','Privé','JEUNE','CONFIRMED'),(44,NULL,'Louis','Exemple','ANIMATEUR','CONFIRMED'),(45,11,'Volunteer','Projeté','BENEVOLE','CONFIRMED'),(46,NULL,'Pending','Privé','JEUNE','PENDING');
-   INSERT INTO teams VALUES(8,10,NULL); INSERT INTO team_participants VALUES(8,42),(8,43);
+   INSERT INTO teams VALUES(8,'Équipe A',10,NULL); INSERT INTO team_participants VALUES(8,42),(8,43);
    `);
       const runner = { query: (sql: string) => db.exec(sql) };
       const migration = new CreateAccessExpectedGroups1789800000000();
@@ -57,6 +57,23 @@ describe('Expected groups data model', () => {
         query: async (sql: string, args: unknown[]) =>
           (await db.query<Record<string, unknown>>(sql, args)).rows,
       } as never);
+      const groupReader = new AccessExpectedGroupsService({
+        transaction: async (_: unknown, work: (m: unknown) => unknown) =>
+          work({ query: async (sql: string, args: unknown[]) => (await db.query(sql, args)).rows }),
+      } as never);
+      const group = await groupReader.group(1);
+      expect(
+        group.sources.find((s: { participantId: number }) => s.participantId === 42).label,
+      ).toBe('Ada');
+      expect(
+        group.sources.find((s: { participantId: number }) => s.participantId === 44).label,
+      ).toBe('Louis Exemple');
+      expect(group.sources.find((s: { teamId: number }) => s.teamId === 8).label).toBe('Équipe A');
+      const ownPassages = await groupReader.passages({ groupId: 1, limit: 50, offset: 0 });
+      expect(ownPassages.total).toBe(1);
+      expect(ownPassages.items[0].id).toBe(1);
+      expect((await groupReader.passages({ groupId: 999, limit: 50, offset: 0 })).total).toBe(0);
+      expect((await service.passage(1)).id).toBe(1);
       const dashboard = await service.dashboard('2027-07-31T00:00:00Z', '2027-08-01T00:00:00Z');
       expect(dashboard[0]).toMatchObject({
         expected: 5,

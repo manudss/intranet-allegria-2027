@@ -55,6 +55,9 @@ export interface ExpectedStatusPage {
 export class ExpectedReportApi {
   private http = inject(HttpClient);
   private base = '/api/access-control/expected';
+  passage(id: number) {
+    return this.http.get<ExpectedPassage>(`${this.base}/passages/${id}`);
+  }
   passages(offset = 0) {
     return this.http.get<{ items: ExpectedPassage[]; total: number }>(`${this.base}/passages`, {
       params: new HttpParams().set('limit', 100).set('offset', offset),

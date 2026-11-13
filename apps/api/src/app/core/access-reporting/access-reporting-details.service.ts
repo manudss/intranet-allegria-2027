@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, NotFoundException, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import {
   REPORT_DETAIL_SQL,
   SCANNED_PEOPLE_CTE,
   REPORT_EVENT_FILTER,
   groupEventFilter,
+  GROUP_HISTORY_CTE,
+  GROUP_HISTORY_SUMMARY,
 } from './access-reporting-details.sql';
 import { ReportDetailQuery } from './access-reporting-details.types';
 import { validateReportRange } from './access-reporting.service';
@@ -29,6 +31,32 @@ export function detailParameters(q: ReportDetailQuery): unknown[] {
 export class AccessReportingDetailsService {
   constructor(private readonly db: DataSource) {}
 
+  async groupHistory(q: ReportDetailQuery) {
+    validateReportRange(q);
+    if (!q.expectedGroupId) throw new BadRequestException('Choisissez un groupe');
+    return this.db.transaction('REPEATABLE READ', async (m) => {
+      const [group] = await m.query('SELECT id,name FROM access_expected_groups WHERE id=$1', [
+        q.expectedGroupId,
+      ]);
+      if (!group) throw new NotFoundException('Groupe introuvable');
+      // The member counters describe the whole period/point, independently of the journal verdict filter.
+      const params = [...detailParameters({ ...q, verdict: undefined }), q.expectedGroupId];
+      const [counts] = await m.query(GROUP_HISTORY_SUMMARY, params);
+      const missing = q.withoutAcceptedOnly === 'true';
+      const items = await m.query(
+        `${GROUP_HISTORY_CTE} SELECT * FROM member_status WHERE (NOT $13::boolean OR NOT "hasAccepted") ORDER BY "firstName","personKey" LIMIT $14 OFFSET $15`,
+        [...params, missing, q.limit ?? 50, q.offset ?? 0],
+      );
+      return {
+        group,
+        counts,
+        items,
+        total: missing ? counts.withoutAccepted : counts.members,
+        membershipBasis: 'CURRENT',
+        fetchedAt: new Date().toISOString(),
+      };
+    });
+  }
   async events(q: ReportDetailQuery) {
     validateReportRange(q);
     return this.db.transaction('REPEATABLE READ', async (m) => {

@@ -9,6 +9,7 @@ export interface DetailFilters {
   serviceKey?: string;
   teamId?: number;
   participantId?: number;
+  expectedGroupId?: number;
   personType?: string;
   q?: string;
   verdict?: string;

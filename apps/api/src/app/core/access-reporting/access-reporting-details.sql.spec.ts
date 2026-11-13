@@ -16,7 +16,7 @@ describe('Reporting detail bound PostgreSQL queries', () => {
   it('keeps immutable event identity, zero-activity points, privacy, current-team filters and independent review flags', async () => {
     const db = new PGlite();
     try {
-      await db.exec(`CREATE TABLE access_zones(id int,name text);
+      await db.exec(`CREATE TABLE access_expected_groups(id int,name text); INSERT INTO access_expected_groups VALUES(2,'Équipe A'); CREATE TABLE access_zones(id int,name text);
       CREATE TABLE access_scan_points(id int,name text,zone_id int,active bool);
       CREATE TABLE access_scan_types(id int,label text);
       CREATE TABLE volunteers(id int,"firstName" text,"lastName" text); CREATE TABLE access_expected_group_sources(group_id int,team_id int,person_type text,participant_id int,volunteer_id int); CREATE TABLE teams(id int,name text,primary_animator_id int,secondary_animator_id int); CREATE TABLE participants(id int,"firstName" text,"lastName" text,type text,status text DEFAULT 'CONFIRMED',volunteer_id int);
@@ -129,6 +129,47 @@ describe('Reporting detail bound PostgreSQL queries', () => {
       const review = await service.events({ ...q, limit: 50, offset: 0, reviewOnly: 'true' });
       expect(review.total).toBe(1);
       expect(review.items[0].id).toBe(4);
+      await db.exec(
+        `INSERT INTO volunteers VALUES(99,'Camille','Exemple'); INSERT INTO access_expected_group_sources(group_id,volunteer_id) VALUES(2,99); INSERT INTO access_expected_passages VALUES(1,2); INSERT INTO access_passage_exceptions VALUES(1,4,'Exception ponctuelle',43,1)`,
+      );
+      const history = await service.groupHistory({
+        ...q,
+        expectedGroupId: 2,
+        limit: 50,
+        offset: 0,
+      });
+      expect(history.counts).toMatchObject({
+        members: 2,
+        scannedPeople: 1,
+        withoutAccepted: 1,
+        attempts: 3,
+        accepted: 2,
+        duplicates: 1,
+      });
+      expect(history.items).toHaveLength(2);
+      expect(
+        history.items.find((r: { volunteerId: number }) => r.volunteerId === 99),
+      ).toMatchObject({ participantId: null, hasAccepted: false });
+      expect(
+        (
+          await service.groupHistory({
+            ...q,
+            expectedGroupId: 2,
+            withoutAcceptedOnly: 'true',
+            limit: 50,
+            offset: 0,
+          })
+        ).items,
+      ).toHaveLength(1);
+      const groupEvents = await service.events({ ...q, expectedGroupId: 2, limit: 50, offset: 0 });
+      expect(groupEvents.total).toBe(3); // passage-only exceptions are not current group members
+      expect(
+        (await service.groupHistory({ ...q, expectedGroupId: 2, limit: 50, offset: 999 })).counts
+          .members,
+      ).toBe(2);
+      await expect(service.groupHistory({ ...q, expectedGroupId: 999 })).rejects.toThrow(
+        'Groupe introuvable',
+      );
       // Out-of-range pagination still has a usable independent total.
       expect(
         (await db.query<Record<string, unknown>>(REPORT_DETAIL_SQL.events, [...args, 50, 500]))

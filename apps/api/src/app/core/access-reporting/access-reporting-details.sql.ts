@@ -57,7 +57,7 @@ export function groupEventFilter(groupId: number | null): string {
   const membership = EXPECTED_GROUP_MEMBERS_CTE.replace('src.group_id=$1', 'src.group_id=$14');
   return (
     REPORT_EVENT_FILTER +
-    ` AND e.participant_id IN (${membership} SELECT "participantId" FROM members WHERE "participantId" IS NOT NULL UNION SELECT ex.participant_id FROM access_passage_exceptions ex JOIN access_expected_passages xp ON xp.id=ex.passage_id WHERE xp.group_id=$14)`
+    ` AND e.participant_id IN (${membership} SELECT "participantId" FROM members WHERE "participantId" IS NOT NULL)`
   );
 }
 
@@ -69,3 +69,20 @@ export const SCANNED_PEOPLE_CTE = `WITH matched AS (
  ${REPORT_EVENT_FILTER} AND e.participant_id IS NOT NULL AND e.verdict='ACCEPTED' AND NOT e.needs_review
 ), latest AS (SELECT DISTINCT ON("participantId") * FROM matched ORDER BY "participantId",coalesce("occurredAtLocal","receivedAt") DESC,id DESC)
 `;
+
+/** Current composition only. Passage exceptions never change a group's membership. */
+export const GROUP_HISTORY_CTE = `${EXPECTED_GROUP_MEMBERS_CTE.replace('src.group_id=$1', 'src.group_id=$12')}, activity AS (
+ SELECT e.* ${REPORT_EVENT_FILTER} AND e.participant_id IN (SELECT "participantId" FROM members)
+), member_status AS (
+ SELECT m.*,EXISTS(SELECT 1 FROM activity a WHERE a.participant_id=m."participantId" AND a.verdict='ACCEPTED' AND NOT a.needs_review) AS "hasAccepted",
+ (SELECT max(a.received_at) FROM activity a WHERE a.participant_id=m."participantId") AS "lastReceivedAt" FROM members m
+)`;
+export const GROUP_HISTORY_SUMMARY = `${GROUP_HISTORY_CTE} SELECT
+ (SELECT count(*)::int FROM members) AS members,
+ (SELECT count(*)::int FROM member_status WHERE "hasAccepted") AS "scannedPeople",
+ (SELECT count(*)::int FROM member_status WHERE NOT "hasAccepted") AS "withoutAccepted",
+ (SELECT count(*)::int FROM activity) AS attempts,
+ (SELECT count(*)::int FROM activity WHERE verdict='ACCEPTED' AND NOT needs_review) AS accepted,
+ (SELECT count(*)::int FROM activity WHERE verdict='DUPLICATE') AS duplicates,
+ (SELECT count(*)::int FROM activity WHERE verdict NOT IN ('ACCEPTED','DUPLICATE')) AS rejected,
+ (SELECT count(*)::int FROM activity WHERE needs_review) AS "needsReview"`;

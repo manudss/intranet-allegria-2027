@@ -10,6 +10,36 @@ const q = () =>
     to: '2027-08-01T00:00:00Z',
   });
 describe('Reporting details service', () => {
+  it('requires a group and bounded dates before querying group history', async () => {
+    const transaction = vi.fn();
+    const service = new AccessReportingDetailsService({ transaction } as never);
+    await expect(service.groupHistory(q())).rejects.toThrow('Choisissez un groupe');
+    await expect(
+      service.groupHistory({ ...q(), expectedGroupId: 2, to: '2028-01-01T00:00:00Z' }),
+    ).rejects.toThrow();
+    expect(transaction).not.toHaveBeenCalled();
+  });
+  it('keeps group member counters independent of journal verdict and pages missing members on the server', async () => {
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce([{ id: 2, name: 'Équipe A' }])
+      .mockResolvedValueOnce([{ members: 10, withoutAccepted: 2 }])
+      .mockResolvedValueOnce([]);
+    const transaction = vi.fn((_: unknown, f: (m: unknown) => unknown) => f({ query }));
+    const service = new AccessReportingDetailsService({ transaction } as never);
+    const result = await service.groupHistory({
+      ...q(),
+      expectedGroupId: 2,
+      verdict: 'DUPLICATE' as never,
+      withoutAcceptedOnly: 'true',
+      limit: 50,
+      offset: 100,
+    });
+    expect(result).toMatchObject({ total: 2, items: [], membershipBasis: 'CURRENT' });
+    expect(query.mock.calls[1][1][10]).toBeNull();
+    expect(query.mock.calls[2][1].slice(-3)).toEqual([true, 50, 100]);
+    expect(transaction.mock.calls[0][0]).toBe('REPEATABLE READ');
+  });
   it('counts empty pages in the same read snapshot, without altering scans', async () => {
     const query = vi
       .fn()
@@ -51,6 +81,7 @@ describe('Reporting details service', () => {
     for (const fields of [
       { limit: 101 },
       { anomaliesOnly: 'yes' },
+      { withoutAcceptedOnly: '1' },
       { reviewOnly: '1' },
       { offset: -1 },
       { pointId: 0 },

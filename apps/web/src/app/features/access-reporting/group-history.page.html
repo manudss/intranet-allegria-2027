@@ -1,0 +1,208 @@
+<main class="page">
+  <header>
+    <h1>Historique d'un groupe</h1>
+    <nav class="navigation" aria-label="Suivi des accès">
+      <a routerLink="/acces/dashboard">Dashboard</a
+      ><a routerLink="/acces/scannes">Scannés par lieu</a
+      ><a routerLink="/acces/non-scannes">Non scannés</a
+      ><a routerLink="/acces/historique-personne">Historique personne</a
+      ><a routerLink="/acces/historique-groupe" class="active">Historique groupe</a
+      ><a routerLink="/acces/groupes-exceptions">Groupes attendus · exceptions</a>
+    </nav>
+  </header>
+  <form class="search" (ngSubmit)="findGroups()">
+    <label
+      >Rechercher un groupe<input
+        name="groupSearch"
+        [(ngModel)]="groupSearch"
+        maxlength="120" /></label
+    ><button type="submit" [disabled]="groupLoading()">Rechercher</button>
+  </form>
+  @if(groupError()){
+  <p class="error" role="alert">{{groupError()}}</p>
+  }
+  <div class="filters">
+    <label
+      >Groupe attendu<select name="group" [(ngModel)]="groupId" (ngModelChange)="choose()">
+        <option [ngValue]="null">Choisir un groupe</option>
+        @for(g of groups().items;track g.id){
+        <option [ngValue]="g.id">{{g.name}}{{g.archivedAt?' · archivé':''}}</option>
+        }
+      </select></label
+    >
+  </div>
+  <nav class="pager">
+    <button (click)="groupPage(-1)" [disabled]="groupLoading()||groupOffset===0">
+      Groupes précédents</button
+    ><span
+      >{{groupResultOffset()+(groups().items.length?1:0)}}–{{groupResultOffset()+groups().items.length}}
+      / {{groups().total}} groupes</span
+    ><button (click)="groupPage(1)" [disabled]="groupLoading()||groupOffset+50>=groups().total">
+      Groupes suivants
+    </button>
+  </nav>
+  <p class="note">
+    Composition actuelle du groupe, pas une reconstitution de sa composition passée. Les sources
+    équipe, type de personne et membres explicites sont celles définies dans le groupe. Une
+    exception liée à un passage ne modifie pas cette composition. Le journal inclut toutes les
+    tentatives reçues des membres actuels, même après remplacement d'un badge.
+  </p>
+  @if(groupId){
+  <form class="filters" (ngSubmit)="refresh()">
+    <label>Du<input name="from" type="date" [(ngModel)]="from" /></label
+    ><label>Au (inclus)<input name="to" type="date" [(ngModel)]="to" /></label
+    ><label
+      >Point<select name="point" [(ngModel)]="pointId">
+        <option [ngValue]="null">Tous les points</option>
+        @for(p of points;track p.id){
+        <option [ngValue]="p.id">{{p.name}}</option>
+        }
+      </select></label
+    >@if(tab==='journal'){<label
+      >Résultat du journal<select name="verdict" [(ngModel)]="verdictFilter">
+        <option value="">Tous les résultats</option>
+        <option value="ACCEPTED">Accepté</option>
+        <option value="DUPLICATE">Doublon</option>
+        <option value="REJECTED_NOT_EXPECTED">Hors groupe attendu</option>
+        <option value="REJECTED_NO_RIGHT">Droit refusé</option>
+        <option value="REJECTED_REVOKED">Badge révoqué</option>
+        <option value="REJECTED_EXPIRED_ASSIGNMENT">Badge remplacé / expiré</option>
+      </select></label
+    >}<button type="submit" [disabled]="loading()">{{loading()?'Chargement…':'Actualiser'}}</button>
+  </form>
+  @if(error()){
+  <p class="error" role="alert">{{error()}}</p>
+  }
+  <nav class="tabs">
+    <button [class.active]="tab==='journal'" (click)="switchTab('journal')">
+      Journal chronologique</button
+    ><button [class.active]="tab==='members'" (click)="switchTab('members')">Membres</button
+    ><button [class.active]="tab==='missing'" (click)="switchTab('missing')">
+      Sans passage accepté
+    </button>
+  </nav>
+  @if(history();as h){
+  <h2>{{h.group.name}}</h2>
+  <section class="metrics">
+    <article>
+      Membres du groupe<strong>{{h.counts.members}}</strong><small>Composition actuelle</small>
+    </article>
+    <article>
+      Personnes scannées<strong>{{h.counts.scannedPeople}}</strong
+      ><small>Au moins un accepté sans ambiguïté</small>
+    </article>
+    <article>
+      Sans passage accepté<strong>{{h.counts.withoutAccepted}}</strong
+      ><small>Sur la période et le point</small>
+    </article>
+    <article>
+      Tentatives reçues<strong>{{h.counts.attempts}}</strong
+      ><small
+        >{{h.counts.accepted}} acceptées · {{h.counts.rejected}} refus · {{h.counts.duplicates}}
+        doublons · {{h.counts.needsReview}} à vérifier</small
+      >
+    </article>
+  </section>
+  <p class="hint">
+    Les compteurs de membres portent sur la période et le point, tous résultats confondus. Le filtre
+    résultat ne concerne que le journal. « Sans passage accepté » n'indique pas un droit manquant ni
+    une absence certaine. Scans hors ligne non reçus exclus. Période de 1 à 31 jours.
+  </p>
+  <div
+    class="table-wrap"
+    tabindex="0"
+    role="region"
+    aria-label="Historique du groupe, tableau défilant"
+  >
+    <table>
+      @if(tab==='journal'){
+      <thead>
+        <tr>
+          <th>Personne</th>
+          <th>Date / heure Paris</th>
+          <th>Lieu / point</th>
+          <th>Type / service</th>
+          <th>Résultat</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for(e of events()?.items??[];track e.id){
+        <tr>
+          <td>
+            <b>{{name(e)}} · #{{e.participantId}}</b
+            ><a
+              routerLink="/acces/historique-personne"
+              [queryParams]="{participantId:e.participantId}"
+              >Historique →</a
+            >
+          </td>
+          <td>
+            {{time(e.occurredAtLocal??e.receivedAt)}}<small>Reçu {{time(e.receivedAt)}}</small
+            ><small>#{{e.id}}</small>
+          </td>
+          <td>{{e.zoneName}}<b>{{e.pointName}}</b></td>
+          <td>{{e.scanTypeLabel}}<small>{{e.serviceKey??'Sans service'}}</small></td>
+          <td>
+            {{verdict(e.verdict)}}@if(e.needsReview){<small
+              >À vérifier{{e.reviewClosed?' · vérification close':''}}</small
+            >}@if(e.exceptionId){<small>Exception · {{e.exceptionReason}}</small>}
+          </td>
+        </tr>
+        }@empty{
+        <tr>
+          <td colspan="5">Aucune tentative reçue pour ces filtres.</td>
+        </tr>
+        }
+      </tbody>
+      }@else{
+      <thead>
+        <tr>
+          <th>Personne</th>
+          <th>Type</th>
+          <th>Passage accepté</th>
+          <th>Dernière réception</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for(p of h.items;track p.personKey){
+        <tr>
+          <td>
+            <b>{{name(p)}}</b><small>{{p.personKey}}</small>@if(p.participantId){<a
+              routerLink="/acces/historique-personne"
+              [queryParams]="{participantId:p.participantId}"
+              >Historique →</a
+            >}@else{<small>Sans fiche participant, consultation sans création.</small>}
+          </td>
+          <td>{{p.type}}</td>
+          <td>
+            {{p.hasAccepted?'Au moins un accepté sans ambiguïté':'Aucun accepté sans ambiguïté'}}
+          </td>
+          <td>{{time(p.lastReceivedAt)}}</td>
+        </tr>
+        }@empty{
+        <tr>
+          <td colspan="4">Aucun membre pour cette sélection.</td>
+        </tr>
+        }
+      </tbody>
+      }
+    </table>
+  </div>
+  <nav class="pager">
+    <button (click)="page(-1)" [disabled]="offset===0||loading()">Précédent</button
+    ><span
+      >{{resultOffset()+((tab==='journal'?(events()?.items?.length??0):h.items.length)?1:0)}}–{{resultOffset()+(tab==='journal'?(events()?.items?.length??0):h.items.length)}}
+      / {{tab==='journal'?events()?.total:h.total}} {{tab==='journal'?'tentatives':'membres'}}</span
+    ><button
+      (click)="page(1)"
+      [disabled]="loading()||offset+50>=(tab==='journal'?(events()?.total??0):h.total)"
+    >
+      Suivant
+    </button>
+  </nav>
+  <p class="hint">
+    Actualisé le {{time(h.fetchedAt)}}. Pagination côté serveur. Sur petit écran, faites défiler le
+    tableau horizontalement.
+  </p>
+  } }
+</main>

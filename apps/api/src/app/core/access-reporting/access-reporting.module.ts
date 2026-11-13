@@ -39,6 +39,9 @@ export class AccessReportingController {
   @Get('people') people(@Query() q: ExpectedPageQuery) {
     return this.peopleService.people(q);
   }
+  @Get('group-history') groupHistory(@Query() q: ReportDetailQuery) {
+    return this.details.groupHistory(q);
+  }
   @Get('dashboard') dashboard(@Query() q: ReportDetailQuery) {
     return this.details.dashboard(q);
   }

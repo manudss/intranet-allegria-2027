@@ -123,3 +123,7 @@ preuve d'absence. Les autres pages d'historique et gestion restent à compléter
 ### Historique individuel
 
 Écran `/acces/historique-personne` : recherche paginée indépendante du passage attendu, y compris personnes sans badge et bénévoles sans projection ; événements paginés par participant sur 1 à 31 jours, filtres point/type/verdict indépendants. Les liens depuis les détails par lieu ne transmettent que l’identité. Tous les verdicts et vérifications restent visibles après remplacement d’un badge. Aucun nouveau participant ni badge n’est créé par la consultation.
+
+### Historique groupe
+
+`/acces/historique-groupe` consulte la composition actuelle d'un groupe attendu, indépendamment d'un passage précis. Journal de toutes les tentatives reçues des membres actuels, liste des membres et membres sans accepté sans ambiguïté. Les exceptions de passage seules ne changent jamais cette composition et restent consultables dans le suivi du passage. Les compteurs membres utilisent la période et le point, tous résultats confondus ; le filtre verdict ne concerne que le journal. Recherche de groupes, journal et membres paginés côté serveur. Le statut sans accepté n'affirme ni absence physique ni défaut de droit.

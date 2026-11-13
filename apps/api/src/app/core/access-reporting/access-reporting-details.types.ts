@@ -5,6 +5,7 @@ import { PersonType } from '../entities/person-type.enum';
 import { AccessScanVerdict } from '../entities/access-scan-verdict.enum';
 
 export class ReportDetailQuery extends AccessReportQuery {
+  @IsOptional() @IsIn(['true', 'false']) withoutAcceptedOnly?: string;
   @IsOptional() @IsIn(['true', 'false']) anomaliesOnly?: string;
   @IsOptional() @IsIn(['true', 'false']) reviewOnly?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) pointId?: number;

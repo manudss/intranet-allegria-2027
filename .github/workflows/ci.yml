@@ -120,3 +120,7 @@ jobs:
             sleep 2
           done
           API_URL=http://localhost:3000 QR_SMOKE_ALLOW_MUTATION=yes node scripts/check-access-control.mjs || { cat api-qr.log; exit 1; }
+
+      - name: Check QR print and testkit (seed database only)
+        run: |
+          API_URL=http://localhost:3000 QR_SMOKE_ALLOW_MUTATION=yes node scripts/check-qr-testkit.mjs || { cat api-qr.log; exit 1; }

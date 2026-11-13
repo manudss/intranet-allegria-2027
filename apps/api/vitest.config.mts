@@ -8,7 +8,7 @@ export default defineConfig(() => ({
   test: {
     name: 'api',
     // Keep the PostgreSQL WASM test from competing with dozens of forks.
-    maxWorkers: 2,
+    maxWorkers: 1,
     watch: false,
     globals: true,
     environment: 'node',

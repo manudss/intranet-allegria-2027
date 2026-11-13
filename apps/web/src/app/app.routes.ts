@@ -111,6 +111,7 @@ export const appRoutes: Route[] = [
             (m) => m.VolunteerAuditLogsPage,
           ),
       },
+      {path:'acces/impression',title:'Badges et impression',canActivate:[roleGuard],data:{roles:['ADMIN','BADGE_MANAGER']},loadComponent:()=>import('./features/access-control/badge-print.page').then(m=>m.BadgePrintPage)},
       {
         path: 'acces/badges',
         title: 'Stock badges',

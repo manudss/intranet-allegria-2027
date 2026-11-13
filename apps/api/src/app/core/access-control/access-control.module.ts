@@ -1,3 +1,5 @@
+import { BadgePrintService } from './badge-print.service';
+import { BadgePrintController } from './badge-print.controller';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
@@ -48,12 +50,14 @@ import {
     ]),
   ],
   controllers: [
+    BadgePrintController,
     AccessBadgesController,
     AccessConfigController,
     AccessGrantsController,
     AccessScanningController,
   ],
   providers: [
+    BadgePrintService,
     AccessAuditService,
     BadgesService,
     ScanConfigService,

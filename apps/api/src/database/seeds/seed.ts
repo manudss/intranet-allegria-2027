@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { seedAccessTestkit } from './access-testkit';
 import { fakerFR as faker } from '@faker-js/faker';
 import type { DataSource } from 'typeorm';
 import { hashPassword } from '../../app/core/auth/password.util';
@@ -658,8 +659,8 @@ async function seedAccessControl(
       grantRepository.create({
         userId: user.id,
         zoneId: null,
-        startsAt: new Date('2027-10-30T00:00:00.000Z'),
-        endsAt: new Date('2027-11-04T23:59:59.000Z'),
+        startsAt: new Date(Date.now() - 86400000),
+        endsAt: new Date(Date.now() + 30 * 86400000),
         createdByUserId: args.adminUser.id,
       }),
     ),
@@ -1693,6 +1694,8 @@ async function run(): Promise<void> {
       youngParticipants: participants,
       adultParticipants: savedAdultParticipants,
     });
+
+    await seedAccessTestkit(dataSource, adminUser, demoPasswordHash);
 
     console.log('Seed termine.');
     console.log(`Profil: ${profileName}`);

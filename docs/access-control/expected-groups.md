@@ -87,3 +87,23 @@ les deltas et le choix d'un point reflètent cette politique. Un ancien appareil
 déjà déconnecté ne peut pas recevoir un changement : l'activation opérationnelle
 exige reconnexion et redémarrage de ses sessions avant le service. Ne pas annoncer
 une révocation instantanée hors réseau. Les scans non envoyés restent conservés.
+
+## Essai preview via seed QR
+
+Le reseed existant crée un point séparé `QR-DEMO · Groupe attendu (en ligne)`
+avec son groupe de 5 membres normaux et une exception préenregistrée. Les
+compteurs initiaux sont 6 attendus effectifs, 2 confirmés, 1 à vérifier seul et
+3 sans confirmation. Le passage et le droit de dérogation expirent sept jours
+après le seed. Aucun point repas existant n'est modifié par ce scénario.
+
+- `qr.scanner.a@allegria.local` : peut confirmer une exception sur ce point.
+- `qr.scanner.b@allegria.local` : peut scanner, sans droit de dérogation.
+- `Animateur` : membre normal, badge valide, à scanner.
+- `Presence Sorti` / `Presence Reentre` : hors de ce groupe, badges valides,
+  disponibles pour essayer une nouvelle dérogation avec motif.
+- `Badge Revoque` : ne doit pas être accepté par exception.
+
+Se connecter à l'administration avec le compte de démo pour consulter les
+listes et préparer les badges du lot `QR-TESTKIT`. Le seed est le seul mécanisme
+de création de ces données. La base preview/pr-32 est distincte des autres PR
+et de production ; un reseed efface ses essais précédents.

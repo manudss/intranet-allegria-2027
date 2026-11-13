@@ -193,6 +193,13 @@ export const appRoutes: Route[] = [
         loadComponent: () => import('./pages/jour-j').then((m) => m.JourJ),
       },
       {
+        path: 'acces/suivi',
+        title: 'Suivi des accès',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
+        loadComponent: () => import('./features/access-reporting/access-reporting.page').then(m => m.AccessReportingPage),
+      },
+      {
         path: 'suivi-operationnel',
         title: 'Suivi opérationnel',
         canActivate: [roleGuard],

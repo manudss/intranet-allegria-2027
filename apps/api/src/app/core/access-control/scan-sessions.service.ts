@@ -73,7 +73,7 @@ export class ScanSessionsService {
     return (
       (
         await this.sessionsRepository.manager.query(
-          `SELECT 1 FROM access_expected_passages x JOIN access_scan_points pt ON pt.id=x.point_id WHERE ($1::int IS NULL OR pt.zone_id=$1) AND x.archived_at IS NULL LIMIT 1`,
+          `SELECT 1 FROM access_scan_points pt WHERE ($1::int IS NULL OR pt.zone_id=$1) AND pt.expected_online_required LIMIT 1`,
           [zoneId],
         )
       ).length > 0

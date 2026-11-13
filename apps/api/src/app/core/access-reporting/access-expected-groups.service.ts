@@ -211,6 +211,9 @@ export class AccessExpectedGroupsService {
           `INSERT INTO access_expected_passages(group_id,point_id,scan_type_id,service_key,label,starts_at,ends_at,timezone,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
           [...values, userId],
         );
+      await m.query('UPDATE access_scan_points SET expected_online_required=true WHERE id=$1', [
+        dto.pointId,
+      ]);
       await this.audit(m, userId, 'access_expected_passages', passage.id, passage.version);
       return passage;
     });

@@ -133,7 +133,10 @@ describe('ScansService.upload', () => {
   });
   it('est idempotent : un clientEventId déjà enregistré renvoie le verdict stocké', async () => {
     const { service, repos } = makeService();
-    repos.events.findOneBy.mockResolvedValue({ verdict: AccessScanVerdict.ACCEPTED });
+    repos.events.findOneBy.mockResolvedValue({
+      sessionId: 11,
+      verdict: AccessScanVerdict.ACCEPTED,
+    });
 
     const results = await service.upload(11, 1, { scans: [scan()] });
 

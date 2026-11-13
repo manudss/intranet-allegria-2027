@@ -264,6 +264,8 @@ export class ScansService {
 
       const existing = await events.findOneBy({ clientEventId: scan.clientEventId });
       if (existing) {
+        if (existing.sessionId !== sessionId)
+          throw new ForbiddenException('Identifiant de scan appartenant à une autre session');
         // Répétition réseau du téléphone : on renvoie le verdict déjà tranché.
         results.push({
           clientEventId: scan.clientEventId,

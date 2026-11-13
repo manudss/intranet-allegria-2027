@@ -47,6 +47,12 @@ const makeService = () => {
 };
 
 describe('ScanSessionsService', () => {
+  it('forces online validation when a point in the session zone has expected-group policy', async () => {
+    const { service, repos } = makeService();
+    repos.sessions.manager.query.mockResolvedValue([{ id: 1 }]);
+    expect((await service.start(1, {})).requiresOnlineValidation).toBe(true);
+  });
+
   it('refuse par défaut : sans habilitation active, pas de session', async () => {
     const { service, grantsService, repos } = makeService();
     grantsService.assertActiveGrant.mockRejectedValue(new ForbiddenException('nope'));

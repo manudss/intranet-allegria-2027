@@ -13,6 +13,7 @@ export interface AccessZone {
 }
 
 export interface ScanPoint {
+  expectedOnlineRequired?: boolean;
   id: number;
   zoneId: number;
   scanTypeId: number;

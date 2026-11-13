@@ -129,7 +129,7 @@ export class ScanStore implements OnDestroy {
         keyExpiresAt: res.keyExpiresAt,
         snapshotVersion: res.snapshotVersion,
         maxOfflineMinutes: res.maxOfflineMinutes,
-        requiresOnlineValidation: res.requiresOnlineValidation,
+        requiresOnlineValidation: res.requiresOnlineValidation || !!point.expectedOnlineRequired,
         startedAt: res.startedAt,
         lastRefreshAt: new Date().toISOString(),
       };

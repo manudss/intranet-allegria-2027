@@ -73,3 +73,13 @@ d'évacuation.
 
 La migration n'est pas appliquée à une preview par ce commit. Ses montées et
 descentes sont testées dans PostgreSQL/PGlite sans modifier les scans existants.
+
+
+## Activation et appareils hors ligne
+
+Créer un rattachement active durablement `expected_online_required` sur le point.
+Archiver ses groupes ne réactive pas le mode hors ligne. Les nouvelles sessions,
+les deltas et le choix d'un point reflètent cette politique. Un ancien appareil
+déjà déconnecté ne peut pas recevoir un changement : l'activation opérationnelle
+exige reconnexion et redémarrage de ses sessions avant le service. Ne pas annoncer
+une révocation instantanée hors réseau. Les scans non envoyés restent conservés.

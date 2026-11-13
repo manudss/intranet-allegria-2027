@@ -50,9 +50,12 @@ describe('Expected groups data model', () => {
    (5,45,1,1,'autre','2027-07-31 10:34Z','2027-07-31 10:34Z','ACCEPTED',false),
    (6,44,1,1,'midi','2027-07-31 10:35Z','2027-07-31 10:35Z','REJECTED_REVOKED',false),
    (7,45,1,1,'midi','2027-07-31 12:00Z','2027-07-31 12:00Z','ACCEPTED',false);`);
-      const members = (await db.query(EXPECTED_GROUP_SQL.members, [1, 50, 0])).rows;
+      const members = (
+        await db.query<Record<string, unknown>>(EXPECTED_GROUP_SQL.members, [1, 50, 0])
+      ).rows;
       const service = new AccessExpectedGroupsService({
-        query: async (sql: string, args: unknown[]) => (await db.query(sql, args)).rows,
+        query: async (sql: string, args: unknown[]) =>
+          (await db.query<Record<string, unknown>>(sql, args)).rows,
       } as never);
       const dashboard = await service.dashboard('2027-07-31T00:00:00Z', '2027-08-01T00:00:00Z');
       expect(dashboard[0]).toMatchObject({
@@ -68,7 +71,9 @@ describe('Expected groups data model', () => {
         personKey: 'volunteer:10',
         participantId: null,
       });
-      expect((await db.query(EXPECTED_GROUP_SQL.statusCounts, [1, 1])).rows[0]).toEqual({
+      expect(
+        (await db.query<Record<string, unknown>>(EXPECTED_GROUP_SQL.statusCounts, [1, 1])).rows[0],
+      ).toEqual({
         expected: 5,
         exceptions: 0,
         confirmed: 1,
@@ -76,15 +81,26 @@ describe('Expected groups data model', () => {
         notConfirmed: 3,
       });
       expect(
-        (await db.query(EXPECTED_GROUP_SQL.statusRows, [1, 1, 'NOT_CONFIRMED', 50, 0])).rows,
+        (
+          await db.query<Record<string, unknown>>(EXPECTED_GROUP_SQL.statusRows, [
+            1,
+            1,
+            'NOT_CONFIRMED',
+            50,
+            0,
+          ])
+        ).rows,
       ).toHaveLength(3);
       // Creating the volunteer projection later changes neither identity nor count.
       await db.exec(
         `INSERT INTO participants VALUES(50,10,'Volunteer','Sans badge','BENEVOLE','CONFIRMED')`,
       );
-      expect((await db.query(EXPECTED_GROUP_SQL.memberCount, [1])).rows[0].total).toBe(5);
       expect(
-        (await db.query(EXPECTED_GROUP_SQL.members, [1, 50, 0])).rows.find(
+        (await db.query<Record<string, unknown>>(EXPECTED_GROUP_SQL.memberCount, [1])).rows[0]
+          .total,
+      ).toBe(5);
+      expect(
+        (await db.query<Record<string, unknown>>(EXPECTED_GROUP_SQL.members, [1, 50, 0])).rows.find(
           (r) => r.volunteerId === 10,
         )?.personKey,
       ).toBe('volunteer:10');
@@ -92,10 +108,17 @@ describe('Expected groups data model', () => {
       await db.exec(
         `DELETE FROM access_expected_group_sources WHERE person_type='JEUNE'; DELETE FROM team_participants WHERE participant_id=43;`,
       );
-      expect((await db.query(EXPECTED_GROUP_SQL.memberCount, [1])).rows[0].total).toBe(4);
-      expect((await db.query('SELECT count(*)::int AS n FROM access_scan_events')).rows[0].n).toBe(
-        7,
-      );
+      expect(
+        (await db.query<Record<string, unknown>>(EXPECTED_GROUP_SQL.memberCount, [1])).rows[0]
+          .total,
+      ).toBe(4);
+      expect(
+        (
+          await db.query<Record<string, unknown>>(
+            'SELECT count(*)::int AS n FROM access_scan_events',
+          )
+        ).rows[0].n,
+      ).toBe(7);
       await expect(
         db.exec(
           `INSERT INTO access_expected_group_sources(group_id,team_id,participant_id) VALUES(1,8,42)`,
@@ -108,8 +131,15 @@ describe('Expected groups data model', () => {
         (8,44,1,1,'midi','2027-07-31 10:40Z','2027-07-31 10:40Z','REJECTED_NOT_EXPECTED',false),
         (9,44,1,1,'midi','2027-07-31 10:41Z','2027-07-31 10:41Z','ACCEPTED',false);
         INSERT INTO access_passage_exceptions VALUES(1,1,44,1,'2027-07-31 10:41Z','Accompagne le groupe',9,8,3);`);
-      const exceptions = (await db.query(EXPECTED_GROUP_SQL.statusRows, [1, 1, 'EXCEPTION', 50, 0]))
-        .rows;
+      const exceptions = (
+        await db.query<Record<string, unknown>>(EXPECTED_GROUP_SQL.statusRows, [
+          1,
+          1,
+          'EXCEPTION',
+          50,
+          0,
+        ])
+      ).rows;
       expect(exceptions).toHaveLength(1);
       expect(exceptions[0]).toMatchObject({
         participantId: 44,
@@ -124,14 +154,61 @@ describe('Expected groups data model', () => {
         lastAttempt: { verdict: 'ACCEPTED', needsReview: false },
       });
       expect(exceptions[0].exception).toHaveProperty('refusedAt');
-      expect((await db.query(EXPECTED_GROUP_SQL.statusCounts, [1, 1])).rows[0]).toMatchObject({
+      expect(
+        (await db.query<Record<string, unknown>>(EXPECTED_GROUP_SQL.statusCounts, [1, 1])).rows[0],
+      ).toMatchObject({
         exceptions: 1,
         confirmed: 2,
       });
-      await migration.down(runner as never);
-      expect((await db.query('SELECT count(*)::int AS n FROM access_scan_events')).rows[0].n).toBe(
-        9,
+      // Exercise the public read service against SQL, not a mocked list.
+      await db.exec(`INSERT INTO participants(id,"firstName","lastName",type,status)
+        SELECT 300+i,'Pagination '||lpad(i::text,2,'0'),'Test','ANIMATEUR','CONFIRMED' FROM generate_series(1,60) i;
+        INSERT INTO access_expected_group_sources(group_id,participant_id) SELECT 1,300+i FROM generate_series(1,60) i;`);
+      const actual = new AccessExpectedGroupsService({
+        transaction: async (_isolation: string, work: (m: unknown) => unknown) =>
+          work({
+            query: async (sql: string, args: unknown[]) =>
+              (await db.query<Record<string, unknown>>(sql, args)).rows,
+          }),
+      } as never);
+      const first = await actual.status(
+        1,
+        Object.assign(new ExpectedPageQuery(), { limit: 50, offset: 0 }),
       );
+      const second = await actual.status(
+        1,
+        Object.assign(new ExpectedPageQuery(), { limit: 50, offset: 50 }),
+      );
+      expect(first.total).toBe(64);
+      expect(first.counts.expected).toBe(64);
+      expect(first.items).toHaveLength(50);
+      expect(second.total).toBe(64);
+      expect(second.items).toHaveLength(14);
+      expect(
+        new Set([...first.items, ...second.items].map((r: { personKey: string }) => r.personKey))
+          .size,
+      ).toBe(64);
+      const onlyExceptions = await actual.status(
+        1,
+        Object.assign(new ExpectedPageQuery(), { status: 'EXCEPTION' }),
+      );
+      expect(onlyExceptions.total).toBe(1);
+      expect(onlyExceptions.items).toHaveLength(1);
+      expect(onlyExceptions.counts.expected).toBe(64);
+      const searched = await actual.status(
+        1,
+        Object.assign(new ExpectedPageQuery(), { q: 'Pagination 60' }),
+      );
+      expect(searched.total).toBe(1);
+      expect(searched.items[0].participantId).toBe(360);
+      await migration.down(runner as never);
+      expect(
+        (
+          await db.query<Record<string, unknown>>(
+            'SELECT count(*)::int AS n FROM access_scan_events',
+          )
+        ).rows[0].n,
+      ).toBe(9);
     } finally {
       await db.close();
     }

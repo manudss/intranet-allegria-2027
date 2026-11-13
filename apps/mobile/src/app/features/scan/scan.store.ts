@@ -4,7 +4,14 @@ import { AuthService } from '../../core/auth.service';
 import { decryptJson, deriveTableKey, encryptJson } from './scan-crypto';
 import { listScans, openScanDb, scanDb } from './scan-db';
 import { ScanApiService } from './scan-api.service';
-import { PendingScan, ScanPoint, SnapshotEntry, Verdict, duplicateKeyOf, evaluateScan } from './scan.models';
+import {
+  PendingScan,
+  ScanPoint,
+  SnapshotEntry,
+  Verdict,
+  duplicateKeyOf,
+  evaluateScan,
+} from './scan.models';
 export const SCAN_UPLOAD_INTERVAL_MS = 45_000;
 const UPLOAD_BATCH = 500;
 
@@ -71,23 +78,29 @@ export class ScanStore implements OnDestroy {
   private readonly onVisibility = () => {
     if (document.visibilityState === 'visible') void this.refreshExpiry().catch(() => undefined);
   };
-  private isOwner(): boolean { return this.meta?.ownerId === this.auth.currentUser()?.id; }
+  private isOwner(): boolean {
+    return this.meta?.ownerId === this.auth.currentUser()?.id;
+  }
   async restore(): Promise<void> {
     if (!this.db) return;
     const meta = await scanDb.getKv<SessionMeta>(this.db, 'meta');
     if (!meta) return;
     this.meta = meta;
-    if (!this.isOwner()) throw new Error('Une autre session de scan doit être clôturée par son utilisateur.');
+    if (!this.isOwner())
+      throw new Error('Une autre session de scan doit être clôturée par son utilisateur.');
     await this.refreshPendingCount();
     this.activePoint.set(meta.point);
-    this.sessionKey = await scanDb.getKv<string>(this.db, 'sessionKey') ?? '';
+    this.sessionKey = (await scanDb.getKv<string>(this.db, 'sessionKey')) ?? '';
     if (this.isExpired(meta)) {
       // Keep queue and its session routing. Never erase unconfirmed scans.
       await this.suspend();
       return;
     }
     const blob = await scanDb.getTable(this.db);
-    if (!this.sessionKey || !blob) { this.ready.set(false); return; }
+    if (!this.sessionKey || !blob) {
+      this.ready.set(false);
+      return;
+    }
     this.key = await deriveTableKey(this.sessionKey);
     const local = await decryptJson<LocalTable>(this.key, blob);
     this.entries = new Map(local.entries.map((e) => [e.code, e]));
@@ -102,59 +115,180 @@ export class ScanStore implements OnDestroy {
       if (this.meta) {
         if (!this.isOwner()) throw new Error('Session appartenant à un autre utilisateur');
         const result = await this.sync();
-        if (result.failed || this.pendingCount()) throw new Error('Scans non envoyés, session conservée');
+        if (result.failed || this.pendingCount())
+          throw new Error('Scans non envoyés, session conservée');
       }
       const res = await firstValueFrom(this.api.startSession(point.zoneId).pipe(timeout(10_000)));
       this.key = await deriveTableKey(res.sessionKey);
       this.sessionKey = res.sessionKey;
       this.meta = {
-        sessionId: res.sessionId, ownerId: this.auth.currentUser()?.id ?? 0, point,
-        expiresAt: res.expiresAt, keyExpiresAt: res.keyExpiresAt, snapshotVersion: res.snapshotVersion,
-        maxOfflineMinutes: res.maxOfflineMinutes, requiresOnlineValidation: res.requiresOnlineValidation,
-        startedAt: res.startedAt, lastRefreshAt: new Date().toISOString(),
+        sessionId: res.sessionId,
+        ownerId: this.auth.currentUser()?.id ?? 0,
+        point,
+        expiresAt: res.expiresAt,
+        keyExpiresAt: res.keyExpiresAt,
+        snapshotVersion: res.snapshotVersion,
+        maxOfflineMinutes: res.maxOfflineMinutes,
+        requiresOnlineValidation: res.requiresOnlineValidation,
+        startedAt: res.startedAt,
+        lastRefreshAt: new Date().toISOString(),
       };
       this.entries = new Map(res.snapshot.map((e) => [e.code, e]));
-      this.seenKeys.clear(); this.servedByService.clear();
+      this.seenKeys.clear();
+      this.servedByService.clear();
       await this.persist();
-      this.activePoint.set(point); this.ready.set(true); this.expired.set(false);
+      this.activePoint.set(point);
+      this.ready.set(true);
+      this.expired.set(false);
       this.updateFreshness();
     });
   }
   private async persist(scan?: PendingScan): Promise<void> {
     if (!this.db || !this.key || !this.meta) throw new Error('Session indisponible');
-    const local: LocalTable = { entries: [...this.entries.values()], seenKeys: [...this.seenKeys], servedByService: Object.fromEntries(this.servedByService) };
+    const local: LocalTable = {
+      entries: [...this.entries.values()],
+      seenKeys: [...this.seenKeys],
+      servedByService: Object.fromEntries(this.servedByService),
+    };
     const blob = await encryptJson(this.key, local);
     await scanDb.save(this.db, this.meta, this.sessionKey, blob, scan);
   }
   recordScan(rawCode: string): Promise<Verdict> {
     return this.serial(async () => {
-      if (!this.meta || !this.db || !this.isOwner()) return this.verdict('offline', 'Mode scan non prêt', 'Démarrez une session avant de scanner.');
+      if (!this.meta || !this.db || !this.isOwner())
+        return this.verdict(
+          'offline',
+          'Mode scan non prêt',
+          'Démarrez une session avant de scanner.',
+        );
       if (Date.now() >= Date.parse(this.meta.keyExpiresAt) && navigator.onLine) await this.sync();
       if (this.isExpired(this.meta)) {
         await this.suspend();
-        return this.verdict('expired', 'Session expirée', 'Les scans non envoyés sont conservés. Reconnectez cet appareil.');
+        return this.verdict(
+          'expired',
+          'Session expirée',
+          'Les scans non envoyés sont conservés. Reconnectez cet appareil.',
+        );
       }
-      if (!this.ready() || !this.key) return this.verdict('offline', 'Mode scan non prêt', 'Redémarrez une session en ligne.');
+      if (!this.ready() || !this.key)
+        return this.verdict('offline', 'Mode scan non prêt', 'Redémarrez une session en ligne.');
       const code = rawCode.trim();
       const point = this.meta.point;
       const rule = point.scanType?.duplicateRule ?? 'ALLOW';
       const entry = this.entries.get(code);
       const now = new Date();
-      const scope = `${point.scanTypeId}|${rule === 'UNIQUE_PER_DAY' ? now.toISOString().slice(0, 10) : point.serviceKey ?? ''}`;
-      const seen = new Set([...this.seenKeys].filter((k) => k.startsWith(scope + ':')).map((k) => k.slice(scope.length + 1)));
-      let verdict = evaluateScan(entry, rule, point.serviceKey, seen, this.servedByService.get(scope) ?? 0);
+      const scope = `${point.scanTypeId}|${rule === 'UNIQUE_PER_DAY' ? now.toISOString().slice(0, 10) : (point.serviceKey ?? '')}`;
+      const seen = new Set(
+        [...this.seenKeys]
+          .filter((k) => k.startsWith(scope + ':'))
+          .map((k) => k.slice(scope.length + 1)),
+      );
+      let verdict = evaluateScan(
+        entry,
+        rule,
+        point.serviceKey,
+        seen,
+        this.servedByService.get(scope) ?? 0,
+      );
       const onlineRequired = this.meta.requiresOnlineValidation;
-      if (onlineRequired || verdict.kind === 'unknown') {
+      if (onlineRequired) {
+        const scan: PendingScan = {
+          clientEventId: crypto.randomUUID(),
+          code,
+          pointId: point.id,
+          assignmentId: entry?.assignmentId,
+          tableVersion: this.meta.snapshotVersion,
+          occurredAtLocal: now.toISOString(),
+          serviceKey: point.serviceKey ?? undefined,
+        };
+        // Persist first: a timed-out request may have committed. Keep its stable id for retry.
+        await this.persist(scan);
+        await this.refreshPendingCount();
+        if (!navigator.onLine)
+          return this.verdict(
+            'offline',
+            'Connexion requise',
+            'Ne pas laisser passer. La tentative est conservée pour synchronisation.',
+          );
+        try {
+          const result = await firstValueFrom(
+            this.api.decide(this.meta.sessionId, scan).pipe(timeout(10_000)),
+          );
+          if (result.clientEventId !== scan.clientEventId) throw new Error('Accusé inattendu');
+          const rows = await listScans(this.db);
+          await scanDb.removeScans(
+            this.db,
+            rows.filter((r) => r.scan.clientEventId === scan.clientEventId).map((r) => r.id),
+          );
+          await this.refreshPendingCount();
+          const name = entry
+            ? [entry.firstName, entry.personType === 'JEUNE' ? null : entry.lastName]
+                .filter(Boolean)
+                .join(' ')
+            : 'Personne scannée';
+          let v: Verdict;
+          if (result.needsReview)
+            v = {
+              kind: 'ko',
+              title: 'À vérifier',
+              detail: 'Passage non confirmé. Contactez un référent.',
+            };
+          else if (result.verdict === 'ACCEPTED')
+            v = { kind: 'ok', title: 'Accepté', detail: name };
+          else if (result.verdict === 'DUPLICATE')
+            v = {
+              kind: 'already',
+              title: 'Déjà validé',
+              detail: 'Passage déjà enregistré. Pas de dérogation.',
+            };
+          else if (result.verdict === 'REJECTED_NOT_EXPECTED')
+            v = {
+              kind: 'ko',
+              title: 'Hors groupe',
+              detail: name + ' · Non attendu ici pour ce service',
+              eventId: result.eventId,
+              exceptionAllowed: result.exceptionAllowed,
+              passages: result.passages,
+            };
+          else
+            v = {
+              kind: 'ko',
+              title: 'Accès refusé',
+              detail: 'Badge inconnu, révoqué, remplacé ou sans droit. Contactez un référent.',
+            };
+          this.lastVerdict.set(v);
+          return v;
+        } catch {
+          return this.verdict(
+            'offline',
+            'Décision non confirmée',
+            'Ne pas laisser passer. Tentative conservée, reconnectez et synchronisez avant de rescanner.',
+          );
+        }
+      }
+      if (verdict.kind === 'unknown') {
         const online = navigator.onLine ? await this.lookupOnline(code, point.id) : null;
-        verdict = online ?? { kind: 'offline', title: 'À vérifier', detail: onlineRequired ? 'Validation en ligne obligatoire. Ne pas laisser passer.' : 'Badge absent de la table. Vérifiez avec un référent.' };
+        verdict = online ?? {
+          kind: 'offline',
+          title: 'À vérifier',
+          detail: onlineRequired
+            ? 'Validation en ligne obligatoire. Ne pas laisser passer.'
+            : 'Badge absent de la table. Vérifiez avec un référent.',
+        };
       }
       if (verdict.kind === 'ok') {
         this.seenKeys.add(`${scope}:${duplicateKeyOf(code, rule, point.serviceKey)}`);
         this.servedByService.set(scope, (this.servedByService.get(scope) ?? 0) + 1);
       }
       const scan: PendingScan = {
-        clientAccepted: verdict.kind === 'ok', clientEventId: crypto.randomUUID(), code, pointId: point.id, assignmentId: entry?.assignmentId,
-        tableVersion: this.meta.snapshotVersion, occurredAtLocal: now.toISOString(), serviceKey: point.serviceKey ?? undefined,
+        clientAccepted: verdict.kind === 'ok',
+        clientEventId: crypto.randomUUID(),
+        code,
+        pointId: point.id,
+        assignmentId: entry?.assignmentId,
+        tableVersion: this.meta.snapshotVersion,
+        occurredAtLocal: now.toISOString(),
+        serviceKey: point.serviceKey ?? undefined,
       };
       // Unknown/refused scans are also retained for server review.
       await this.persist(scan);
@@ -163,29 +297,94 @@ export class ScanStore implements OnDestroy {
       return verdict;
     });
   }
+  authorizeException(
+    v: Verdict,
+    passageId: number,
+    reason: string,
+    operationId: string,
+  ): Promise<Verdict> {
+    return this.serial(async () => {
+      if (
+        !this.meta ||
+        !this.isOwner() ||
+        !this.ready() ||
+        this.isExpired(this.meta) ||
+        !navigator.onLine ||
+        !v.eventId ||
+        !v.exceptionAllowed
+      )
+        throw new Error('Connexion, session et droit exception requis.');
+      const result = await firstValueFrom(
+        this.api
+          .authorizeException(this.meta.sessionId, {
+            eventId: v.eventId,
+            passageId,
+            reason: reason.trim(),
+            operationId,
+          })
+          .pipe(timeout(10_000)),
+      );
+      if (result.verdict !== 'ACCEPTED') throw new Error('Exception non confirmée');
+      const accepted: Verdict = {
+        kind: 'ok',
+        title: 'Accepté',
+        detail: v.detail.split(' · ')[0],
+        exceptionConfirmed: true,
+      };
+      this.lastVerdict.set(accepted);
+      return accepted;
+    });
+  }
   private verdict(kind: Verdict['kind'], title: string, detail: string): Verdict {
-    const v = { kind, title, detail }; this.lastVerdict.set(v); return v;
+    const v = { kind, title, detail };
+    this.lastVerdict.set(v);
+    return v;
   }
   private async lookupOnline(code: string, pointId: number): Promise<Verdict | null> {
     try {
       const res = await firstValueFrom(this.api.lookupCode(code, pointId).pipe(timeout(4_000)));
-      if (res.verdict === 'ACCEPTED') return { kind: 'ok', title: 'OK (vérifié en ligne)', detail: [res.firstName, res.lastName].filter(Boolean).join(' ') };
-      if (res.verdict === 'DUPLICATE') return { kind: 'already', title: 'Déjà validé', detail: 'Vérifié en ligne.' };
-      return { kind: 'ko', title: 'Accès refusé', detail: 'Badge inconnu, révoqué, remplacé ou sans droit.' };
-    } catch { return null; }
+      if (res.verdict === 'ACCEPTED')
+        return {
+          kind: 'ok',
+          title: 'OK (vérifié en ligne)',
+          detail: [res.firstName, res.lastName].filter(Boolean).join(' '),
+        };
+      if (res.verdict === 'DUPLICATE')
+        return { kind: 'already', title: 'Déjà validé', detail: 'Vérifié en ligne.' };
+      return {
+        kind: 'ko',
+        title: 'Accès refusé',
+        detail: 'Badge inconnu, révoqué, remplacé ou sans droit.',
+      };
+    } catch {
+      return null;
+    }
   }
-  uploadPending(): Promise<{ sent: number; failed: boolean }> { return this.serial(() => this.sync()); }
+  uploadPending(): Promise<{ sent: number; failed: boolean }> {
+    return this.serial(() => this.sync());
+  }
   private async sync(): Promise<{ sent: number; failed: boolean }> {
-    if (!this.db || !this.meta || !this.isOwner()) return { sent: 0, failed: this.pendingCount() > 0 };
+    if (!this.db || !this.meta || !this.isOwner())
+      return { sent: 0, failed: this.pendingCount() > 0 };
     let sent = 0;
     try {
       let rows = await listScans(this.db);
       while (rows.length) {
         const batch = rows.slice(0, UPLOAD_BATCH);
-        const results = await firstValueFrom(this.api.uploadScans(this.meta.sessionId, batch.map((r) => r.scan)).pipe(timeout(10_000)));
+        const results = await firstValueFrom(
+          this.api
+            .uploadScans(
+              this.meta.sessionId,
+              batch.map((r) => r.scan),
+            )
+            .pipe(timeout(10_000)),
+        );
         const ack = new Set(results.map((r) => r.clientEventId));
         const confirmed = batch.filter((r) => ack.has(r.scan.clientEventId));
-        await scanDb.removeScans(this.db, confirmed.map((r) => r.id));
+        await scanDb.removeScans(
+          this.db,
+          confirmed.map((r) => r.id),
+        );
         sent += confirmed.length;
         await this.refreshPendingCount();
         if (confirmed.length !== batch.length) return { sent, failed: true };
@@ -193,43 +392,79 @@ export class ScanStore implements OnDestroy {
       }
       await this.renewKeyIfNeeded();
       if (this.ready() && this.key && !this.isExpired(this.meta)) {
-        const delta = await firstValueFrom(this.api.delta(this.meta.sessionId, this.meta.snapshotVersion).pipe(timeout(4_000)));
+        const delta = await firstValueFrom(
+          this.api.delta(this.meta.sessionId, this.meta.snapshotVersion).pipe(timeout(4_000)),
+        );
         const revoked = new Set(delta.revokedAssignmentIds);
-        for (const [code, entry] of this.entries) if (revoked.has(entry.assignmentId)) this.entries.delete(code);
+        for (const [code, entry] of this.entries)
+          if (revoked.has(entry.assignmentId)) this.entries.delete(code);
         for (const entry of delta.upserts) this.entries.set(entry.code, entry);
-        this.meta = { ...this.meta, snapshotVersion: delta.version, lastRefreshAt: new Date().toISOString() };
+        this.meta = {
+          ...this.meta,
+          requiresOnlineValidation:
+            delta.requiresOnlineValidation ?? this.meta.requiresOnlineValidation,
+          snapshotVersion: delta.version,
+          lastRefreshAt: new Date().toISOString(),
+        };
         await this.persist();
         this.lastSyncAt.set(new Date());
       }
       this.updateFreshness();
       return { sent, failed: false };
-    } catch { await this.refreshPendingCount(); this.updateFreshness(); return { sent, failed: true }; }
+    } catch {
+      await this.refreshPendingCount();
+      this.updateFreshness();
+      return { sent, failed: true };
+    }
   }
   private async renewKeyIfNeeded(): Promise<void> {
-    if (!this.meta || !this.key || this.pendingCount() > 0 || Date.now() < Date.parse(this.meta.keyExpiresAt) - 60_000) return;
+    if (
+      !this.meta ||
+      !this.key ||
+      this.pendingCount() > 0 ||
+      Date.now() < Date.parse(this.meta.keyExpiresAt) - 60_000
+    )
+      return;
     try {
       const res = await firstValueFrom(this.api.renewKey(this.meta.sessionId).pipe(timeout(4_000)));
-      this.key = await deriveTableKey(res.sessionKey); this.sessionKey = res.sessionKey;
+      this.key = await deriveTableKey(res.sessionKey);
+      this.sessionKey = res.sessionKey;
       this.meta = { ...this.meta, keyExpiresAt: res.keyExpiresAt };
       await this.persist();
-    } catch { /* Expiry check will suspend the table, preserving pending events. */ }
+    } catch {
+      /* Expiry check will suspend the table, preserving pending events. */
+    }
   }
   exitSession(): Promise<boolean> {
     return this.serial(async () => {
       const result = await this.sync();
       if (result.failed || this.pendingCount() || !this.isOwner()) return false;
-      try { if (this.meta) await firstValueFrom(this.api.closeSession(this.meta.sessionId).pipe(timeout(4_000))); }
-      catch { return false; }
+      try {
+        if (this.meta)
+          await firstValueFrom(this.api.closeSession(this.meta.sessionId).pipe(timeout(4_000)));
+      } catch {
+        return false;
+      }
       if (this.db) await scanDb.clearAll(this.db);
-      this.meta = null; this.key = null; this.sessionKey = '';
-      this.entries.clear(); this.seenKeys.clear(); this.servedByService.clear();
-      this.ready.set(false); this.expired.set(false); this.activePoint.set(null); this.tableFreshness.set('none');
+      this.meta = null;
+      this.key = null;
+      this.sessionKey = '';
+      this.entries.clear();
+      this.seenKeys.clear();
+      this.servedByService.clear();
+      this.ready.set(false);
+      this.expired.set(false);
+      this.activePoint.set(null);
+      this.tableFreshness.set('none');
       return true;
     });
   }
   isExpired(meta: SessionMeta, now = Date.now()): boolean {
-    return now >= Date.parse(meta.expiresAt) || now >= Date.parse(meta.keyExpiresAt)
-      || now - Date.parse(meta.lastRefreshAt) >= meta.maxOfflineMinutes * 60_000;
+    return (
+      now >= Date.parse(meta.expiresAt) ||
+      now >= Date.parse(meta.keyExpiresAt) ||
+      now - Date.parse(meta.lastRefreshAt) >= meta.maxOfflineMinutes * 60_000
+    );
   }
   refreshExpiry(): Promise<void> {
     return this.serial(async () => {
@@ -239,12 +474,22 @@ export class ScanStore implements OnDestroy {
   }
   private async suspend(): Promise<void> {
     if (this.db) await scanDb.clearTable(this.db);
-    this.entries.clear(); this.seenKeys.clear(); this.servedByService.clear();
-    this.key = null; this.ready.set(false); this.expired.set(true); this.tableFreshness.set('none');
+    this.entries.clear();
+    this.seenKeys.clear();
+    this.servedByService.clear();
+    this.key = null;
+    this.ready.set(false);
+    this.expired.set(true);
+    this.tableFreshness.set('none');
   }
   private updateFreshness(): void {
-    if (!this.meta || !this.ready()) { this.tableFreshness.set('none'); return; }
-    this.tableFreshness.set(Date.now() - Date.parse(this.meta.lastRefreshAt) < 90_000 ? 'fresh' : 'stale');
+    if (!this.meta || !this.ready()) {
+      this.tableFreshness.set('none');
+      return;
+    }
+    this.tableFreshness.set(
+      Date.now() - Date.parse(this.meta.lastRefreshAt) < 90_000 ? 'fresh' : 'stale',
+    );
   }
   private async refreshPendingCount(): Promise<void> {
     if (this.db) this.pendingCount.set(await scanDb.countScans(this.db));

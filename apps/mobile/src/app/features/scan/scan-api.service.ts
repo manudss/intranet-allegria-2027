@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   AccessZone,
+  ServerVerdict,
   LookupResult,
   PendingScan,
   ScanDelta,
@@ -30,11 +31,16 @@ export class ScanApiService {
   }
 
   startSession(zoneId?: number): Observable<ScanSessionStart> {
-    return this.http.post<ScanSessionStart>(`${this.base}/scan/sessions`, zoneId != null ? { zoneId } : {});
+    return this.http.post<ScanSessionStart>(
+      `${this.base}/scan/sessions`,
+      zoneId != null ? { zoneId } : {},
+    );
   }
 
   renewKey(sessionId: number): Observable<{ sessionKey: string; keyExpiresAt: string }> {
-    return this.http.get<{ sessionKey: string; keyExpiresAt: string }>(`${this.base}/scan/sessions/${sessionId}/key`);
+    return this.http.get<{ sessionKey: string; keyExpiresAt: string }>(
+      `${this.base}/scan/sessions/${sessionId}/key`,
+    );
   }
 
   delta(sessionId: number, sinceVersion: number): Observable<ScanDelta> {
@@ -44,9 +50,26 @@ export class ScanApiService {
   }
 
   uploadScans(sessionId: number, scans: PendingScan[]): Observable<ScanVerdictResult[]> {
-    return this.http.post<ScanVerdictResult[]>(`${this.base}/scan/sessions/${sessionId}/scans`, { scans });
+    return this.http.post<ScanVerdictResult[]>(`${this.base}/scan/sessions/${sessionId}/scans`, {
+      scans,
+    });
   }
 
+  decide(sessionId: number, scan: PendingScan): Observable<ScanVerdictResult> {
+    return this.http.post<ScanVerdictResult>(
+      `${this.base}/scan/sessions/${sessionId}/decision`,
+      scan,
+    );
+  }
+  authorizeException(
+    sessionId: number,
+    body: { eventId: number; passageId: number; reason: string; operationId: string },
+  ): Observable<{ verdict: ServerVerdict; exceptionId: number; eventId: number }> {
+    return this.http.post<{ verdict: ServerVerdict; exceptionId: number; eventId: number }>(
+      `${this.base}/scan/sessions/${sessionId}/exceptions`,
+      body,
+    );
+  }
   closeSession(sessionId: number): Observable<unknown> {
     return this.http.post(`${this.base}/scan/sessions/${sessionId}/close`, {});
   }

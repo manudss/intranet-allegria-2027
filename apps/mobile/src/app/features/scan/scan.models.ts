@@ -55,6 +55,7 @@ export interface ScanSessionStart {
 }
 
 export interface ScanDelta {
+  requiresOnlineValidation?: boolean;
   version: number;
   upserts: SnapshotEntry[];
   revokedAssignmentIds: number[];
@@ -73,6 +74,7 @@ export interface PendingScan {
 
 export type ServerVerdict =
   | 'ACCEPTED'
+  | 'REJECTED_NOT_EXPECTED'
   | 'DUPLICATE'
   | 'REJECTED_UNKNOWN'
   | 'REJECTED_REVOKED'
@@ -80,6 +82,10 @@ export type ServerVerdict =
   | 'REJECTED_EXPIRED_ASSIGNMENT';
 
 export interface ScanVerdictResult {
+  eventId?: number;
+  needsReview?: boolean;
+  exceptionAllowed?: boolean;
+  passages?: { id: number; groupId: number; groupName: string }[];
   clientEventId: string;
   verdict: ServerVerdict;
   duplicateOfEventId?: number;
@@ -94,6 +100,10 @@ export interface LookupResult {
 export type VerdictKind = 'ok' | 'already' | 'ko' | 'unknown' | 'expired' | 'offline';
 
 export interface Verdict {
+  eventId?: number;
+  exceptionAllowed?: boolean;
+  exceptionConfirmed?: boolean;
+  passages?: { id: number; groupId: number; groupName: string }[];
   kind: VerdictKind;
   title: string;
   detail: string;
@@ -117,7 +127,11 @@ export function evaluateScan(
   servedSoFar: number,
 ): Verdict {
   if (!entry) {
-    return { kind: 'unknown', title: 'Badge inconnu', detail: 'Vérifiez le badge avec un référent.' };
+    return {
+      kind: 'unknown',
+      title: 'Badge inconnu',
+      detail: 'Vérifiez le badge avec un référent.',
+    };
   }
   const name = `${entry.firstName} ${entry.lastName}`;
   const dupKey = rule === 'UNIQUE_PER_SERVICE' ? `${entry.code}|${serviceKey ?? ''}` : entry.code;
@@ -138,6 +152,10 @@ export function evaluateScan(
 }
 
 /** Clé de doublon locale pour marquer un scan accepté. */
-export function duplicateKeyOf(code: string, rule: DuplicateRule, serviceKey: string | null): string {
+export function duplicateKeyOf(
+  code: string,
+  rule: DuplicateRule,
+  serviceKey: string | null,
+): string {
   return rule === 'UNIQUE_PER_SERVICE' ? `${code}|${serviceKey ?? ''}` : code;
 }

@@ -15,7 +15,11 @@ describe('Exception persistence PostgreSQL', () => {
         `INSERT INTO access_scan_events VALUES(7,'REJECTED_NOT_EXPECTED'),(99,'ACCEPTED');INSERT INTO access_exception_grants(user_id,point_id,created_by) VALUES(1,3,1);INSERT INTO access_passage_exceptions(passage_id,participant_id,authorized_by,session_id,reason,refused_event_id,accepted_event_id,operation_id) VALUES(4,42,1,11,'Accompagne équipe',7,99,'operation-1');`,
       );
       expect(
-        (await db.query('SELECT verdict FROM access_scan_events WHERE id=7')).rows[0].verdict,
+        (
+          await db.query<Record<string, unknown>>(
+            'SELECT verdict FROM access_scan_events WHERE id=7',
+          )
+        ).rows[0].verdict,
       ).toBe('REJECTED_NOT_EXPECTED');
       await expect(
         db.exec(
@@ -24,9 +28,13 @@ describe('Exception persistence PostgreSQL', () => {
       ).rejects.toThrow();
       await expect(db.exec('DELETE FROM access_scan_events WHERE id=7')).rejects.toThrow();
       await migration.down(runner as never);
-      expect((await db.query('SELECT count(*)::int AS n FROM access_scan_events')).rows[0].n).toBe(
-        2,
-      );
+      expect(
+        (
+          await db.query<Record<string, unknown>>(
+            'SELECT count(*)::int AS n FROM access_scan_events',
+          )
+        ).rows[0].n,
+      ).toBe(2);
     } finally {
       await db.close();
     }

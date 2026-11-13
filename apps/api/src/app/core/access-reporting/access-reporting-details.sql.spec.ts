@@ -35,10 +35,15 @@ describe('Reporting detail bound PostgreSQL queries', () => {
       INSERT INTO access_scan_reviews VALUES(4);`);
       const q = { from: '2027-07-31T00:00:00Z', to: '2027-08-01T00:00:00Z' } as ReportDetailQuery;
       const args = detailParameters(q);
-      const totals = (await db.query(REPORT_DETAIL_SQL.totals, args)).rows[0];
+      const totals = (await db.query<Record<string, unknown>>(REPORT_DETAIL_SQL.totals, args))
+        .rows[0];
       expect(
-        (await db.query(`${SCANNED_PEOPLE_CTE} SELECT count(*)::int AS n FROM latest`, args))
-          .rows[0].n,
+        (
+          await db.query<Record<string, unknown>>(
+            `${SCANNED_PEOPLE_CTE} SELECT count(*)::int AS n FROM latest`,
+            args,
+          )
+        ).rows[0].n,
       ).toBe(1);
       expect(totals).toMatchObject({
         attempts: 5,
@@ -48,14 +53,17 @@ describe('Reporting detail bound PostgreSQL queries', () => {
         rejected: 1,
         needsReview: 1,
       });
-      const points = (await db.query(REPORT_DETAIL_SQL.dashboard, args)).rows;
+      const points = (await db.query<Record<string, unknown>>(REPORT_DETAIL_SQL.dashboard, args))
+        .rows;
       expect(points).toHaveLength(3);
       expect(points.find((r) => r.pointId === 3)).toMatchObject({
         attempts: 0,
         scannedPeople: 0,
         lastReceivedAt: null,
       });
-      const events = (await db.query(REPORT_DETAIL_SQL.events, [...args, 50, 0])).rows;
+      const events = (
+        await db.query<Record<string, unknown>>(REPORT_DETAIL_SQL.events, [...args, 50, 0])
+      ).rows;
       expect(events).toHaveLength(5);
       expect(events.find((r) => r.id === 1)).toMatchObject({
         participantId: 42,
@@ -70,36 +78,55 @@ describe('Reporting detail bound PostgreSQL queries', () => {
       expect(events[0]).not.toHaveProperty('code');
       // Filtering a group does not fan out events for people in multiple teams.
       const team = detailParameters({ ...q, teamId: 9 });
-      expect((await db.query(REPORT_DETAIL_SQL.eventCount, team)).rows[0].total).toBe(4);
+      expect(
+        (await db.query<Record<string, unknown>>(REPORT_DETAIL_SQL.eventCount, team)).rows[0].total,
+      ).toBe(4);
       // Search cannot leak a young person's hidden surname via result existence.
       expect(
-        (await db.query(REPORT_DETAIL_SQL.eventCount, detailParameters({ ...q, q: 'Privé' })))
-          .rows[0].total,
+        (
+          await db.query<Record<string, unknown>>(
+            REPORT_DETAIL_SQL.eventCount,
+            detailParameters({ ...q, q: 'Privé' }),
+          )
+        ).rows[0].total,
       ).toBe(0);
       expect(
-        (await db.query(REPORT_DETAIL_SQL.eventCount, detailParameters({ ...q, q: 'Exemple' })))
-          .rows[0].total,
+        (
+          await db.query<Record<string, unknown>>(
+            REPORT_DETAIL_SQL.eventCount,
+            detailParameters({ ...q, q: 'Exemple' }),
+          )
+        ).rows[0].total,
       ).toBe(1);
       expect(
-        (await db.query(REPORT_DETAIL_SQL.eventCount, detailParameters({ ...q, q: '%' }))).rows[0]
-          .total,
+        (
+          await db.query<Record<string, unknown>>(
+            REPORT_DETAIL_SQL.eventCount,
+            detailParameters({ ...q, q: '%' }),
+          )
+        ).rows[0].total,
       ).toBe(0);
       await db.exec('INSERT INTO access_expected_group_sources(group_id,team_id) VALUES(2,8)');
       const filter = groupEventFilter(2).split('$14').join('$12');
       expect(
         (
-          await db.query(REPORT_DETAIL_SQL.eventCount.replace(REPORT_EVENT_FILTER, filter), [
-            ...args,
-            2,
-          ])
+          await db.query<Record<string, unknown>>(
+            REPORT_DETAIL_SQL.eventCount.replace(REPORT_EVENT_FILTER, filter),
+            [...args, 2],
+          )
         ).rows[0].total,
       ).toBe(3);
       // Out-of-range pagination still has a usable independent total.
-      expect((await db.query(REPORT_DETAIL_SQL.events, [...args, 50, 500])).rows).toEqual([]);
-      expect((await db.query(REPORT_DETAIL_SQL.eventCount, args)).rows[0].total).toBe(5);
+      expect(
+        (await db.query<Record<string, unknown>>(REPORT_DETAIL_SQL.events, [...args, 50, 500]))
+          .rows,
+      ).toEqual([]);
+      expect(
+        (await db.query<Record<string, unknown>>(REPORT_DETAIL_SQL.eventCount, args)).rows[0].total,
+      ).toBe(5);
       expect(
         (
-          await db.query(
+          await db.query<Record<string, unknown>>(
             REPORT_DETAIL_SQL.eventCount,
             detailParameters({ ...q, participantId: 42, pointId: 2, serviceKey: 'midi' }),
           )

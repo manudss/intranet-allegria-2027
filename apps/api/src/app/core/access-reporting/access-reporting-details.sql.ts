@@ -24,6 +24,8 @@ export const REPORT_DETAIL_SQL = {
     e.point_id AS "pointId",pt.name AS "pointName",pt.zone_id AS "zoneId",z.name AS "zoneName",
     e.scan_type_id AS "scanTypeId",st.label AS "scanTypeLabel",e.service_key AS "serviceKey",
     e.occurred_at_local AS "occurredAtLocal",e.received_at AS "receivedAt",e.verdict,e.needs_review AS "needsReview",
+    (SELECT ex.id FROM access_passage_exceptions ex WHERE ex.accepted_event_id=e.id) AS "exceptionId",
+    (SELECT ex.reason FROM access_passage_exceptions ex WHERE ex.accepted_event_id=e.id) AS "exceptionReason",
     EXISTS(SELECT 1 FROM access_scan_reviews r WHERE r.event_id=e.id) AS "reviewClosed"
     ${REPORT_EVENT_FILTER}
     ORDER BY coalesce(e.occurred_at_local,e.received_at) DESC,e.id DESC LIMIT $12 OFFSET $13`,

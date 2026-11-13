@@ -25,6 +25,7 @@ import { ScansService } from './scans.service';
 import { ACCESS_CONTROL_ROLES } from './access-control.constants';
 import {
   AssignBadgeDto,
+  ScanBatchItemDto,
   CreateScannerGrantDto,
   CreateScanPointDto,
   CreateScanTypeDto,
@@ -75,7 +76,9 @@ export class AccessBadgesController {
     return this.badgesService.findByCode(code);
   }
 
-  @ApiOperation({ summary: 'Attribuer un badge disponible à une personne (un seul actif par personne)' })
+  @ApiOperation({
+    summary: 'Attribuer un badge disponible à une personne (un seul actif par personne)',
+  })
   @Roles(...MANAGE_ROLES)
   @Post('assign')
   assign(@Body() dto: AssignBadgeDto, @Req() req: UserRequest) {
@@ -92,7 +95,11 @@ export class AccessBadgesController {
   @ApiOperation({ summary: 'Révoquer un badge (clôt son affectation active)' })
   @Roles(...MANAGE_ROLES)
   @Post(':id/revoke')
-  revoke(@Param('id', ParseIntPipe) id: number, @Body() dto: RevokeBadgeDto, @Req() req: UserRequest) {
+  revoke(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: RevokeBadgeDto,
+    @Req() req: UserRequest,
+  ) {
     return this.badgesService.revoke(id, dto.reason, req.user.id);
   }
 
@@ -143,11 +150,18 @@ export class AccessConfigController {
   @ApiOperation({ summary: 'Régler une zone' })
   @Roles(...MANAGE_ROLES)
   @Patch('zones/:id')
-  updateZone(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateZoneDto, @Req() req: UserRequest) {
+  updateZone(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateZoneDto,
+    @Req() req: UserRequest,
+  ) {
     return this.configService.updateZone(id, dto, req.user.id);
   }
 
-  @ApiOperation({ summary: 'Lister les points de scan (lecture ouverte au rôle scanner : choix du point en mode scan)' })
+  @ApiOperation({
+    summary:
+      'Lister les points de scan (lecture ouverte au rôle scanner : choix du point en mode scan)',
+  })
   @Roles(...MANAGE_ROLES, ...SCAN_ROLES)
   @Get('points')
   listPoints() {
@@ -156,7 +170,11 @@ export class AccessConfigController {
 
   @Roles(...MANAGE_ROLES)
   @Patch('points/:id')
-  updatePoint(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateScanPointDto, @Req() req: UserRequest) {
+  updatePoint(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateScanPointDto,
+    @Req() req: UserRequest,
+  ) {
     return this.configService.updatePoint(id, dto.active, req.user.id);
   }
 
@@ -203,7 +221,12 @@ export class AccessGrantsController {
   @ApiOperation({ summary: 'Journal d’audit du contrôle d’accès' })
   @Roles(...MANAGE_ROLES)
   @Get('audit')
-  audit(@Query('action') action?: AccessAuditAction, @Query('userId') userId?: string, @Query('limit') limit?: string, @Query('offset') offset?: string) {
+  audit(
+    @Query('action') action?: AccessAuditAction,
+    @Query('userId') userId?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
     return this.auditService.search({
       action,
       userId: userId ? Number(userId) : undefined,
@@ -241,14 +264,32 @@ export class AccessScanningController {
   @ApiOperation({ summary: 'Deltas d’affectations depuis une version (y compris révocations)' })
   @Roles(...SCAN_ROLES)
   @Get('sessions/:id/delta')
-  delta(@Param('id', ParseIntPipe) id: number, @Query('since') since: string, @Req() req: UserRequest) {
+  delta(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('since') since: string,
+    @Req() req: UserRequest,
+  ) {
     return this.sessionsService.delta(id, req.user.id, Number(since ?? 0));
+  }
+
+  @Roles(...SCAN_ROLES)
+  @Post('sessions/:id/decision')
+  online(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ScanBatchItemDto,
+    @Req() req: UserRequest,
+  ) {
+    return this.scansService.online(id, req.user.id, dto);
   }
 
   @ApiOperation({ summary: 'Envoyer les scans en attente par lots (idempotent)' })
   @Roles(...SCAN_ROLES)
   @Post('sessions/:id/scans')
-  upload(@Param('id', ParseIntPipe) id: number, @Body() dto: UploadScansDto, @Req() req: UserRequest) {
+  upload(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UploadScansDto,
+    @Req() req: UserRequest,
+  ) {
     return this.scansService.upload(id, req.user.id, dto);
   }
 

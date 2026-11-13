@@ -13,10 +13,7 @@ import {
 } from '../entities';
 import { AccessAuditService } from './access-audit.service';
 import { SnapshotEntry, StartScanSessionDto } from './access-control.types';
-import {
-  SCAN_SESSION_KEY_TTL_MINUTES,
-  SCAN_SESSION_TTL_MINUTES,
-} from './access-control.constants';
+import { SCAN_SESSION_KEY_TTL_MINUTES, SCAN_SESSION_TTL_MINUTES } from './access-control.constants';
 import { ScannerGrantsService } from './scanner-grants.service';
 
 const newSessionKey = (): string => randomBytes(24).toString('base64url');
@@ -116,7 +113,14 @@ export class ScanSessionsService {
       sessionKey: session.sessionKey,
       snapshotVersion,
       maxOfflineMinutes: zone?.maxOfflineMinutes ?? 240,
-      requiresOnlineValidation: zone?.requiresOnlineValidation ?? false,
+      requiresOnlineValidation:
+        (zone?.requiresOnlineValidation ?? false) ||
+        (
+          await this.sessionsRepository.manager.query(
+            `SELECT 1 FROM access_expected_passages x JOIN access_scan_points pt ON pt.id=x.point_id WHERE ($1::int IS NULL OR pt.zone_id=$1) AND x.archived_at IS NULL AND x.ends_at>now() LIMIT 1`,
+            [zoneId],
+          )
+        ).length > 0,
       snapshot,
     };
   }

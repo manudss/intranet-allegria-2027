@@ -26,11 +26,18 @@ export const EXPECTED_GROUP_MEMBERS_CTE = `WITH canonical_people AS (
 /** $1 group id, $2 passage id. Only that group's passage is used. */
 export const EXPECTED_PASSAGE_STATUS_CTE = `${EXPECTED_GROUP_MEMBERS_CTE}, passage AS (
   SELECT * FROM access_expected_passages WHERE id=$2 AND group_id=$1
+), effective_members AS (
+  SELECT * FROM members
+  UNION
+  SELECT 'participant:'||p.id,p.id,p.volunteer_id,p."firstName",CASE WHEN p.type='JEUNE' THEN NULL ELSE p."lastName" END,p.type::text
+  FROM access_passage_exceptions ex JOIN participants p ON p.id=ex.participant_id
+  WHERE ex.passage_id=$2 AND NOT EXISTS(SELECT 1 FROM members m WHERE m."participantId"=p.id)
 ), statuses AS (
   SELECT m.*,
     CASE WHEN trace.confirmed THEN 'CONFIRMED' WHEN trace.uncertain THEN 'REVIEW_ONLY' ELSE 'NOT_CONFIRMED' END AS status,
-    trace."lastReceivedAt"
-  FROM members m CROSS JOIN passage x
+    trace."lastReceivedAt",
+    EXISTS(SELECT 1 FROM access_passage_exceptions ex WHERE ex.passage_id=x.id AND ex.participant_id=m."participantId") AS "isException"
+  FROM effective_members m CROSS JOIN passage x
   LEFT JOIN LATERAL (
     SELECT bool_or(e.verdict='ACCEPTED' AND NOT e.needs_review) AS confirmed,
       bool_or(e.needs_review) AS uncertain,max(e.received_at) AS "lastReceivedAt"

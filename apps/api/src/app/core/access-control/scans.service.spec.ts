@@ -59,6 +59,7 @@ const makeService = (point = makePoint()) => {
     grantsService as never,
     auditService as never,
     rateLimiter,
+    { check: vi.fn().mockResolvedValue(true) } as never,
   );
   return { service, repos, auditService, grantsService, rateLimiter, sessionsService, manager };
 };
@@ -71,19 +72,64 @@ const scan = (overrides?: Record<string, unknown>) => ({
 });
 
 describe('ScansService.upload', () => {
+  it('refuses outside expected membership only after normal security and duplicate checks', async () => {
+    const { service, repos } = makeService();
+    repos.badges.findOneBy.mockResolvedValue({ id: 8, status: AccessBadgeStatus.ASSIGNED });
+    repos.assignments.findOne.mockResolvedValue({
+      id: 5,
+      badgeId: 8,
+      participantId: 42,
+      participant: { type: PersonType.JEUNE },
+      endsAt: null,
+    });
+    const expected = (
+      service as unknown as {
+        expected: {
+          check: ReturnType<typeof vi.fn>;
+          canOverride: ReturnType<typeof vi.fn>;
+          candidates: ReturnType<typeof vi.fn>;
+        };
+      }
+    ).expected;
+    expected.check.mockResolvedValue(false);
+    expected.canOverride = vi.fn().mockResolvedValue(true);
+    expected.candidates = vi.fn().mockResolvedValue([{ id: 4, groupId: 2, groupName: 'Repas' }]);
+    const [result] = await service.upload(11, 1, { scans: [scan()] });
+    expect(result).toMatchObject({
+      verdict: 'REJECTED_NOT_EXPECTED',
+      eventId: 500,
+      exceptionAllowed: true,
+    });
+    expect(repos.events.save).toHaveBeenCalledWith(
+      expect.objectContaining({ participantId: 42, needsReview: false }),
+    );
+  });
+
   it('flags a locally refused observation even if the current server would accept the badge', async () => {
-    const {service,repos}=makeService();
-    repos.badges.findOneBy.mockResolvedValue({id:8,status:AccessBadgeStatus.ASSIGNED});
-    repos.assignments.findOne.mockResolvedValue({id:5,badgeId:8,participantId:42,participant:{type:PersonType.JEUNE},endsAt:null});
-    await service.upload(11,1,{scans:[scan({clientAccepted:false})]});
-    expect(repos.events.save).toHaveBeenCalledWith(expect.objectContaining({verdict:AccessScanVerdict.ACCEPTED,needsReview:true}));
+    const { service, repos } = makeService();
+    repos.badges.findOneBy.mockResolvedValue({ id: 8, status: AccessBadgeStatus.ASSIGNED });
+    repos.assignments.findOne.mockResolvedValue({
+      id: 5,
+      badgeId: 8,
+      participantId: 42,
+      participant: { type: PersonType.JEUNE },
+      endsAt: null,
+    });
+    await service.upload(11, 1, { scans: [scan({ clientAccepted: false })] });
+    expect(repos.events.save).toHaveBeenCalledWith(
+      expect.objectContaining({ verdict: AccessScanVerdict.ACCEPTED, needsReview: true }),
+    );
   });
   it('takes a database transaction lock before deciding unique-service scans', async () => {
-    const { service, repos, manager } = makeService(makePoint({duplicateRule: AccessScanDuplicateRule.UNIQUE_PER_SERVICE}));
+    const { service, repos, manager } = makeService(
+      makePoint({ duplicateRule: AccessScanDuplicateRule.UNIQUE_PER_SERVICE }),
+    );
     repos.badges.findOneBy.mockResolvedValue(null);
-    await service.upload(11, 1, {scans: [scan()]});
+    await service.upload(11, 1, { scans: [scan()] });
     expect(manager.query).toHaveBeenCalledWith('SELECT pg_advisory_xact_lock($1, $2)', [21027, 2]);
-    expect(manager.query.mock.invocationCallOrder[0]).toBeLessThan(repos.events.save.mock.invocationCallOrder[0]);
+    expect(manager.query.mock.invocationCallOrder[0]).toBeLessThan(
+      repos.events.save.mock.invocationCallOrder[0],
+    );
   });
   it('est idempotent : un clientEventId déjà enregistré renvoie le verdict stocké', async () => {
     const { service, repos } = makeService();
@@ -176,7 +222,11 @@ describe('ScansService.upload', () => {
     // Le badge neuf ne redonne pas un repas : le doublon est cherché par participantId.
     expect(repos.events.findOne).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ participantId: 42, scanTypeId: 2, serviceKey: 'repas-midi' }),
+        where: expect.objectContaining({
+          participantId: 42,
+          scanTypeId: 2,
+          serviceKey: 'repas-midi',
+        }),
       }),
     );
   });
@@ -194,7 +244,9 @@ describe('ScansService.upload', () => {
     });
 
     const [result] = await service.upload(11, 1, {
-      scans: [scan({ assignmentId: 5, tableVersion: 41, occurredAtLocal: '2027-07-31T12:00:00.000Z' })],
+      scans: [
+        scan({ assignmentId: 5, tableVersion: 41, occurredAtLocal: '2027-07-31T12:00:00.000Z' }),
+      ],
     });
 
     expect(result.verdict).toBe(AccessScanVerdict.ACCEPTED);
@@ -277,10 +329,19 @@ describe('ScansService.lookup (repli en ligne sur code inconnu)', () => {
 describe('late offline collection safeguards', () => {
   it('collects an expired session and flags its events for review', async () => {
     const { service, repos, sessionsService } = makeService();
-    sessionsService.findOwnedSession.mockResolvedValue({ id: 11, userId: 1, zoneId: 1, expiresAt: new Date(0), startedAt: new Date(0), closedAt: null });
+    sessionsService.findOwnedSession.mockResolvedValue({
+      id: 11,
+      userId: 1,
+      zoneId: 1,
+      expiresAt: new Date(0),
+      startedAt: new Date(0),
+      closedAt: null,
+    });
     repos.badges.findOneBy.mockResolvedValue(null);
     await service.upload(11, 1, { scans: [scan()] });
-    expect(repos.events.save).toHaveBeenCalledWith(expect.objectContaining({ needsReview: true, sessionId: 11 }));
+    expect(repos.events.save).toHaveBeenCalledWith(
+      expect.objectContaining({ needsReview: true, sessionId: 11 }),
+    );
   });
   it('refuses a point outside the session zone', async () => {
     const { service, sessionsService } = makeService();

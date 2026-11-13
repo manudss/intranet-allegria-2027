@@ -15,6 +15,7 @@ describe('Expected groups data model', () => {
    CREATE TABLE team_participants(team_id int,participant_id int);
    CREATE TABLE access_scan_points(id int PRIMARY KEY);
    CREATE TABLE access_scan_types(id int PRIMARY KEY);
+   CREATE TABLE access_passage_exceptions(passage_id int,participant_id int);
    CREATE TABLE access_scan_events(id int PRIMARY KEY,participant_id int,point_id int,scan_type_id int,service_key text,occurred_at_local timestamptz,received_at timestamptz,verdict text,needs_review bool);
    INSERT INTO access_scan_points VALUES(1),(2); INSERT INTO access_scan_types VALUES(1);
    INSERT INTO volunteers VALUES(10,'Volunteer','Sans badge'),(11,'Volunteer','Projeté');

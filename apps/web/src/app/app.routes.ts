@@ -112,13 +112,6 @@ export const appRoutes: Route[] = [
           ),
       },
       {
-        path: 'acces/suivi',
-        title: 'Suivi des accès',
-        canActivate: [roleGuard],
-        data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
-        loadComponent: () => import('./features/access-reporting/access-reporting.page').then(m => m.AccessReportingPage),
-      },
-      {
         path: 'hebergement/carte',
         title: 'Hebergement - Carte',
         loadComponent: () =>
@@ -158,6 +151,13 @@ export const appRoutes: Route[] = [
         canActivate: [roleGuard],
         data: { roles: ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'LOGISTICS', 'VIEWER'] },
         loadComponent: () => import('./pages/jour-j').then((m) => m.JourJ),
+      },
+      {
+        path: 'acces/suivi',
+        title: 'Suivi des accès',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
+        loadComponent: () => import('./features/access-reporting/access-reporting.page').then(m => m.AccessReportingPage),
       },
       {
         path: 'suivi-operationnel',

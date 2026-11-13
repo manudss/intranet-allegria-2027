@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { scanRoleGuard } from './features/scan/scan-role.guard';
 import { authGuard } from './core/auth.guard';
 
 export const appRoutes: Routes = [
@@ -36,6 +37,35 @@ export const appRoutes: Routes = [
           import('./features/public/public-infos/public-infos').then((m) => m.PublicInfosComponent),
         title: 'Infos pratiques - ALEGRIA',
       },
+    ],
+  },
+  {
+    // Mode scan : hors du shell principal, écran dédié plein écran (badge
+    // personnel posé à un poste). Garde d'authentification + rôle vérifié
+    // côté client (SCANNER / BADGE_MANAGER / ADMIN) dans les composants.
+    path: 'scan',
+    canActivate: [authGuard],
+    canActivateChild: [scanRoleGuard],
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./features/scan/scan-entry.component').then((m) => m.ScanEntryComponent),
+        title: 'Mode scan - ALEGRIA',
+      },
+      {
+        path: 'attribuer',
+        loadComponent: () =>
+          import('./features/scan/badge-assign.component').then((m) => m.BadgeAssignComponent),
+        title: 'Attribuer un badge - ALEGRIA',
+      },
+      {
+        path: ':pointId',
+        loadComponent: () =>
+          import('./features/scan/scanner.component').then((m) => m.ScannerComponent),
+        title: 'Scanner - ALEGRIA',
+      },
+
     ],
   },
   {

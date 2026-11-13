@@ -1,0 +1,52 @@
+import { describe, it, expect, vi } from 'vitest';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+import { AccessReportingDetailsService } from './access-reporting-details.service';
+import { ReportDetailQuery } from './access-reporting-details.types';
+import { REPORT_DETAIL_SQL } from './access-reporting-details.sql';
+const q = () =>
+  Object.assign(new ReportDetailQuery(), {
+    from: '2027-07-31T00:00:00Z',
+    to: '2027-08-01T00:00:00Z',
+  });
+describe('Reporting details service', () => {
+  it('counts empty pages in the same read snapshot, without altering scans', async () => {
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce([{ total: 12 }])
+      .mockResolvedValueOnce([]);
+    const transaction = vi.fn((_isolation: unknown, fn: (m: unknown) => unknown) => fn({ query }));
+    const s = new AccessReportingDetailsService({ transaction } as never);
+    expect(await s.events({ ...q(), offset: 100 })).toMatchObject({
+      items: [],
+      total: 12,
+      limit: 50,
+      offset: 100,
+      membershipBasis: 'CURRENT',
+    });
+    expect(transaction.mock.calls[0][0]).toBe('REPEATABLE READ');
+    expect(query.mock.calls[0][0]).toBe(REPORT_DETAIL_SQL.eventCount);
+  });
+  it('rejects an unbounded date range before any database read', async () => {
+    const transaction = vi.fn();
+    const s = new AccessReportingDetailsService({ transaction } as never);
+    await expect(s.events({ ...q(), to: '2028-01-01T00:00:00Z' })).rejects.toThrow();
+    expect(transaction).not.toHaveBeenCalled();
+  });
+  it('validates bounded pagination, enums and positive identifiers', async () => {
+    for (const fields of [
+      { limit: 101 },
+      { offset: -1 },
+      { pointId: 0 },
+      { personType: 'ROOT' },
+      { verdict: 'OK' },
+      { q: 'x'.repeat(121) },
+    ]) {
+      const errors = await validate(plainToInstance(ReportDetailQuery, { ...q(), ...fields }));
+      expect(errors.length).toBeGreaterThan(0);
+    }
+    expect(
+      await validate(plainToInstance(ReportDetailQuery, { ...q(), limit: '50', pointId: '3' })),
+    ).toEqual([]);
+  });
+});

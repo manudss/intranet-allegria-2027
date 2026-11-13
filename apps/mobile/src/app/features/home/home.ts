@@ -20,6 +20,7 @@ export class HomeComponent {
   private readonly programApi = inject(ProgramApiService);
 
   readonly user = this.auth.currentUser;
+  readonly canScan = computed(() => this.auth.hasAnyRole(['ADMIN', 'SCANNER', 'BADGE_MANAGER']));
   readonly canAccessSpace = computed(() => this.auth.hasAnyRole(MY_SPACE_ROLES));
   readonly day = signal<ProgramDay | null>(null);
   readonly loading = signal(true);

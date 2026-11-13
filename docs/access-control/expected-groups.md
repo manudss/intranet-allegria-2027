@@ -119,3 +119,7 @@ Les filtres de période/type de scan sont transmis au lien Détails du point.
 Le détail sépare personnes acceptées, toutes les tentatives et scans à vérifier.
 La pagination/recherche sont côté serveur ; les compteurs ne sont pas une
 preuve d'absence. Les autres pages d'historique et gestion restent à compléter.
+
+### Historique individuel
+
+Écran `/acces/historique-personne` : recherche paginée indépendante du passage attendu, y compris personnes sans badge et bénévoles sans projection ; événements paginés par participant sur 1 à 31 jours, filtres point/type/verdict indépendants. Les liens depuis les détails par lieu ne transmettent que l’identité. Tous les verdicts et vérifications restent visibles après remplacement d’un badge. Aucun nouveau participant ni badge n’est créé par la consultation.

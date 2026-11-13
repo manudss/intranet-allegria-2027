@@ -4,7 +4,7 @@
     <nav class="navigation" aria-label="Suivi des accès">
       <a routerLink="/acces/dashboard" [class.active]="!place">Dashboard</a
       ><a routerLink="/acces/scannes" [class.active]="place">Scannés par lieu</a
-      ><a routerLink="/acces/non-scannes">Non scannés</a
+      ><a routerLink="/acces/historique-personne">Historique personne</a><a routerLink="/acces/non-scannes">Non scannés</a
       ><a routerLink="/acces/groupes-exceptions">Groupes attendus · exceptions</a
       ><a routerLink="/acces/suivi">Vérifications</a>
     </nav>
@@ -184,7 +184,7 @@
               >À vérifier{{p.reviewClosed?' · vérification close':''}}</small
             >}@if(p.exceptionId){<small class="exception">Exception</small>}
           </td>
-          <td><button (click)="detail.set(p)">Détails →</button></td>
+          <td><button (click)="detail.set(p)">Détails →</button>@if(p.participantId){<a routerLink="/acces/historique-personne" [queryParams]="{participantId:p.participantId}">Historique →</a>}</td>
         </tr>
         }@empty{
         <tr>

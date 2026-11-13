@@ -6,7 +6,10 @@ import {
   groupEventFilter,
   SCANNED_PEOPLE_CTE,
 } from './access-reporting-details.sql';
-import { detailParameters } from './access-reporting-details.service';
+import {
+  AccessReportingDetailsService,
+  detailParameters,
+} from './access-reporting-details.service';
 import { ReportDetailQuery } from './access-reporting-details.types';
 
 describe('Reporting detail bound PostgreSQL queries', () => {
@@ -116,6 +119,16 @@ describe('Reporting detail bound PostgreSQL queries', () => {
           )
         ).rows[0].total,
       ).toBe(3);
+      const service = new AccessReportingDetailsService({
+        transaction: async (_: unknown, work: (m: unknown) => unknown) =>
+          work({ query: async (sql: string, args: unknown[]) => (await db.query(sql, args)).rows }),
+      } as never);
+      const anomalies = await service.events({ ...q, limit: 50, offset: 0, anomaliesOnly: 'true' });
+      expect(anomalies.total).toBe(3);
+      expect(anomalies.items.map((r: { id: number }) => r.id)).toEqual([5, 4, 3]);
+      const review = await service.events({ ...q, limit: 50, offset: 0, reviewOnly: 'true' });
+      expect(review.total).toBe(1);
+      expect(review.items[0].id).toBe(4);
       // Out-of-range pagination still has a usable independent total.
       expect(
         (await db.query<Record<string, unknown>>(REPORT_DETAIL_SQL.events, [...args, 50, 500]))

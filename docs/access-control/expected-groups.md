@@ -107,3 +107,15 @@ Se connecter à l'administration avec le compte de démo pour consulter les
 listes et préparer les badges du lot `QR-TESTKIT`. Le seed est le seul mécanisme
 de création de ces données. La base preview/pr-32 est distincte des autres PR
 et de production ; un reseed efface ses essais précédents.
+
+## Dashboard et détail par point (suite V3, non redéployée)
+
+Les routes `/acces/dashboard` et `/acces/scannes` lisent les compteurs et le
+journal paginé. Le dashboard s'actualise toutes les 15 secondes seulement
+quand l'onglet est visible, sans requête en cours et sans filtre en cours
+d'édition. Pause/reprise et actualisation manuelle sont disponibles. En cas
+d'échec, les résultats précédents et leur heure restent affichés avec alerte.
+Les filtres de période/type de scan sont transmis au lien Détails du point.
+Le détail sépare personnes acceptées, toutes les tentatives et scans à vérifier.
+La pagination/recherche sont côté serveur ; les compteurs ne sont pas une
+preuve d'absence. Les autres pages d'historique et gestion restent à compléter.

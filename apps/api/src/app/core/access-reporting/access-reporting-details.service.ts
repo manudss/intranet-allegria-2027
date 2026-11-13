@@ -33,7 +33,10 @@ export class AccessReportingDetailsService {
     validateReportRange(q);
     return this.db.transaction('REPEATABLE READ', async (m) => {
       const params = detailParameters(q);
-      const groupFilter = groupEventFilter(q.expectedGroupId ?? null);
+      const groupFilter =
+        groupEventFilter(q.expectedGroupId ?? null) +
+        (q.anomaliesOnly === 'true' ? ` AND (e.needs_review OR e.verdict<>'ACCEPTED')` : '') +
+        (q.reviewOnly === 'true' ? ` AND e.needs_review` : '');
       const countSql = REPORT_DETAIL_SQL.eventCount.replace(
         REPORT_EVENT_FILTER,
         groupFilter.split('$14').join('$12'),

@@ -27,6 +27,20 @@ describe('Reporting details service', () => {
     expect(transaction.mock.calls[0][0]).toBe('REPEATABLE READ');
     expect(query.mock.calls[0][0]).toBe(REPORT_DETAIL_SQL.eventCount);
   });
+  it('applies anomaly and review filters identically to count and rows', async () => {
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce([{ total: 0 }])
+      .mockResolvedValueOnce([]);
+    const s = new AccessReportingDetailsService({
+      transaction: async (_: unknown, f: (m: unknown) => unknown) => f({ query }),
+    } as never);
+    await s.events({ ...q(), anomaliesOnly: 'true', reviewOnly: 'true' });
+    for (const call of query.mock.calls) {
+      expect(call[0]).toContain("e.needs_review OR e.verdict<>'ACCEPTED'");
+      expect(call[0]).toContain('AND e.needs_review');
+    }
+  });
   it('rejects an unbounded date range before any database read', async () => {
     const transaction = vi.fn();
     const s = new AccessReportingDetailsService({ transaction } as never);
@@ -36,6 +50,8 @@ describe('Reporting details service', () => {
   it('validates bounded pagination, enums and positive identifiers', async () => {
     for (const fields of [
       { limit: 101 },
+      { anomaliesOnly: 'yes' },
+      { reviewOnly: '1' },
       { offset: -1 },
       { pointId: 0 },
       { personType: 'ROOT' },

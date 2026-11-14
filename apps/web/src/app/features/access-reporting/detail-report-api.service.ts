@@ -63,6 +63,27 @@ export interface DetailPage {
   total: number;
   fetchedAt: string;
 }
+export interface ExpectedSlot {
+  slotKey: string;
+  pointId: number;
+  pointName: string;
+  scanTypeId: number;
+  scanTypeLabel: string;
+  serviceKey: string | null;
+  startsAt: string;
+  endsAt: string;
+  expected: number;
+  confirmed: number;
+  reviewOnly: number;
+  notConfirmed: number;
+  exceptions: number;
+}
+export interface ExpectedOverview {
+  passages: (ExpectedSlot & { id: number; groupId: number; groupName: string; label: string })[];
+  slots: ExpectedSlot[];
+  fetchedAt: string;
+  membershipBasis: string;
+}
 export interface ConfigPoint {
   id: number;
   name: string;
@@ -80,6 +101,11 @@ export class DetailReportApi {
     for (const [k, v] of Object.entries(q))
       if (v != null && v !== '') params = params.set(k, String(v));
     return params;
+  }
+  expected(q: DetailFilters) {
+    return this.http.get<ExpectedOverview>(this.base + '/expected/overview', {
+      params: this.params(q),
+    });
   }
   dashboard(q: DetailFilters) {
     return this.http.get<Dashboard>(this.base + '/reporting/dashboard', { params: this.params(q) });

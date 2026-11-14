@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { forkJoin, Subscription } from 'rxjs';
+import { forkJoin, Subscription, of } from 'rxjs';
 import {
   DetailReportApi,
   DetailFilters,
@@ -10,6 +10,7 @@ import {
   DetailPage,
   ConfigPoint,
   DetailEvent,
+  ExpectedOverview,
 } from './detail-report-api.service';
 import { reportFilters } from './access-reporting.page';
 @Component({
@@ -30,6 +31,8 @@ export class DetailReportPage implements OnInit, OnDestroy {
   readonly place = this.route.snapshot.data['mode'] === 'place';
   readonly dashboard = signal<Dashboard | null>(null);
   readonly rows = signal<DetailPage | null>(null);
+  readonly expected = signal<ExpectedOverview | null>(null);
+  slotKey = '';
   readonly loading = signal(false);
   readonly error = signal('');
   readonly automatic = signal(true);
@@ -139,12 +142,19 @@ export class DetailReportPage implements OnInit, OnDestroy {
             ...(this.mode === 'review' ? { reviewOnly: 'true' } : {}),
           })
       : this.api.events({ ...q, limit: 10, offset: 0, anomaliesOnly: 'true' });
-    this.request = forkJoin({ dashboard: this.api.dashboard(q), rows: list }).subscribe({
+    this.request = forkJoin({
+      dashboard: this.api.dashboard(q),
+      rows: list,
+      expected: this.place ? of(null) : this.api.expected(q),
+    }).subscribe({
       next: (r) => {
         this.appliedFilters = JSON.stringify(q);
         this.resultOffset.set(this.offset);
         this.dashboard.set(r.dashboard);
         this.rows.set(r.rows);
+        this.expected.set(r.expected);
+        if (!r.expected?.slots.some((s) => s.slotKey === this.slotKey))
+          this.slotKey = r.expected?.slots[0]?.slotKey ?? '';
         this.loading.set(false);
       },
       error: () => {
@@ -191,6 +201,16 @@ export class DetailReportPage implements OnInit, OnDestroy {
       minute: '2-digit',
       second: '2-digit',
     }).format(new Date(value));
+  }
+  selectedSlot() {
+    return this.expected()?.slots.find((s) => s.slotKey === this.slotKey);
+  }
+  pointsWithoutExpected() {
+    return (
+      this.dashboard()?.points.filter(
+        (p) => p.active && !this.expected()?.passages.some((x) => x.pointId === p.pointId),
+      ) ?? []
+    );
   }
   selectedPoint() {
     return this.points.find((p) => p.id === this.pointId);

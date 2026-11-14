@@ -127,3 +127,13 @@ preuve d'absence. Les autres pages d'historique et gestion restent à compléter
 ### Historique groupe
 
 `/acces/historique-groupe` consulte la composition actuelle d'un groupe attendu, indépendamment d'un passage précis. Journal de toutes les tentatives reçues des membres actuels, liste des membres et membres sans accepté sans ambiguïté. Les exceptions de passage seules ne changent jamais cette composition et restent consultables dans le suivi du passage. Les compteurs membres utilisent la période et le point, tous résultats confondus ; le filtre verdict ne concerne que le journal. Recherche de groupes, journal et membres paginés côté serveur. Le statut sans accepté n'affirme ni absence physique ni défaut de droit.
+
+### Gestion V4 des groupes et rattachements
+
+`/acces/groupes` gère nom/état, union des sources équipe/type/personne, composition enregistrée paginée et rattachements par groupe. Les noms des jeunes sont masqués dans les libellés des sources. Les doublons de sources ne sont pas ajoutés dans le formulaire ; le serveur déduplique les personnes à la résolution. Un brouillon n'est jamais présenté comme une nouvelle composition calculée. Les modifications de groupe et passage portent leur version ; un conflit conserve les champs et demande un rechargement explicite.
+
+Les rattachements reprennent obligatoirement le type et le service du point actif. Dates saisies explicitement en Europe/Paris ; les heures ambiguës/inexistantes du changement d'heure sont refusées. Le formulaire rappelle l'obligation en ligne activée sur le point et conservée après archivage, ainsi que l'absence de création de badge ou de droit d'accès. Liens de suivi résolus par identifiant exact de passage, y compris au-delà de la première page de la liste, sans substitution silencieuse si ce passage manque.
+
+### Dashboard V4
+
+Le dashboard ajoute la liste des groupes attendus et leurs statuts disjoints pour la période, le lieu, le type et le service. Les points sans groupe affichent explicitement l'absence de population définie, sans inventer un nombre de non-scannés. Le récapitulatif déduplique la même identité entre plusieurs groupes pour un même point/type/service/début/fin exacts ; il ne somme pas les groupes ni les créneaux différents. Un accepté sans ambiguïté l'emporte sur une tentative seulement à vérifier. Les exceptions propres au passage sont incluses dans ce suivi, sans modifier la composition générale du groupe. Les compteurs de tentatives restent séparés.

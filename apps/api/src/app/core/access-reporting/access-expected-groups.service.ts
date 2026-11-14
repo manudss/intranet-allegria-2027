@@ -1,3 +1,6 @@
+import { ReportDetailQuery } from './access-reporting-details.types';
+import { validateReportRange } from './access-reporting.service';
+import { EXPECTED_OVERVIEW_ROWS, EXPECTED_OVERVIEW_SLOTS } from './access-expected-overview.sql';
 import {
   BadRequestException,
   ConflictException,
@@ -33,6 +36,15 @@ export class AccessExpectedGroupsService {
       entityType,
       entityId,
       details: { version },
+    });
+  }
+  async overview(q: ReportDetailQuery) {
+    validateReportRange(q);
+    return this.db.transaction('REPEATABLE READ', async (m) => {
+      const params = [q.from, q.to, q.zoneId ?? null, q.scanTypeId ?? null, q.serviceKey ?? null];
+      const passages = await m.query(EXPECTED_OVERVIEW_ROWS, params);
+      const slots = await m.query(EXPECTED_OVERVIEW_SLOTS, params);
+      return { passages, slots, fetchedAt: new Date().toISOString(), membershipBasis: 'CURRENT' };
     });
   }
   async dashboard(from: string, to: string) {
@@ -79,7 +91,11 @@ export class AccessExpectedGroupsService {
       const [group] = await m.query('SELECT * FROM access_expected_groups WHERE id=$1', [id]);
       if (!group) throw new NotFoundException('Groupe introuvable');
       const sources = await m.query(
-        'SELECT team_id AS "teamId",person_type AS "personType",participant_id AS "participantId",volunteer_id AS "volunteerId" FROM access_expected_group_sources WHERE group_id=$1 ORDER BY id',
+        `SELECT src.team_id AS "teamId",src.person_type AS "personType",src.participant_id AS "participantId",src.volunteer_id AS "volunteerId",
+          CASE WHEN src.team_id IS NOT NULL THEN t.name WHEN src.person_type IS NOT NULL THEN src.person_type::text
+          WHEN src.participant_id IS NOT NULL THEN concat_ws(' ',p."firstName",CASE WHEN p.type='JEUNE' THEN NULL ELSE p."lastName" END)
+          ELSE concat_ws(' ',v."firstName",v."lastName") END AS label
+        FROM access_expected_group_sources src LEFT JOIN teams t ON t.id=src.team_id LEFT JOIN participants p ON p.id=src.participant_id LEFT JOIN volunteers v ON v.id=src.volunteer_id WHERE src.group_id=$1 ORDER BY src.id`,
         [id],
       );
       return { ...group, sources };
@@ -139,12 +155,23 @@ export class AccessExpectedGroupsService {
       return group;
     });
   }
+  async passage(id: number) {
+    const [passage] = await this.db.query(
+      `SELECT x.*,g.name AS "groupName",pt.name AS "pointName" FROM access_expected_passages x JOIN access_expected_groups g ON g.id=x.group_id JOIN access_scan_points pt ON pt.id=x.point_id WHERE x.id=$1`,
+      [id],
+    );
+    if (!passage) throw new NotFoundException('Passage introuvable');
+    return passage;
+  }
   async passages(q: ExpectedPageQuery) {
     return this.db.transaction('REPEATABLE READ', async (m) => {
-      const [count] = await m.query('SELECT count(*)::int AS total FROM access_expected_passages');
+      const [count] = await m.query(
+        'SELECT count(*)::int AS total FROM access_expected_passages WHERE ($1::int IS NULL OR group_id=$1)',
+        [q.groupId ?? null],
+      );
       const items = await m.query(
-        `SELECT x.*,g.name AS "groupName",pt.name AS "pointName" FROM access_expected_passages x JOIN access_expected_groups g ON g.id=x.group_id JOIN access_scan_points pt ON pt.id=x.point_id ORDER BY x.starts_at DESC,x.id DESC LIMIT $1 OFFSET $2`,
-        [q.limit, q.offset],
+        `SELECT x.*,g.name AS "groupName",pt.name AS "pointName" FROM access_expected_passages x JOIN access_expected_groups g ON g.id=x.group_id JOIN access_scan_points pt ON pt.id=x.point_id WHERE ($1::int IS NULL OR x.group_id=$1) ORDER BY x.starts_at DESC,x.id DESC LIMIT $2 OFFSET $3`,
+        [q.groupId ?? null, q.limit, q.offset],
       );
       return { items, total: count.total };
     });

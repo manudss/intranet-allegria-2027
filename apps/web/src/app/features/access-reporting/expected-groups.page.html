@@ -1,0 +1,356 @@
+<main class="page">
+  <header>
+    <h1>Groupes attendus</h1>
+    <nav class="navigation" aria-label="Suivi des accès">
+      <a routerLink="/acces/dashboard">Dashboard</a
+      ><a routerLink="/acces/scannes">Scannés par lieu</a
+      ><a routerLink="/acces/non-scannes">Non scannés</a
+      ><a routerLink="/acces/historique-personne">Historique personne</a
+      ><a routerLink="/acces/historique-groupe">Historique groupe</a
+      ><a routerLink="/acces/groupes" class="active">Groupes attendus</a
+      ><a routerLink="/acces/groupes-exceptions">Exceptions</a>
+    </nav>
+  </header>
+  <form class="search" (ngSubmit)="loadGroups()">
+    <label
+      >Rechercher un groupe<input
+        name="groupSearch"
+        [(ngModel)]="groupSearch"
+        maxlength="120" /></label
+    ><button type="submit" [disabled]="listLoading()">Rechercher</button>
+  </form>
+  @if(listError()){
+  <p class="error" role="alert">{{listError()}}</p>
+  }
+  <div class="filters">
+    <label
+      >Nom du groupe<select
+        [ngModel]="selectedId"
+        (ngModelChange)="choose($event)"
+        [disabled]="saving()||passageSaving()"
+      >
+        <option [ngValue]="null">Nouveau groupe</option>
+        @for(g of groups().items;track g.id){
+        <option [ngValue]="g.id">{{g.name}}{{g.archivedAt?' · archivé':''}}</option>
+        }
+      </select></label
+    ><button (click)="create()" [disabled]="saving()||passageSaving()">Créer un groupe</button>
+  </div>
+  <nav class="pager">
+    <button (click)="groupPage(-1)" [disabled]="listLoading()||groupOffset===0">
+      Groupes précédents</button
+    ><span
+      >{{groupResultOffset+(groups().items.length?1:0)}}–{{groupResultOffset+groups().items.length}}
+      / {{groups().total}} groupes</span
+    ><button (click)="groupPage(1)" [disabled]="listLoading()||groupOffset+50>=groups().total">
+      Groupes suivants
+    </button>
+  </nav>
+  @if(error()){
+  <p class="error" role="alert">{{error()}}</p>
+  }@if(notice()){
+  <p class="note" role="status">{{notice()}}</p>
+  } @if(loading()){
+  <p role="status">Chargement du groupe…</p>
+  }@else{
+  <fieldset [disabled]="saving()||passageSaving()" class="editor">
+    <div class="filters">
+      <label
+        >Nom<input
+          name="name"
+          [(ngModel)]="name"
+          (ngModelChange)="edited()"
+          maxlength="150"
+          required /></label
+      >@if(group()){<label
+        >État<select name="archived" [(ngModel)]="archived" (ngModelChange)="edited()">
+          <option [ngValue]="false">Actif</option>
+          <option [ngValue]="true">Archivé</option>
+        </select></label
+      >}
+    </div>
+    <h2>Composition actuelle</h2>
+    <p class="note">
+      Union des équipes, types et personnes ajoutées. Une personne compte une seule fois. Les
+      changements de composition des équipes sont reflétés dans le groupe. Un ajout au groupe ne
+      crée pas de badge, ne donne pas de droit de zone et ne vaut pas confirmation d'un passage.
+      Archiver conserve les scans et l'historique.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Sélection</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for(s of sources;track key(s);let i=$index){
+          <tr>
+            <td>{{s.teamId?'Équipe':s.personType?'Type':'Personne ajoutée'}}</td>
+            <td>{{label(s)}}</td>
+            <td>
+              <button (click)="remove(i)" [attr.aria-label]="'Retirer '+label(s)">Retirer</button>
+            </td>
+          </tr>
+          }@empty{
+          <tr>
+            <td colspan="3">Aucune source. Le groupe enregistré sera vide.</td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="filters">
+      <label
+        >Équipe<select name="team" [(ngModel)]="teamId">
+          <option [ngValue]="null">Choisir une équipe</option>
+          @for(t of teams;track t.id){
+          <option [ngValue]="t.id">{{t.name}}</option>
+          }
+        </select></label
+      ><button (click)="addTeam()" [disabled]="!teamId">Ajouter l'équipe</button
+      ><label
+        >Type<select name="personType" [(ngModel)]="personType">
+          <option value="">Choisir un type</option>
+          <option value="JEUNE">Jeunes</option>
+          <option value="ANIMATEUR">Animateurs</option>
+          <option value="BENEVOLE">Bénévoles</option>
+        </select></label
+      ><button (click)="addType()" [disabled]="!personType">Ajouter le type</button>
+    </div>
+    <details>
+      <summary>Ajouter des personnes</summary>
+      <form class="search" (ngSubmit)="findPeople()">
+        <label
+          >Prénom / nom adulte / identifiant<input
+            name="peopleSearch"
+            [(ngModel)]="peopleSearch"
+            maxlength="120" /></label
+        ><button type="submit" [disabled]="peopleLoading()">Rechercher une personne</button>
+      </form>
+      @if(peopleError()){
+      <p class="error" role="alert">{{peopleError()}}</p>
+      }@for(p of people().items;track p.participantId??'v'+p.volunteerId){
+      <article class="person-choice">
+        <b>{{p.firstName}} {{p.lastName}}</b> · {{typeLabel(p.type)}} ·
+        {{p.participantId?'#'+p.participantId:'Bénévole #'+p.volunteerId}}<button
+          (click)="addPerson(p)"
+        >
+          Ajouter
+        </button>
+      </article>
+      }
+      <nav class="pager">
+        <button (click)="peoplePage(-1)" [disabled]="peopleLoading()||peopleOffset===0">
+          Personnes précédentes</button
+        ><span
+          >{{peopleResultOffset+(people().items.length?1:0)}}–{{peopleResultOffset+people().items.length}}
+          / {{people().total}} personnes</span
+        ><button
+          (click)="peoplePage(1)"
+          [disabled]="peopleLoading()||peopleOffset+50>=people().total"
+        >
+          Personnes suivantes
+        </button>
+      </nav>
+    </details>
+    @if(dirty()){
+    <p class="note" role="status">
+      Modifications non enregistrées. Le nombre et la liste ci-dessous décrivent encore la
+      composition enregistrée, pas le brouillon.
+    </p>
+    } @if(group()){
+    <section class="metrics">
+      <article>
+        Membres distincts enregistrés<strong>{{members().total}}</strong
+        ><small
+          >{{membersLoading()?'Calcul en cours…':'Composition actuelle · doublons
+          supprimés'}}</small
+        >
+      </article>
+    </section>
+    }
+    <div class="actions">
+      <button (click)="save()" [disabled]="saving()||!name.trim()">
+        {{saving()?'Enregistrement…':'Enregistrer le groupe'}}</button
+      >@if(group()){<button (click)="reload()">Recharger le groupe</button
+      ><button (click)="membersVisible.set(!membersVisible())">
+        {{membersVisible()?'Masquer':'Voir'}} les membres enregistrés</button
+      >}
+    </div>
+  </fieldset>
+  @if(memberError()){
+  <p class="error" role="alert">
+    {{memberError()}}<button (click)="loadMembers()">Réessayer</button>
+  </p>
+  } @if(membersVisible()){
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Personne</th>
+          <th>Type</th>
+          <th>Identité</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for(p of members().items;track p.personKey){
+        <tr>
+          <td>
+            {{p.firstName}} {{p.lastName}}@if(p.participantId){<a
+              routerLink="/acces/historique-personne"
+              [queryParams]="{participantId:p.participantId}"
+              >Historique →</a
+            >}
+          </td>
+          <td>{{typeLabel(p.type)}}</td>
+          <td>
+            {{p.personKey}}@if(!p.participantId){<small
+              >Sans fiche participant. Aucune fiche créée par cette consultation.</small
+            >}
+          </td>
+        </tr>
+        }@empty{
+        <tr>
+          <td colspan="3">Aucun membre enregistré.</td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <nav class="pager">
+    <button (click)="memberPage(-1)" [disabled]="membersLoading()||memberOffset===0">
+      Membres précédents</button
+    ><span
+      >{{memberResultOffset+(members().items.length?1:0)}}–{{memberResultOffset+members().items.length}}
+      / {{members().total}}</span
+    ><button
+      (click)="memberPage(1)"
+      [disabled]="membersLoading()||memberOffset+50>=members().total"
+    >
+      Membres suivants
+    </button>
+  </nav>
+  } @if(group()){
+  <h2>Rattachements aux passages attendus</h2>
+  <p class="hint">
+    Chaque rattachement définit un point, son service et une période. Les sources du groupe et les
+    rattachements s'enregistrent séparément.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date / service</th>
+          <th>Point attendu</th>
+          <th>Période · Europe/Paris</th>
+          <th>État</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for(p of passages().items;track p.id){
+        <tr>
+          <td>{{p.label}}<small>{{p.service_key??'Sans service'}}</small></td>
+          <td>{{p.pointName}}</td>
+          <td>{{time(p.starts_at)}}<small>à {{time(p.ends_at)}}</small></td>
+          <td>{{p.archived_at?'Archivé':'Actif'}}</td>
+          <td>
+            <button (click)="editPassage(p)" [disabled]="passageSaving()||saving()">Modifier</button
+            ><a routerLink="/acces/non-scannes" [queryParams]="{passageId:p.id}">Voir le suivi →</a>
+          </td>
+        </tr>
+        }@empty{
+        <tr>
+          <td colspan="5">Aucun rattachement enregistré pour ce groupe.</td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <nav class="pager">
+    <button (click)="passagePage(-1)" [disabled]="passagesLoading()||passageOffset===0">
+      Rattachements précédents</button
+    ><span
+      >{{passageResultOffset+(passages().items.length?1:0)}}–{{passageResultOffset+passages().items.length}}
+      / {{passages().total}}</span
+    ><button
+      (click)="passagePage(1)"
+      [disabled]="passagesLoading()||passageOffset+50>=passages().total"
+    >
+      Rattachements suivants
+    </button>
+  </nav>
+  <button (click)="editPassage(null)" [disabled]="saving()||passageSaving()||dirty()||archived">
+    + Rattacher à un service / point
+  </button>
+  @if(passageError()){
+  <p class="error" role="alert">
+    {{passageError()}}<button (click)="loadPassages()">Recharger la liste</button>
+  </p>
+  } @if(editorOpen()){
+  <fieldset class="editor" [disabled]="passageSaving()||saving()">
+    <h2>{{passage?'Modifier le rattachement':'Nouveau rattachement'}}</h2>
+    <div class="filters">
+      <label
+        >Libellé<input
+          name="passageLabel"
+          [(ngModel)]="passageLabel"
+          (ngModelChange)="passageDirty.set(true)"
+          maxlength="150" /></label
+      ><label
+        >Lieu / point<select
+          name="passagePoint"
+          [(ngModel)]="passagePointId"
+          (ngModelChange)="passageDirty.set(true)"
+        >
+          <option [ngValue]="null">Choisir un point actif</option>
+          @for(p of points;track p.id){@if(p.active){
+          <option [ngValue]="p.id">{{p.name}}</option>
+          }}
+        </select></label
+      ><label
+        >Début · Europe/Paris<input
+          name="startsAt"
+          type="datetime-local"
+          [(ngModel)]="startsAt"
+          (ngModelChange)="passageDirty.set(true)" /></label
+      ><label
+        >Fin · Europe/Paris<input
+          name="endsAt"
+          type="datetime-local"
+          [(ngModel)]="endsAt"
+          (ngModelChange)="passageDirty.set(true)" /></label
+      >@if(passage){<label
+        >État<select
+          name="passageArchived"
+          [(ngModel)]="passageArchived"
+          (ngModelChange)="passageDirty.set(true)"
+        >
+          <option [ngValue]="false">Actif</option>
+          <option [ngValue]="true">Archivé</option>
+        </select></label
+      >}
+    </div>
+    @if(selectedPoint();as point){
+    <p>
+      Type de scan : {{selectedType()}} · Service configuré : {{point.serviceKey??'Sans service'}}.
+      Type et service sont ceux du point, non modifiables ici.
+    </p>
+    }
+    <p class="note">
+      Un accepté de chaque personne à ce point/service dans cette période confirme son passage. Ce
+      rattachement ne donne pas de droit de zone. Il active l'obligation de connexion en ligne sur
+      ce point ; elle reste active même après archivage, afin d'éviter un contournement hors ligne.
+      Un groupe vide n'attend personne.
+    </p>
+    <div class="actions">
+      <button (click)="savePassage()" [disabled]="passageSaving()||dirty()||archived">
+        {{passageSaving()?'Enregistrement…':'Enregistrer le rattachement'}}</button
+      ><button (click)="closePassage()">Fermer le formulaire</button>
+    </div>
+  </fieldset>
+  }} }
+</main>

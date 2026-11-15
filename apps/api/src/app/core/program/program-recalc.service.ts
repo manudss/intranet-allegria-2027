@@ -163,6 +163,7 @@ export class ProgramRecalcService {
         endTime: computeEndTime(newStartTime, duration),
         status: ProgramSequenceStatus.MOBILE,
         track: draft.track ?? ProgramSequenceTrack.COMMON,
+        visibility: draft.visibility,
         minDurationMinutes: draft.minDurationMinutes ?? null,
         minMarginMinutes: draft.minMarginMinutes ?? null,
         previousSequenceId: previous.id,

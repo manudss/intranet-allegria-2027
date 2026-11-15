@@ -10,6 +10,8 @@ import { ParticipantsController } from '../participants/participants.controller'
 import { PublicHostFamilyRegistrationsController } from '../public-registrations/public-host-family-registrations.controller';
 import { PublicParticipantRegistrationsController } from '../public-registrations/public-participant-registrations.controller';
 import { PublicVolunteerApplicationsController } from '../public-registrations/public-volunteer-applications.controller';
+import { ProgramController } from '../program/program.controller';
+import { PublicProgramController } from '../program/public-program.controller';
 import { RolesController } from './roles.controller';
 import { UsersController } from './users.controller';
 import { AuthController } from './auth.controller';
@@ -48,10 +50,12 @@ const all: Ctor[] = [
   PublicParticipantRegistrationsController,
   PublicHostFamilyRegistrationsController,
   PublicVolunteerApplicationsController,
+  ProgramController,
+  PublicProgramController,
 ];
 
 describe('public routes allow-list', () => {
-  it('only exposes health, login and the three POST-only registration endpoints', () => {
+  it('only exposes health, login, the three POST-only registration endpoints and the published program snapshot', () => {
     const publicRoutes = all
       .flatMap(routesOf)
       .filter((r) => r.isPublic)
@@ -66,6 +70,7 @@ describe('public routes allow-list', () => {
         'POST /public/host-family-registrations',
         'POST /public/participant-registrations',
         'POST /public/volunteer-applications',
+        'GET /public/program/:date',
       ].sort(),
     );
   });

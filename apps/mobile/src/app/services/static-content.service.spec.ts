@@ -6,6 +6,7 @@ import { StaticContentService } from './static-content.service';
 
 describe('StaticContentService — programme public', () => {
   function setup() {
+    localStorage.clear();
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
@@ -34,6 +35,40 @@ describe('StaticContentService — programme public', () => {
         sequences: [{ title: 'Veillée', startTime: '21:00', endTime: '22:00', location: 'Chapelle' }],
       };
     }
+  });
+
+  it('après un instantané vu (même vide), une panne réseau ne réaffiche jamais l’ancien fichier', () => {
+    const { service, http } = setup();
+    // 1. Un instantané vide a été vu (jour dépublié puis régénéré).
+    service.getPublicProgramDay('2027-10-31').subscribe();
+    http.expectOne('/api/public/program/2027-10-31').flush({
+      date: '2027-10-31',
+      updatedAt: '2027-10-30T21:00:00.000Z',
+      sequences: [],
+    });
+
+    // 2. Plus tard (cache SW expiré, réseau en erreur) : pas de repli statique.
+    let result: { sequences: unknown[]; updatedAt: string | null } | undefined;
+    service.getPublicProgramDay('2027-10-31').subscribe((day) => (result = day));
+    http.expectOne('/api/public/program/2027-10-31').error(new ProgressEvent('offline'));
+    http.expectNone('/content/program-2027-10-31.json');
+    expect(result?.sequences).toEqual([]);
+    expect(result?.updatedAt).toBeNull();
+    http.verify();
+  });
+
+  it('le repli statique reste possible tant qu’aucun instantané n’a été vu', () => {
+    const { service, http } = setup();
+    let result: { date: string } | undefined;
+    service.getPublicProgramDay('2027-10-31').subscribe((day) => (result = day));
+    http.expectOne('/api/public/program/2027-10-31').error(new ProgressEvent('offline'));
+    http.expectOne('/content/program-2027-10-31.json').flush({
+      date: '2027-10-31',
+      updatedAt: '2027-10-01T00:00:00.000Z',
+      sequences: [],
+    });
+    expect(result?.date).toBe('2027-10-31');
+    http.verify();
   });
 
   it('une liste publiée vide (jour retiré) ne retombe PAS sur le fichier statique', () => {

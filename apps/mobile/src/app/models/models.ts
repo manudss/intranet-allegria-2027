@@ -27,6 +27,13 @@ export enum ProgramSequenceStatus {
   FROZEN = 'FROZEN',
 }
 
+/** Piste d'une séquence : branche TA / ES ou temps commun. */
+export enum ProgramSequenceTrack {
+  TA = 'TA',
+  ES = 'ES',
+  COMMON = 'COMMON',
+}
+
 export interface ProgramSequence {
   id: number;
   eventDate: string;
@@ -38,6 +45,7 @@ export interface ProgramSequence {
   /** Heure de fin calculée (HH:mm), dérivée de startTime + durationMinutes */
   endTime: string;
   status: ProgramSequenceStatus;
+  track: ProgramSequenceTrack;
   volunteerTeamId: number | null;
   volunteerTeamName: string | null;
   notes: string | null;

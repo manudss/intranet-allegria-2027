@@ -36,6 +36,21 @@ describe('StaticContentService — programme public', () => {
     }
   });
 
+  it('une liste publiée vide (jour retiré) ne retombe PAS sur le fichier statique', () => {
+    const { service, http } = setup();
+    let result: { sequences: unknown[] } | undefined;
+    service.getPublicProgramDay('2027-10-31').subscribe((day) => (result = day));
+    // Réponse 200 explicite : le jour a été dépublié — aucun repli sur l'ancien JSON.
+    http.expectOne('/api/public/program/2027-10-31').flush({
+      date: '2027-10-31',
+      updatedAt: '2027-10-30T21:00:00.000Z',
+      sequences: [],
+    });
+    http.expectNone('/content/program-2027-10-31.json');
+    expect(result?.sequences).toEqual([]);
+    http.verify();
+  });
+
   it('retombe sur le fichier statique si l’API est injoignable', () => {
     const { service, http } = setup();
     let result: { date: string } | undefined;

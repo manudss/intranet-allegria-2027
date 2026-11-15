@@ -727,7 +727,6 @@ export class ProgramService {
       list.push(sequence);
       byDate.set(sequence.eventDate, list);
     }
-    const repo = this.dataSource.manager.getRepository(ProgramPublicExport);
     return this.dataSource.transaction(async (manager) => {
       const tx = manager.getRepository(ProgramPublicExport);
       const dates = [...byDate.keys()];

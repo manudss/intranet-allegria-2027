@@ -1,5 +1,10 @@
 import { EntityManager } from 'typeorm';
-import { ProgramSequence, ProgramSequenceStatus, ProgramSequenceTrack } from '../entities';
+import {
+  ProgramSequence,
+  ProgramSequenceStatus,
+  ProgramSequenceTrack,
+  ProgramSequenceVisibility,
+} from '../entities';
 
 /**
  * Programme des 4 jours d'ALLEGRIA 2027 (dim. 31 oct. - mer. 3 nov.), d'après le premier planning projeté
@@ -18,6 +23,8 @@ export interface ProgramSeedItem {
   notes?: string;
   /** Créneau ajouté par nous entre ceux du planning projeté (repas, trajets...). */
   proposed?: boolean;
+  /** PUBLIC = grand temps visible sans connexion après publication ; INTERNAL (défaut) sinon. */
+  visibility?: ProgramSequenceVisibility;
 }
 
 export const addMinutes = (time: string, minutes: number): string => {
@@ -32,7 +39,13 @@ export interface ProgramSeedBranch {
   location: string;
   /** Piste portée par les séquences de la branche. */
   track: 'TA' | 'ES';
-  items: { slot: number; title: string; durationMinutes?: number; notes?: string }[];
+  items: {
+    slot: number;
+    title: string;
+    durationMinutes?: number;
+    notes?: string;
+    visibility?: ProgramSequenceVisibility;
+  }[];
 }
 
 export interface ProgramSeedDay {
@@ -57,19 +70,20 @@ export const PROGRAM_SEED_DAYS: ProgramSeedDay[] = [
       { title: 'Accueil & installation des équipes', startTime: '10:00', durationMinutes: 120, minDurationMinutes: 60, proposed: true },
       { title: 'Repas', startTime: '12:00', durationMinutes: 75, minDurationMinutes: 45, proposed: true },
       { title: 'Trajet vers le lieu de lancement', startTime: '13:15', durationMinutes: 45, minDurationMinutes: 30, proposed: true },
-      { title: 'Temps de lancement', startTime: '14:00', durationMinutes: 75, minDurationMinutes: 45 },
+      { title: 'Temps de lancement', startTime: '14:00', durationMinutes: 75, minDurationMinutes: 45, visibility: ProgramSequenceVisibility.PUBLIC },
       {
         title: 'Eucharistie',
         startTime: '15:15',
         durationMinutes: 75,
         minDurationMinutes: 60,
         frozen: true,
+        visibility: ProgramSequenceVisibility.PUBLIC,
         notes: 'Figé pour la démo : horaire à confirmer.',
       },
       { title: 'Goûter & temps libre', startTime: '16:30', durationMinutes: 45, minDurationMinutes: 30, proposed: true },
       { title: 'Retour aux hébergements & installation', startTime: '17:15', durationMinutes: 60, minDurationMinutes: 30, proposed: true },
       { title: 'Dîner', startTime: '18:30', durationMinutes: 75, minDurationMinutes: 45, proposed: true },
-      { title: 'Veillée FESTIVE', startTime: '20:00', durationMinutes: 105, minDurationMinutes: 60 },
+      { title: 'Veillée FESTIVE', startTime: '20:00', durationMinutes: 105, minDurationMinutes: 60, visibility: ProgramSequenceVisibility.PUBLIC },
       { title: 'Retour aux hébergements & coucher', startTime: '21:45', durationMinutes: 45, minDurationMinutes: 30, proposed: true },
     ],
     branches: [],
@@ -92,11 +106,13 @@ export const PROGRAM_SEED_DAYS: ProgramSeedDay[] = [
         durationMinutes: 150,
         minDurationMinutes: 90,
         notes: SPLIT_NOTE,
+        // Rassemblement commun TA + ES : grand temps public malgré le temps séparé de la matinée.
+        visibility: ProgramSequenceVisibility.PUBLIC,
       },
       { title: 'Goûter', startTime: '16:30', durationMinutes: 30, minDurationMinutes: 20, proposed: true },
       { title: 'Retour aux hébergements', startTime: '17:00', durationMinutes: 60, minDurationMinutes: 30, proposed: true },
       { title: 'Dîner', startTime: '18:30', durationMinutes: 75, minDurationMinutes: 45, proposed: true },
-      { title: 'Veillée Spectacle', startTime: '20:00', durationMinutes: 105, minDurationMinutes: 60 },
+      { title: 'Veillée Spectacle', startTime: '20:00', durationMinutes: 105, minDurationMinutes: 60, visibility: ProgramSequenceVisibility.PUBLIC },
       { title: 'Retour aux hébergements & coucher', startTime: '21:45', durationMinutes: 45, minDurationMinutes: 30, proposed: true },
     ],
     branches: [
@@ -135,8 +151,8 @@ export const PROGRAM_SEED_DAYS: ProgramSeedDay[] = [
       },
       { title: 'Repas', startTime: '11:30', durationMinutes: 75, minDurationMinutes: 45, proposed: true },
       { title: 'Trajet vers le Crêt des 6 soleils', startTime: '12:45', durationMinutes: 45, minDurationMinutes: 30, proposed: true },
-      { title: 'Grand Jeu / Balade au Crêt des 6 soleils', startTime: '13:30', durationMinutes: 120, minDurationMinutes: 60, notes: SPLIT_NOTE },
-      { title: 'Goûter Crêt des 6 soleils - Moments fraternels', startTime: '15:30', durationMinutes: 60, minDurationMinutes: 30 },
+      { title: 'Grand Jeu / Balade au Crêt des 6 soleils', startTime: '13:30', durationMinutes: 120, minDurationMinutes: 60, notes: SPLIT_NOTE, visibility: ProgramSequenceVisibility.PUBLIC },
+      { title: 'Goûter Crêt des 6 soleils - Moments fraternels', startTime: '15:30', durationMinutes: 60, minDurationMinutes: 30, visibility: ProgramSequenceVisibility.PUBLIC },
       { title: 'Retour aux hébergements', startTime: '16:30', durationMinutes: 60, minDurationMinutes: 30, proposed: true },
       { title: 'Temps libre & douches', startTime: '17:30', durationMinutes: 60, minDurationMinutes: 30, proposed: true },
       { title: 'Dîner', startTime: '18:30', durationMinutes: 75, minDurationMinutes: 45, proposed: true },
@@ -171,9 +187,9 @@ export const PROGRAM_SEED_DAYS: ProgramSeedDay[] = [
     slots: [
       { title: 'Réveil & petit-déjeuner', startTime: '07:30', durationMinutes: 60, minDurationMinutes: 30, proposed: true },
       { title: 'Rangement des chambres & bagages', startTime: '08:30', durationMinutes: 45, minDurationMinutes: 30, proposed: true },
-      { title: "Écriture des « J'aime »", startTime: '09:15', durationMinutes: 60, minDurationMinutes: 30 },
-      { title: 'Eucharistie ouverte (démarches de choix)', startTime: '10:15', durationMinutes: 75, minDurationMinutes: 60 },
-      { title: 'Clôture avec Mercis-Envoi', startTime: '11:30', durationMinutes: 45, minDurationMinutes: 30 },
+      { title: "Écriture des « J'aime »", startTime: '09:15', durationMinutes: 60, minDurationMinutes: 30, visibility: ProgramSequenceVisibility.PUBLIC },
+      { title: 'Eucharistie ouverte (démarches de choix)', startTime: '10:15', durationMinutes: 75, minDurationMinutes: 60, visibility: ProgramSequenceVisibility.PUBLIC },
+      { title: 'Clôture avec Mercis-Envoi', startTime: '11:30', durationMinutes: 45, minDurationMinutes: 30, visibility: ProgramSequenceVisibility.PUBLIC },
       { title: "Repas d'au revoir", startTime: '12:15', durationMinutes: 75, minDurationMinutes: 45, proposed: true },
       { title: 'Départs des équipes', startTime: '13:30', durationMinutes: 60, minDurationMinutes: 30, proposed: true },
     ],
@@ -213,6 +229,7 @@ export async function insertProgramDemoDay(
           durationMinutes: item.durationMinutes,
           endTime: addMinutes(item.startTime, item.durationMinutes),
           status: item.frozen ? ProgramSequenceStatus.FROZEN : ProgramSequenceStatus.MOBILE,
+          visibility: item.visibility ?? ProgramSequenceVisibility.INTERNAL,
           minDurationMinutes: item.minDurationMinutes,
           previousSequenceId: saved.at(-1)?.id ?? null,
           volunteerTeamId: nextTeamId(),
@@ -240,6 +257,8 @@ export async function insertProgramDemoDay(
           durationMinutes,
           endTime: addMinutes(slot.startTime, durationMinutes),
           minDurationMinutes: Math.min(15, durationMinutes),
+          // Les temps propres à un groupe restent internes par défaut.
+          visibility: entry.visibility ?? ProgramSequenceVisibility.INTERNAL,
           // Seule la tête de branche est rattachée à la chaîne principale.
           anchorSequenceId: previousId === null ? slot.id : null,
           previousSequenceId: previousId,

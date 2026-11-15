@@ -748,7 +748,7 @@ export class ProgramService {
       await tx
         .createQueryBuilder()
         .delete()
-        .where('event_date NOT IN (:...dates)', { dates: dates.length ? dates : [''] })
+        .where('"eventDate" NOT IN (:...dates)', { dates: dates.length ? dates : [''] })
         .execute();
       await this.writeLog(manager, {
         action: ProgramChangeLogAction.UPDATE,

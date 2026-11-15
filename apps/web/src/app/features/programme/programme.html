@@ -97,6 +97,26 @@
         </button>
       }
     </div>
+    <div class="track-filters" role="group" aria-label="Disposition de la vue jour">
+      <button
+        tuiButton
+        type="button"
+        size="s"
+        [appearance]="dayLayout() === 'locations' ? 'primary' : 'secondary'"
+        (click)="setDayLayout('locations')"
+      >
+        Par lieu
+      </button>
+      <button
+        tuiButton
+        type="button"
+        size="s"
+        [appearance]="dayLayout() === 'tracks' ? 'primary' : 'secondary'"
+        (click)="setDayLayout('tracks')"
+      >
+        Par piste
+      </button>
+    </div>
     <div class="track-filters" role="group" aria-label="Filtrer par piste">
       @for (option of trackFilters; track option.value) {
         <button
@@ -184,7 +204,67 @@
         <p class="empty-state">Chargement du planning…</p>
       }
 
-      @if (columns().length) {
+      @if (dayLayout() === 'tracks') {
+        <section class="tracks-view" aria-label="Vue par piste">
+          <div class="tracks-head">
+            <span class="tracks-col" [style.color]="trackColor(ProgramSequenceTrack.TA)">
+              <img class="track-logo" src="/assets/branches/ta.jpg" alt="TA" /> TA
+            </span>
+            <span class="tracks-col" [style.color]="trackColor(ProgramSequenceTrack.ES)">
+              <img class="track-logo" src="/assets/branches/es.jpg" alt="ES" /> ES
+            </span>
+          </div>
+          @for (row of trackRows(); track row.key) {
+            @if (row.common; as common) {
+              <article class="track-card common" (click)="selectLocation(common.location)">
+                <header>
+                  <span class="track-inline">
+                    <img class="track-logo" src="/assets/branches/ta.jpg" alt="TA" />
+                    <img class="track-logo" src="/assets/branches/es.jpg" alt="ES" />
+                  </span>
+                  <strong>{{ common.startTime }} – {{ common.endTime }} · {{ common.title }}</strong>
+                </header>
+                <span class="track-meta">Commun · {{ common.location }}</span>
+              </article>
+            } @else {
+              <div class="tracks-row">
+                @if (row.ta; as ta) {
+                  <article
+                    class="track-card"
+                    [style.border-left-color]="trackColor(ProgramSequenceTrack.TA)"
+                    (click)="selectLocation(ta.location)"
+                  >
+                    <header>
+                      <img class="track-logo" src="/assets/branches/ta.jpg" alt="TA" />
+                      <strong>{{ ta.startTime }} – {{ ta.endTime }} · {{ ta.title }}</strong>
+                    </header>
+                    <span class="track-meta">TA · {{ ta.location }}</span>
+                  </article>
+                } @else {
+                  <div class="tracks-empty" aria-hidden="true"></div>
+                }
+                @if (row.es; as es) {
+                  <article
+                    class="track-card"
+                    [style.border-left-color]="trackColor(ProgramSequenceTrack.ES)"
+                    (click)="selectLocation(es.location)"
+                  >
+                    <header>
+                      <img class="track-logo" src="/assets/branches/es.jpg" alt="ES" />
+                      <strong>{{ es.startTime }} – {{ es.endTime }} · {{ es.title }}</strong>
+                    </header>
+                    <span class="track-meta">ES · {{ es.location }}</span>
+                  </article>
+                } @else {
+                  <div class="tracks-empty" aria-hidden="true"></div>
+                }
+              </div>
+            }
+          } @empty {
+            <p class="empty-state">Aucune séquence pour ce filtre.</p>
+          }
+        </section>
+      } @else if (columns().length) {
         <div class="calendar-scroll">
           <div class="calendar" [style.--calendar-height.px]="calendarHeightPx()">
             <div class="calendar-axis">

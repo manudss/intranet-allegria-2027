@@ -133,6 +133,14 @@ interface BlockView {
   category: number;
 }
 
+/** Une ligne de la vue « Par piste » : temps commun pleine largeur, ou paire TA / ES côte à côte. */
+interface TrackRow {
+  key: string;
+  common: ProgramSequence | null;
+  ta: ProgramSequence | null;
+  es: ProgramSequence | null;
+}
+
 interface CalendarColumn {
   name: string;
   selected: boolean;
@@ -160,6 +168,7 @@ export class ProgrammePage {
   private readonly auth = inject(AuthService);
 
   readonly ProgramSequenceStatus = ProgramSequenceStatus;
+  readonly ProgramSequenceTrack = ProgramSequenceTrack;
   readonly changeLogLabels = CHANGE_LOG_LABELS;
   readonly days = PROGRAM_EVENT_DAYS;
   readonly trackFilters = TRACK_FILTERS;
@@ -167,6 +176,13 @@ export class ProgrammePage {
     (option): option is { value: ProgramSequenceTrack; label: string } => option.value !== 'ALL',
   );
   readonly trackFilter = signal<TrackFilter>('ALL');
+
+  /** Disposition de la vue jour : calendrier par lieu (existant) ou deux colonnes TA / ES (maquette validée). */
+  readonly dayLayout = signal<'locations' | 'tracks'>('locations');
+
+  setDayLayout(mode: 'locations' | 'tracks'): void {
+    this.dayLayout.set(mode);
+  }
 
   trackColor(track: ProgramSequenceTrack): string {
     return TRACK_COLORS[track] ?? TRACK_COLORS[ProgramSequenceTrack.COMMON];
@@ -443,6 +459,38 @@ export class ProgrammePage {
   readonly viewMode = signal<'day' | 'overview'>('day');
   readonly overview = signal<OverviewDay[]>([]);
   readonly overviewLoading = signal(false);
+
+  /**
+   * Lignes de la vue « Par piste » : les temps communs sur toute la largeur, les créneaux TA et ES
+   * en deux colonnes, appariés quand ils partagent exactement le même horaire. Affichage seul.
+   */
+  readonly trackRows = computed<TrackRow[]>(() => {
+    const date = this.eventDate();
+    const sequences = this.allSequences()
+      .filter((s) => s.eventDate === date)
+      .filter((s) => this.matchesTrack(s));
+    const byStart = (a: ProgramSequence, b: ProgramSequence) => a.startTime.localeCompare(b.startTime);
+    const commons = sequences
+      .filter((s) => (s.track ?? ProgramSequenceTrack.COMMON) === ProgramSequenceTrack.COMMON)
+      .sort(byStart);
+    const tas = sequences.filter((s) => s.track === ProgramSequenceTrack.TA).sort(byStart);
+    const ess = sequences.filter((s) => s.track === ProgramSequenceTrack.ES).sort(byStart);
+
+    const rows: TrackRow[] = commons.map((common) => ({ key: `c${common.id}`, common, ta: null, es: null }));
+    const pairedEs = new Set<number>();
+    for (const ta of tas) {
+      const match = ess.find(
+        (es) => !pairedEs.has(es.id) && es.startTime === ta.startTime && es.endTime === ta.endTime,
+      );
+      if (match) pairedEs.add(match.id);
+      rows.push({ key: `t${ta.id}`, common: null, ta, es: match ?? null });
+    }
+    for (const es of ess.filter((e) => !pairedEs.has(e.id))) {
+      rows.push({ key: `e${es.id}`, common: null, ta: null, es });
+    }
+    const firstTime = (row: TrackRow) => (row.common ?? row.ta ?? row.es)!.startTime;
+    return rows.sort((a, b) => firstTime(a).localeCompare(firstTime(b)));
+  });
 
   /** Vue d'ensemble filtrée par piste : lieux vidés par le filtre masqués. */
   readonly filteredOverview = computed<OverviewDay[]>(() =>

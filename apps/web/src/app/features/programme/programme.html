@@ -29,8 +29,30 @@
       >
         Nouveau créneau
       </button>
+      <button
+        tuiButton
+        appearance="secondary"
+        type="button"
+        iconStart="@tui.globe"
+        (click)="publishPublicProgram()"
+        [disabled]="publishingPublic()"
+        title="Régénère la liste statique des grands temps publics (appli sans connexion)"
+      >
+        Mettre à jour la liste publique
+      </button>
     }
   </div>
+
+  @if (publicExportStatus(); as exportStatus) {
+    <p class="public-export-status">
+      @if (exportStatus.length) {
+        Liste publique générée le {{ exportStatus[exportStatus.length - 1].generatedAt | date: 'dd/MM/yyyy à HH:mm' }}
+        ({{ exportStatus.length }} jour(s), grands temps seulement).
+      } @else {
+        Liste publique jamais générée : l'appli sans connexion n'affiche aucun grand temps.
+      }
+    </p>
+  }
 
   @if (actionMessage(); as message) {
     <div class="banner" [class.positive]="message.appearance === 'positive'" [class.negative]="message.appearance === 'negative'" [class.warning]="message.appearance === 'warning'">
@@ -335,6 +357,9 @@
                           } @else if (block.frozen) {
                             <span class="state-tag state-frozen">Figé</span>
                           }
+                        @if (block.sequence?.visibility === ProgramSequenceVisibility.PUBLIC) {
+                            <span class="state-tag state-public">Public</span>
+                          }
                         </header>
                         <h3>
                           {{ block.title }}
@@ -484,6 +509,13 @@
               </button>
             }
           </div>
+          <label>
+            Visibilité
+            <select [ngModel]="createDraft().visibility" (ngModelChange)="updateCreateDraft({ visibility: $event })">
+              <option [value]="ProgramSequenceVisibility.INTERNAL">Réservé bénévoles-coordinateurs</option>
+              <option [value]="ProgramSequenceVisibility.PUBLIC">Public (grand temps, sans connexion)</option>
+            </select>
+          </label>
           <button tuiButton appearance="primary" type="button" (click)="submitCreate()">Créer</button>
           <button tuiButton appearance="secondary" type="button" (click)="cancelPreview()">Annuler</button>
         </div>
@@ -526,6 +558,13 @@
               </button>
             }
           </div>
+          <label>
+            Visibilité
+            <select [ngModel]="editDraft().visibility" (ngModelChange)="updateEditDraft({ visibility: $event })">
+              <option [value]="ProgramSequenceVisibility.INTERNAL">Réservé bénévoles-coordinateurs</option>
+              <option [value]="ProgramSequenceVisibility.PUBLIC">Public (grand temps, sans connexion)</option>
+            </select>
+          </label>
           <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyTeam">
             <label tuiLabel for="programme-equipe">Équipe responsable</label>
             <input
@@ -606,6 +645,13 @@
           <label>
             Notes
             <textarea [ngModel]="insertDraft().notes" (ngModelChange)="updateInsertDraft({ notes: $event })"></textarea>
+          </label>
+          <label>
+            Visibilité
+            <select [ngModel]="insertDraft().visibility" (ngModelChange)="updateInsertDraft({ visibility: $event })">
+              <option [value]="ProgramSequenceVisibility.INTERNAL">Réservé bénévoles-coordinateurs</option>
+              <option [value]="ProgramSequenceVisibility.PUBLIC">Public (grand temps, sans connexion)</option>
+            </select>
           </label>
           <button tuiButton appearance="primary" type="button" (click)="previewInsertAction()">
             Prévisualiser l'insertion

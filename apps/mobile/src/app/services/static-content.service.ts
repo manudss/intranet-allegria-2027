@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, catchError, of } from 'rxjs';
 
 export interface InfosSection {
   title: string;
@@ -31,13 +31,17 @@ export interface PublicSequence {
 
 export interface PublicProgramDay {
   date: string;
-  updatedAt: string;
+  /** null tant que la liste n'a jamais été publiée depuis l'agenda */
+  updatedAt: string | null;
   sequences: PublicSequence[];
 }
 
 /**
- * Contenu public/parteil : fichiers JSON statiques (assets), servis par le
- * CDN en production — le serveur API ne répond jamais à ces requêtes.
+ * Contenu public/parteil.
+ * Le programme des grands temps vient de l'instantané régénéré par le bouton
+ * « Mettre à jour la liste publique » (route publique de l'API, jamais de
+ * temps réel) ; le fichier statique /content/program-<date>.json sert de
+ * repli (API injoignable). Infos et contacts restent des assets statiques.
  */
 @Injectable({ providedIn: 'root' })
 export class StaticContentService {
@@ -52,6 +56,8 @@ export class StaticContentService {
   }
 
   getPublicProgramDay(date: string): Observable<PublicProgramDay> {
-    return this.http.get<PublicProgramDay>(`/content/program-${date}.json`);
+    return this.http.get<PublicProgramDay>(`/api/public/program/${date}`).pipe(
+      catchError(() => this.http.get<PublicProgramDay>(`/content/program-${date}.json`)),
+    );
   }
 }

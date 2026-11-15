@@ -216,7 +216,7 @@
           </div>
           @for (row of trackRows(); track row.key) {
             @if (row.common; as common) {
-              <article class="track-card common" (click)="selectLocation(common.location)">
+              <button type="button" class="track-card common" (click)="selectLocation(common.location)">
                 <header>
                   <span class="track-inline">
                     <img class="track-logo" src="/assets/branches/ta.jpg" alt="TA" />
@@ -225,11 +225,12 @@
                   <strong>{{ common.startTime }} – {{ common.endTime }} · {{ common.title }}</strong>
                 </header>
                 <span class="track-meta">Commun · {{ common.location }}</span>
-              </article>
+              </button>
             } @else {
               <div class="tracks-row">
                 @if (row.ta; as ta) {
-                  <article
+                  <button
+                    type="button"
                     class="track-card"
                     [style.border-left-color]="trackColor(ProgramSequenceTrack.TA)"
                     (click)="selectLocation(ta.location)"
@@ -239,12 +240,13 @@
                       <strong>{{ ta.startTime }} – {{ ta.endTime }} · {{ ta.title }}</strong>
                     </header>
                     <span class="track-meta">TA · {{ ta.location }}</span>
-                  </article>
+                  </button>
                 } @else {
                   <div class="tracks-empty" aria-hidden="true"></div>
                 }
                 @if (row.es; as es) {
-                  <article
+                  <button
+                    type="button"
                     class="track-card"
                     [style.border-left-color]="trackColor(ProgramSequenceTrack.ES)"
                     (click)="selectLocation(es.location)"
@@ -254,7 +256,7 @@
                       <strong>{{ es.startTime }} – {{ es.endTime }} · {{ es.title }}</strong>
                     </header>
                     <span class="track-meta">ES · {{ es.location }}</span>
-                  </article>
+                  </button>
                 } @else {
                   <div class="tracks-empty" aria-hidden="true"></div>
                 }

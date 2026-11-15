@@ -323,6 +323,22 @@ describe('ProgrammePage', () => {
     expect(filtered[0].es?.title).toBe('Atelier');
   });
 
+  it('vue « Par piste » : le temps commun cadre d\u2019une scission TA/ES n\u2019est pas rendu en double', () => {
+    const { component, flushDay } = setup(['VIEWER']);
+    flushDay([
+      seq(1, '09:00', null, { title: 'Messe en paroisse' }), // cadre commun de la scission
+      seq(2, '09:00', 1, { title: 'Messe TA', track: ProgramSequenceTrack.TA, anchorSequenceId: 1 }),
+      seq(3, '09:00', 2, { title: 'Messe ES', track: ProgramSequenceTrack.ES, anchorSequenceId: 1 }),
+      seq(4, '12:00', 3, { title: 'Repas' }), // vrai temps commun, rendu
+    ]);
+
+    component.setDayLayout('tracks');
+    const rows = component.trackRows();
+    expect(rows.map((r) => (r.common ? r.common.title : 'pair'))).toEqual(['pair', 'Repas']);
+    expect(rows[0].ta?.title).toBe('Messe TA');
+    expect(rows[0].es?.title).toBe('Messe ES');
+  });
+
   it('envoie la piste choisie à la création comme à l’édition', () => {
     const { component, http, flushDay } = setup(['COORDINATOR']);
     flushDay();

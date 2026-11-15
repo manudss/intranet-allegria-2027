@@ -109,6 +109,9 @@ describe('programme de démonstration', () => {
     expect(es.length).toBeGreaterThan(0);
     expect(ta.every((row) => row['track'] === ProgramSequenceTrack.TA)).toBe(true);
     expect(es.every((row) => row['track'] === ProgramSequenceTrack.ES)).toBe(true);
+    // Les activités de branche (messes, jeux) ne portent pas d'équipe bénévole responsable.
+    expect(ta.every((row) => row['volunteerTeamId'] === null)).toBe(true);
+    expect(es.every((row) => row['volunteerTeamId'] === null)).toBe(true);
   });
 
   it.each(PROGRAM_SEED_DAYS.map((day) => [day.eventDate, day] as const))(

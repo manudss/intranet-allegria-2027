@@ -243,7 +243,9 @@ export async function insertProgramDemoDay(
           // Seule la tête de branche est rattachée à la chaîne principale.
           anchorSequenceId: previousId === null ? slot.id : null,
           previousSequenceId: previousId,
-          volunteerTeamId: nextTeamId(),
+          // Les créneaux de branche sont des activités de participants (messes, jeux) :
+          // pas d'équipe bénévole responsable (sinon la rotation leur attribue n'importe quelle équipe).
+          volunteerTeamId: null,
           notes: entry.notes ?? null,
         }),
       );

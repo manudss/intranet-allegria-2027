@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ProgramSequenceStatus } from '../entities';
+import { ProgramSequenceStatus, ProgramSequenceTrack } from '../entities';
 import { ProgramRecalcService } from './program-recalc.service';
 import { computeEndTime } from './program-time.util';
 import { ProgramSequenceData } from './program-recalc.types';
@@ -25,6 +25,7 @@ function seq(
     location: LOCATION,
     endTime: '00:00',
     status: ProgramSequenceStatus.MOBILE,
+    track: ProgramSequenceTrack.COMMON,
     minDurationMinutes: null,
     minMarginMinutes: null,
     previousSequenceId: null,
@@ -74,6 +75,15 @@ function buildSampleChain(): ProgramSequenceData[] {
 }
 
 describe('ProgramRecalcService', () => {
+  it('propage la piste du brouillon à la séquence insérée (défaut : temps commun)', () => {
+    const service = new ProgramRecalcService();
+    const chain = buildSampleChain();
+    const ta = service.previewInsert(chain, 2, { ...DRAFT, track: ProgramSequenceTrack.TA });
+    expect(ta.newSequence.track).toBe(ProgramSequenceTrack.TA);
+    const fallback = service.previewInsert(chain, 2, DRAFT);
+    expect(fallback.newSequence.track).toBe(ProgramSequenceTrack.COMMON);
+  });
+
   const service = new ProgramRecalcService();
 
   it('buildChain reconstruit la chaîne ordonnée depuis les pointeurs previousSequenceId', () => {

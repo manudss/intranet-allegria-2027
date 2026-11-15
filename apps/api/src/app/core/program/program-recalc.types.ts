@@ -1,4 +1,4 @@
-import { ProgramSequenceStatus } from '../entities';
+import { ProgramSequenceStatus, ProgramSequenceTrack } from '../entities';
 
 /** Vue plate d'une séquence, indépendante de TypeORM, utilisée par le moteur de recalcul. */
 export interface ProgramSequenceData {
@@ -10,6 +10,7 @@ export interface ProgramSequenceData {
   durationMinutes: number;
   endTime: string;
   status: ProgramSequenceStatus;
+  track: ProgramSequenceTrack;
   minDurationMinutes: number | null;
   minMarginMinutes: number | null;
   previousSequenceId: number | null;
@@ -23,6 +24,7 @@ export interface ProgramSequenceDraft {
   location: string;
   title: string;
   durationMinutes: number;
+  track?: ProgramSequenceTrack;
   volunteerTeamId: number | null;
   notes: string | null;
   minDurationMinutes?: number | null;

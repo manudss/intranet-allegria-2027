@@ -38,6 +38,13 @@ const TRACK_LABELS: Record<ProgramSequenceTrack, string> = {
 
 type TrackFilter = 'ALL' | ProgramSequenceTrack;
 
+/**
+ * Marqueur explicite d'un temps commun « cadre de scission » dans les notes (posé par le seed,
+ * SPLIT_NOTE côté API) : le créneau n'est qu'un repère horaire, le programme réel est
+ * dans les lieux « Groupe TA » / « Groupe ES ».
+ */
+const SPLIT_FRAME_NOTE = 'Temps séparé';
+
 const TRACK_FILTERS: { value: TrackFilter; label: string }[] = [
   { value: 'ALL', label: 'Tous' },
   { value: ProgramSequenceTrack.TA, label: 'TA' },
@@ -470,19 +477,22 @@ export class ProgrammePage {
       .filter((s) => s.eventDate === date)
       .filter((s) => this.matchesTrack(s));
     const byStart = (a: ProgramSequence, b: ProgramSequence) => a.startTime.localeCompare(b.startTime);
-    // Un temps commun qui sert de cadre à une scission TA / ES (note « Temps séparé »)
-    // n'est pas un événement en soi : les lignes TA / ES le remplacent, sinon le même
-    // créneau serait rendu en double (commun + paire). Détection par les données :
-    // ancrage de branche (tête) ou créneau de branche sur exactement le même horaire.
+    // Cadre de scission : temps commun portant la note explicite « Temps séparé » (seed)
+    // ET repris par des créneaux de branche (ancrage, ou fenêtre horaire exactement égale).
+    // Seuls ces cadres-là ne sont pas rendus en plus de la paire TA / ES : un vrai temps
+    // commun, même au même horaire qu'un créneau de branche, n'est jamais masqué.
     const branchAnchorIds = new Set(
       sequences.map((s) => s.anchorSequenceId).filter((id): id is number => id !== null),
     );
     const branchWindows = sequences
       .filter((s) => s.track === ProgramSequenceTrack.TA || s.track === ProgramSequenceTrack.ES)
       .map((s) => `${s.startTime}-${s.endTime}`);
+    const isSplitFrame = (s: ProgramSequence): boolean =>
+      (s.notes ?? '').includes(SPLIT_FRAME_NOTE) &&
+      (branchAnchorIds.has(s.id) || branchWindows.includes(`${s.startTime}-${s.endTime}`));
     const commons = sequences
       .filter((s) => (s.track ?? ProgramSequenceTrack.COMMON) === ProgramSequenceTrack.COMMON)
-      .filter((s) => !branchAnchorIds.has(s.id) && !branchWindows.includes(`${s.startTime}-${s.endTime}`))
+      .filter((s) => !isSplitFrame(s))
       .sort(byStart);
     const tas = sequences.filter((s) => s.track === ProgramSequenceTrack.TA).sort(byStart);
     const ess = sequences.filter((s) => s.track === ProgramSequenceTrack.ES).sort(byStart);

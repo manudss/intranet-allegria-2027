@@ -323,25 +323,42 @@ describe('ProgrammePage', () => {
     expect(filtered[0].es?.title).toBe('Atelier');
   });
 
-  it('vue « Par piste » : le temps commun cadre d\u2019une scission TA/ES n\u2019est pas rendu en double', () => {
+  it('vue « Par piste » : le cadre de scission noté « Temps séparé » n\u2019est pas rendu en double', () => {
     const { component, flushDay } = setup(['VIEWER']);
+    const split = 'Temps séparé : un programme par groupe (TA / ES).';
     flushDay([
-      seq(1, '09:00', null, { title: 'Messe en paroisse' }), // cadre commun de la scission
-      seq(2, '09:00', 1, { title: 'Messe TA', track: ProgramSequenceTrack.TA, anchorSequenceId: 1 }),
-      seq(3, '09:00', 2, { title: 'Messe ES', track: ProgramSequenceTrack.ES, anchorSequenceId: 1 }),
-      seq(4, '12:00', 3, { title: 'Repas' }), // vrai temps commun, rendu
-      seq(5, '14:00', 4, { title: 'Jeu (cadre)' }), // cadre non ancré : détecté par horaires identiques
-      seq(6, '14:00', 5, { title: 'Jeu TA', track: ProgramSequenceTrack.TA }),
-      seq(7, '14:00', 6, { title: 'Jeu ES', track: ProgramSequenceTrack.ES }),
+      // Cadre noté + paire ancrée au même horaire : masqué.
+      seq(1, '09:00', null, { title: 'Messe en paroisse', notes: split, endTime: '11:00' }),
+      seq(2, '09:00', 1, { title: 'Messe TA', track: ProgramSequenceTrack.TA, anchorSequenceId: 1, endTime: '11:00' }),
+      seq(3, '09:00', 2, { title: 'Messe ES', track: ProgramSequenceTrack.ES, anchorSequenceId: 1, endTime: '11:00' }),
+      // Cadre noté non ancré (créneau de branche suivant) mais même fenêtre : masqué aussi.
+      seq(4, '14:00', 3, { title: 'Jeu (cadre)', notes: split, endTime: '16:30' }),
+      seq(5, '14:00', 4, { title: 'Jeu TA', track: ProgramSequenceTrack.TA, endTime: '16:30' }),
+      seq(6, '14:00', 5, { title: 'Jeu ES', track: ProgramSequenceTrack.ES, endTime: '16:30' }),
+      // Vrai temps commun au même horaire qu\u2019un créneau TA, SANS la note : toujours rendu.
+      seq(7, '18:30', 6, { title: 'Dîner', endTime: '19:45' }),
+      seq(8, '18:30', 7, { title: 'Dîner TA', track: ProgramSequenceTrack.TA, endTime: '19:45' }),
+      // Cadre noté mais chevauchement partiel seulement (branches déplacées) : rendu, pas masqué.
+      seq(9, '20:00', 8, { title: 'Veillée (cadre)', notes: split, endTime: '21:30' }),
+      seq(10, '20:30', 9, { title: 'Veillée TA', track: ProgramSequenceTrack.TA, endTime: '21:30' }),
+      seq(11, '12:00', 10, { title: 'Repas' }),
     ]);
 
     component.setDayLayout('tracks');
     const rows = component.trackRows();
-    expect(rows.map((r) => (r.common ? r.common.title : 'pair'))).toEqual(['pair', 'Repas', 'pair']);
+    expect(rows.map((r) => (r.common ? r.common.title : 'pair'))).toEqual([
+      'pair', 'Repas', 'pair', 'Dîner', 'pair', 'Veillée (cadre)', 'pair',
+    ]);
     expect(rows[0].ta?.title).toBe('Messe TA');
     expect(rows[0].es?.title).toBe('Messe ES');
     expect(rows[2].ta?.title).toBe('Jeu TA');
     expect(rows[2].es?.title).toBe('Jeu ES');
+    // Le dîner commun et son homonyme TA cohabitent : pas de masquage générique par horaire.
+    expect(rows[3].common?.title).toBe('Dîner');
+    expect(rows[4].ta?.title).toBe('Dîner TA');
+    // Cadre noté dont les branches ont glissé : rendu pour ne pas perdre l\u2019information.
+    expect(rows[5].common?.title).toBe('Veillée (cadre)');
+    expect(rows[6].ta?.startTime).toBe('20:30');
   });
 
   it('envoie la piste choisie à la création comme à l’édition', () => {

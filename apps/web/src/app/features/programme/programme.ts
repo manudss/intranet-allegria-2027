@@ -470,15 +470,19 @@ export class ProgrammePage {
       .filter((s) => s.eventDate === date)
       .filter((s) => this.matchesTrack(s));
     const byStart = (a: ProgramSequence, b: ProgramSequence) => a.startTime.localeCompare(b.startTime);
-    // Un temps commun qui sert de cadre à des créneaux de branche (anchorSequenceId vers lui,
-    // note « Temps séparé ») n'est pas un événement en soi : les lignes TA / ES le remplacent,
-    // sinon le même créneau serait rendu en double (commun + paire).
+    // Un temps commun qui sert de cadre à une scission TA / ES (note « Temps séparé »)
+    // n'est pas un événement en soi : les lignes TA / ES le remplacent, sinon le même
+    // créneau serait rendu en double (commun + paire). Détection par les données :
+    // ancrage de branche (tête) ou créneau de branche sur exactement le même horaire.
     const branchAnchorIds = new Set(
       sequences.map((s) => s.anchorSequenceId).filter((id): id is number => id !== null),
     );
+    const branchWindows = sequences
+      .filter((s) => s.track === ProgramSequenceTrack.TA || s.track === ProgramSequenceTrack.ES)
+      .map((s) => `${s.startTime}-${s.endTime}`);
     const commons = sequences
       .filter((s) => (s.track ?? ProgramSequenceTrack.COMMON) === ProgramSequenceTrack.COMMON)
-      .filter((s) => !branchAnchorIds.has(s.id))
+      .filter((s) => !branchAnchorIds.has(s.id) && !branchWindows.includes(`${s.startTime}-${s.endTime}`))
       .sort(byStart);
     const tas = sequences.filter((s) => s.track === ProgramSequenceTrack.TA).sort(byStart);
     const ess = sequences.filter((s) => s.track === ProgramSequenceTrack.ES).sort(byStart);

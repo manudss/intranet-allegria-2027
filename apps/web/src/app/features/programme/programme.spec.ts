@@ -330,13 +330,18 @@ describe('ProgrammePage', () => {
       seq(2, '09:00', 1, { title: 'Messe TA', track: ProgramSequenceTrack.TA, anchorSequenceId: 1 }),
       seq(3, '09:00', 2, { title: 'Messe ES', track: ProgramSequenceTrack.ES, anchorSequenceId: 1 }),
       seq(4, '12:00', 3, { title: 'Repas' }), // vrai temps commun, rendu
+      seq(5, '14:00', 4, { title: 'Jeu (cadre)' }), // cadre non ancré : détecté par horaires identiques
+      seq(6, '14:00', 5, { title: 'Jeu TA', track: ProgramSequenceTrack.TA }),
+      seq(7, '14:00', 6, { title: 'Jeu ES', track: ProgramSequenceTrack.ES }),
     ]);
 
     component.setDayLayout('tracks');
     const rows = component.trackRows();
-    expect(rows.map((r) => (r.common ? r.common.title : 'pair'))).toEqual(['pair', 'Repas']);
+    expect(rows.map((r) => (r.common ? r.common.title : 'pair'))).toEqual(['pair', 'Repas', 'pair']);
     expect(rows[0].ta?.title).toBe('Messe TA');
     expect(rows[0].es?.title).toBe('Messe ES');
+    expect(rows[2].ta?.title).toBe('Jeu TA');
+    expect(rows[2].es?.title).toBe('Jeu ES');
   });
 
   it('envoie la piste choisie à la création comme à l’édition', () => {

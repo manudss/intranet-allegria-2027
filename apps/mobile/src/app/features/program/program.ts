@@ -47,9 +47,9 @@ export class ProgramComponent {
 
   /** Logos de branche ; les temps communs portent les deux. */
   trackLogos(track: ProgramSequenceTrack): string[] {
-    if (track === ProgramSequenceTrack.TA) return ['/assets/ta.jpg'];
-    if (track === ProgramSequenceTrack.ES) return ['/assets/es.jpg'];
-    return ['/assets/ta.jpg', '/assets/es.jpg'];
+    if (track === ProgramSequenceTrack.TA) return ['/assets/branches/ta.jpg'];
+    if (track === ProgramSequenceTrack.ES) return ['/assets/branches/es.jpg'];
+    return ['/assets/branches/ta.jpg', '/assets/branches/es.jpg'];
   }
 
   setTrackFilter(value: 'ALL' | ProgramSequenceTrack) {

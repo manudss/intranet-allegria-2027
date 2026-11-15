@@ -530,6 +530,13 @@ export enum ProgramSequenceStatus {
   FROZEN = 'FROZEN',
 }
 
+/** Piste d'une séquence : branche TA / ES ou temps commun. */
+export enum ProgramSequenceTrack {
+  TA = 'TA',
+  ES = 'ES',
+  COMMON = 'COMMON',
+}
+
 export interface ProgramDocumentLink {
   label: string;
   url: string;
@@ -546,6 +553,7 @@ export interface ProgramSequence {
   /** Heure de fin calculée (HH:mm), dérivée de startTime + durationMinutes */
   endTime: string;
   status: ProgramSequenceStatus;
+  track: ProgramSequenceTrack;
   minDurationMinutes: number | null;
   minMarginMinutes: number | null;
   /** Prédécesseur dans la chaîne principale du lieu/jour ; null = tête de chaîne */
@@ -571,6 +579,7 @@ export interface ProgramDay {
 export interface ProgramSequenceDraft {
   title: string;
   durationMinutes: number;
+  track?: ProgramSequenceTrack;
   volunteerTeamId: number | null;
   notes: string | null;
   minDurationMinutes?: number | null;
@@ -627,6 +636,7 @@ export interface ProgramSequenceCreatePayload {
   title: string;
   startTime: string;
   durationMinutes: number;
+  track?: ProgramSequenceTrack;
   volunteerTeamId?: number | null;
   notes?: string | null;
   anchorSequenceId?: number | null;
@@ -641,6 +651,7 @@ export interface ProgramSequenceUpdatePayload {
   minMarginMinutes?: number | null;
   missionIds?: number[];
   documentLinks?: ProgramDocumentLink[];
+  track?: ProgramSequenceTrack;
 }
 
 export interface ProgramChangeLogEntry {

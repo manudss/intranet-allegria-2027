@@ -723,3 +723,49 @@ $header-height: 2.5rem;
   .pending-bar .pending-hint { display: none; }
   .pending-bar { padding: 0.5rem 0.75rem; font-size: 0.85rem; }
 }
+
+/* Pistes TA / ES / temps commun : la couleur de la bordure gauche existante est posée en ligne. */
+
+.track-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.track-logo {
+  inline-size: 1rem;
+  block-size: 1rem;
+  border-radius: 50%;
+  object-fit: cover;
+  vertical-align: -0.15rem;
+}
+
+.track-inline {
+  display: inline-flex;
+  gap: 0.15rem;
+  margin-left: 0.25rem;
+}
+
+.track-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin: 0 0.35rem;
+}
+
+.track-picker {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0;
+}
+
+.track-picker-label {
+  font-size: 0.8rem;
+  color: var(--tui-text-secondary);
+  margin-right: 0.25rem;
+}

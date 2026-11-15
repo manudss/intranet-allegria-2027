@@ -43,7 +43,7 @@
       @if (overviewLoading()) {
         <p class="empty-state">Chargement…</p>
       }
-      @for (day of overview(); track day.date) {
+      @for (day of filteredOverview(); track day.date) {
         <article class="overview-day">
           <h3>J{{ day.dayIndex + 1 }} · {{ day.date }}</h3>
           @if (!day.locations.length) {
@@ -64,6 +64,12 @@
                 @for (sequence of loc.sequences; track sequence.id) {
                   <li [class.frozen]="sequence.status === ProgramSequenceStatus.FROZEN">
                     <strong>{{ sequence.startTime }} – {{ sequence.endTime }}</strong>
+                    <span class="track-chip" [style.color]="trackColor(sequence.track)">
+                      @for (logo of trackLogos(sequence.track); track logo) {
+                        <img class="track-logo" [src]="logo" [alt]="trackLabel(sequence.track)" />
+                      }
+                      {{ trackLabel(sequence.track) }}
+                    </span>
                     {{ sequence.title }}
                     @if (sequence.status === ProgramSequenceStatus.FROZEN) {
                       <span tuiBadge appearance="warning">Figé</span>
@@ -91,7 +97,19 @@
         </button>
       }
     </div>
-
+    <div class="track-filters" role="group" aria-label="Filtrer par piste">
+      @for (option of trackFilters; track option.value) {
+        <button
+          tuiButton
+          type="button"
+          size="s"
+          [appearance]="trackFilter() === option.value ? 'primary' : 'secondary'"
+          (click)="setTrackFilter(option.value)"
+        >
+          {{ option.label }}
+        </button>
+      }
+    </div>
   </div>
 
   <div class="kpis">
@@ -220,6 +238,7 @@
                         [class.dragging]="!!block.sequence && dragState()?.sequenceId === block.sequence.id"
                         [style.top.px]="block.topPx"
                         [style.height.px]="liveHeight(block)"
+                        [style.border-left-color]="block.sequence ? trackColor(block.sequence.track) : null"
                         [style.transform]="block.sequence ? dragTransform(block.sequence) : null"
                         (pointerdown)="block.sequence && startDrag($event, block.sequence)"
                       >
@@ -235,7 +254,16 @@
                             <span class="state-tag state-frozen">Figé</span>
                           }
                         </header>
-                        <h3>{{ block.title }}</h3>
+                        <h3>
+                          {{ block.title }}
+                          @if (block.sequence; as sq) {
+                            <span class="track-inline" [title]="trackLabel(sq.track)">
+                              @for (logo of trackLogos(sq.track); track logo) {
+                                <img class="track-logo" [src]="logo" [alt]="trackLabel(sq.track)" />
+                              }
+                            </span>
+                          }
+                        </h3>
                         @if (block.sequence && canEdit() && !block.frozen) {
                           <span class="drag-grip" aria-label="Déplacer le créneau" role="img">⠿</span>
                           <div class="resize-handle" aria-hidden="true" (pointerdown)="startResize($event, block.sequence)"></div>
@@ -359,6 +387,21 @@
             Durée (minutes)
             <input type="number" min="1" [ngModel]="createDraft().durationMinutes" (ngModelChange)="updateCreateDraft({ durationMinutes: +$event })" />
           </label>
+
+          <div class="track-picker" role="group" aria-label="Piste">
+            <span class="track-picker-label">Piste</span>
+            @for (option of trackOptions; track option.value) {
+              <button
+                tuiButton
+                type="button"
+                size="xs"
+                [appearance]="createDraft().track === option.value ? 'primary' : 'secondary'"
+                (click)="updateCreateDraft({ track: option.value })"
+              >
+                {{ option.label }}
+              </button>
+            }
+          </div>
           <button tuiButton appearance="primary" type="button" (click)="submitCreate()">Créer</button>
           <button tuiButton appearance="secondary" type="button" (click)="cancelPreview()">Annuler</button>
         </div>
@@ -386,6 +429,21 @@
             Titre
             <input type="text" maxlength="200" [ngModel]="editDraft().title" (ngModelChange)="updateEditDraft({ title: $event })" />
           </label>
+
+          <div class="track-picker" role="group" aria-label="Piste">
+            <span class="track-picker-label">Piste</span>
+            @for (option of trackOptions; track option.value) {
+              <button
+                tuiButton
+                type="button"
+                size="xs"
+                [appearance]="editDraft().track === option.value ? 'primary' : 'secondary'"
+                (click)="updateEditDraft({ track: option.value })"
+              >
+                {{ option.label }}
+              </button>
+            }
+          </div>
           <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyTeam">
             <label tuiLabel for="programme-equipe">Équipe responsable</label>
             <input
@@ -448,6 +506,21 @@
               (ngModelChange)="updateInsertDraft({ durationMinutes: +$event })"
             />
           </label>
+
+          <div class="track-picker" role="group" aria-label="Piste">
+            <span class="track-picker-label">Piste</span>
+            @for (option of trackOptions; track option.value) {
+              <button
+                tuiButton
+                type="button"
+                size="xs"
+                [appearance]="insertDraft().track === option.value ? 'primary' : 'secondary'"
+                (click)="updateInsertDraft({ track: option.value })"
+              >
+                {{ option.label }}
+              </button>
+            }
+          </div>
           <label>
             Notes
             <textarea [ngModel]="insertDraft().notes" (ngModelChange)="updateInsertDraft({ notes: $event })"></textarea>

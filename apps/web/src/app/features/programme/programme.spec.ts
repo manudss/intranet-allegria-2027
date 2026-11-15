@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { AuthService } from '../../core/auth.service';
-import { ProgramInsertPreview, ProgramSequence, ProgramSequenceStatus } from '../../models/models';
+import { ProgramInsertPreview, ProgramSequence, ProgramSequenceStatus, ProgramSequenceTrack } from '../../models/models';
 import { ProgrammePage } from './programme';
 import { PROGRAM_EVENT_DAYS } from './schedule-chain.util';
 
@@ -24,6 +24,7 @@ function seq(
     durationMinutes: 60,
     endTime: '00:00',
     status: ProgramSequenceStatus.MOBILE,
+    track: ProgramSequenceTrack.COMMON,
     minDurationMinutes: 30,
     minMarginMinutes: null,
     previousSequenceId,
@@ -275,6 +276,51 @@ describe('ProgrammePage', () => {
     req.flush(seq(9, '09:00', null, { location: 'Salle C' }));
     flushDay([seq(9, '09:00', null, { location: 'Salle C' })]);
     expect(component.location()).toBe('Salle C');
+    http.verify();
+  });
+
+  it('filtre les créneaux par piste dans le calendrier, sans toucher aux données', () => {
+    const { component, flushDay } = setup(['VIEWER']);
+    flushDay([
+      seq(1, '08:00', null, { track: ProgramSequenceTrack.TA }),
+      seq(2, '09:00', 1, { track: ProgramSequenceTrack.ES }),
+      seq(3, '10:00', 2),
+    ]);
+
+    expect(component.columns()[0].blocks).toHaveLength(3);
+    component.setTrackFilter(ProgramSequenceTrack.TA);
+    expect(component.columns()[0].blocks.map((b) => b.sequence?.id)).toEqual([1]);
+    component.setTrackFilter(ProgramSequenceTrack.ES);
+    expect(component.columns()[0].blocks.map((b) => b.sequence?.id)).toEqual([2]);
+    component.setTrackFilter(ProgramSequenceTrack.COMMON);
+    expect(component.columns()[0].blocks.map((b) => b.sequence?.id)).toEqual([3]);
+    component.setTrackFilter('ALL');
+    expect(component.columns()[0].blocks).toHaveLength(3);
+  });
+
+  it('envoie la piste choisie à la création comme à l’édition', () => {
+    const { component, http, flushDay } = setup(['COORDINATOR']);
+    flushDay();
+
+    component.openCreateForm();
+    component.updateCreateDraft({ title: 'Atelier', location: 'Salle C', track: ProgramSequenceTrack.TA });
+    component.submitCreate();
+    const createReq = http.expectOne('/api/program/sequences');
+    expect(createReq.request.body).toMatchObject({ track: ProgramSequenceTrack.TA });
+    createReq.flush(seq(9, '09:00', null, { location: 'Salle C', track: ProgramSequenceTrack.TA }));
+    flushDay();
+
+    component.openEditForm(component.chain()[0]);
+    expect(component.editDraft().track).toBe(ProgramSequenceTrack.COMMON);
+    component.updateEditDraft({ track: ProgramSequenceTrack.ES });
+    // Équipe et missions chargées en parallèle de l'ouverture.
+    http.expectOne('/api/volunteer-teams').flush([]);
+    http.expectOne('/api/volunteer-missions').flush([]);
+    component.submitEdit();
+    const editReq = http.expectOne('/api/program/sequences/1');
+    expect(editReq.request.body).toMatchObject({ track: ProgramSequenceTrack.ES });
+    editReq.flush(seq(1, '08:00', null, { track: ProgramSequenceTrack.ES }));
+    flushDay();
     http.verify();
   });
 

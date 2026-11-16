@@ -1,4 +1,4 @@
-import type {ExpectedGroupsPage} from './features/access-reporting/expected-groups.page';
+import type { ExpectedGroupsPage } from './features/access-reporting/expected-groups.page';
 import { Route } from '@angular/router';
 import { authGuard } from './core/auth.guard';
 import { roleGuard } from './core/role.guard';
@@ -112,7 +112,14 @@ export const appRoutes: Route[] = [
             (m) => m.VolunteerAuditLogsPage,
           ),
       },
-      {path:'acces/impression',title:'Badges et impression',canActivate:[roleGuard],data:{roles:['ADMIN','BADGE_MANAGER']},loadComponent:()=>import('./features/access-control/badge-print.page').then(m=>m.BadgePrintPage)},
+      {
+        path: 'acces/impression',
+        title: 'Badges et impression',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
+        loadComponent: () =>
+          import('./features/access-control/badge-print.page').then((m) => m.BadgePrintPage),
+      },
       {
         path: 'acces/badges',
         title: 'Stock badges',
@@ -139,7 +146,7 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'acces/configuration',
-        title: "Configuration acces",
+        title: 'Configuration acces',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
         loadComponent: () =>
@@ -147,7 +154,7 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'acces/journal',
-        title: "Journal acces",
+        title: 'Journal acces',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
         loadComponent: () =>
@@ -182,6 +189,10 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'programme',
+        canDeactivate: [
+          (component: { canDeactivate: () => boolean | Promise<boolean> }) =>
+            component.canDeactivate(),
+        ],
         title: 'Planning & Ordonnancement',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'LOGISTICS', 'VIEWER'] },
@@ -204,19 +215,80 @@ export const appRoutes: Route[] = [
         data: { roles: ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'LOGISTICS', 'VIEWER'] },
         loadComponent: () => import('./pages/jour-j').then((m) => m.JourJ),
       },
-      {path:'acces/groupes',title:'Groupes attendus',canActivate:[roleGuard],canDeactivate:[(component:ExpectedGroupsPage)=>component.canDeactivate()],data:{roles:['ADMIN','BADGE_MANAGER']},loadComponent:()=>import('./features/access-reporting/expected-groups.page').then(m=>m.ExpectedGroupsPage)},
-      {path:'acces/historique-groupe',title:'Historique groupe',canActivate:[roleGuard],data:{roles:['ADMIN','BADGE_MANAGER']},loadComponent:()=>import('./features/access-reporting/group-history.page').then(m=>m.GroupHistoryPage)},
-      {path:'acces/historique-personne',title:'Historique personne',canActivate:[roleGuard],data:{roles:['ADMIN','BADGE_MANAGER']},loadComponent:()=>import('./features/access-reporting/person-history.page').then(m=>m.PersonHistoryPage)},
-      {path:'acces/dashboard',title:'Dashboard des accès',canActivate:[roleGuard],data:{roles:['ADMIN','BADGE_MANAGER']},loadComponent:()=>import('./features/access-reporting/detail-report.page').then(m=>m.DetailReportPage)},
-      {path:'acces/scannes',title:'Scannés par lieu',canActivate:[roleGuard],data:{roles:['ADMIN','BADGE_MANAGER'],mode:'place'},loadComponent:()=>import('./features/access-reporting/detail-report.page').then(m=>m.DetailReportPage)},
-      {path:'acces/non-scannes',title:'Non scannés · groupes attendus',canActivate:[roleGuard],data:{roles:['ADMIN','BADGE_MANAGER'],mode:'missing'},loadComponent:()=>import('./features/access-reporting/expected-report.page').then(m=>m.ExpectedReportPage)},
-      {path:'acces/groupes-exceptions',title:'Groupes attendus · exceptions',canActivate:[roleGuard],data:{roles:['ADMIN','BADGE_MANAGER'],mode:'groups'},loadComponent:()=>import('./features/access-reporting/expected-report.page').then(m=>m.ExpectedReportPage)},
+      {
+        path: 'acces/groupes',
+        title: 'Groupes attendus',
+        canActivate: [roleGuard],
+        canDeactivate: [(component: ExpectedGroupsPage) => component.canDeactivate()],
+        data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
+        loadComponent: () =>
+          import('./features/access-reporting/expected-groups.page').then(
+            (m) => m.ExpectedGroupsPage,
+          ),
+      },
+      {
+        path: 'acces/historique-groupe',
+        title: 'Historique groupe',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
+        loadComponent: () =>
+          import('./features/access-reporting/group-history.page').then((m) => m.GroupHistoryPage),
+      },
+      {
+        path: 'acces/historique-personne',
+        title: 'Historique personne',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
+        loadComponent: () =>
+          import('./features/access-reporting/person-history.page').then(
+            (m) => m.PersonHistoryPage,
+          ),
+      },
+      {
+        path: 'acces/dashboard',
+        title: 'Dashboard des accès',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
+        loadComponent: () =>
+          import('./features/access-reporting/detail-report.page').then((m) => m.DetailReportPage),
+      },
+      {
+        path: 'acces/scannes',
+        title: 'Scannés par lieu',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'BADGE_MANAGER'], mode: 'place' },
+        loadComponent: () =>
+          import('./features/access-reporting/detail-report.page').then((m) => m.DetailReportPage),
+      },
+      {
+        path: 'acces/non-scannes',
+        title: 'Non scannés · groupes attendus',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'BADGE_MANAGER'], mode: 'missing' },
+        loadComponent: () =>
+          import('./features/access-reporting/expected-report.page').then(
+            (m) => m.ExpectedReportPage,
+          ),
+      },
+      {
+        path: 'acces/groupes-exceptions',
+        title: 'Groupes attendus · exceptions',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'BADGE_MANAGER'], mode: 'groups' },
+        loadComponent: () =>
+          import('./features/access-reporting/expected-report.page').then(
+            (m) => m.ExpectedReportPage,
+          ),
+      },
       {
         path: 'acces/suivi',
         title: 'Suivi des accès',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
-        loadComponent: () => import('./features/access-reporting/access-reporting.page').then(m => m.AccessReportingPage),
+        loadComponent: () =>
+          import('./features/access-reporting/access-reporting.page').then(
+            (m) => m.AccessReportingPage,
+          ),
       },
       {
         path: 'suivi-operationnel',

@@ -1,3 +1,4 @@
+import { ProgramMissionTimingService } from './program-mission-timing.service';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
@@ -25,7 +26,7 @@ import { ProgramService } from './program.service';
     AuthModule,
   ],
   controllers: [ProgramController, PublicProgramController],
-  providers: [ProgramService, ProgramRecalcService],
+  providers: [ProgramService, ProgramRecalcService, ProgramMissionTimingService],
   exports: [ProgramRecalcService],
 })
 export class ProgramModule {}

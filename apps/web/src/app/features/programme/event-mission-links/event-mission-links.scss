@@ -1,0 +1,111 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.section-heading,
+.mission-actions,
+.buttons {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.section-heading h3 {
+  margin: 0;
+}
+small,
+.hint {
+  color: var(--tui-text-secondary);
+  font-size: 0.8rem;
+}
+.hint {
+  line-height: 1.6;
+}
+.phase {
+  margin: 1rem 0;
+}
+.phase h4 {
+  margin: 0.6rem 0;
+}
+.phase h4 small {
+  font-weight: normal;
+  margin-left: 0.5rem;
+}
+.mission,
+.link-form {
+  border: 1px solid var(--tui-border-normal);
+  border-radius: 0.75rem;
+  padding: 0.85rem;
+  margin: 0.6rem 0;
+  background: var(--tui-background-base);
+}
+.mission > small {
+  display: block;
+  margin: 0.35rem 0;
+}
+.mission-actions {
+  justify-content: flex-start;
+}
+.mission-actions label {
+  min-width: 7rem;
+}
+.link-form {
+  display: grid;
+  gap: 0.8rem;
+  background: var(--tui-background-neutral-1);
+}
+label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+}
+select {
+  background: var(--tui-background-base);
+  color: var(--tui-text-primary);
+  border: 1px solid var(--tui-border-normal);
+  border-radius: 0.5rem;
+  min-height: 44px;
+  padding: 0.6rem;
+  width: 100%;
+  max-width: 100%;
+  font: inherit;
+}
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+  align-items: end;
+}
+.error {
+  color: var(--tui-text-negative);
+  white-space: pre-wrap;
+}
+.binding-preview {
+  border: 1px solid var(--tui-border-normal);
+  padding: 1rem;
+  border-radius: 0.5rem;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.check input {
+  width: 20px;
+  height: 20px;
+}
+button {
+  max-width: 100%;
+}
+@media (max-width: 500px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .mission-actions button {
+    flex: 1;
+  }
+  .section-heading button {
+    font-size: 0.8rem;
+  }
+}

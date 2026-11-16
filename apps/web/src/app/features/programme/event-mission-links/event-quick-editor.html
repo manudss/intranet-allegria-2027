@@ -1,0 +1,263 @@
+<section class="editor" aria-label="Retouche événement">
+  <header>
+    <div class="heading">
+      <h2>Modifier l'événement</h2>
+      <button
+        tuiButton
+        appearance="flat"
+        size="s"
+        type="button"
+        aria-label="Fermer"
+        [disabled]="busy()"
+        (click)="requestExit('close')"
+      >
+        ×
+      </button>
+    </div>
+    <div class="heading">
+      <small>{{ event().title }}</small
+      ><button
+        tuiButton
+        appearance="flat"
+        size="s"
+        type="button"
+        [disabled]="busy()"
+        (click)="requestExit('fiche')"
+      >
+        Ouvrir la fiche complète ↗
+      </button>
+    </div>
+  </header>
+  <div class="editor-body">
+    @if(error()){
+    <p class="error" role="alert">{{ error() }}</p>
+    } @if(confirmExit(); as destination){
+    <section class="exit-check" role="alert">
+      <p>
+        Des retouches ne sont pas enregistrées. Quitter les abandonne ; les liens déjà enregistrés
+        sont conservés.
+      </p>
+      <button tuiButton appearance="secondary" size="s" type="button" (click)="stay()">
+        Continuer la retouche</button
+      ><button tuiButton appearance="flat" size="s" type="button" (click)="exit(destination)">
+        Abandonner et quitter
+      </button>
+    </section>
+    }
+    <tui-textfield [tuiTextfieldCleaner]="false"
+      ><label tuiLabel for="event-quick-editor-1">Titre</label
+      ><input
+        id="event-quick-editor-1"
+        tuiInput
+        maxlength="200"
+        [ngModel]="title()"
+        (ngModelChange)="title.set($event)"
+    /></tui-textfield>
+    <div class="grid">
+      <tui-textfield [tuiTextfieldCleaner]="false"
+        ><label tuiLabel for="event-quick-editor-2">Début</label
+        ><input
+          id="event-quick-editor-2"
+          tuiInput
+          type="time"
+          [disabled]="busy() || event().status === 'FROZEN'"
+          [ngModel]="start()"
+          (ngModelChange)="start.set($event);preview.set(null)"
+      /></tui-textfield>
+      <tui-textfield [tuiTextfieldCleaner]="false"
+        ><label tuiLabel for="event-quick-editor-3">Fin</label
+        ><input
+          id="event-quick-editor-3"
+          tuiInput
+          type="time"
+          [disabled]="busy() || event().status === 'FROZEN'"
+          [ngModel]="end()"
+          (ngModelChange)="end.set($event);preview.set(null)"
+      /></tui-textfield>
+    </div>
+    <p class="hint">
+      Début ou fin : un changement à la fois. Le premier créneau garde son début. Horaires à
+      confirmer séparément.
+    </p>
+    <button
+      tuiButton
+      appearance="secondary"
+      size="s"
+      type="button"
+      [disabled]="busy() || event().status === 'FROZEN'"
+      (click)="previewTime()"
+    >
+      Prévisualiser l'ensemble des horaires
+    </button>
+    @if(preview(); as p){
+    <section class="time-preview">
+      <h3>Aperçu avant application</h3>
+      <p>{{ p.message }}</p>
+      @for(d of p.affected;track d.sequenceId){
+      <p>
+        <strong>{{ d.title }}</strong><br />Avant : {{ d.before.startTime }}–{{ d.before.endTime
+        }}<br />Après : {{ d.after.startTime }}–{{ d.after.endTime }}
+      </p>
+      }<app-shift-changes [changes]="p.shiftChanges ?? []" /><button
+        tuiButton
+        appearance="primary"
+        size="s"
+        type="button"
+        [disabled]="busy() || p.outcome !== 'ok'"
+        (click)="applyTime()"
+      >
+        Confirmer les horaires
+      </button>
+    </section>
+    }
+    <div class="grid">
+      <app-event-choice
+        label="Piste"
+        [choices]="trackChoices"
+        [value]="track()"
+        (valueChange)="track.set($event)"
+      /><app-event-choice
+        label="Visibilité"
+        [choices]="visibilityChoices"
+        [value]="visibility()"
+        (valueChange)="visibility.set($event)"
+      />
+    </div>
+    <tui-textfield [tuiTextfieldCleaner]="false"
+      ><label tuiLabel for="event-quick-editor-4">Lieu (chaîne existante)</label
+      ><input id="event-quick-editor-4" tuiInput [ngModel]="event().location" [readOnly]="true"
+    /></tui-textfield>
+    <app-event-choice
+      label="Équipe responsable"
+      [choices]="teamChoices()"
+      [value]="teamId()"
+      (valueChange)="teamId.set($event)"
+    />
+    <tui-textfield [tuiTextfieldCleaner]="false"
+      ><label tuiLabel for="event-quick-editor-5">Notes pour les bénévoles</label
+      ><textarea
+        id="event-quick-editor-5"
+        tuiTextarea
+        [ngModel]="notes()"
+        (ngModelChange)="notes.set($event)"
+      ></textarea>
+    </tui-textfield>
+    <app-event-mission-links [sequenceId]="event().id" [editable]="true" (changed)="saved.emit()" />
+    <section>
+      <h3>Groupes de rassemblement concernés</h3>
+      <p class="hint">Les liens de groupes sont enregistrés immédiatement.</p>
+      <div class="tags">
+        @for(id of sequence()?.groupIds ?? [];track id){<button
+          tuiButton
+          appearance="secondary"
+          size="s"
+          type="button"
+          [disabled]="busy()"
+          (click)="unlinkGroup(id)"
+          [attr.aria-label]="'Retirer le lien avec '+groupNameFor(id)"
+        >
+          {{ groupNameFor(id) }} ×</button
+        >}
+      </div>
+      <app-event-choice
+        label="Groupe existant à lier"
+        [choices]="groupChoices()"
+        [value]="groupId()"
+        (valueChange)="groupId.set($event)"
+      />
+      <div class="buttons">
+        <button
+          tuiButton
+          appearance="secondary"
+          size="s"
+          type="button"
+          [disabled]="busy() || !groupId()"
+          (click)="linkGroup()"
+        >
+          Lier le groupe</button
+        ><button
+          tuiButton
+          appearance="flat"
+          size="s"
+          type="button"
+          (click)="newGroupOpen.set(!newGroupOpen())"
+        >
+          Créer un groupe
+        </button>
+      </div>
+      @if(newGroupOpen()){<tui-textfield [tuiTextfieldCleaner]="false"
+        ><label tuiLabel for="event-quick-editor-6">Nom du groupe</label
+        ><input
+          id="event-quick-editor-6"
+          tuiInput
+          [ngModel]="groupName()"
+          (ngModelChange)="groupName.set($event)" /></tui-textfield
+      ><tui-textfield [tuiTextfieldCleaner]="false"
+        ><label tuiLabel for="event-quick-editor-7">Diocèse (facultatif)</label
+        ><input
+          id="event-quick-editor-7"
+          tuiInput
+          [ngModel]="diocese()"
+          (ngModelChange)="diocese.set($event)" /></tui-textfield
+      ><button
+        tuiButton
+        appearance="secondary"
+        size="s"
+        type="button"
+        [disabled]="busy() || !groupName().trim()"
+        (click)="createGroup()"
+      >
+        Créer et lier</button
+      >}
+    </section>
+    <section>
+      <h3>Documents liés</h3>
+      @for(doc of documents();track $index;let i=$index){
+      <div class="document">
+        <tui-textfield [tuiTextfieldCleaner]="false"
+          ><label tuiLabel for="event-quick-editor-8">Libellé</label
+          ><input
+            id="event-quick-editor-8"
+            tuiInput
+            [ngModel]="doc.label"
+            (ngModelChange)="updateDocument(i,'label',$event)" /></tui-textfield
+        ><tui-textfield [tuiTextfieldCleaner]="false"
+          ><label tuiLabel for="event-quick-editor-9">URL http(s)</label
+          ><input
+            id="event-quick-editor-9"
+            tuiInput
+            type="url"
+            [ngModel]="doc.url"
+            (ngModelChange)="updateDocument(i,'url',$event)" /></tui-textfield
+        ><button tuiButton appearance="flat" size="s" type="button" (click)="removeDocument(i)">
+          Retirer ce lien
+        </button>
+      </div>
+      }<button tuiButton appearance="flat" size="s" type="button" (click)="addDocument()">
+        Ajouter un lien
+      </button>
+    </section>
+    <p class="hint">
+      Tâches et historique : dans la fiche complète. Aucun téléversement de document.
+    </p>
+  </div>
+  <footer>
+    <button
+      tuiButton
+      appearance="primary"
+      type="button"
+      [disabled]="busy() || !title().trim()"
+      (click)="save()"
+    >
+      Enregistrer les retouches</button
+    ><button
+      tuiButton
+      appearance="secondary"
+      type="button"
+      [disabled]="busy()"
+      (click)="requestExit('close')"
+    >
+      Annuler
+    </button>
+  </footer>
+</section>

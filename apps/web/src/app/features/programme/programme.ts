@@ -1,5 +1,7 @@
+import { EventQuickEditorComponent } from './event-mission-links/event-quick-editor';
+import { ShiftChangesComponent } from './event-mission-links/shift-changes';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, ParamMap, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { TuiDataListWrapper } from '@taiga-ui/kit';
@@ -18,7 +20,11 @@ import {
   VolunteerMission,
   VolunteerTeam,
 } from '../../models/models';
-import { ProgramApiService, VolunteerMissionsApiService, VolunteerTeamsApiService } from '../../services/api.services';
+import {
+  ProgramApiService,
+  VolunteerMissionsApiService,
+  VolunteerTeamsApiService,
+} from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { buildChain, PROGRAM_EVENT_DAYS } from './schedule-chain.util';
 import { minutesToTime, timeToMinutes } from './schedule-time.util';
@@ -169,7 +175,13 @@ interface OverviewDay {
 @Component({
   selector: 'app-programme',
   standalone: true,
-  imports: [...SHARED_IMPORTS, TuiDataListWrapper, RouterLink],
+  imports: [
+    EventQuickEditorComponent,
+    ShiftChangesComponent,
+    ...SHARED_IMPORTS,
+    TuiDataListWrapper,
+    RouterLink,
+  ],
   templateUrl: './programme.html',
   styleUrl: './programme.scss',
 })
@@ -276,7 +288,10 @@ export class ProgrammePage {
   readonly previewDiffs = computed<ProgramSequenceDiff[]>(() => {
     const current = this.preview();
     if (!current) return [];
-    if (current.kind !== 'resize' || current.affected.some((d) => d.sequenceId === current.sequenceId)) {
+    if (
+      current.kind !== 'resize' ||
+      current.affected.some((d) => d.sequenceId === current.sequenceId)
+    ) {
       return current.affected;
     }
     const target = this.allSequences().find((s) => s.id === current.sequenceId);
@@ -285,7 +300,11 @@ export class ProgrammePage {
     const targetDiff: ProgramSequenceDiff = {
       sequenceId: target.id,
       title: target.title,
-      before: { startTime: target.startTime, endTime: target.endTime, durationMinutes: target.durationMinutes },
+      before: {
+        startTime: target.startTime,
+        endTime: target.endTime,
+        durationMinutes: target.durationMinutes,
+      },
       after: { startTime: target.startTime, endTime, durationMinutes: current.newDurationMinutes },
     };
     return [targetDiff, ...current.affected];
@@ -313,7 +332,10 @@ export class ProgrammePage {
     if (!starts.length) return { start: 8 * 60, end: 20 * 60 };
     return {
       start: Math.floor(Math.min(...starts) / 60) * 60,
-      end: Math.max(Math.ceil(Math.max(...ends) / 60) * 60, Math.floor(Math.min(...starts) / 60) * 60 + 60),
+      end: Math.max(
+        Math.ceil(Math.max(...ends) / 60) * 60,
+        Math.floor(Math.min(...starts) / 60) * 60 + 60,
+      ),
     };
   });
 
@@ -368,35 +390,36 @@ export class ProgrammePage {
       const blocks: BlockView[] = buildChain(sequences, date, name)
         .filter((sequence) => this.matchesTrack(sequence))
         .map((sequence) => {
-        const after = projected.get(sequence.id);
-        const startTime = after?.startTime ?? sequence.startTime;
-        const endTime = after?.endTime ?? sequence.endTime;
-        const duration = after?.durationMinutes ?? sequence.durationMinutes;
-        const changed =
-          !!after &&
-          (after.startTime !== sequence.startTime || after.durationMinutes !== sequence.durationMinutes);
-        const topPx = (timeToMinutes(startTime) - start) * px;
-        return {
-          key: `s${sequence.id}`,
-          sequence,
-          title: sequence.title,
-          startTime,
-          endTime,
-          topPx,
-          heightPx: Math.max(duration * px, MIN_BLOCK_HEIGHT_PX),
-          change: changed ? (blocked ? 'blocked' : 'changed') : 'none',
-          ghost: changed
-            ? {
-                topPx: (timeToMinutes(sequence.startTime) - start) * px,
-                heightPx: Math.max(sequence.durationMinutes * px, MIN_BLOCK_HEIGHT_PX),
-                label: `${sequence.startTime} – ${minutesToTime(timeToMinutes(sequence.startTime) + sequence.durationMinutes)}`,
-              }
-            : null,
-          justChanged: recent.has(sequence.id),
-          frozen: sequence.status === ProgramSequenceStatus.FROZEN,
-          category: this.categoryIndex(sequence),
-        } satisfies BlockView;
-      });
+          const after = projected.get(sequence.id);
+          const startTime = after?.startTime ?? sequence.startTime;
+          const endTime = after?.endTime ?? sequence.endTime;
+          const duration = after?.durationMinutes ?? sequence.durationMinutes;
+          const changed =
+            !!after &&
+            (after.startTime !== sequence.startTime ||
+              after.durationMinutes !== sequence.durationMinutes);
+          const topPx = (timeToMinutes(startTime) - start) * px;
+          return {
+            key: `s${sequence.id}`,
+            sequence,
+            title: sequence.title,
+            startTime,
+            endTime,
+            topPx,
+            heightPx: Math.max(duration * px, MIN_BLOCK_HEIGHT_PX),
+            change: changed ? (blocked ? 'blocked' : 'changed') : 'none',
+            ghost: changed
+              ? {
+                  topPx: (timeToMinutes(sequence.startTime) - start) * px,
+                  heightPx: Math.max(sequence.durationMinutes * px, MIN_BLOCK_HEIGHT_PX),
+                  label: `${sequence.startTime} – ${minutesToTime(timeToMinutes(sequence.startTime) + sequence.durationMinutes)}`,
+                }
+              : null,
+            justChanged: recent.has(sequence.id),
+            frozen: sequence.status === ProgramSequenceStatus.FROZEN,
+            category: this.categoryIndex(sequence),
+          } satisfies BlockView;
+        });
 
       if (current?.kind === 'insert' && current.newSequence.location === name) {
         const created = current.newSequence;
@@ -487,7 +510,8 @@ export class ProgrammePage {
     const sequences = this.allSequences()
       .filter((s) => s.eventDate === date)
       .filter((s) => this.matchesTrack(s));
-    const byStart = (a: ProgramSequence, b: ProgramSequence) => a.startTime.localeCompare(b.startTime);
+    const byStart = (a: ProgramSequence, b: ProgramSequence) =>
+      a.startTime.localeCompare(b.startTime);
     // Cadre de scission : temps commun portant la note explicite « Temps séparé » (seed)
     // ET repris par des créneaux de branche (ancrage, ou fenêtre horaire exactement égale).
     // Seuls ces cadres-là ne sont pas rendus en plus de la paire TA / ES : un vrai temps
@@ -508,7 +532,12 @@ export class ProgrammePage {
     const tas = sequences.filter((s) => s.track === ProgramSequenceTrack.TA).sort(byStart);
     const ess = sequences.filter((s) => s.track === ProgramSequenceTrack.ES).sort(byStart);
 
-    const rows: TrackRow[] = commons.map((common) => ({ key: `c${common.id}`, common, ta: null, es: null }));
+    const rows: TrackRow[] = commons.map((common) => ({
+      key: `c${common.id}`,
+      common,
+      ta: null,
+      es: null,
+    }));
     const pairedEs = new Set<number>();
     for (const ta of tas) {
       const match = ess.find(
@@ -557,6 +586,14 @@ export class ProgrammePage {
     );
   });
 
+  readonly editingSequence = signal<ProgramSequence | null>(null);
+  readonly quickEditor = viewChild(EventQuickEditorComponent);
+  canDeactivate() {
+    return this.quickEditor()?.confirmNavigation() ?? true;
+  }
+  refreshAfterQuickEdit() {
+    this.loadDay();
+  }
   readonly editSequenceId = signal<number | null>(null);
   readonly editDraft = signal<EditDraft>({
     title: '',
@@ -609,7 +646,8 @@ export class ProgrammePage {
   /** Hauteur (px) d'un bloc pendant un redimensionnement à la souris (retour visuel immédiat). */
   liveHeight(block: BlockView): number {
     const resize = this.resizeDragState();
-    const delta = block.sequence && resize?.sequenceId === block.sequence.id ? resize.deltaMinutes : 0;
+    const delta =
+      block.sequence && resize?.sequenceId === block.sequence.id ? resize.deltaMinutes : 0;
     return Math.max(block.heightPx + delta * this.pxPerMinute, MIN_BLOCK_HEIGHT_PX);
   }
 
@@ -661,7 +699,10 @@ export class ProgrammePage {
   onDragMove(event: PointerEvent): void {
     const resize = this.resizeDragState();
     if (resize) {
-      this.resizeDragState.set({ ...resize, deltaMinutes: this.snappedDelta(event, resize.startClientY) });
+      this.resizeDragState.set({
+        ...resize,
+        deltaMinutes: this.snappedDelta(event, resize.startClientY),
+      });
       return;
     }
     const state = this.dragState();
@@ -733,6 +774,7 @@ export class ProgrammePage {
 
   openInsertForm(afterSequenceId: number): void {
     this.editSequenceId.set(null);
+    this.editingSequence.set(null);
     this.createOpen.set(false);
     this.resizeSequenceId.set(null);
     this.insertAfterId.set(afterSequenceId);
@@ -756,6 +798,7 @@ export class ProgrammePage {
 
   openResizeForm(sequence: ProgramSequence): void {
     this.editSequenceId.set(null);
+    this.editingSequence.set(null);
     this.createOpen.set(false);
     this.insertAfterId.set(null);
     this.resizeSequenceId.set(sequence.id);
@@ -775,10 +818,17 @@ export class ProgrammePage {
   }
 
   /** Horaires affichés dans « Détails et actions » : avant/après quand un aperçu est en cours. */
-  detailTimes(sequence: ProgramSequence): { before: string; after: string | null; blocked: boolean } {
+  detailTimes(sequence: ProgramSequence): {
+    before: string;
+    after: string | null;
+    blocked: boolean;
+  } {
     const before = `${sequence.startTime} - ${sequence.endTime}`;
     const after = this.projectedTimes().get(sequence.id);
-    if (!after || (after.startTime === sequence.startTime && after.durationMinutes === sequence.durationMinutes)) {
+    if (
+      !after ||
+      (after.startTime === sequence.startTime && after.durationMinutes === sequence.durationMinutes)
+    ) {
       return { before, after: null, blocked: false };
     }
     return {
@@ -804,7 +854,8 @@ export class ProgrammePage {
           diff.before.durationMinutes !== diff.after.durationMinutes,
       )
       .map((diff) => diff.sequenceId);
-    if (current.kind === 'resize' && !touched.includes(current.sequenceId)) touched.push(current.sequenceId);
+    if (current.kind === 'resize' && !touched.includes(current.sequenceId))
+      touched.push(current.sequenceId);
     const count = this.pendingChangeCount();
 
     request.subscribe({
@@ -917,6 +968,7 @@ export class ProgrammePage {
       documentLinks: sequence.documentLinks.map((link) => ({ ...link })),
     });
     this.editSequenceId.set(sequence.id);
+    this.editingSequence.set(sequence);
     this.revealPanel();
   }
 
@@ -1117,13 +1169,20 @@ export class ProgrammePage {
 
   private revealPanel(): void {
     if (typeof window === 'undefined' || !window.matchMedia?.('(max-width: 960px)').matches) return;
-    setTimeout(() => document.querySelector('.pending-bar, .preview-panel')?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' }), 0);
+    setTimeout(
+      () =>
+        document
+          .querySelector('.pending-bar, .preview-panel')
+          ?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' }),
+      0,
+    );
   }
 
   private closeForms(): void {
     this.insertAfterId.set(null);
     this.resizeSequenceId.set(null);
     this.editSequenceId.set(null);
+    this.editingSequence.set(null);
     this.createOpen.set(false);
     this.deleteTargetId.set(null);
     this.preview.set(null);

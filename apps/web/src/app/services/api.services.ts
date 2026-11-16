@@ -1,3 +1,9 @@
+import {
+  EventMissionTiming,
+  EventMissionPhase,
+  EventShiftBindingDraft,
+  EventBindingPreview,
+} from '../models/models';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
@@ -447,31 +453,37 @@ export class TeamBenevolesApiService {
   repartitionFilters(): Observable<RepartitionFilters> {
     return this.http.get<RepartitionFilters>('/api/benevoles/repartition/filters');
   }
-  repartitionTeams(query: {
-    search?: string;
-    hostingGroupId?: number | null;
-    groupId?: number | null;
-    fill?: 'all' | 'free' | 'full';
-  } = {}): Observable<RepartitionTeamRow[]> {
+  repartitionTeams(
+    query: {
+      search?: string;
+      hostingGroupId?: number | null;
+      groupId?: number | null;
+      fill?: 'all' | 'free' | 'full';
+    } = {},
+  ): Observable<RepartitionTeamRow[]> {
     return this.http.get<RepartitionTeamRow[]>('/api/benevoles/repartition/teams', {
       params: repartitionParams(query),
     });
   }
-  repartitionVolunteers(query: {
-    search?: string;
-    skill?: string;
-    tag?: string;
-    poleId?: number | null;
-    assignment?: 'all' | 'unassigned' | 'assigned';
-    limit?: number;
-    offset?: number;
-  } = {}): Observable<RepartitionVolunteersResult> {
+  repartitionVolunteers(
+    query: {
+      search?: string;
+      skill?: string;
+      tag?: string;
+      poleId?: number | null;
+      assignment?: 'all' | 'unassigned' | 'assigned';
+      limit?: number;
+      offset?: number;
+    } = {},
+  ): Observable<RepartitionVolunteersResult> {
     return this.http.get<RepartitionVolunteersResult>('/api/benevoles/repartition/volunteers', {
       params: repartitionParams(query),
     });
   }
   applyRepartition(assignments: ApplyRepartitionEntry[]): Observable<ApplyRepartitionResult> {
-    return this.http.post<ApplyRepartitionResult>('/api/benevoles/repartition/apply', { assignments });
+    return this.http.post<ApplyRepartitionResult>('/api/benevoles/repartition/apply', {
+      assignments,
+    });
   }
 }
 @Injectable({ providedIn: 'root' })
@@ -496,9 +508,12 @@ export class JeunesRepartitionApiService {
       offset?: number;
     } = {},
   ): Observable<JeunesRepartitionParticipantsResult> {
-    return this.http.get<JeunesRepartitionParticipantsResult>('/api/jeunes/repartition/participants', {
-      params: repartitionParams(query),
-    });
+    return this.http.get<JeunesRepartitionParticipantsResult>(
+      '/api/jeunes/repartition/participants',
+      {
+        params: repartitionParams(query),
+      },
+    );
   }
 
   repartitionTeams(
@@ -518,7 +533,10 @@ export class JeunesRepartitionApiService {
     baseName?: string;
     maxSize?: number;
   }): Observable<BulkCreateTeamsResult> {
-    return this.http.post<BulkCreateTeamsResult>('/api/jeunes/repartition/teams/bulk-create', query);
+    return this.http.post<BulkCreateTeamsResult>(
+      '/api/jeunes/repartition/teams/bulk-create',
+      query,
+    );
   }
 
   propose(
@@ -534,7 +552,9 @@ export class JeunesRepartitionApiService {
   }
 
   apply(assignments: ApplyJeunesRepartitionEntry[]): Observable<ApplyJeunesRepartitionResult> {
-    return this.http.post<ApplyJeunesRepartitionResult>('/api/jeunes/repartition/apply', { assignments });
+    return this.http.post<ApplyJeunesRepartitionResult>('/api/jeunes/repartition/apply', {
+      assignments,
+    });
   }
 }
 
@@ -681,6 +701,47 @@ export class ProgramApiService {
   private readonly http = inject(HttpClient);
   private readonly base = '/api/program';
 
+  previewResizeBatch(
+    targets: { id: number; durationMinutes: number }[],
+  ): Observable<ProgramResizePreview> {
+    return this.http.post<ProgramResizePreview>(`${this.base}/resize-batch/preview`, { targets });
+  }
+  applyResizeBatch(targets: { id: number; durationMinutes: number }[], version: string) {
+    return this.http.post(`${this.base}/resize-batch/apply`, { targets, version });
+  }
+  missionTiming(id: number): Observable<EventMissionTiming> {
+    return this.http.get<EventMissionTiming>(`${this.base}/sequences/${id}/mission-timing`);
+  }
+  setMissionPhase(
+    id: number,
+    missionId: number,
+    phase: EventMissionPhase,
+  ): Observable<EventMissionTiming> {
+    return this.http.put<EventMissionTiming>(
+      `${this.base}/sequences/${id}/missions/${missionId}/phase`,
+      { phase },
+    );
+  }
+  previewBinding(id: number, draft: EventShiftBindingDraft): Observable<EventBindingPreview> {
+    return this.http.post<EventBindingPreview>(
+      `${this.base}/sequences/${id}/shift-binding/preview`,
+      draft,
+    );
+  }
+  applyBinding(
+    id: number,
+    draft: EventShiftBindingDraft,
+    version: string,
+  ): Observable<EventBindingPreview> {
+    return this.http.post<EventBindingPreview>(`${this.base}/sequences/${id}/shift-binding/apply`, {
+      ...draft,
+      version,
+    });
+  }
+  removeBinding(id: number, shiftId: number) {
+    return this.http.delete(`${this.base}/sequences/${id}/shift-binding/${shiftId}`);
+  }
+
   getDay(date: string): Observable<ProgramDay> {
     return this.http.get<ProgramDay>(`${this.base}/days/${date}`);
   }
@@ -745,7 +806,10 @@ export class ProgramApiService {
     return this.http.patch<ProgramSequence>(`${this.base}/sequences/${sequenceId}`, payload);
   }
 
-  deleteSequence(sequenceId: number, closeGap = false): Observable<{ deletedId: number; shiftedMinutes: number }> {
+  deleteSequence(
+    sequenceId: number,
+    closeGap = false,
+  ): Observable<{ deletedId: number; shiftedMinutes: number }> {
     const params = closeGap ? new HttpParams().set('closeGap', 'true') : new HttpParams();
     return this.http.delete<{ deletedId: number; shiftedMinutes: number }>(
       `${this.base}/sequences/${sequenceId}`,
@@ -775,10 +839,7 @@ export class ProgramApiService {
   }
 
   /** Remplace les groupes de jeunes concernés par le créneau. */
-  setSequenceGroups(
-    sequenceId: number,
-    groupIds: number[],
-  ): Observable<ProgramSequenceDetail> {
+  setSequenceGroups(sequenceId: number, groupIds: number[]): Observable<ProgramSequenceDetail> {
     return this.http.put<ProgramSequenceDetail>(`${this.base}/sequences/${sequenceId}/groups`, {
       groupIds,
     });

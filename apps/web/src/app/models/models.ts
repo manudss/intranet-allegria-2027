@@ -604,6 +604,7 @@ export interface ProgramSequenceDiff {
 export type ProgramRecalcOutcome = 'ok' | 'partial' | 'impossible';
 
 export interface ProgramInsertPreview {
+  shiftChanges?: EventShiftTimingDiff[];
   kind: 'insert';
   afterSequenceId: number;
   draft: ProgramSequenceDraft;
@@ -620,6 +621,7 @@ export interface ProgramInsertPreview {
 }
 
 export interface ProgramResizePreview {
+  shiftChanges?: EventShiftTimingDiff[];
   kind: 'resize';
   sequenceId: number;
   previousDurationMinutes: number;
@@ -872,4 +874,35 @@ export interface ApplyJeunesRepartitionEntry {
 
 export interface ApplyJeunesRepartitionResult {
   applied: number;
+}
+
+export type EventMissionPhase = 'BEFORE' | 'DURING' | 'AFTER';
+export interface EventShiftBindingDraft {
+  shiftId: number;
+  startAnchor: 'START' | 'END';
+  endAnchor: 'START' | 'END';
+  startOffset: number;
+  endOffset: number;
+  previousSequenceId: number | null;
+}
+export interface EventShiftBinding extends EventShiftBindingDraft {
+  sequenceId: number;
+}
+export interface EventMissionTiming {
+  phases: { missionId: number; phase: EventMissionPhase }[];
+  bindings: EventShiftBinding[];
+}
+export interface EventShiftTimingDiff {
+  shiftId: number;
+  missionId: number;
+  title: string;
+  sequenceId: number;
+  before: { startAt: string; endAt: string };
+  after: { startAt: string; endAt: string };
+}
+export interface EventBindingPreview {
+  version: string;
+  shifts: EventShiftTimingDiff[];
+  conflicts: string[];
+  previousSequenceId: number | null;
 }

@@ -162,7 +162,14 @@
   flex-wrap: wrap;
 
   select {
-    min-width: 16rem;
+    min-width: 0;
+    width: min(100%, 22rem);
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--tui-border-normal);
+    border-radius: 0.5rem;
+    font: inherit;
+    background: var(--tui-background-base);
+    color: var(--tui-text-primary);
   }
 }
 
@@ -337,4 +344,59 @@
 
 .planning-link {
   font-size: 0.85rem;
+}
+
+// Grid children must be allowed to shrink before tabs/forms can scroll or wrap.
+.fiche-main {
+  min-width: 0;
+
+  tui-tabs {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .fiche-badges {
+    flex-wrap: wrap;
+  }
+
+  .details-list > div {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+
+  .details-list dd,
+  .item-list li,
+  .time-preview {
+    overflow-wrap: anywhere;
+  }
+
+  .item-list li,
+  .form-actions,
+  .time-fields {
+    flex-wrap: wrap;
+  }
+
+  .time-edit {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .edit-form,
+  .add-task-form,
+  .time-edit {
+    input:not([type='radio']):not([type='checkbox']),
+    select,
+    textarea {
+      box-sizing: border-box;
+      min-width: 0;
+      max-width: 100%;
+    }
+  }
+
+  .task-check {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
 }

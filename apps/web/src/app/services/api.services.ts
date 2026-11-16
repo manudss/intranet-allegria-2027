@@ -749,6 +749,22 @@ export class ProgramApiService {
     );
   }
 
+  /** Bouton « Mettre à jour la liste publique » : régénère l'instantané statique. */
+  regeneratePublicExport(): Observable<{ dates: string[]; generatedAt: string }> {
+    return this.http.post<{ dates: string[]; generatedAt: string }>(
+      `${this.base}/public-export`,
+      {},
+    );
+  }
+
+  getPublicExportStatus(): Observable<
+    { eventDate: string; generatedAt: string; sequenceCount: number }[]
+  > {
+    return this.http.get<{ eventDate: string; generatedAt: string; sequenceCount: number }[]>(
+      `${this.base}/public-export`,
+    );
+  }
+
   getChangeLog(date?: string): Observable<ProgramChangeLogEntry[]> {
     const params = date ? new HttpParams().set('date', date) : undefined;
     return this.http.get<ProgramChangeLogEntry[]>(`${this.base}/change-log`, { params });

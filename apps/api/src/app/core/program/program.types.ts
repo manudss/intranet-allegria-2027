@@ -4,6 +4,7 @@ import {
   ProgramDocumentLink,
   ProgramSequenceStatus,
   ProgramSequenceTrack,
+  ProgramSequenceVisibility,
 } from '../entities';
 
 export class InsertSequenceDto {
@@ -15,6 +16,12 @@ export class InsertSequenceDto {
 
   @ApiPropertyOptional({ example: 3, nullable: true })
   volunteerTeamId?: number | null;
+
+  @ApiPropertyOptional({
+    enum: ProgramSequenceVisibility,
+    description: 'PUBLIC = visible sans connexion (grands temps) ; INTERNAL par défaut',
+  })
+  visibility?: ProgramSequenceVisibility;
 
   @ApiPropertyOptional({ nullable: true })
   notes?: string | null;
@@ -96,6 +103,8 @@ export class UpdateSequenceDto {
 
   @ApiPropertyOptional({ enum: ProgramSequenceTrack })
   track?: ProgramSequenceTrack;
+  @ApiPropertyOptional({ enum: ProgramSequenceVisibility })
+  visibility?: ProgramSequenceVisibility;
 }
 
 export class ChangeLogQueryDto {
@@ -113,6 +122,7 @@ export interface ProgramSequenceView {
   durationMinutes: number;
   endTime: string;
   status: ProgramSequenceStatus;
+  visibility: ProgramSequenceVisibility;
   minDurationMinutes: number | null;
   minMarginMinutes: number | null;
   previousSequenceId: number | null;

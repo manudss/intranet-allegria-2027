@@ -13,6 +13,7 @@ import {
   ProgramSequenceDraft,
   ProgramSequenceStatus,
   ProgramSequenceTrack,
+  ProgramSequenceVisibility,
   VolunteerMission,
   VolunteerTeam,
 } from '../../models/models';
@@ -95,6 +96,7 @@ const EMPTY_DRAFT = (): ProgramSequenceDraft => ({
   track: ProgramSequenceTrack.COMMON,
   volunteerTeamId: null,
   notes: null,
+  visibility: ProgramSequenceVisibility.INTERNAL,
 });
 
 const CHANGE_LOG_LABELS: Record<ProgramChangeLogAction, string> = {
@@ -111,6 +113,7 @@ interface EditDraft {
   title: string;
   notes: string;
   track: ProgramSequenceTrack;
+  visibility: ProgramSequenceVisibility;
   volunteerTeamId: number | null;
   missionIds: number[];
   documentLinks: ProgramDocumentLink[];
@@ -122,6 +125,7 @@ interface CreateDraft {
   startTime: string;
   durationMinutes: number;
   track: ProgramSequenceTrack;
+  visibility: ProgramSequenceVisibility;
 }
 
 interface BlockView {
@@ -176,6 +180,11 @@ export class ProgrammePage {
 
   readonly ProgramSequenceStatus = ProgramSequenceStatus;
   readonly ProgramSequenceTrack = ProgramSequenceTrack;
+  readonly ProgramSequenceVisibility = ProgramSequenceVisibility;
+  readonly publicExportStatus = signal<
+    { eventDate: string; generatedAt: string; sequenceCount: number }[] | null
+  >(null);
+  readonly publishingPublic = signal(false);
   readonly changeLogLabels = CHANGE_LOG_LABELS;
   readonly days = PROGRAM_EVENT_DAYS;
   readonly trackFilters = TRACK_FILTERS;
@@ -551,6 +560,7 @@ export class ProgrammePage {
     title: '',
     notes: '',
     track: ProgramSequenceTrack.COMMON,
+    visibility: ProgramSequenceVisibility.INTERNAL,
     volunteerTeamId: null,
     missionIds: [],
     documentLinks: [],
@@ -565,6 +575,7 @@ export class ProgrammePage {
     startTime: '09:00',
     durationMinutes: 30,
     track: ProgramSequenceTrack.COMMON,
+    visibility: ProgramSequenceVisibility.INTERNAL,
   });
 
   constructor() {
@@ -845,6 +856,7 @@ export class ProgrammePage {
       startTime,
       durationMinutes: 30,
       track: ProgramSequenceTrack.COMMON,
+      visibility: ProgramSequenceVisibility.INTERNAL,
     });
     this.createOpen.set(true);
     this.revealPanel();
@@ -864,6 +876,7 @@ export class ProgrammePage {
         startTime: draft.startTime,
         durationMinutes: draft.durationMinutes,
         track: draft.track,
+        visibility: draft.visibility,
       })
       .subscribe({
         next: (created) => {
@@ -885,6 +898,7 @@ export class ProgrammePage {
       title: sequence.title,
       notes: sequence.notes ?? '',
       track: sequence.track ?? ProgramSequenceTrack.COMMON,
+      visibility: sequence.visibility,
       volunteerTeamId: sequence.volunteerTeamId,
       missionIds: [...sequence.missionIds],
       documentLinks: sequence.documentLinks.map((link) => ({ ...link })),
@@ -935,6 +949,7 @@ export class ProgrammePage {
         title: draft.title,
         notes: draft.notes,
         track: draft.track,
+        visibility: draft.visibility,
         volunteerTeamId: draft.volunteerTeamId,
         missionIds: draft.missionIds,
         documentLinks: draft.documentLinks,
@@ -947,6 +962,33 @@ export class ProgrammePage {
         },
         error: (error: HttpErrorResponse) => this.showError(error),
       });
+  }
+
+  /** Bouton « Mettre à jour la liste publique » : régénère l'instantané statique (jamais automatique). */
+  publishPublicProgram(): void {
+    if (this.publishingPublic()) return;
+    this.publishingPublic.set(true);
+    this.api.regeneratePublicExport().subscribe({
+      next: (result) => {
+        this.publishingPublic.set(false);
+        this.actionMessage.set({
+          appearance: 'positive',
+          text: `Liste publique mise à jour (${result.dates.length} jour(s)).`,
+        });
+        this.loadPublicExportStatus();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.publishingPublic.set(false);
+        this.showError(error);
+      },
+    });
+  }
+
+  loadPublicExportStatus(): void {
+    this.api.getPublicExportStatus().subscribe({
+      next: (status) => this.publicExportStatus.set(status),
+      error: () => this.publicExportStatus.set(null),
+    });
   }
 
   deleteSequence(sequence: ProgramSequence): void {
@@ -1076,6 +1118,7 @@ export class ProgrammePage {
 
   /** Recharge les séquences du jour affiché (source de vérité = serveur). */
   private loadDay(): void {
+    this.loadPublicExportStatus();
     const date = this.eventDate();
     this.loading.set(true);
     this.api.getDay(date).subscribe({

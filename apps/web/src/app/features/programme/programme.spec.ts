@@ -3,7 +3,13 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { AuthService } from '../../core/auth.service';
-import { ProgramInsertPreview, ProgramSequence, ProgramSequenceStatus, ProgramSequenceTrack } from '../../models/models';
+import {
+  ProgramInsertPreview,
+  ProgramSequence,
+  ProgramSequenceStatus,
+  ProgramSequenceTrack,
+  ProgramSequenceVisibility,
+} from '../../models/models';
 import { ProgrammePage } from './programme';
 import { PROGRAM_EVENT_DAYS } from './schedule-chain.util';
 
@@ -25,6 +31,7 @@ function seq(
     endTime: '00:00',
     status: ProgramSequenceStatus.MOBILE,
     track: ProgramSequenceTrack.COMMON,
+    visibility: ProgramSequenceVisibility.INTERNAL,
     minDurationMinutes: 30,
     minMarginMinutes: null,
     previousSequenceId,
@@ -68,13 +75,52 @@ function setup(roles: string[]) {
   fixture.detectChanges();
   const component = fixture.componentInstance;
 
-  const flushDay = (sequences: ProgramSequence[] = SEQUENCES) =>
+  const flushDay = (sequences: ProgramSequence[] = SEQUENCES) => {
     http.expectOne(`/api/program/days/${DAY}`).flush({ date: DAY, sequences });
+    http.expectOne('/api/program/public-export').flush([]);
+  };
 
   return { component, http, flushDay, fixture };
 }
 
 describe('ProgrammePage', () => {
+  it('envoie la visibilité choisie à la création (réservé par défaut)', () => {
+    const { component, http, flushDay } = setup(['COORDINATOR']);
+    flushDay();
+
+    component.openCreateForm();
+    expect(component.createDraft().visibility).toBe(ProgramSequenceVisibility.INTERNAL);
+    component.updateCreateDraft({
+      location: 'Chapelle',
+      title: 'Veillée',
+      visibility: ProgramSequenceVisibility.PUBLIC,
+    });
+    component.submitCreate();
+
+    const req = http.expectOne('/api/program/sequences');
+    expect(req.request.body.visibility).toBe(ProgramSequenceVisibility.PUBLIC);
+    req.flush(SEQUENCES[0]);
+    http.expectOne(`/api/program/days/${DAY}`).flush({ date: DAY, sequences: SEQUENCES });
+    http.expectOne('/api/program/public-export').flush([]);
+  });
+
+  it('le bouton « Mettre à jour la liste publique » régénère l’instantané', () => {
+    const { component, http, flushDay } = setup(['COORDINATOR']);
+    flushDay();
+
+    component.publishPublicProgram();
+    const req = http.expectOne('/api/program/public-export');
+    expect(req.request.method).toBe('POST');
+    req.flush({ dates: [DAY], generatedAt: '2027-10-31T10:00:00.000Z' });
+    http.expectOne('/api/program/public-export').flush([
+      { eventDate: DAY, generatedAt: '2027-10-31T10:00:00.000Z', sequenceCount: 3 },
+    ]);
+
+    expect(component.actionMessage()?.appearance).toBe('positive');
+    expect(component.publicExportStatus()?.length).toBe(1);
+    http.verify();
+  });
+
   it('charge le jour depuis l’API et affiche chaîne et KPI', () => {
     const { component, http, flushDay } = setup(['VIEWER']);
     flushDay();
@@ -93,6 +139,7 @@ describe('ProgrammePage', () => {
     http
       .expectOne(`/api/program/days/${PROGRAM_EVENT_DAYS[2]}`)
       .flush({ date: PROGRAM_EVENT_DAYS[2], sequences: [] });
+    http.expectOne('/api/program/public-export').flush([]);
 
     expect(component.allSequences()).toEqual([]);
     http.verify();

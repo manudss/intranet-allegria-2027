@@ -31,7 +31,9 @@
   "dataGroups": [
     {
       "name": "api-program",
-      "urls": ["**/api/program/**"],
+      "urls": [
+        "**/api/program/**"
+      ],
       "cacheConfig": {
         "strategy": "freshness",
         "maxSize": 50,
@@ -40,8 +42,23 @@
       }
     },
     {
+      "name": "api-public-program",
+      "urls": [
+        "**/api/public/**"
+      ],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 20,
+        "maxAge": "12h",
+        "timeout": "5s"
+      }
+    },
+    {
       "name": "api-user",
-      "urls": ["**/api/users/me", "**/api/me/**"],
+      "urls": [
+        "**/api/users/me",
+        "**/api/me/**"
+      ],
       "cacheConfig": {
         "strategy": "freshness",
         "maxSize": 5,

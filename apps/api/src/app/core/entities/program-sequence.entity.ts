@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { ProgramSequenceStatus } from './program-sequence-status.enum';
 import { ProgramSequenceTrack } from './program-sequence-track.enum';
+import { ProgramSequenceVisibility } from './program-sequence-visibility.enum';
 import { User } from './user.entity';
 import { VolunteerTeam } from './volunteer-team.entity';
 
@@ -65,6 +66,14 @@ export class ProgramSequence {
     default: ProgramSequenceTrack.COMMON,
   })
   track!: ProgramSequenceTrack;
+  /** Public (site/appli sans connexion) ou réservé bénévoles-coordinateurs ; interne par défaut */
+  @Column({
+    type: 'enum',
+    enum: ProgramSequenceVisibility,
+    enumName: 'program_sequence_visibility_enum',
+    default: ProgramSequenceVisibility.INTERNAL,
+  })
+  visibility!: ProgramSequenceVisibility;
 
   @Column({ type: 'int', nullable: true })
   minDurationMinutes!: number | null;

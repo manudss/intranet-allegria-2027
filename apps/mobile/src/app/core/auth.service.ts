@@ -47,6 +47,7 @@ export class AuthService {
     );
   }
   logout(redirect = true) {
+    void this.clearServiceWorkerDataCaches();
     this.clear();
     if (redirect) void this.router.navigateByUrl('/login');
   }
@@ -59,6 +60,23 @@ export class AuthService {
   private setUser(user: User | null) {
     this.userState.set(user);
   }
+  /**
+   * Purge les caches de données du service worker (groupes api-*) : les réponses
+   * API authentifiées (programme détaillé, profil) ne doivent pas survivre à une
+   * déconnexion sur un appareil ensuite utilisé sans connexion.
+   */
+  private async clearServiceWorkerDataCaches(): Promise<void> {
+    try {
+      if (!('caches' in globalThis)) return;
+      const keys = await caches.keys();
+      await Promise.all(
+        keys.filter((key) => key.includes(':data:') || key.includes('api-')).map((key) => caches.delete(key)),
+      );
+    } catch {
+      // service worker absent ou caches inaccessibles : rien à purger
+    }
+  }
+
   private clear() {
     localStorage.removeItem(this.tokenKey);
     this.setUser(null);

@@ -14,6 +14,8 @@ import {
   ProgramSequence,
   ProgramSequenceStatus,
   ProgramSequenceTrack,
+  ProgramPublicExport,
+  ProgramSequenceVisibility,
 } from '../entities';
 import { ProgramRecalcService } from './program-recalc.service';
 import { computeEndTime, minutesToTime, timeToMinutes } from './program-time.util';
@@ -62,6 +64,7 @@ function toData(sequence: ProgramSequence): ProgramSequenceData {
     endTime: sequence.endTime,
     status: sequence.status,
     track: sequence.track ?? ProgramSequenceTrack.COMMON,
+    visibility: sequence.visibility ?? ProgramSequenceVisibility.INTERNAL,
     minDurationMinutes: sequence.minDurationMinutes,
     minMarginMinutes: sequence.minMarginMinutes,
     previousSequenceId: sequence.previousSequenceId,
@@ -74,6 +77,7 @@ function toData(sequence: ProgramSequence): ProgramSequenceData {
 function toView(sequence: ProgramSequence): ProgramSequenceView {
   return {
     ...toData(sequence),
+    visibility: sequence.visibility ?? ProgramSequenceVisibility.INTERNAL,
     volunteerTeamName: sequence.volunteerTeam?.name ?? null,
     missionIds: sequence.missionIds ?? [],
     documentLinks: sequence.documentLinks ?? [],
@@ -651,6 +655,7 @@ export class ProgramService {
   private validateMetadata(dto: {
     notes?: string | null;
     volunteerTeamId?: number | null;
+    visibility?: ProgramSequenceVisibility;
     minDurationMinutes?: number | null;
     minMarginMinutes?: number | null;
     missionIds?: number[];
@@ -660,6 +665,12 @@ export class ProgramService {
     const patch: Partial<ProgramSequence> = {};
     if (dto.track !== undefined) {
       patch.track = this.assertTrack(dto.track);
+    }
+    if (dto.visibility !== undefined) {
+      if (!Object.values(ProgramSequenceVisibility).includes(dto.visibility)) {
+        throw new BadRequestException('Visibilité invalide : PUBLIC ou INTERNAL attendu.');
+      }
+      patch.visibility = dto.visibility;
     }
     if (dto.notes !== undefined) {
       patch.notes = dto.notes?.trim() ? dto.notes.trim() : null;
@@ -695,6 +706,89 @@ export class ProgramService {
       throw new BadRequestException('Piste invalide : TA, ES ou COMMON attendu.');
     }
     return track;
+  }
+
+  /**
+   * Régénère l'instantané public (grands temps) de chaque jour ayant au moins une
+   * séquence publique, et vide les jours sans séquence publique. Action explicite
+   * « Mettre à jour la liste publique » : jamais de régénération automatique.
+   */
+  async regeneratePublicExports(
+    user: ProgramRequestUser,
+  ): Promise<{ dates: string[]; generatedAt: string }> {
+    const sequences = await this.dataSource.manager.find(ProgramSequence, {
+      where: { visibility: ProgramSequenceVisibility.PUBLIC },
+      order: { eventDate: 'ASC', startTime: 'ASC' },
+    });
+    const generatedAt = new Date();
+    const byDate = new Map<string, ProgramSequence[]>();
+    for (const sequence of sequences) {
+      const list = byDate.get(sequence.eventDate) ?? [];
+      list.push(sequence);
+      byDate.set(sequence.eventDate, list);
+    }
+    return this.dataSource.transaction(async (manager) => {
+      const tx = manager.getRepository(ProgramPublicExport);
+      const dates = [...byDate.keys()];
+      for (const [date, daySequences] of byDate) {
+        await tx.save(
+          tx.create({
+            eventDate: date,
+            sequences: daySequences.map((sequence) => ({
+              title: sequence.title,
+              startTime: sequence.startTime,
+              endTime: sequence.endTime,
+              location: sequence.location,
+            })),
+            generatedByUserId: user.id,
+            generatedAt,
+          }),
+        );
+      }
+      await tx
+        .createQueryBuilder()
+        .delete()
+        .where('"eventDate" NOT IN (:...dates)', { dates: dates.length ? dates : [''] })
+        .execute();
+      await this.writeLog(manager, {
+        action: ProgramChangeLogAction.UPDATE,
+        user,
+        eventDate: dates[0] ?? generatedAt.toISOString().slice(0, 10),
+        affectedSequenceIds: [],
+        before: null,
+        after: { dates },
+        comment: `Mise à jour de la liste publique (${dates.length} jour(s)).`,
+      });
+      return { dates, generatedAt: generatedAt.toISOString() };
+    });
+  }
+
+  /** État des instantanés publics (jour, date de génération, nombre de grands temps). */
+  async getPublicExportsStatus(): Promise<
+    { eventDate: string; generatedAt: string; sequenceCount: number }[]
+  > {
+    const exports = await this.dataSource.manager.find(ProgramPublicExport, {
+      order: { eventDate: 'ASC' },
+    });
+    return exports.map((entry) => ({
+      eventDate: entry.eventDate,
+      generatedAt: new Date(entry.generatedAt).toISOString(),
+      sequenceCount: entry.sequences.length,
+    }));
+  }
+
+  /** Instantané public d'un jour, lu par l'appli non connectée ; vide si jamais publié. */
+  async getPublicProgramDay(
+    date: string,
+  ): Promise<{ date: string; updatedAt: string | null; sequences: ProgramPublicExport['sequences'] }> {
+    const entry = await this.dataSource.manager.findOne(ProgramPublicExport, {
+      where: { eventDate: date },
+    });
+    return {
+      date,
+      updatedAt: entry ? new Date(entry.generatedAt).toISOString() : null,
+      sequences: entry?.sequences ?? [],
+    };
   }
 
   private assertOptionalInt(value: number | null, label: string, min: number, max?: number) {

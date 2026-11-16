@@ -47,6 +47,20 @@ function requireVersion(version: string | undefined): string {
 export class ProgramController {
   constructor(private readonly service: ProgramService) {}
 
+  @ApiOperation({ summary: 'Régénère la liste publique statique (bouton « Mettre à jour la liste publique »)' })
+  @Roles(...WRITE_ROLES)
+  @Post('public-export')
+  regeneratePublicExport(@Req() req: UserRequest) {
+    return this.service.regeneratePublicExports(req.user);
+  }
+
+  @ApiOperation({ summary: 'État des instantanés publics par jour' })
+  @Roles(...READ_ROLES)
+  @Get('public-export')
+  getPublicExportStatus() {
+    return this.service.getPublicExportsStatus();
+  }
+
   @ApiOperation({ summary: 'Séquences du jour (tous lieux, branches incluses)' })
   @Roles(...READ_ROLES)
   @Get('days/:date')

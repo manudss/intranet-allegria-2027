@@ -39,6 +39,9 @@ export { VolunteerApplicationStatus } from './volunteer-application-status.enum'
 export { VolunteerApplication } from './volunteer-application.entity';
 export { ProgramSequenceStatus } from './program-sequence-status.enum';
 export { ProgramSequenceTrack } from './program-sequence-track.enum';
+export { ProgramSequenceVisibility } from './program-sequence-visibility.enum';
+export { ProgramPublicExport } from './program-public-export.entity';
+export type { PublicExportSequence } from './program-public-export.entity';
 export { ProgramChangeLogAction } from './program-change-log-action.enum';
 export { ProgramSequence } from './program-sequence.entity';
 export type { ProgramDocumentLink } from './program-sequence.entity';

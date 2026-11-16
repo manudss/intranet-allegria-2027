@@ -525,6 +525,12 @@ export interface DashboardTodoMission {
 
 // ─── Module Programme (planification en chaîne des séquences) ──
 
+/** Visibilité d'une séquence : publique (sans connexion, grands temps) ou réservée bénévoles-coordinateurs. */
+export enum ProgramSequenceVisibility {
+  PUBLIC = 'PUBLIC',
+  INTERNAL = 'INTERNAL',
+}
+
 export enum ProgramSequenceStatus {
   MOBILE = 'MOBILE',
   FROZEN = 'FROZEN',
@@ -554,6 +560,7 @@ export interface ProgramSequence {
   endTime: string;
   status: ProgramSequenceStatus;
   track: ProgramSequenceTrack;
+  visibility: ProgramSequenceVisibility;
   minDurationMinutes: number | null;
   minMarginMinutes: number | null;
   /** Prédécesseur dans la chaîne principale du lieu/jour ; null = tête de chaîne */
@@ -580,6 +587,7 @@ export interface ProgramSequenceDraft {
   title: string;
   durationMinutes: number;
   track?: ProgramSequenceTrack;
+  visibility?: ProgramSequenceVisibility;
   volunteerTeamId: number | null;
   notes: string | null;
   minDurationMinutes?: number | null;
@@ -637,6 +645,7 @@ export interface ProgramSequenceCreatePayload {
   startTime: string;
   durationMinutes: number;
   track?: ProgramSequenceTrack;
+  visibility?: ProgramSequenceVisibility;
   volunteerTeamId?: number | null;
   notes?: string | null;
   anchorSequenceId?: number | null;
@@ -652,6 +661,7 @@ export interface ProgramSequenceUpdatePayload {
   missionIds?: number[];
   documentLinks?: ProgramDocumentLink[];
   track?: ProgramSequenceTrack;
+  visibility?: ProgramSequenceVisibility;
 }
 
 export interface ProgramChangeLogEntry {

@@ -833,3 +833,13 @@ $header-height: 2.5rem;
   font-size: 0.8rem;
   color: var(--tui-text-secondary);
 }
+.state-tag.state-public {
+  background: var(--tui-status-positive);
+  color: #fff;
+}
+
+.public-export-status {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--tui-text-secondary);
+}

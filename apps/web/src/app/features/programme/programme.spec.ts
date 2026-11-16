@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, convertToParamMap } from '@angular/router';
 import { describe, expect, it, vi } from 'vitest';
 import { AuthService } from '../../core/auth.service';
 import {
@@ -86,6 +86,19 @@ function setup(roles: string[]) {
 }
 
 describe('ProgrammePage', () => {
+  it('pré-positionne jour et lieu depuis un lien profond (fiche événement)', () => {
+    const { component, http, flushDay } = setup(['COORDINATOR']);
+    flushDay();
+    component.applyQueryParams(
+      convertToParamMap({ date: PROGRAM_EVENT_DAYS[1], lieu: 'Salle A' }),
+    );
+    expect(component.dayIndex()).toBe(1);
+    expect(component.location()).toBe('Salle A');
+    component.applyQueryParams(convertToParamMap({ date: '2030-01-01' }));
+    expect(component.dayIndex()).toBe(1);
+    http.verify();
+  });
+
   it('envoie la visibilité choisie à la création (réservé par défaut)', () => {
     const { component, http, flushDay } = setup(['COORDINATOR']);
     flushDay();

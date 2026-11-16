@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, ParamMap, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { TuiDataListWrapper } from '@taiga-ui/kit';
 import { AuthService } from '../../core/auth.service';
@@ -178,6 +178,7 @@ export class ProgrammePage {
   private readonly teamsApi = inject(VolunteerTeamsApiService);
   private readonly missionsApi = inject(VolunteerMissionsApiService);
   private readonly auth = inject(AuthService);
+  private readonly route = inject(ActivatedRoute);
 
   readonly ProgramSequenceStatus = ProgramSequenceStatus;
   readonly ProgramSequenceTrack = ProgramSequenceTrack;
@@ -580,7 +581,18 @@ export class ProgrammePage {
   });
 
   constructor() {
+    // Lien profond (ex. depuis la fiche événement) : /programme?date=YYYY-MM-DD&lieu=…
+    this.applyQueryParams(this.route.snapshot.queryParamMap);
     this.loadDay();
+  }
+
+  /** Pré-positionne le jour et le lieu demandés par un lien profond, s'ils sont connus. */
+  applyQueryParams(params: ParamMap): void {
+    const date = params.get('date');
+    const dayIndex = date ? this.days.indexOf(date) : -1;
+    if (dayIndex >= 0) this.dayIndex.set(dayIndex);
+    const lieu = params.get('lieu');
+    if (lieu) this.location.set(lieu);
   }
 
   setDay(index: number): void {

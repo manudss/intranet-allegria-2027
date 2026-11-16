@@ -72,7 +72,7 @@
     <div class="fiche-body">
       <main class="fiche-main">
         <tui-tabs [activeItemIndex]="tabIndex()" (activeItemIndexChange)="selectTab($event)">
-          @for (tab of TABS; track tab) {
+          @for (tab of tabLabels(); track tab) {
             <button tuiTab type="button">{{ tab }}</button>
           }
         </tui-tabs>
@@ -147,6 +147,14 @@
                 <dl class="details-list">
                   <div><dt>Lieu</dt><dd>{{ sequence.location }}</dd></div>
                   <div><dt>Horaire</dt><dd>{{ sequence.startTime }} – {{ sequence.endTime }} ({{ sequence.durationMinutes }} min)</dd></div>
+                  <div>
+                    <dt></dt>
+                    <dd>
+                      <a class="planning-link" [routerLink]="['/programme']" [queryParams]="{ date: sequence.eventDate, lieu: sequence.location }">
+                        Modifier les horaires dans le planning (aperçu du recalcul de chaîne)
+                      </a>
+                    </dd>
+                  </div>
                   <div><dt>Piste</dt><dd>{{ TRACK_LABELS[sequence.track] }}</dd></div>
                   <div><dt>Visibilité</dt><dd>{{ VISIBILITY_LABELS[sequence.visibility] }}</dd></div>
                   <div><dt>Statut</dt><dd>{{ sequence.status === ProgramSequenceStatus.FROZEN ? 'Figé' : 'Mobile' }}</dd></div>
@@ -175,6 +183,7 @@
                       {{ mission.title }}
                       @if (mission.location) { <small>— {{ mission.location }}</small> }
                     </span>
+                    <a tuiButton appearance="flat" size="xs" [routerLink]="['/missions-benevoles']">Ouvrir la mission</a>
                     @if (canEdit()) {
                       <button tuiButton appearance="flat" size="xs" type="button" [disabled]="busy()" (click)="removeMission(mission.id)">
                         Retirer
@@ -202,6 +211,54 @@
                     Lier la mission
                   </button>
                 </div>
+                @if (newMission(); as draft) {
+                  <form class="add-task-form" (ngSubmit)="createAndLinkMission()">
+                    <label>
+                      Titre de la nouvelle mission
+                      <input
+                        type="text"
+                        maxlength="200"
+                        [ngModel]="draft.title"
+                        (ngModelChange)="updateNewMission({ title: $event })"
+                        name="fiche-nouvelle-mission"
+                      />
+                    </label>
+                    <label>
+                      Équipe responsable
+                      <select
+                        [ngModel]="draft.volunteerTeamId ?? ''"
+                        (ngModelChange)="updateNewMission({ volunteerTeamId: $event === '' ? null : +$event })"
+                        name="fiche-nouvelle-mission-equipe"
+                      >
+                        <option value="">Aucune</option>
+                        @for (team of teams(); track team.id) {
+                          <option [value]="team.id">{{ team.name }}</option>
+                        }
+                      </select>
+                    </label>
+                    <label>
+                      Lieu (facultatif)
+                      <input
+                        type="text"
+                        maxlength="200"
+                        [ngModel]="draft.location"
+                        (ngModelChange)="updateNewMission({ location: $event })"
+                        name="fiche-nouvelle-mission-lieu"
+                      />
+                    </label>
+                    @if (missionFormError()) {
+                      <p class="inline-error" role="alert">{{ missionFormError() }}</p>
+                    }
+                    <footer class="form-actions">
+                      <button tuiButton appearance="primary" size="s" type="submit" [disabled]="busy()">Créer et lier</button>
+                      <button tuiButton appearance="secondary" size="s" type="button" (click)="cancelNewMission()">Annuler</button>
+                    </footer>
+                  </form>
+                } @else {
+                  <button tuiButton appearance="flat" size="s" type="button" (click)="startNewMission()">
+                    Créer une mission
+                  </button>
+                }
               }
 
               <h3>Tâches de préparation</h3>

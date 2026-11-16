@@ -15,6 +15,7 @@ import {
   ProgramSequenceTrack,
   ProgramSequenceVisibility,
   VolunteerMission,
+  VolunteerMissionStatus,
   VolunteerTeam,
 } from '../../../models/models';
 import {
@@ -60,6 +61,12 @@ const OFFSET_PRESETS: { value: number; label: string }[] = [
 ];
 
 const TABS = ['Détails', 'Missions & tâches', 'Groupes concernés', 'Documents', 'Historique'];
+
+interface NewMissionDraft {
+  title: string;
+  volunteerTeamId: number | null;
+  location: string;
+}
 
 interface EditDraft {
   title: string;
@@ -136,10 +143,25 @@ export class FicheEvenementPage {
   });
   readonly taskFormError = signal<string | null>(null);
   readonly missionToAdd = signal<number | null>(null);
+  readonly newMission = signal<NewMissionDraft | null>(null);
+  readonly missionFormError = signal<string | null>(null);
   readonly groupToAdd = signal<number | null>(null);
   readonly newGroup = signal<{ name: string; diocese: string } | null>(null);
   readonly newDoc = signal<{ label: string; url: string }>({ label: '', url: '' });
   readonly docFormError = signal<string | null>(null);
+
+  /** Onglets avec compteurs, comme la maquette validée. */
+  readonly tabLabels = computed(() => {
+    const sequence = this.sequence();
+    if (!sequence) return TABS;
+    return [
+      TABS[0],
+      `${TABS[1]} ${sequence.missionIds.length} · ${this.tasks().length}`,
+      `${TABS[2]} ${sequence.groupIds.length}`,
+      `${TABS[3]} ${sequence.documentLinks.length}`,
+      TABS[4],
+    ];
+  });
 
   readonly linkedGroups = computed(() => {
     const sequence = this.sequence();
@@ -355,6 +377,56 @@ export class FicheEvenementPage {
     const sequence = this.sequence();
     if (!sequence || this.busy()) return;
     this.patchSequence({ missionIds: sequence.missionIds.filter((id) => id !== missionId) });
+  }
+
+  startNewMission(): void {
+    const sequence = this.sequence();
+    this.newMission.set({
+      title: '',
+      volunteerTeamId: sequence?.volunteerTeamId ?? null,
+      location: sequence?.location ?? '',
+    });
+    this.missionFormError.set(null);
+  }
+
+  cancelNewMission(): void {
+    this.newMission.set(null);
+  }
+
+  updateNewMission(patch: Partial<NewMissionDraft>): void {
+    const draft = this.newMission();
+    if (draft) this.newMission.set({ ...draft, ...patch });
+  }
+
+  /** Crée une mission bénévole (brouillon) puis la lie à ce créneau. */
+  createAndLinkMission(): void {
+    const sequence = this.sequence();
+    const draft = this.newMission();
+    if (!sequence || !draft || this.busy()) return;
+    const title = draft.title.trim();
+    if (!title) {
+      this.missionFormError.set('Le titre de la mission est obligatoire.');
+      return;
+    }
+    this.busy.set(true);
+    this.missionsApi
+      .create({
+        title,
+        description: '',
+        volunteerTeamId: draft.volunteerTeamId,
+        location: draft.location.trim(),
+        responsibleVolunteerId: null,
+        status: VolunteerMissionStatus.DRAFT,
+        isOptional: false,
+      })
+      .subscribe({
+        next: (mission) => {
+          this.missions.set([...this.missions(), mission]);
+          this.newMission.set(null);
+          this.patchSequence({ missionIds: [...(this.sequence()?.missionIds ?? []), mission.id] });
+        },
+        error: () => this.fail('La création de la mission a échoué.'),
+      });
   }
 
   addTask(): void {

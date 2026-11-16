@@ -220,4 +220,47 @@ describe('FicheEvenementPage', () => {
     expect(component.canEdit()).toBe(false);
     http.verify();
   });
+
+  it('crée une mission puis la lie au créneau', () => {
+    const { http, component } = setup();
+    flushInitialLoad(http);
+    component.startNewMission();
+    component.updateNewMission({ title: 'Régie son', volunteerTeamId: 3, location: 'Grande salle' });
+    component.createAndLinkMission();
+    const createRequest = http.expectOne('/api/volunteer-missions');
+    expect(createRequest.request.method).toBe('POST');
+    expect(createRequest.request.body.title).toBe('Régie son');
+    expect(createRequest.request.body.status).toBe('DRAFT');
+    createRequest.flush({ id: 50, title: 'Régie son', location: 'Grande salle' });
+    const linkRequest = http.expectOne('/api/program/sequences/1');
+    expect(linkRequest.request.method).toBe('PATCH');
+    expect(linkRequest.request.body).toEqual({ missionIds: [42, 50] });
+    linkRequest.flush(detail({ missionIds: [42, 50] }));
+    http.expectOne('/api/program/sequences/1').flush(detail({ missionIds: [42, 50] }));
+    expect(component.missions().some((m) => m.id === 50)).toBe(true);
+    expect(component.tabLabels()[1]).toBe('Missions & tâches 2 · 0');
+    http.verify();
+  });
+
+  it('exige un titre pour créer une mission', () => {
+    const { http, component } = setup();
+    flushInitialLoad(http);
+    component.startNewMission();
+    component.createAndLinkMission();
+    expect(component.missionFormError()).toBeTruthy();
+    http.verify();
+  });
+
+  it('affiche les compteurs dans les onglets', () => {
+    const { http, component } = setup();
+    flushInitialLoad(http);
+    expect(component.tabLabels()).toEqual([
+      'Détails',
+      'Missions & tâches 1 · 0',
+      'Groupes concernés 1',
+      'Documents 1',
+      'Historique',
+    ]);
+    http.verify();
+  });
 });

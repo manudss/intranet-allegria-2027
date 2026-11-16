@@ -50,6 +50,7 @@ import {
   VolunteerTeamMembership,
 } from '../../app/core/entities';
 import { insertProgramDemoDay, PROGRAM_SEED_DAYS } from '../../app/core/program/program-demo-seed';
+import { insertDocumentLibraryDemo } from './document-library-demo-seed';
 import dataSource from '../typeorm.config';
 import { computeTeamMaxSize, hasSecondaryAnimator } from './team-fill';
 
@@ -685,6 +686,9 @@ async function run(): Promise<void> {
     try {
       await queryRunner.query(`
         TRUNCATE TABLE
+          "document_link_teams",
+          "document_links",
+          "document_categories",
           "access_scan_events",
           "access_scan_sessions",
           "access_badge_assignments",
@@ -1697,6 +1701,8 @@ async function run(): Promise<void> {
 
     await seedAccessTestkit(dataSource, adminUser, demoPasswordHash);
 
+    const documentLibraryCount = await insertDocumentLibraryDemo(dataSource);
+
     console.log('Seed termine.');
     console.log(`Profil: ${profileName}`);
     console.log(`Users: ${users.length}`);
@@ -1713,6 +1719,7 @@ async function run(): Promise<void> {
     console.log(`Host families: ${hostFamilies.length}`);
     console.log(`Assignments: ${assignmentsToCreate.length}`);
     console.log(`Health records: ${participantHealthToCreate.length}`);
+    console.log(`Document library: ${documentLibraryCount} fiches (categories: 11)`);
     console.log(
       `Access control: ${accessControlSeed.badges} badges (lot L2027-A), ${accessControlSeed.assignments} attributions`,
     );

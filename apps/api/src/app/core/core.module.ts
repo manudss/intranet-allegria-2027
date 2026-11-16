@@ -22,6 +22,7 @@ import { MySpaceModule } from './my-space/my-space.module';
 import { VolunteerHostingModule } from './volunteer-hosting/volunteer-hosting.module';
 import { JeunesRepartitionModule } from './jeunes-repartition/jeunes-repartition.module';
 import { AccessControlModule } from './access-control/access-control.module';
+import { DocumentLibraryModule } from './document-library/document-library.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { AccessControlModule } from './access-control/access-control.module';
     VolunteerHostingModule,
     JeunesRepartitionModule,
     AccessControlModule,
+    DocumentLibraryModule,
   ],
 })
 export class CoreModule {}

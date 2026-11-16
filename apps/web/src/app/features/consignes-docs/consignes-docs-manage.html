@@ -1,0 +1,177 @@
+<app-page-layout
+  title="Gestion du catalogue"
+  description="Fiches « Consignes & documents » : ajout, modification, audience"
+>
+  @if (canWrite()) {
+  <button actions tuiButton (click)="create()">Ajouter un document</button>
+  }
+  <tui-textfield iconStart="@tui.search">
+    <label for="rechercher-une-fiche" tuiLabel>Rechercher une fiche</label>
+    <input
+      tuiInput
+      placeholder="Titre, description, catégorie…"
+      [value]="query()"
+      (input)="query.set($any($event.target).value)"
+      id="rechercher-une-fiche"
+    />
+  </tui-textfield>
+  @if (loading()) {
+  <tui-loader />
+  } @else {
+  <app-data-table [rows]="filtered()" [columns]="tableColumns" (rowSelected)="open($event)" />
+  }
+</app-page-layout>
+
+@if (opened()) {
+<tui-drawer direction="end">
+  <header>
+    <h2>{{ mode() === 'create' ? 'Ajouter un document' : (selected()?.title ?? 'Fiche') }}</h2>
+  </header>
+
+  <div class="notice">Cette fiche ne modifie ni le fichier ni son partage dans SharePoint.</div>
+
+  @if (mode() === 'detail') {
+  <dl>
+    <dt>Titre</dt>
+    <dd>{{ selected()?.title }}</dd>
+    <dt>Catégorie</dt>
+    <dd>{{ selected()?.category?.label ?? '—' }}</dd>
+    <dt>Type de fichier</dt>
+    <dd>{{ selected()?.fileType }}</dd>
+    <dt>Lien</dt>
+    <dd class="url">{{ selected()?.url }}</dd>
+    <dt>Audience Allegria</dt>
+    <dd>
+      @if (selected()?.visibility === 'ALL') { Tous les utilisateurs connectés } @else { Équipes :
+      {{ teamNames(selected()) }} }
+    </dd>
+    <dt>Ouverture du fichier</dt>
+    <dd>Compte Microsoft autorisé requis (géré par SharePoint, indépendant d'Allegria)</dd>
+  </dl>
+  } @else {
+  <form class="drawer-form">
+    <tui-textfield iconStart="@tui.file-text">
+      <label for="titre-fiche" tuiLabel>Titre</label
+      ><input tuiInput [formField]="docForm.title" id="titre-fiche" />
+    </tui-textfield>
+
+    <tui-textfield iconStart="@tui.tag" tuiChevron>
+      <label for="categorie-fiche" tuiLabel>Catégorie</label
+      ><select
+        tuiSelect
+        [ngModel]="model().categoryId"
+        (ngModelChange)="setCategory($event)"
+        id="categorie-fiche"
+      >
+        <option [ngValue]="null">Sans catégorie</option>
+        @for (category of activeCategories(); track category.id) {
+        <option [ngValue]="category.id">{{ category.label }}</option>
+        }
+      </select>
+    </tui-textfield>
+
+    <tui-textfield iconStart="@tui.file" tuiChevron>
+      <label for="type-fiche" tuiLabel>Type de fichier</label
+      ><select
+        tuiSelect
+        [ngModel]="model().fileType"
+        (ngModelChange)="setFileType($event)"
+        id="type-fiche"
+      >
+        @for (type of fileTypes; track type) {
+        <option [ngValue]="type">{{ type }}</option>
+        }
+      </select>
+    </tui-textfield>
+
+    <tui-textfield iconStart="@tui.link" class="wide">
+      <label for="lien-fiche" tuiLabel>Lien du document</label
+      ><input
+        tuiInput
+        [formField]="docForm.url"
+        placeholder="Lien SharePoint du fichier"
+        id="lien-fiche"
+      />
+    </tui-textfield>
+    <p class="hint">
+      Le lien doit être vérifié avec un compte Microsoft autorisé. Aucun lien public créé ici.
+    </p>
+
+    <tui-textfield iconStart="@tui.note" class="wide">
+      <label for="description-fiche" tuiLabel>Description</label
+      ><textarea
+        tuiTextarea
+        [ngModel]="model().description"
+        (ngModelChange)="model.update((m) => ({ ...m, description: $event }))"
+        id="description-fiche"
+      ></textarea>
+    </tui-textfield>
+
+    <fieldset class="audience">
+      <legend>1 · Qui voit la fiche dans Allegria ?</legend>
+      <label tuiBlock for="audience-tous">
+        <input
+          tuiRadio
+          type="radio"
+          name="visibility"
+          value="ALL"
+          [checked]="model().visibility === 'ALL'"
+          (change)="setVisibility('ALL')"
+          id="audience-tous"
+        />
+        Tous les utilisateurs connectés
+      </label>
+      <label tuiBlock for="audience-equipes">
+        <input
+          tuiRadio
+          type="radio"
+          name="visibility"
+          value="TEAMS"
+          [checked]="model().visibility === 'TEAMS'"
+          (change)="setVisibility('TEAMS')"
+          id="audience-equipes"
+        />
+        Certaines équipes opérationnelles
+      </label>
+      @if (model().visibility === 'TEAMS') {
+      <div class="team-picker">
+        @for (team of teams(); track team.id) {
+        <label class="check" [class.team-inactive]="!team.isActive">
+          <input
+            type="checkbox"
+            [checked]="isTeamSelected(team.id)"
+            (change)="toggleTeam(team.id, $any($event.target).checked)"
+          />
+          {{ team.name }} ({{ team.code }}) @if (!team.isActive) { — inactive }
+        </label>
+        }
+        <p class="hint">
+          Appartenir à au moins une équipe suffit. Une équipe inactive ne donne pas accès.
+        </p>
+      </div>
+      }
+    </fieldset>
+
+    <fieldset class="audience">
+      <legend>2 · Qui peut ouvrir le fichier ?</legend>
+      <p class="hint">
+        Compte Microsoft autorisé requis. Le partage Microsoft reste indépendant des équipes
+        Allegria.
+      </p>
+    </fieldset>
+  </form>
+  }
+
+  <footer>
+    <button tuiButton appearance="flat" (click)="opened.set(false)">
+      {{ mode() === 'detail' ? 'Fermer' : 'Annuler' }}
+    </button>
+    @if (mode() === 'detail') { @if (canWrite()) {
+    <button tuiButton (click)="edit()">Modifier</button>
+    <button tuiButton appearance="secondary-destructive" (click)="remove()">Supprimer</button>
+    } } @else {
+    <button tuiButton (click)="save()">Enregistrer la fiche</button>
+    }
+  </footer>
+</tui-drawer>
+}

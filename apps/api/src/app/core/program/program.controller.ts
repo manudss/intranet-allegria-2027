@@ -8,6 +8,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   UseGuards,
@@ -20,12 +21,15 @@ import { ProgramService } from './program.service';
 import {
   ChangeLogQueryDto,
   CreateSequenceDto,
+  CreateTaskDto,
   InsertSequenceApplyDto,
   InsertSequenceDto,
   ProgramRequestUser,
   ResizeSequenceApplyDto,
   ResizeSequenceDto,
+  SetSequenceGroupsDto,
   UpdateSequenceDto,
+  UpdateTaskDto,
 } from './program.types';
 
 const READ_ROLES = ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'LOGISTICS', 'VIEWER'];
@@ -145,6 +149,72 @@ export class ProgramController {
   @Patch('sequences/:id/unfreeze')
   unfreeze(@Req() req: UserRequest, @Param('id', ParseIntPipe) id: number) {
     return this.service.unfreeze(req.user, id);
+  }
+
+  @ApiOperation({ summary: "Fiche événement : détail d'une séquence et de ses groupes liés" })
+  @Roles(...READ_ROLES)
+  @Get('sequences/:id')
+  getSequence(@Param('id', ParseIntPipe) id: number) {
+    return this.service.getSequenceDetail(id);
+  }
+
+  @ApiOperation({ summary: 'Remplace les groupes de rassemblement liés au créneau' })
+  @Roles(...WRITE_ROLES)
+  @Put('sequences/:id/groups')
+  setGroups(
+    @Req() req: UserRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: SetSequenceGroupsDto,
+  ) {
+    return this.service.setSequenceGroups(req.user, id, dto);
+  }
+
+  @ApiOperation({ summary: 'Duplique le créneau en copie hors chaîne, titre suffixé « (copie) »' })
+  @Roles(...WRITE_ROLES)
+  @Post('sequences/:id/duplicate')
+  duplicate(@Req() req: UserRequest, @Param('id', ParseIntPipe) id: number) {
+    return this.service.duplicateSequence(req.user, id);
+  }
+
+  @ApiOperation({ summary: 'Tâches de préparation du créneau' })
+  @Roles(...READ_ROLES)
+  @Get('sequences/:id/tasks')
+  listTasks(@Param('id', ParseIntPipe) id: number) {
+    return this.service.listTasks(id);
+  }
+
+  @ApiOperation({ summary: 'Ajoute une tâche de préparation au créneau' })
+  @Roles(...WRITE_ROLES)
+  @Post('sequences/:id/tasks')
+  createTask(
+    @Req() req: UserRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CreateTaskDto,
+  ) {
+    return this.service.createTask(req.user, id, dto);
+  }
+
+  @ApiOperation({ summary: 'Modifie une tâche de préparation (intitulé, échéance, responsable, fait)' })
+  @Roles(...WRITE_ROLES)
+  @Patch('sequences/:id/tasks/:taskId')
+  updateTask(
+    @Req() req: UserRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('taskId', ParseIntPipe) taskId: number,
+    @Body() dto: UpdateTaskDto,
+  ) {
+    return this.service.updateTask(req.user, id, taskId, dto);
+  }
+
+  @ApiOperation({ summary: 'Supprime une tâche de préparation' })
+  @Roles(...WRITE_ROLES)
+  @Delete('sequences/:id/tasks/:taskId')
+  deleteTask(
+    @Req() req: UserRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('taskId', ParseIntPipe) taskId: number,
+  ) {
+    return this.service.deleteTask(req.user, id, taskId);
   }
 
   @ApiOperation({ summary: 'Journal des modifications du programme' })

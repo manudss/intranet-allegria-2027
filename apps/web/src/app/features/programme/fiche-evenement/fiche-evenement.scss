@@ -1,0 +1,402 @@
+:host {
+  display: block;
+}
+
+.fiche-loading,
+.fiche-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 3rem 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.fiche-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.fiche-time {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.fiche-badges {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.fiche-frozen-note {
+  margin: 0;
+  color: var(--tui-text-secondary);
+  font-size: 0.85rem;
+}
+
+.inline-error {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--tui-status-negative-pale);
+  color: var(--tui-status-negative);
+}
+
+.fiche-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 1.5rem;
+  align-items: start;
+
+  @media (max-width: 960px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tab-panel {
+  padding-top: 1rem;
+
+  h3 {
+    margin: 1.25rem 0 0.5rem;
+    font-size: 1rem;
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+}
+
+.details-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+
+  > div {
+    display: grid;
+    grid-template-columns: 11rem 1fr;
+    gap: 0.75rem;
+  }
+
+  dt {
+    color: var(--tui-text-secondary);
+    font-size: 0.85rem;
+  }
+
+  dd {
+    margin: 0;
+
+    &.notes {
+      white-space: pre-wrap;
+    }
+  }
+}
+
+.item-list {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid var(--tui-border-normal);
+    border-radius: 0.5rem;
+
+    &.done .task-title {
+      text-decoration: line-through;
+      color: var(--tui-text-secondary);
+    }
+  }
+
+  .empty-state {
+    border: none;
+    color: var(--tui-text-secondary);
+  }
+}
+
+.task-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  cursor: pointer;
+}
+
+.task-meta,
+.log-comment {
+  color: var(--tui-text-secondary);
+  font-size: 0.85rem;
+}
+
+.log-list li {
+  flex-wrap: wrap;
+}
+
+.log-action {
+  font-weight: 600;
+}
+
+.add-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+
+  select {
+    min-width: 0;
+    width: min(100%, 22rem);
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--tui-border-normal);
+    border-radius: 0.5rem;
+    font: inherit;
+    background: var(--tui-background-base);
+    color: var(--tui-text-primary);
+  }
+}
+
+.edit-form,
+.add-task-form {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 34rem;
+  margin-bottom: 1rem;
+
+  label {
+    display: grid;
+    gap: 0.25rem;
+    font-size: 0.9rem;
+  }
+
+  input[type='text'],
+  input[type='url'],
+  input[type='date'],
+  select,
+  textarea {
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--tui-border-normal);
+    border-radius: 0.5rem;
+    font: inherit;
+    background: var(--tui-background-base);
+  }
+}
+
+.track-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  .track-picker-label {
+    font-size: 0.9rem;
+    margin-right: 0.25rem;
+  }
+}
+
+.due-picker {
+  border: 1px solid var(--tui-border-normal);
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  display: grid;
+  gap: 0.4rem;
+
+  legend {
+    font-size: 0.85rem;
+    color: var(--tui-text-secondary);
+    padding: 0 0.25rem;
+  }
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.fiche-aside {
+  display: grid;
+  gap: 1rem;
+}
+
+.aside-card {
+  border: 1px solid var(--tui-border-normal);
+  border-radius: 0.75rem;
+  padding: 0.9rem 1rem;
+
+  h3 {
+    margin: 0 0 0.6rem;
+    font-size: 0.95rem;
+  }
+
+  h4 {
+    margin: 0.75rem 0 0.4rem;
+    font-size: 0.85rem;
+  }
+
+  .details-list > div {
+    grid-template-columns: 5.5rem 1fr;
+  }
+}
+
+.aside-groups {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+
+  .empty-state {
+    color: var(--tui-text-secondary);
+  }
+}
+
+.time-edit-zone {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.time-edit {
+  display: grid;
+  gap: 0.6rem;
+  flex: 1;
+  min-width: 20rem;
+}
+
+.time-fields {
+  display: flex;
+  gap: 0.75rem;
+
+  label {
+    display: grid;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+  }
+
+  input {
+    padding: 0.4rem 0.55rem;
+    border: 1px solid var(--tui-border-normal);
+    border-radius: 0.5rem;
+    font: inherit;
+    background: var(--tui-background-base);
+  }
+}
+
+.sync-parallel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.hint {
+  margin: 0;
+  color: var(--tui-text-secondary);
+  font-size: 0.85rem;
+}
+
+.time-preview {
+  border: 1px solid var(--tui-border-normal);
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  display: grid;
+  gap: 0.4rem;
+
+  &.blocked {
+    border-color: var(--tui-status-negative);
+  }
+
+  .preview-title {
+    margin: 0;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    font-size: 0.9rem;
+  }
+}
+
+.planning-link {
+  font-size: 0.85rem;
+}
+
+// Grid children must be allowed to shrink before tabs/forms can scroll or wrap.
+.fiche-main {
+  min-width: 0;
+
+  tui-tabs {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .fiche-badges {
+    flex-wrap: wrap;
+  }
+
+  .details-list > div {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+
+  .details-list dd,
+  .item-list li,
+  .time-preview {
+    overflow-wrap: anywhere;
+  }
+
+  .item-list li,
+  .form-actions,
+  .time-fields {
+    flex-wrap: wrap;
+  }
+
+  .time-edit {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .edit-form,
+  .add-task-form,
+  .time-edit {
+    input:not([type='radio']):not([type='checkbox']),
+    select,
+    textarea {
+      box-sizing: border-box;
+      min-width: 0;
+      max-width: 100%;
+    }
+  }
+
+  .task-check {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+}

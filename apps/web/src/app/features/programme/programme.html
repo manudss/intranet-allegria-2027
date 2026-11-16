@@ -431,6 +431,12 @@
                   </div>
                 }
 
+                <footer class="sequence-actions">
+                  <a tuiButton appearance="flat" size="xs" [routerLink]="['/programme/evenements', sequence.id]">
+                    Ouvrir la fiche
+                  </a>
+                </footer>
+
                 @if (canEdit()) {
                   <footer class="sequence-actions">
                     <button tuiButton appearance="flat" size="xs" type="button" (click)="openInsertForm(sequence.id)">

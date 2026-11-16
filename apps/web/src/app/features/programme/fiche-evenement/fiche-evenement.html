@@ -1,0 +1,665 @@
+@if (loading()) {
+  <div class="fiche-loading"><tui-loader size="l" /></div>
+} @else if (loadError()) {
+  <div class="fiche-error" role="alert">
+    <p>{{ loadError() }}</p>
+    <a tuiButton appearance="secondary" routerLink="/programme">Retour au planning</a>
+  </div>
+} @else if (sequence(); as sequence) {
+  <app-page-layout [title]="sequence.title" [description]="dateLabel() + ' · ' + sequence.location">
+    <div actions class="header-actions">
+      <a tuiButton appearance="flat" type="button" iconStart="@tui.arrow-left" routerLink="/programme">
+        Planning
+      </a>
+      @if (canEdit()) {
+        <button
+          tuiButton
+          appearance="secondary"
+          type="button"
+          iconStart="@tui.copy"
+          [disabled]="busy()"
+          (click)="duplicate()"
+        >
+          Dupliquer
+        </button>
+        <button
+          tuiButton
+          appearance="secondary"
+          type="button"
+          [iconStart]="sequence.status === ProgramSequenceStatus.FROZEN ? '@tui.unlock' : '@tui.lock'"
+          [disabled]="busy()"
+          (click)="toggleFreeze()"
+        >
+          {{ sequence.status === ProgramSequenceStatus.FROZEN ? 'Défiger' : 'Figer' }}
+        </button>
+        @if (!editing()) {
+          <button tuiButton appearance="primary" type="button" iconStart="@tui.pencil" (click)="startEdit(); selectTab(0)">
+            Modifier
+          </button>
+        }
+      }
+    </div>
+
+    <header class="fiche-summary">
+      <p class="fiche-time">
+        <tui-icon icon="@tui.clock" />
+        {{ sequence.startTime }} – {{ sequence.endTime }} ({{ sequence.durationMinutes }} min)
+      </p>
+      <div class="fiche-badges">
+        <div tuiBadge appearance="neutral">{{ TRACK_LABELS[sequence.track] }}</div>
+        <div tuiBadge [appearance]="sequence.visibility === ProgramSequenceVisibility.PUBLIC ? 'accent' : 'neutral'">
+          {{ VISIBILITY_LABELS[sequence.visibility] }}
+        </div>
+        @if (sequence.status === ProgramSequenceStatus.FROZEN) {
+          <div tuiBadge appearance="warning">Figé</div>
+        }
+      </div>
+      @if (sequence.status === ProgramSequenceStatus.FROZEN && sequence.frozenByUserName) {
+        <p class="fiche-frozen-note">
+          Figé par {{ sequence.frozenByUserName }}
+          @if (sequence.frozenAt) { le {{ dateTimeLabel(sequence.frozenAt) }} }
+        </p>
+      }
+    </header>
+
+    @if (actionError()) {
+      <div class="inline-error" role="alert">
+        {{ actionError() }}
+        <button tuiButton appearance="flat" size="xs" type="button" (click)="dismissError()">Fermer</button>
+      </div>
+    }
+
+    <div class="fiche-body">
+      <main class="fiche-main">
+        <tui-tabs [activeItemIndex]="tabIndex()" (activeItemIndexChange)="selectTab($event)">
+          @for (tab of tabLabels(); track tab) {
+            <button tuiTab type="button">{{ tab }}</button>
+          }
+        </tui-tabs>
+
+        @switch (tabIndex()) {
+          @case (0) {
+            <section class="tab-panel" aria-label="Détails">
+              @if (editing() && editDraft(); as draft) {
+                <form class="edit-form" (ngSubmit)="saveEdit()">
+                  <label>
+                    Titre
+                    <input
+                      type="text"
+                      maxlength="200"
+                      required
+                      [ngModel]="draft.title"
+                      (ngModelChange)="updateEditDraft({ title: $event })"
+                      name="fiche-titre"
+                    />
+                  </label>
+                  <div class="track-picker" role="group" aria-label="Piste">
+                    <span class="track-picker-label">Piste</span>
+                    <button tuiButton type="button" size="xs"
+                      [appearance]="draft.track === ProgramSequenceTrack.TA ? 'primary' : 'secondary'"
+                      (click)="updateEditDraft({ track: ProgramSequenceTrack.TA })">TA</button>
+                    <button tuiButton type="button" size="xs"
+                      [appearance]="draft.track === ProgramSequenceTrack.ES ? 'primary' : 'secondary'"
+                      (click)="updateEditDraft({ track: ProgramSequenceTrack.ES })">ES</button>
+                    <button tuiButton type="button" size="xs"
+                      [appearance]="draft.track === ProgramSequenceTrack.COMMON ? 'primary' : 'secondary'"
+                      (click)="updateEditDraft({ track: ProgramSequenceTrack.COMMON })">Temps commun</button>
+                  </div>
+                  <label>
+                    Visibilité
+                    <select
+                      [ngModel]="draft.visibility"
+                      (ngModelChange)="updateEditDraft({ visibility: $event })"
+                      name="fiche-visibilite"
+                    >
+                      <option [value]="ProgramSequenceVisibility.PUBLIC">Public (grand temps, sans connexion)</option>
+                      <option [value]="ProgramSequenceVisibility.INTERNAL">Réservé bénévoles-coordinateurs</option>
+                    </select>
+                  </label>
+                  <label>
+                    Équipe responsable
+                    <select
+                      [ngModel]="draft.volunteerTeamId"
+                      (ngModelChange)="updateEditDraft({ volunteerTeamId: $event === '' ? null : +$event })"
+                      name="fiche-equipe"
+                    >
+                      <option value="">Aucune</option>
+                      @for (team of teams(); track team.id) {
+                        <option [value]="team.id">{{ team.name }}</option>
+                      }
+                    </select>
+                  </label>
+                  <label>
+                    Notes
+                    <textarea
+                      rows="4"
+                      [ngModel]="draft.notes"
+                      (ngModelChange)="updateEditDraft({ notes: $event })"
+                      name="fiche-notes"
+                    ></textarea>
+                  </label>
+                  <footer class="form-actions">
+                    <button tuiButton appearance="primary" type="submit" [disabled]="busy()">Enregistrer</button>
+                    <button tuiButton appearance="secondary" type="button" (click)="cancelEdit()">Annuler</button>
+                  </footer>
+                </form>
+              } @else {
+                <dl class="details-list">
+                  <div><dt>Lieu</dt><dd>{{ sequence.location }}</dd></div>
+                  <div><dt>Horaire</dt><dd>{{ sequence.startTime }} – {{ sequence.endTime }} ({{ sequence.durationMinutes }} min)</dd></div>
+                  @if (canEdit() && sequence.status !== ProgramSequenceStatus.FROZEN) {
+                    <div>
+                      <dt></dt>
+                      <dd class="time-edit-zone">
+                        @if (timeEdit(); as tedit) {
+                          <div class="time-edit">
+                            <div class="time-fields">
+                              <label>
+                                Début
+                                <input
+                                  type="time"
+                                  [ngModel]="tedit.startTime"
+                                  (ngModelChange)="updateTimeEdit({ startTime: $event })"
+                                  name="fiche-debut"
+                                />
+                              </label>
+                              <label>
+                                Durée (min)
+                                <input
+                                  type="number"
+                                  min="5"
+                                  step="5"
+                                  [ngModel]="tedit.durationMinutes"
+                                  (ngModelChange)="updateTimeEdit({ durationMinutes: +$event })"
+                                  name="fiche-duree"
+                                />
+                              </label>
+                            </div>
+                            @if (isChainHead() && startChanged()) {
+                              <p class="hint">Premier créneau de la chaîne : son début ne peut pas être décalé.</p>
+                            }
+                            @if (durationChanged() && chainContext().parallels.length) {
+                              <label class="sync-parallel">
+                                <input
+                                  type="checkbox"
+                                  [ngModel]="syncParallel()"
+                                  (ngModelChange)="syncParallel.set($event); timePreview.set(null); parallelPreview.set(null)"
+                                  name="fiche-sync-parallele"
+                                />
+                                Appliquer aussi cette durée à la voie parallèle
+                                ({{ TRACK_LABELS[chainContext().parallels[0].track] }})
+                              </label>
+                            }
+                            @if (timeError()) {
+                              <p class="inline-error" role="alert">{{ timeError() }}</p>
+                            }
+                            <footer class="form-actions">
+                              <button tuiButton appearance="secondary" size="s" type="button" [disabled]="busy()" (click)="previewTimeChange()">
+                                Prévisualiser le recalcul
+                              </button>
+                              <button tuiButton appearance="flat" size="s" type="button" (click)="cancelTimeEdit()">Annuler</button>
+                            </footer>
+                            @if (timePreview(); as preview) {
+                              <div class="time-preview" [class.blocked]="preview.outcome !== 'ok'">
+                                <p class="preview-title">Aperçu du recalcul : {{ preview.message }}</p>
+                                <ul>
+                                  @for (diff of preview.affected; track diff.sequenceId) {
+                                    <li>
+                                      {{ diff.title }} : {{ diff.before.startTime }}–{{ diff.before.endTime }}
+                                      → {{ diff.after.startTime }}–{{ diff.after.endTime }}
+                                    </li>
+                                  }
+                                </ul>
+                                @if (parallelPreview(); as pp) {
+                                  <p class="preview-title">Voie parallèle : {{ pp.message }}</p>
+                                  <ul>
+                                    @for (diff of pp.affected; track diff.sequenceId) {
+                                      <li>
+                                        {{ diff.title }} : {{ diff.before.startTime }}–{{ diff.before.endTime }}
+                                        → {{ diff.after.startTime }}–{{ diff.after.endTime }}
+                                      </li>
+                                    }
+                                  </ul>
+                                }
+                                @if (preview.outcome === 'ok' && (!parallelPreview() || parallelPreview()!.outcome === 'ok')) {
+                                  <button tuiButton appearance="primary" size="s" type="button" [disabled]="busy()" (click)="applyTimeChange()">
+                                    Appliquer le recalcul
+                                  </button>
+                                } @else {
+                                  <p class="hint">Recalcul impossible tel quel (créneau figé ou durée minimale) : ajustez la valeur.</p>
+                                }
+                              </div>
+                            }
+                          </div>
+                        } @else {
+                          <button tuiButton appearance="flat" size="xs" type="button" (click)="startTimeEdit()">
+                            Modifier les horaires
+                          </button>
+                          <a class="planning-link" [routerLink]="['/programme']" [queryParams]="{ date: sequence.eventDate, lieu: sequence.location }">
+                            Ouvrir dans le planning
+                          </a>
+                        }
+                      </dd>
+                    </div>
+                  }
+                  <div><dt>Piste</dt><dd>{{ TRACK_LABELS[sequence.track] }}</dd></div>
+                  <div><dt>Visibilité</dt><dd>{{ VISIBILITY_LABELS[sequence.visibility] }}</dd></div>
+                  <div><dt>Statut</dt><dd>{{ sequence.status === ProgramSequenceStatus.FROZEN ? 'Figé' : 'Mobile' }}</dd></div>
+                  <div><dt>Équipe responsable</dt><dd>{{ sequence.volunteerTeamName ?? 'Aucune' }}</dd></div>
+                  @if (sequence.minDurationMinutes) {
+                    <div><dt>Durée minimale</dt><dd>{{ sequence.minDurationMinutes }} min</dd></div>
+                  }
+                  @if (sequence.minMarginMinutes) {
+                    <div><dt>Marge minimale</dt><dd>{{ sequence.minMarginMinutes }} min</dd></div>
+                  }
+                  @if (sequence.notes) {
+                    <div><dt>Notes</dt><dd class="notes">{{ sequence.notes }}</dd></div>
+                  }
+                </dl>
+              }
+            </section>
+          }
+
+          @case (1) {
+            <section class="tab-panel" aria-label="Missions et tâches">
+              <h3>Missions bénévoles liées</h3>
+              <ul class="item-list">
+                @for (mission of linkedMissions(); track mission.id) {
+                  <li>
+                    <span>
+                      {{ mission.title }}
+                      @if (mission.location) { <small>— {{ mission.location }}</small> }
+                    </span>
+                    <a tuiButton appearance="flat" size="xs" [routerLink]="['/missions-benevoles']">Ouvrir la mission</a>
+                    @if (canEdit()) {
+                      <button tuiButton appearance="flat" size="xs" type="button" [disabled]="busy()" (click)="removeMission(mission.id)">
+                        Retirer
+                      </button>
+                    }
+                  </li>
+                } @empty {
+                  <li class="empty-state">Aucune mission liée à ce créneau.</li>
+                }
+              </ul>
+              @if (canEdit()) {
+                <div class="add-row">
+                  <select
+                    aria-label="Mission à lier"
+                    [ngModel]="missionToAdd() ?? ''"
+                    (ngModelChange)="missionToAdd.set($event === '' ? null : +$event)"
+                    name="fiche-mission"
+                  >
+                    <option value="">Choisir une mission…</option>
+                    @for (mission of availableMissions(); track mission.id) {
+                      <option [value]="mission.id">{{ mission.title }}</option>
+                    }
+                  </select>
+                  <button tuiButton appearance="secondary" size="s" type="button" [disabled]="busy() || !missionToAdd()" (click)="addMission()">
+                    Lier la mission
+                  </button>
+                </div>
+                @if (newMission(); as draft) {
+                  <form class="add-task-form" (ngSubmit)="createAndLinkMission()">
+                    <label>
+                      Titre de la nouvelle mission
+                      <input
+                        type="text"
+                        maxlength="200"
+                        [ngModel]="draft.title"
+                        (ngModelChange)="updateNewMission({ title: $event })"
+                        name="fiche-nouvelle-mission"
+                      />
+                    </label>
+                    <label>
+                      Équipe responsable
+                      <select
+                        [ngModel]="draft.volunteerTeamId ?? ''"
+                        (ngModelChange)="updateNewMission({ volunteerTeamId: $event === '' ? null : +$event })"
+                        name="fiche-nouvelle-mission-equipe"
+                      >
+                        <option value="">Aucune</option>
+                        @for (team of teams(); track team.id) {
+                          <option [value]="team.id">{{ team.name }}</option>
+                        }
+                      </select>
+                    </label>
+                    <label>
+                      Lieu (facultatif)
+                      <input
+                        type="text"
+                        maxlength="200"
+                        [ngModel]="draft.location"
+                        (ngModelChange)="updateNewMission({ location: $event })"
+                        name="fiche-nouvelle-mission-lieu"
+                      />
+                    </label>
+                    @if (missionFormError()) {
+                      <p class="inline-error" role="alert">{{ missionFormError() }}</p>
+                    }
+                    <footer class="form-actions">
+                      <button tuiButton appearance="primary" size="s" type="submit" [disabled]="busy()">Créer et lier</button>
+                      <button tuiButton appearance="secondary" size="s" type="button" (click)="cancelNewMission()">Annuler</button>
+                    </footer>
+                  </form>
+                } @else {
+                  <button tuiButton appearance="flat" size="s" type="button" (click)="startNewMission()">
+                    Créer une mission
+                  </button>
+                }
+              }
+
+              <h3>Tâches de préparation</h3>
+              <ul class="item-list task-list">
+                @for (task of tasks(); track task.id) {
+                  <li [class.done]="task.isDone">
+                    <label class="task-check">
+                      <input
+                        type="checkbox"
+                        [checked]="task.isDone"
+                        [disabled]="busy()"
+                        (change)="toggleTask(task)"
+                        [attr.aria-label]="'Marquer « ' + task.title + ' » comme ' + (task.isDone ? 'à faire' : 'faite')"
+                      />
+                      <span class="task-title">{{ task.title }}</span>
+                    </label>
+                    <span class="task-meta">
+                      {{ taskDueLabel(task) }}
+                      @if (task.responsible) { · {{ task.responsible }} }
+                      @if (task.isDone && task.doneAt) { · faite le {{ dateTimeLabel(task.doneAt) }} }
+                    </span>
+                    @if (canEdit()) {
+                      <button tuiButton appearance="flat" size="xs" type="button" [disabled]="busy()" (click)="removeTask(task)">
+                        Supprimer
+                      </button>
+                    }
+                  </li>
+                } @empty {
+                  <li class="empty-state">Aucune tâche de préparation pour ce créneau.</li>
+                }
+              </ul>
+              @if (canEdit()) {
+                <form class="add-task-form" (ngSubmit)="addTask()">
+                  <label>
+                    Nouvelle tâche
+                    <input
+                      type="text"
+                      maxlength="200"
+                      placeholder="Ex. Imprimer les feuilles de route"
+                      [ngModel]="taskDraft().title"
+                      (ngModelChange)="taskDraft.set({ ...taskDraft(), title: $event })"
+                      name="fiche-tache-titre"
+                    />
+                  </label>
+                  <fieldset class="due-picker">
+                    <legend>Échéance</legend>
+                    <label>
+                      <input
+                        type="radio"
+                        name="fiche-tache-echeance"
+                        [checked]="taskDraft().dueKind === 'offset'"
+                        (change)="taskDraft.set({ ...taskDraft(), dueKind: 'offset' })"
+                      />
+                      Avant le début du créneau
+                    </label>
+                    @if (taskDraft().dueKind === 'offset') {
+                      <select
+                        aria-label="Délai avant le début"
+                        [ngModel]="taskDraft().dueOffsetMinutes"
+                        (ngModelChange)="taskDraft.set({ ...taskDraft(), dueOffsetMinutes: +$event })"
+                        name="fiche-tache-delai"
+                      >
+                        @for (preset of OFFSET_PRESETS; track preset.value) {
+                          <option [value]="preset.value">{{ preset.label }}</option>
+                        }
+                      </select>
+                    }
+                    <label>
+                      <input
+                        type="radio"
+                        name="fiche-tache-echeance"
+                        [checked]="taskDraft().dueKind === 'date'"
+                        (change)="taskDraft.set({ ...taskDraft(), dueKind: 'date' })"
+                      />
+                      Date fixe
+                    </label>
+                    @if (taskDraft().dueKind === 'date') {
+                      <input
+                        type="date"
+                        aria-label="Date d'échéance"
+                        [ngModel]="taskDraft().dueDate"
+                        (ngModelChange)="taskDraft.set({ ...taskDraft(), dueDate: $event })"
+                        name="fiche-tache-date"
+                      />
+                    }
+                  </fieldset>
+                  <label>
+                    Responsable (facultatif)
+                    <input
+                      type="text"
+                      maxlength="150"
+                      [ngModel]="taskDraft().responsible"
+                      (ngModelChange)="taskDraft.set({ ...taskDraft(), responsible: $event })"
+                      name="fiche-tache-responsable"
+                    />
+                  </label>
+                  @if (taskFormError()) {
+                    <p class="inline-error" role="alert">{{ taskFormError() }}</p>
+                  }
+                  <button tuiButton appearance="secondary" size="s" type="submit" [disabled]="busy()">
+                    Ajouter la tâche
+                  </button>
+                </form>
+              }
+            </section>
+          }
+
+          @case (2) {
+            <section class="tab-panel" aria-label="Groupes concernés">
+              <ul class="item-list">
+                @for (group of linkedGroups(); track group.id) {
+                  <li>
+                    <span>
+                      {{ group.name }}
+                      @if (group.diocese) { <small>— {{ group.diocese }}</small> }
+                    </span>
+                    @if (canEdit()) {
+                      <button tuiButton appearance="flat" size="xs" type="button" [disabled]="busy()" (click)="unlinkGroup(group.id)">
+                        Retirer
+                      </button>
+                    }
+                  </li>
+                } @empty {
+                  <li class="empty-state">Aucun groupe lié à ce créneau.</li>
+                }
+              </ul>
+              @if (canEdit()) {
+                <div class="add-row">
+                  <select
+                    aria-label="Groupe à lier"
+                    [ngModel]="groupToAdd() ?? ''"
+                    (ngModelChange)="groupToAdd.set($event === '' ? null : +$event)"
+                    name="fiche-groupe"
+                  >
+                    <option value="">Choisir un groupe existant…</option>
+                    @for (group of availableGroups(); track group.id) {
+                      <option [value]="group.id">{{ group.name }}@if (group.diocese) { — {{ group.diocese }} }</option>
+                    }
+                  </select>
+                  <button tuiButton appearance="secondary" size="s" type="button" [disabled]="busy() || !groupToAdd()" (click)="addGroup()">
+                    Lier un groupe existant
+                  </button>
+                </div>
+                @if (newGroup(); as draft) {
+                  <form class="add-task-form" (ngSubmit)="createAndLinkGroup()">
+                    <label>
+                      Nom du nouveau groupe
+                      <input
+                        type="text"
+                        maxlength="200"
+                        [ngModel]="draft.name"
+                        (ngModelChange)="updateNewGroup({ name: $event })"
+                        name="fiche-nouveau-groupe"
+                      />
+                    </label>
+                    <label>
+                      Diocèse (facultatif)
+                      <input
+                        type="text"
+                        maxlength="100"
+                        [ngModel]="draft.diocese"
+                        (ngModelChange)="updateNewGroup({ diocese: $event })"
+                        name="fiche-nouveau-groupe-diocese"
+                      />
+                    </label>
+                    <footer class="form-actions">
+                      <button tuiButton appearance="primary" size="s" type="submit" [disabled]="busy()">Créer et lier</button>
+                      <button tuiButton appearance="secondary" size="s" type="button" (click)="cancelNewGroup()">Annuler</button>
+                    </footer>
+                  </form>
+                } @else {
+                  <button tuiButton appearance="flat" size="s" type="button" (click)="startNewGroup()">
+                    Créer un groupe
+                  </button>
+                }
+              }
+            </section>
+          }
+
+          @case (3) {
+            <section class="tab-panel" aria-label="Documents">
+              <ul class="item-list">
+                @for (doc of sequence.documentLinks; track doc.url) {
+                  <li>
+                    <a [href]="doc.url" target="_blank" rel="noopener">{{ doc.label }}</a>
+                    @if (canEdit()) {
+                      <button tuiButton appearance="flat" size="xs" type="button" [disabled]="busy()" (click)="removeDocument(doc)">
+                        Retirer
+                      </button>
+                    }
+                  </li>
+                } @empty {
+                  <li class="empty-state">Aucun document lié à ce créneau.</li>
+                }
+              </ul>
+              @if (canEdit()) {
+                <form class="add-task-form" (ngSubmit)="addDocument()">
+                  <label>
+                    Libellé
+                    <input
+                      type="text"
+                      maxlength="200"
+                      placeholder="Ex. Run of show"
+                      [ngModel]="newDoc().label"
+                      (ngModelChange)="newDoc.set({ ...newDoc(), label: $event })"
+                      name="fiche-doc-libelle"
+                    />
+                  </label>
+                  <label>
+                    Lien
+                    <input
+                      type="url"
+                      placeholder="https://…"
+                      [ngModel]="newDoc().url"
+                      (ngModelChange)="newDoc.set({ ...newDoc(), url: $event })"
+                      name="fiche-doc-url"
+                    />
+                  </label>
+                  @if (docFormError()) {
+                    <p class="inline-error" role="alert">{{ docFormError() }}</p>
+                  }
+                  <button tuiButton appearance="secondary" size="s" type="submit" [disabled]="busy()">
+                    Ajouter le document
+                  </button>
+                </form>
+              }
+            </section>
+          }
+
+          @case (4) {
+            <section class="tab-panel" aria-label="Historique">
+              <ul class="item-list log-list">
+                @for (entry of logs(); track entry.id) {
+                  <li>
+                    <span class="log-action">{{ actionLabel(entry.action) }}</span>
+                    <span class="task-meta">
+                      {{ logDateLabel(entry) }}
+                      @if (entry.authorUserName) { · {{ entry.authorUserName }} }
+                    </span>
+                    @if (entry.comment) {
+                      <span class="log-comment">{{ entry.comment }}</span>
+                    }
+                  </li>
+                } @empty {
+                  <li class="empty-state">Aucune modification journalisée pour ce créneau.</li>
+                }
+              </ul>
+            </section>
+          }
+        }
+      </main>
+
+      <aside class="fiche-aside">
+        <section class="aside-card">
+          <h3>Informations clés</h3>
+          <dl class="details-list">
+            <div><dt>Date</dt><dd>{{ dateLabel() }}</dd></div>
+            <div><dt>Début</dt><dd>{{ sequence.startTime }}</dd></div>
+            <div><dt>Fin</dt><dd>{{ sequence.endTime }}</dd></div>
+            <div><dt>Piste</dt><dd>{{ TRACK_LABELS[sequence.track] }}</dd></div>
+            <div><dt>Visibilité</dt><dd>{{ VISIBILITY_LABELS[sequence.visibility] }}</dd></div>
+          </dl>
+        </section>
+
+        <section class="aside-card">
+          <h3>Groupes concernés</h3>
+          <ul class="aside-groups">
+            @for (group of linkedGroups(); track group.id) {
+              <li>{{ group.name }}</li>
+            } @empty {
+              <li class="empty-state">Aucun groupe lié.</li>
+            }
+          </ul>
+        </section>
+
+        <section class="aside-card">
+          <h3>Chaîne du jour</h3>
+          <dl class="details-list">
+            <div>
+              <dt>Avant</dt>
+              <dd>
+                @if (chainContext().previous; as previous) {
+                  <a [routerLink]="['/programme/evenements', previous.id]">{{ previous.startTime }} · {{ previous.title }}</a>
+                } @else {
+                  Début de chaîne
+                }
+              </dd>
+            </div>
+            <div>
+              <dt>Après</dt>
+              <dd>
+                @if (chainContext().next; as next) {
+                  <a [routerLink]="['/programme/evenements', next.id]">{{ next.startTime }} · {{ next.title }}</a>
+                } @else {
+                  Fin de chaîne
+                }
+              </dd>
+            </div>
+          </dl>
+          @if (chainContext().parallels.length) {
+            <h4>Voies parallèles</h4>
+            <ul class="aside-groups">
+              @for (parallel of chainContext().parallels; track parallel.id) {
+                <li>
+                  <a [routerLink]="['/programme/evenements', parallel.id]">
+                    {{ parallel.location }} — {{ parallel.title }}
+                    ({{ TRACK_LABELS[parallel.track] }})
+                  </a>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      </aside>
+    </div>
+  </app-page-layout>
+}

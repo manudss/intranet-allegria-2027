@@ -188,6 +188,16 @@ export const appRoutes: Route[] = [
         loadComponent: () => import('./features/programme/programme').then((m) => m.ProgrammePage),
       },
       {
+        path: 'programme/evenements/:id',
+        title: 'Fiche événement',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'LOGISTICS', 'VIEWER'] },
+        loadComponent: () =>
+          import('./features/programme/fiche-evenement/fiche-evenement').then(
+            (m) => m.FicheEvenementPage,
+          ),
+      },
+      {
         path: 'jour-j',
         title: 'Tableau de bord Jour J',
         canActivate: [roleGuard],

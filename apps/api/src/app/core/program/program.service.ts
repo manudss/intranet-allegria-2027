@@ -6,12 +6,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource, EntityManager } from 'typeorm';
+import { DataSource, EntityManager, In } from 'typeorm';
 import {
+  EventPreparationTask,
+  Group,
   ProgramChangeLog,
   ProgramChangeLogAction,
   ProgramDocumentLink,
   ProgramSequence,
+  ProgramSequenceGroup,
   ProgramSequenceStatus,
   ProgramSequenceTrack,
   ProgramPublicExport,
@@ -29,12 +32,17 @@ import {
 import {
   ChangeLogQueryDto,
   CreateSequenceDto,
+  CreateTaskDto,
+  EventTaskView,
   InsertSequenceDto,
   ProgramChangeLogView,
   ProgramRequestUser,
+  ProgramSequenceDetailView,
   ProgramSequenceView,
   ResizeSequenceDto,
+  SetSequenceGroupsDto,
   UpdateSequenceDto,
+  UpdateTaskDto,
 } from './program.types';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -478,6 +486,27 @@ export class ProgramService {
     if (query.date !== undefined) {
       this.assertDate(query.date);
     }
+    if (query.sequenceId !== undefined) {
+      const sequenceId = Number(query.sequenceId);
+      if (!Number.isInteger(sequenceId) || sequenceId <= 0) {
+        throw new BadRequestException('sequenceId invalide.');
+      }
+      const qb = this.dataSource.manager
+        .getRepository(ProgramChangeLog)
+        .createQueryBuilder('log')
+        .leftJoinAndSelect('log.authorUser', 'authorUser')
+        .where('"log"."affectedSequenceIds" @> CAST(:seq AS jsonb)', {
+          seq: JSON.stringify([sequenceId]),
+        })
+        .orderBy('log.createdAt', 'DESC')
+        .addOrderBy('log.id', 'DESC')
+        .take(200);
+      if (query.date) {
+        qb.andWhere('log.eventDate = :date', { date: query.date });
+      }
+      const logs = await qb.getMany();
+      return logs.map(toLogView);
+    }
     const logs = await this.dataSource.manager.find(ProgramChangeLog, {
       where: query.date ? { eventDate: query.date } : {},
       relations: { authorUser: true },
@@ -588,6 +617,309 @@ export class ProgramService {
     if (outcome === 'impossible') {
       throw new BadRequestException('Application impossible sans décision manuelle.');
     }
+  }
+
+  // ── Fiche événement ─────────────────────────────────────────────────────
+
+  /** Détail complet d'une séquence pour la fiche : groupes de rassemblement liés inclus. */
+  async getSequenceDetail(sequenceId: number): Promise<ProgramSequenceDetailView> {
+    const sequence = await this.dataSource.manager.findOne(ProgramSequence, {
+      where: { id: sequenceId },
+      relations: { volunteerTeam: true, frozenByUser: true },
+    });
+    if (!sequence) {
+      throw new NotFoundException(`Séquence ${sequenceId} introuvable`);
+    }
+    const groupIds = await this.loadGroupIds(this.dataSource.manager, sequenceId);
+    return { ...toView(sequence), groupIds };
+  }
+
+  private async loadGroupIds(manager: EntityManager, sequenceId: number): Promise<number[]> {
+    const rows = await manager.find(ProgramSequenceGroup, {
+      where: { sequenceId },
+      order: { groupId: 'ASC' },
+    });
+    return rows.map((row) => row.groupId);
+  }
+
+  /** Remplace la liste des groupes de rassemblement liés au créneau. */
+  async setSequenceGroups(
+    user: ProgramRequestUser,
+    sequenceId: number,
+    dto: SetSequenceGroupsDto,
+  ): Promise<ProgramSequenceDetailView> {
+    if (
+      !Array.isArray(dto.groupIds) ||
+      !dto.groupIds.every((id) => Number.isInteger(id) && id > 0)
+    ) {
+      throw new BadRequestException('Liste de groupes invalide.');
+    }
+    const wanted = [...new Set(dto.groupIds)];
+    return this.dataSource.transaction(async (manager) => {
+      const sequence = await this.loadSequence(manager, sequenceId);
+      if (wanted.length) {
+        const found = await manager.find(Group, { where: { id: In(wanted) } });
+        if (found.length !== wanted.length) {
+          throw new BadRequestException('Un ou plusieurs groupes sont introuvables.');
+        }
+      }
+      const before = await this.loadGroupIds(manager, sequenceId);
+      await manager.delete(ProgramSequenceGroup, { sequenceId });
+      if (wanted.length) {
+        await manager.save(
+          wanted.map((groupId) => manager.create(ProgramSequenceGroup, { sequenceId, groupId })),
+        );
+      }
+      await this.writeLog(manager, {
+        action: ProgramChangeLogAction.UPDATE,
+        user,
+        eventDate: sequence.eventDate,
+        affectedSequenceIds: [sequenceId],
+        before: { groupIds: before },
+        after: { groupIds: wanted },
+        comment: `Groupes de rassemblement liés à « ${sequence.title} » mis à jour.`,
+      });
+      const refreshed = await manager.findOneOrFail(ProgramSequence, {
+        where: { id: sequenceId },
+        relations: { volunteerTeam: true, frozenByUser: true },
+      });
+      return { ...toView(refreshed), groupIds: wanted };
+    });
+  }
+
+  /**
+   * Duplique le créneau : copie hors chaîne (pas de prédécesseur ni de repère, donc
+   * aucun décalage des autres créneaux), non figée, titre suffixé « (copie) ». Missions,
+   * documents, groupes liés et tâches de préparation (remises à « à faire ») sont repris.
+   */
+  async duplicateSequence(
+    user: ProgramRequestUser,
+    sequenceId: number,
+  ): Promise<ProgramSequenceDetailView> {
+    return this.dataSource.transaction(async (manager) => {
+      const source = await this.loadSequence(manager, sequenceId);
+      const suffix = ' (copie)';
+      const title =
+        source.title.length + suffix.length > MAX_TITLE_LENGTH
+          ? source.title.slice(0, MAX_TITLE_LENGTH - suffix.length) + suffix
+          : source.title + suffix;
+      const copy = await manager.save(
+        manager.create(ProgramSequence, {
+          eventDate: source.eventDate,
+          location: source.location,
+          title,
+          startTime: source.startTime,
+          durationMinutes: source.durationMinutes,
+          endTime: source.endTime,
+          status: ProgramSequenceStatus.MOBILE,
+          track: source.track,
+          visibility: source.visibility,
+          minDurationMinutes: source.minDurationMinutes,
+          minMarginMinutes: source.minMarginMinutes,
+          previousSequenceId: null,
+          anchorSequenceId: null,
+          volunteerTeamId: source.volunteerTeamId,
+          missionIds: [...(source.missionIds ?? [])],
+          documentLinks: (source.documentLinks ?? []).map((link) => ({ ...link })),
+          notes: source.notes,
+          frozenByUserId: null,
+          frozenAt: null,
+        }),
+      );
+      const groupIds = await this.loadGroupIds(manager, sequenceId);
+      if (groupIds.length) {
+        await manager.save(
+          groupIds.map((groupId) =>
+            manager.create(ProgramSequenceGroup, { sequenceId: copy.id, groupId }),
+          ),
+        );
+      }
+      const tasks = await manager.find(EventPreparationTask, { where: { sequenceId } });
+      if (tasks.length) {
+        await manager.save(
+          tasks.map((task) =>
+            manager.create(EventPreparationTask, {
+              sequenceId: copy.id,
+              title: task.title,
+              dueOffsetMinutes: task.dueOffsetMinutes,
+              dueDate: task.dueDate,
+              responsible: task.responsible,
+              isDone: false,
+              doneAt: null,
+            }),
+          ),
+        );
+      }
+      await this.writeLog(manager, {
+        action: ProgramChangeLogAction.INSERT,
+        user,
+        eventDate: copy.eventDate,
+        affectedSequenceIds: [copy.id],
+        before: null,
+        after: { duplicatedFrom: sequenceId },
+        comment: `Duplication de « ${source.title} » (créneau #${sequenceId}).`,
+      });
+      const refreshed = await manager.findOneOrFail(ProgramSequence, {
+        where: { id: copy.id },
+        relations: { volunteerTeam: true, frozenByUser: true },
+      });
+      return { ...toView(refreshed), groupIds };
+    });
+  }
+
+  // ── Tâches de préparation ───────────────────────────────────────────────
+
+  private toTaskView(task: EventPreparationTask): EventTaskView {
+    return {
+      id: task.id,
+      sequenceId: task.sequenceId,
+      title: task.title,
+      dueOffsetMinutes: task.dueOffsetMinutes,
+      dueDate: task.dueDate ? String(task.dueDate) : null,
+      responsible: task.responsible,
+      isDone: task.isDone,
+      doneAt: task.doneAt ? new Date(task.doneAt).toISOString() : null,
+      createdAt: new Date(task.createdAt).toISOString(),
+      updatedAt: new Date(task.updatedAt).toISOString(),
+    };
+  }
+
+  /** Exactement une échéance : relative (minutes avant le début) ou date fixe. Renvoie la date normalisée. */
+  private validateTaskDue(
+    dueOffsetMinutes: number | null | undefined,
+    dueDate: string | null | undefined,
+  ): string | null {
+    const hasOffset = dueOffsetMinutes !== undefined && dueOffsetMinutes !== null;
+    const hasDate = dueDate !== undefined && dueDate !== null && dueDate !== '';
+    if (hasOffset === hasDate) {
+      throw new BadRequestException(
+        "L'échéance est soit relative (minutes avant le début), soit une date fixe.",
+      );
+    }
+    if (hasOffset) {
+      if (!Number.isInteger(dueOffsetMinutes) || dueOffsetMinutes! < 0 || dueOffsetMinutes! > 10080) {
+        throw new BadRequestException("L'échéance relative est un nombre de minutes entre 0 et 10080.");
+      }
+      return null;
+    }
+    this.assertDate(dueDate!);
+    return dueDate!;
+  }
+
+  async listTasks(sequenceId: number): Promise<EventTaskView[]> {
+    await this.loadSequence(this.dataSource.manager, sequenceId);
+    const tasks = await this.dataSource.manager.find(EventPreparationTask, {
+      where: { sequenceId },
+      order: { id: 'ASC' },
+    });
+    return tasks.map((task) => this.toTaskView(task));
+  }
+
+  async createTask(
+    user: ProgramRequestUser,
+    sequenceId: number,
+    dto: CreateTaskDto,
+  ): Promise<EventTaskView> {
+    this.assertTitle(dto.title);
+    const dueDate = this.validateTaskDue(dto.dueOffsetMinutes, dto.dueDate);
+    return this.dataSource.transaction(async (manager) => {
+      const sequence = await this.loadSequence(manager, sequenceId);
+      const task = await manager.save(
+        manager.create(EventPreparationTask, {
+          sequenceId,
+          title: dto.title.trim(),
+          dueOffsetMinutes: dueDate === null ? dto.dueOffsetMinutes! : null,
+          dueDate,
+          responsible: dto.responsible?.trim() ? dto.responsible.trim().slice(0, 150) : null,
+          isDone: false,
+          doneAt: null,
+        }),
+      );
+      await this.writeLog(manager, {
+        action: ProgramChangeLogAction.UPDATE,
+        user,
+        eventDate: sequence.eventDate,
+        affectedSequenceIds: [sequenceId],
+        before: null,
+        after: { task: this.toTaskView(task) },
+        comment: `Tâche de préparation ajoutée à « ${sequence.title} » : ${task.title}.`,
+      });
+      return this.toTaskView(task);
+    });
+  }
+
+  async updateTask(
+    user: ProgramRequestUser,
+    sequenceId: number,
+    taskId: number,
+    dto: UpdateTaskDto,
+  ): Promise<EventTaskView> {
+    return this.dataSource.transaction(async (manager) => {
+      const sequence = await this.loadSequence(manager, sequenceId);
+      const task = await manager.findOne(EventPreparationTask, {
+        where: { id: taskId, sequenceId },
+      });
+      if (!task) {
+        throw new NotFoundException(`Tâche ${taskId} introuvable`);
+      }
+      const before = this.toTaskView(task);
+      if (dto.title !== undefined) {
+        this.assertTitle(dto.title);
+        task.title = dto.title.trim();
+      }
+      if (dto.responsible !== undefined) {
+        task.responsible = dto.responsible?.trim() ? dto.responsible.trim().slice(0, 150) : null;
+      }
+      if (dto.dueOffsetMinutes !== undefined || dto.dueDate !== undefined) {
+        const offset = dto.dueOffsetMinutes !== undefined ? dto.dueOffsetMinutes : null;
+        const date = dto.dueDate !== undefined ? dto.dueDate : null;
+        const dueDate = this.validateTaskDue(offset, date);
+        task.dueOffsetMinutes = dueDate === null ? offset : null;
+        task.dueDate = dueDate;
+      }
+      if (dto.isDone !== undefined) {
+        task.isDone = dto.isDone;
+        task.doneAt = dto.isDone ? new Date() : null;
+      }
+      const saved = await manager.save(task);
+      await this.writeLog(manager, {
+        action: ProgramChangeLogAction.UPDATE,
+        user,
+        eventDate: sequence.eventDate,
+        affectedSequenceIds: [sequenceId],
+        before: { task: before },
+        after: { task: this.toTaskView(saved) },
+        comment: `Tâche de préparation mise à jour : ${saved.title}.`,
+      });
+      return this.toTaskView(saved);
+    });
+  }
+
+  async deleteTask(
+    user: ProgramRequestUser,
+    sequenceId: number,
+    taskId: number,
+  ): Promise<{ deletedId: number }> {
+    return this.dataSource.transaction(async (manager) => {
+      const sequence = await this.loadSequence(manager, sequenceId);
+      const task = await manager.findOne(EventPreparationTask, {
+        where: { id: taskId, sequenceId },
+      });
+      if (!task) {
+        throw new NotFoundException(`Tâche ${taskId} introuvable`);
+      }
+      await manager.remove(task);
+      await this.writeLog(manager, {
+        action: ProgramChangeLogAction.UPDATE,
+        user,
+        eventDate: sequence.eventDate,
+        affectedSequenceIds: [sequenceId],
+        before: { task: this.toTaskView(task) },
+        after: null,
+        comment: `Tâche de préparation supprimée de « ${sequence.title} » : ${task.title}.`,
+      });
+      return { deletedId: taskId };
+    });
   }
 
   private async loadSequence(manager: EntityManager, id: number): Promise<ProgramSequence> {

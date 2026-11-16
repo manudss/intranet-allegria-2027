@@ -110,6 +110,76 @@ export class UpdateSequenceDto {
 export class ChangeLogQueryDto {
   @ApiPropertyOptional({ example: '2027-10-31' })
   date?: string;
+
+  @ApiPropertyOptional({
+    example: 12,
+    description: "Limite le journal aux entrées touchant cette séquence (onglet Historique de la fiche)",
+  })
+  sequenceId?: number;
+}
+
+export class SetSequenceGroupsDto {
+  @ApiProperty({
+    type: [Number],
+    description: 'Identifiants des groupes de rassemblement liés au créneau (remplace la liste)',
+  })
+  groupIds!: number[];
+}
+
+export class CreateTaskDto {
+  @ApiProperty({ example: 'Réserver les 12 balises de course' })
+  title!: string;
+
+  @ApiPropertyOptional({
+    example: 180,
+    description: 'Échéance relative : minutes avant le début du créneau (exclusif avec dueDate)',
+    nullable: true,
+  })
+  dueOffsetMinutes?: number | null;
+
+  @ApiPropertyOptional({
+    example: '2027-11-01',
+    description: 'Échéance à date fixe YYYY-MM-DD (exclusif avec dueOffsetMinutes)',
+    nullable: true,
+  })
+  dueDate?: string | null;
+
+  @ApiPropertyOptional({ example: 'M. Vial', nullable: true })
+  responsible?: string | null;
+}
+
+export class UpdateTaskDto {
+  @ApiPropertyOptional()
+  title?: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  dueOffsetMinutes?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  dueDate?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  responsible?: string | null;
+
+  @ApiPropertyOptional()
+  isDone?: boolean;
+}
+
+export interface EventTaskView {
+  id: number;
+  sequenceId: number;
+  title: string;
+  dueOffsetMinutes: number | null;
+  dueDate: string | null;
+  responsible: string | null;
+  isDone: boolean;
+  doneAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProgramSequenceDetailView extends ProgramSequenceView {
+  groupIds: number[];
 }
 
 export interface ProgramSequenceView {

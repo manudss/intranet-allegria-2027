@@ -185,7 +185,10 @@ export class ProgramMissionTimingService {
       !(draft.previousSequenceId === null || Number.isInteger(draft.previousSequenceId))
     )
       throw new BadRequestException('Créneau et pilote précédent explicites obligatoires.');
-    const [s] = await m.query('SELECT * FROM program_sequences WHERE id=$1', [sequenceId]);
+    const [s] = await m.query(
+      `SELECT *,to_char("eventDate",'YYYY-MM-DD') AS "eventDate" FROM program_sequences WHERE id=$1`,
+      [sequenceId],
+    );
     const [shift]: ShiftRow[] = await m.query(
       `SELECT s.*,m.title FROM volunteer_shifts s JOIN volunteer_missions m ON m.id=s.mission_id WHERE s.id=$1`,
       [draft.shiftId],
@@ -201,7 +204,12 @@ export class ProgramMissionTimingService {
     );
     if ((b?.sequence_id ?? null) !== draft.previousSequenceId)
       throw new ConflictException('Le pilote a changé : recharger et choisir explicitement.');
-    const after = linkedTiming(s.eventDate, s.startTime, s.endTime, draft);
+    const after = linkedTiming(
+      s.eventDate instanceof Date ? s.eventDate.toISOString().slice(0, 10) : String(s.eventDate),
+      s.startTime,
+      s.endTime,
+      draft,
+    );
     const change: ShiftTimingDiff = {
       shiftId: shift.id,
       missionId: shift.mission_id,

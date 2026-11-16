@@ -600,12 +600,6 @@
           Annuler
         </button>
       </div>
-      } @if (editingSequence(); as sequence) {
-      <app-event-quick-editor
-        [event]="sequence"
-        (closed)="cancelPreview()"
-        (saved)="refreshAfterQuickEdit()"
-      />
       } @if (insertAfterId()) {
       <div class="form-card">
         <h4>Nouveau créneau</h4>
@@ -760,3 +754,11 @@
   </div>
   }
 </app-page-layout>
+
+@if (editingSequence(); as sequence) {
+<app-event-quick-editor
+  [event]="sequence"
+  (closed)="cancelPreview()"
+  (saved)="refreshAfterQuickEdit()"
+/>
+}

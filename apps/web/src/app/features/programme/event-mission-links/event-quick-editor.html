@@ -53,7 +53,7 @@
         [ngModel]="title()"
         (ngModelChange)="title.set($event)"
     /></tui-textfield>
-    <div class="grid">
+    <div class="grid time-grid">
       <tui-textfield [tuiTextfieldCleaner]="false"
         ><label tuiLabel for="event-quick-editor-2">Début</label
         ><input
@@ -92,6 +92,10 @@
     @if(preview(); as p){
     <section class="time-preview">
       <h3>Aperçu avant application</h3>
+      <p>
+        Créneau redimensionné : durée {{ p.previousDurationMinutes }} → {{ p.newDurationMinutes }}
+        min.
+      </p>
       <p>{{ p.message }}</p>
       @for(d of p.affected;track d.sequenceId){
       <p>
@@ -249,7 +253,7 @@
       [disabled]="busy() || !title().trim()"
       (click)="save()"
     >
-      Enregistrer les retouches</button
+      Enregistrer</button
     ><button
       tuiButton
       appearance="secondary"

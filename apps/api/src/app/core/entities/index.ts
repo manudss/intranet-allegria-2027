@@ -45,6 +45,8 @@ export type { PublicExportSequence } from './program-public-export.entity';
 export { ProgramChangeLogAction } from './program-change-log-action.enum';
 export { ProgramSequence } from './program-sequence.entity';
 export type { ProgramDocumentLink } from './program-sequence.entity';
+export { ProgramSequenceGroup } from './program-sequence-group.entity';
+export { EventPreparationTask } from './event-preparation-task.entity';
 export { ProgramChangeLog } from './program-change-log.entity';
 export { VolunteerTeamLodging } from './volunteer-team-lodging.entity';
 export { AccessBadgeStatus } from './access-badge-status.enum';

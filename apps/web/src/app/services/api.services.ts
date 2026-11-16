@@ -15,6 +15,9 @@ import {
   DashboardTodoList,
   DashboardWhoDoesWhatResult,
   DeleteResponse,
+  EventPreparationTask,
+  EventTaskCreatePayload,
+  EventTaskUpdatePayload,
   Group,
   GroupPayload,
   ApplyJeunesRepartitionEntry,
@@ -43,6 +46,7 @@ import {
   ProgramSequenceCreatePayload,
   ProgramSequenceUpdatePayload,
   ProgramSequence,
+  ProgramSequenceDetail,
   ProgramSequenceDiff,
   ProgramSequenceDraft,
   SkillCount,
@@ -765,8 +769,64 @@ export class ProgramApiService {
     );
   }
 
-  getChangeLog(date?: string): Observable<ProgramChangeLogEntry[]> {
-    const params = date ? new HttpParams().set('date', date) : undefined;
+  /** Fiche événement : détail d'une séquence avec ses groupes concernés. */
+  getSequence(sequenceId: number): Observable<ProgramSequenceDetail> {
+    return this.http.get<ProgramSequenceDetail>(`${this.base}/sequences/${sequenceId}`);
+  }
+
+  /** Remplace les groupes de jeunes concernés par le créneau. */
+  setSequenceGroups(
+    sequenceId: number,
+    groupIds: number[],
+  ): Observable<ProgramSequenceDetail> {
+    return this.http.put<ProgramSequenceDetail>(`${this.base}/sequences/${sequenceId}/groups`, {
+      groupIds,
+    });
+  }
+
+  /** Duplique le créneau hors chaîne (défigé, « (copie) », tâches remises à faire). */
+  duplicateSequence(sequenceId: number): Observable<ProgramSequenceDetail> {
+    return this.http.post<ProgramSequenceDetail>(
+      `${this.base}/sequences/${sequenceId}/duplicate`,
+      {},
+    );
+  }
+
+  listTasks(sequenceId: number): Observable<EventPreparationTask[]> {
+    return this.http.get<EventPreparationTask[]>(`${this.base}/sequences/${sequenceId}/tasks`);
+  }
+
+  createTask(
+    sequenceId: number,
+    payload: EventTaskCreatePayload,
+  ): Observable<EventPreparationTask> {
+    return this.http.post<EventPreparationTask>(
+      `${this.base}/sequences/${sequenceId}/tasks`,
+      payload,
+    );
+  }
+
+  updateTask(
+    sequenceId: number,
+    taskId: number,
+    payload: EventTaskUpdatePayload,
+  ): Observable<EventPreparationTask> {
+    return this.http.patch<EventPreparationTask>(
+      `${this.base}/sequences/${sequenceId}/tasks/${taskId}`,
+      payload,
+    );
+  }
+
+  deleteTask(sequenceId: number, taskId: number): Observable<{ deletedId: number }> {
+    return this.http.delete<{ deletedId: number }>(
+      `${this.base}/sequences/${sequenceId}/tasks/${taskId}`,
+    );
+  }
+
+  getChangeLog(date?: string, sequenceId?: number): Observable<ProgramChangeLogEntry[]> {
+    let params = new HttpParams();
+    if (date) params = params.set('date', date);
+    if (sequenceId) params = params.set('sequenceId', sequenceId);
     return this.http.get<ProgramChangeLogEntry[]>(`${this.base}/change-log`, { params });
   }
 }

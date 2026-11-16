@@ -675,6 +675,41 @@ export interface ProgramChangeLogEntry {
   comment: string | null;
 }
 
+/** Fiche événement : séquence + groupes de jeunes concernés. */
+export interface ProgramSequenceDetail extends ProgramSequence {
+  groupIds: number[];
+}
+
+/** Tâche de préparation rattachée à un créneau (échéance relative ou date fixe). */
+export interface EventPreparationTask {
+  id: number;
+  sequenceId: number;
+  title: string;
+  /** Minutes avant le début du créneau (null si échéance à date fixe). */
+  dueOffsetMinutes: number | null;
+  /** Date fixe YYYY-MM-DD (null si échéance relative). */
+  dueDate: string | null;
+  responsible: string | null;
+  isDone: boolean;
+  doneAt: string | null;
+  createdAt: string;
+}
+
+export interface EventTaskCreatePayload {
+  title: string;
+  dueOffsetMinutes?: number | null;
+  dueDate?: string | null;
+  responsible?: string | null;
+}
+
+export interface EventTaskUpdatePayload {
+  title?: string;
+  dueOffsetMinutes?: number | null;
+  dueDate?: string | null;
+  responsible?: string | null;
+  isDone?: boolean;
+}
+
 export interface DashboardTodoShift {
   shiftId: number;
   missionTitle: string;

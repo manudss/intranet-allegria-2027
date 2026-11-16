@@ -1,0 +1,223 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
+import { of } from 'rxjs';
+import { describe, expect, it, vi } from 'vitest';
+import { AuthService } from '../../../core/auth.service';
+import {
+  Group,
+  ProgramSequenceDetail,
+  ProgramSequenceStatus,
+  ProgramSequenceTrack,
+  ProgramSequenceVisibility,
+} from '../../../models/models';
+import { FicheEvenementPage } from './fiche-evenement';
+
+const DAY = '2027-10-31';
+
+function detail(overrides: Partial<ProgramSequenceDetail> = {}): ProgramSequenceDetail {
+  return {
+    id: 1,
+    eventDate: DAY,
+    location: 'Grande salle',
+    title: 'Célébration d’ouverture',
+    startTime: '13:30',
+    durationMinutes: 120,
+    endTime: '15:30',
+    status: ProgramSequenceStatus.MOBILE,
+    track: ProgramSequenceTrack.TA,
+    visibility: ProgramSequenceVisibility.PUBLIC,
+    minDurationMinutes: null,
+    minMarginMinutes: null,
+    previousSequenceId: null,
+    anchorSequenceId: null,
+    volunteerTeamId: 3,
+    volunteerTeamName: 'Animation',
+    missionIds: [42],
+    documentLinks: [{ label: 'Run of show', url: 'https://example.org/ros' }],
+    notes: null,
+    frozenByUserId: null,
+    frozenByUserName: null,
+    frozenAt: null,
+    groupIds: [11],
+    ...overrides,
+  };
+}
+
+const GROUPS: Group[] = [
+  { id: 11, name: 'Rassemblement Lyon 1', diocese: 'Lyon', arrivalDatetime: null, departureDatetime: null, notes: null },
+  { id: 12, name: 'Rassemblement Grenoble 1', diocese: 'Grenoble', arrivalDatetime: null, departureDatetime: null, notes: null },
+];
+
+function flushInitialLoad(http: HttpTestingController) {
+  http.expectOne('/api/program/sequences/1').flush(detail());
+  http.expectOne('/api/program/sequences/1/tasks').flush([]);
+  http.expectOne('/api/groups').flush(GROUPS);
+  http.expectOne('/api/volunteer-missions').flush([
+    { id: 42, title: 'Accueil des groupes', location: 'Parvis' },
+    { id: 43, title: 'Service café', location: null },
+  ]);
+  http.expectOne('/api/volunteer-teams').flush([{ id: 3, name: 'Animation' }]);
+  http.expectOne(`/api/program/days/${DAY}`).flush({ date: DAY, sequences: [] });
+}
+
+describe('FicheEvenementPage', () => {
+  function setup(roles: string[] = ['ADMIN']) {
+    const navigate = vi.fn();
+    TestBed.configureTestingModule({
+      imports: [FicheEvenementPage],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: AuthService,
+          useValue: { hasAnyRole: (required: string[]) => required.some((r) => roles.includes(r)) },
+        },
+        {
+          provide: ActivatedRoute,
+          useValue: { paramMap: of(convertToParamMap({ id: '1' })) },
+        },
+        { provide: Router, useValue: { navigate } },
+      ],
+    });
+    const fixture = TestBed.createComponent(FicheEvenementPage);
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    return { fixture, http, component: fixture.componentInstance, navigate };
+  }
+
+  it('charge la fiche : détail, groupes, missions et équipe', () => {
+    const { fixture, http, component } = setup();
+    flushInitialLoad(http);
+    fixture.detectChanges();
+    expect(component.sequence()?.title).toBe('Célébration d’ouverture');
+    expect(component.linkedGroups().map((g) => g.name)).toEqual(['Rassemblement Lyon 1']);
+    expect(component.linkedMissions().map((m) => m.title)).toEqual(['Accueil des groupes']);
+    expect(component.loading()).toBe(false);
+    http.verify();
+  });
+
+  it('charge le journal filtré au premier affichage de l’onglet Historique', () => {
+    const { fixture, http, component } = setup();
+    flushInitialLoad(http);
+    component.selectTab(4);
+    http
+      .expectOne((r) => r.url === '/api/program/change-log' && r.params.get('sequenceId') === '1')
+      .flush([
+        {
+          id: 9,
+          action: 'UPDATE',
+          eventDate: DAY,
+          authorUserId: 7,
+          authorUserName: 'coord@allegria.local',
+          createdAt: '2027-10-01T10:00:00Z',
+          affectedSequenceIds: [1],
+          comment: 'Titre modifié',
+        },
+      ]);
+    expect(component.logs()).toHaveLength(1);
+    expect(component.logsLoaded()).toBe(true);
+    http.verify();
+  });
+
+  it('ajoute une tâche avec échéance relative', () => {
+    const { fixture, http, component } = setup();
+    flushInitialLoad(http);
+    component.taskDraft.set({
+      title: 'Imprimer les feuilles de route',
+      dueKind: 'offset',
+      dueOffsetMinutes: 180,
+      dueDate: '',
+      responsible: 'M. Vial',
+    });
+    component.addTask();
+    const request = http.expectOne('/api/program/sequences/1/tasks');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({
+      title: 'Imprimer les feuilles de route',
+      dueOffsetMinutes: 180,
+      dueDate: null,
+      responsible: 'M. Vial',
+    });
+    request.flush({
+      id: 5,
+      sequenceId: 1,
+      title: 'Imprimer les feuilles de route',
+      dueOffsetMinutes: 180,
+      dueDate: null,
+      responsible: 'M. Vial',
+      isDone: false,
+      doneAt: null,
+      createdAt: '2027-10-01T08:00:00Z',
+    });
+    expect(component.tasks()).toHaveLength(1);
+    expect(fixture.componentInstance.taskDueLabel(component.tasks()[0])).toBe('3 h avant le début');
+    http.verify();
+  });
+
+  it('bascule une tâche en faite', () => {
+    const { http, component } = setup();
+    flushInitialLoad(http);
+    const task = {
+      id: 5,
+      sequenceId: 1,
+      title: 'Météo',
+      dueOffsetMinutes: null,
+      dueDate: '2027-10-30',
+      responsible: null,
+      isDone: false,
+      doneAt: null,
+      createdAt: '2027-10-01T08:00:00Z',
+    };
+    component.tasks.set([task]);
+    component.toggleTask(task);
+    const request = http.expectOne('/api/program/sequences/1/tasks/5');
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({ isDone: true });
+    request.flush({ ...task, isDone: true, doneAt: '2027-10-01T09:00:00Z' });
+    expect(component.tasks()[0].isDone).toBe(true);
+    http.verify();
+  });
+
+  it('lie un groupe existant', () => {
+    const { http, component } = setup();
+    flushInitialLoad(http);
+    component.groupToAdd.set(12);
+    component.addGroup();
+    const request = http.expectOne('/api/program/sequences/1/groups');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ groupIds: [11, 12] });
+    request.flush(detail({ groupIds: [11, 12] }));
+    expect(component.sequence()?.groupIds).toEqual([11, 12]);
+    http.verify();
+  });
+
+  it('duplique le créneau et navigue vers la copie', () => {
+    const { http, component, navigate } = setup();
+    flushInitialLoad(http);
+    component.duplicate();
+    const request = http.expectOne('/api/program/sequences/1/duplicate');
+    expect(request.request.method).toBe('POST');
+    request.flush(detail({ id: 99, title: 'Célébration d’ouverture (copie)' }));
+    expect(navigate).toHaveBeenCalledWith(['/programme/evenements', 99]);
+    http.verify();
+  });
+
+  it('fige puis recharge la fiche', () => {
+    const { http, component } = setup();
+    flushInitialLoad(http);
+    component.toggleFreeze();
+    http.expectOne('/api/program/sequences/1/freeze').flush(detail({ status: ProgramSequenceStatus.FROZEN }));
+    http.expectOne('/api/program/sequences/1').flush(detail({ status: ProgramSequenceStatus.FROZEN }));
+    expect(component.sequence()?.status).toBe(ProgramSequenceStatus.FROZEN);
+    http.verify();
+  });
+
+  it('masque les actions d’écriture pour un lecteur', () => {
+    const { http, component } = setup(['VIEWER']);
+    flushInitialLoad(http);
+    expect(component.canEdit()).toBe(false);
+    http.verify();
+  });
+});

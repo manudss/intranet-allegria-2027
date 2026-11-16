@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { TuiDataListWrapper } from '@taiga-ui/kit';
 import { AuthService } from '../../core/auth.service';
@@ -168,7 +169,7 @@ interface OverviewDay {
 @Component({
   selector: 'app-programme',
   standalone: true,
-  imports: [...SHARED_IMPORTS, TuiDataListWrapper],
+  imports: [...SHARED_IMPORTS, TuiDataListWrapper, RouterLink],
   templateUrl: './programme.html',
   styleUrl: './programme.scss',
 })

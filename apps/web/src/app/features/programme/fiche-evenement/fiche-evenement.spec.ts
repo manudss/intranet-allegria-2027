@@ -50,8 +50,12 @@ const GROUPS: Group[] = [
   { id: 12, name: 'Rassemblement Grenoble 1', diocese: 'Grenoble', arrivalDatetime: null, departureDatetime: null, notes: null },
 ];
 
-function flushInitialLoad(http: HttpTestingController) {
-  http.expectOne('/api/program/sequences/1').flush(detail());
+function flushInitialLoad(
+  http: HttpTestingController,
+  seq: ProgramSequenceDetail = detail(),
+  daySequences: unknown[] = [],
+) {
+  http.expectOne('/api/program/sequences/1').flush(seq);
   http.expectOne('/api/program/sequences/1/tasks').flush([]);
   http.expectOne('/api/groups').flush(GROUPS);
   http.expectOne('/api/volunteer-missions').flush([
@@ -59,7 +63,7 @@ function flushInitialLoad(http: HttpTestingController) {
     { id: 43, title: 'Service café', location: null },
   ]);
   http.expectOne('/api/volunteer-teams').flush([{ id: 3, name: 'Animation' }]);
-  http.expectOne(`/api/program/days/${DAY}`).flush({ date: DAY, sequences: [] });
+  http.expectOne(`/api/program/days/${DAY}`).flush({ date: DAY, sequences: daySequences });
 }
 
 describe('FicheEvenementPage', () => {
@@ -261,6 +265,93 @@ describe('FicheEvenementPage', () => {
       'Documents 1',
       'Historique',
     ]);
+    http.verify();
+  });
+
+  const RESIZE_PREVIEW = {
+    kind: 'resize',
+    sequenceId: 1,
+    previousDurationMinutes: 120,
+    newDurationMinutes: 150,
+    affected: [
+      {
+        sequenceId: 2,
+        title: 'Goûter',
+        before: { startTime: '15:30', endTime: '16:30', durationMinutes: 60 },
+        after: { startTime: '16:00', endTime: '17:00', durationMinutes: 60 },
+      },
+    ],
+    stoppedAtFrozenId: null,
+    marginMinutes: null,
+    outcome: 'ok',
+    message: '1 créneau décalé',
+    version: 'v1',
+  };
+
+  it('prévisualise puis applique un changement de durée', () => {
+    const { http, component } = setup();
+    flushInitialLoad(http);
+    component.startTimeEdit();
+    component.updateTimeEdit({ durationMinutes: 150 });
+    component.previewTimeChange();
+    const previewRequest = http.expectOne('/api/program/sequences/1/resize/preview');
+    expect(previewRequest.request.method).toBe('PATCH');
+    expect(previewRequest.request.body).toEqual({ durationMinutes: 150 });
+    previewRequest.flush(RESIZE_PREVIEW);
+    expect(component.timePreview()?.outcome).toBe('ok');
+    component.applyTimeChange();
+    const applyRequest = http.expectOne('/api/program/sequences/1/resize/apply');
+    expect(applyRequest.request.body).toEqual({ durationMinutes: 150, version: 'v1' });
+    applyRequest.flush({ affected: [] });
+    http.expectOne('/api/program/sequences/1').flush(detail({ durationMinutes: 150, endTime: '16:00' }));
+    http.expectOne(`/api/program/days/${DAY}`).flush({ date: DAY, sequences: [] });
+    expect(component.timeEdit()).toBeNull();
+    http.verify();
+  });
+
+  it('décale le début en redimensionnant le prédécesseur', () => {
+    const { http, component } = setup();
+    const previous = detail({ id: 5, title: 'Trajet', previousSequenceId: null, durationMinutes: 45 });
+    flushInitialLoad(http, detail({ previousSequenceId: 5 }), [previous]);
+    component.startTimeEdit();
+    component.updateTimeEdit({ startTime: '14:00' });
+    component.previewTimeChange();
+    // +30 min de décalage => le prédécesseur passe de 45 à 75 min
+    const previewRequest = http.expectOne('/api/program/sequences/5/resize/preview');
+    expect(previewRequest.request.body).toEqual({ durationMinutes: 75 });
+    previewRequest.flush({ ...RESIZE_PREVIEW, sequenceId: 5 });
+    component.applyTimeChange();
+    http.expectOne('/api/program/sequences/5/resize/apply').flush({ affected: [] });
+    http.expectOne('/api/program/sequences/1').flush(detail({ previousSequenceId: 5 }));
+    http.expectOne(`/api/program/days/${DAY}`).flush({ date: DAY, sequences: [] });
+    http.verify();
+  });
+
+  it('refuse de valider début et durée ensemble, et le début en tête de chaîne', () => {
+    const { http, component } = setup();
+    flushInitialLoad(http);
+    component.startTimeEdit();
+    component.updateTimeEdit({ startTime: '14:00', durationMinutes: 150 });
+    component.previewTimeChange();
+    expect(component.timeError()).toContain('début ou la durée');
+    // Tête de chaîne (previousSequenceId null) : début non décalable
+    component.updateTimeEdit({ startTime: '14:00', durationMinutes: 120 });
+    component.previewTimeChange();
+    expect(component.timeError()).toContain('Premier créneau');
+    http.verify();
+  });
+
+  it('bloque l’application quand l’aperçu n’est pas ok', () => {
+    const { http, component } = setup();
+    flushInitialLoad(http);
+    component.startTimeEdit();
+    component.updateTimeEdit({ durationMinutes: 300 });
+    component.previewTimeChange();
+    http
+      .expectOne('/api/program/sequences/1/resize/preview')
+      .flush({ ...RESIZE_PREVIEW, outcome: 'partial', stoppedAtFrozenId: 9, message: 'Bloqué par un créneau figé' });
+    component.applyTimeChange();
+    http.expectNone('/api/program/sequences/1/resize/apply');
     http.verify();
   });
 });

@@ -9,6 +9,7 @@ import {
   ProgramChangeLogAction,
   ProgramChangeLogEntry,
   ProgramDocumentLink,
+  ProgramResizePreview,
   ProgramSequence,
   ProgramSequenceDetail,
   ProgramSequenceStatus,
@@ -25,6 +26,7 @@ import {
   VolunteerTeamsApiService,
 } from '../../../services/api.services';
 import { SHARED_IMPORTS } from '../../../shared/shared-imports';
+import { minutesToTime, timeToMinutes } from '../schedule-time.util';
 
 const TRACK_LABELS: Record<ProgramSequenceTrack, string> = {
   [ProgramSequenceTrack.TA]: 'Piste TA',
@@ -149,6 +151,14 @@ export class FicheEvenementPage {
   readonly newGroup = signal<{ name: string; diocese: string } | null>(null);
   readonly newDoc = signal<{ label: string; url: string }>({ label: '', url: '' });
   readonly docFormError = signal<string | null>(null);
+
+  // ---- Édition des horaires via les opérations chaînées (aperçu puis validation) ----
+  readonly timeEdit = signal<{ startTime: string; durationMinutes: number } | null>(null);
+  readonly timePreview = signal<ProgramResizePreview | null>(null);
+  readonly timePreviewTarget = signal<ProgramSequence | null>(null);
+  readonly parallelPreview = signal<ProgramResizePreview | null>(null);
+  readonly syncParallel = signal(false);
+  readonly timeError = signal<string | null>(null);
 
   /** Onglets avec compteurs, comme la maquette validée. */
   readonly tabLabels = computed(() => {
@@ -303,6 +313,170 @@ export class FicheEvenementPage {
       },
       error: () => this.fail('La duplication a échoué.'),
     });
+  }
+
+  // ---- Onglet Détails : horaires (opérations chaînées) ----
+
+  startTimeEdit(): void {
+    const sequence = this.sequence();
+    if (!sequence) return;
+    this.timeEdit.set({ startTime: sequence.startTime, durationMinutes: sequence.durationMinutes });
+    this.timePreview.set(null);
+    this.timePreviewTarget.set(null);
+    this.parallelPreview.set(null);
+    this.syncParallel.set(false);
+    this.timeError.set(null);
+  }
+
+  cancelTimeEdit(): void {
+    this.timeEdit.set(null);
+    this.timePreview.set(null);
+    this.timePreviewTarget.set(null);
+    this.parallelPreview.set(null);
+    this.timeError.set(null);
+  }
+
+  updateTimeEdit(patch: Partial<{ startTime: string; durationMinutes: number }>): void {
+    const draft = this.timeEdit();
+    if (draft) this.timeEdit.set({ ...draft, ...patch });
+    // Toute modification invalide l'aperçu affiché.
+    this.timePreview.set(null);
+    this.parallelPreview.set(null);
+  }
+
+  /** Tête de chaîne : le modèle chaîné ne permet pas de décaler le premier créneau. */
+  readonly isChainHead = computed(() => {
+    const sequence = this.sequence();
+    return !!sequence && sequence.previousSequenceId === null;
+  });
+
+  readonly startChanged = computed(() => {
+    const sequence = this.sequence();
+    const draft = this.timeEdit();
+    return !!sequence && !!draft && draft.startTime !== sequence.startTime;
+  });
+
+  readonly durationChanged = computed(() => {
+    const sequence = this.sequence();
+    const draft = this.timeEdit();
+    return !!sequence && !!draft && draft.durationMinutes !== sequence.durationMinutes;
+  });
+
+  private previousSequence(): ProgramSequence | null {
+    const sequence = this.sequence();
+    if (!sequence || sequence.previousSequenceId === null) return null;
+    return this.daySequences().find((s) => s.id === sequence.previousSequenceId) ?? null;
+  }
+
+  /**
+   * Aperçu du recalcul : la durée se redimensionne sur le créneau lui-même ; le décalage du
+   * début se redimensionne sur le prédécesseur (même invariant que le planning). Une seule
+   * opération à la fois : modifier le début OU la durée avant de prévisualiser.
+   */
+  previewTimeChange(): void {
+    const sequence = this.sequence();
+    const draft = this.timeEdit();
+    if (!sequence || !draft || this.busy()) return;
+    this.timeError.set(null);
+
+    if (this.startChanged() && this.durationChanged()) {
+      this.timeError.set(
+        'Modifiez le début ou la durée, puis prévisualisez : les deux changements ne se valident pas ensemble.',
+      );
+      return;
+    }
+    if (!this.startChanged() && !this.durationChanged()) {
+      this.timeError.set('Aucun changement à prévisualiser.');
+      return;
+    }
+
+    let target: ProgramSequence | null = null;
+    let newDuration = 0;
+    if (this.durationChanged()) {
+      target = sequence;
+      newDuration = draft.durationMinutes;
+    } else {
+      const previous = this.previousSequence();
+      if (!previous) {
+        this.timeError.set(
+          'Premier créneau de la chaîne : son début ne peut pas être décalé (le planning fonctionne de la même façon).',
+        );
+        return;
+      }
+      const delta = timeToMinutes(draft.startTime) - timeToMinutes(sequence.startTime);
+      newDuration = previous.durationMinutes + delta;
+      if (newDuration < 5) {
+        this.timeError.set('Ce décalage réduirait le créneau précédent à moins de 5 minutes.');
+        return;
+      }
+      target = previous;
+    }
+
+    this.busy.set(true);
+    this.api.previewResize(target.id, newDuration).subscribe({
+      next: (preview) => {
+        this.timePreview.set(preview);
+        this.timePreviewTarget.set(target);
+        // Voie parallèle : proposer d'appliquer la même durée, comme la note de maquette.
+        const parallel =
+          this.durationChanged() && this.syncParallel() ? this.chainContext().parallels[0] : null;
+        if (parallel) {
+          this.api.previewResize(parallel.id, draft.durationMinutes).subscribe({
+            next: (parallelPreview) => {
+              this.busy.set(false);
+              this.parallelPreview.set(parallelPreview);
+            },
+            error: () => this.failTime("L'aperçu de la voie parallèle a échoué."),
+          });
+        } else {
+          this.busy.set(false);
+          this.parallelPreview.set(null);
+        }
+      },
+      error: () => this.failTime("L'aperçu du recalcul a échoué."),
+    });
+  }
+
+  applyTimeChange(): void {
+    const preview = this.timePreview();
+    const target = this.timePreviewTarget();
+    const parallel = this.parallelPreview();
+    if (!preview || !target || preview.outcome !== 'ok' || this.busy()) return;
+    if (parallel && parallel.outcome !== 'ok') return;
+    this.busy.set(true);
+    this.api.applyResize(target.id, preview.newDurationMinutes, preview.version).subscribe({
+      next: () => {
+        if (parallel) {
+          this.api.applyResize(parallel.sequenceId, parallel.newDurationMinutes, parallel.version).subscribe({
+            next: () => this.finishTimeChange(),
+            error: () => this.failTime(
+              'Le créneau a été modifié mais la voie parallèle a refusé le changement : rechargez la fiche.',
+            ),
+          });
+        } else {
+          this.finishTimeChange();
+        }
+      },
+      error: () => this.failTime("L'application a échoué (la chaîne a peut-être changé entre-temps)."),
+    });
+  }
+
+  private finishTimeChange(): void {
+    this.busy.set(false);
+    this.cancelTimeEdit();
+    this.reloadSequence();
+    const sequence = this.sequence();
+    if (sequence) {
+      this.api.getDay(sequence.eventDate).subscribe({
+        next: (day) => this.daySequences.set(day.sequences),
+        error: () => undefined,
+      });
+    }
+  }
+
+  private failTime(message: string): void {
+    this.busy.set(false);
+    this.timeError.set(message);
   }
 
   // ---- Onglet Détails : édition ----

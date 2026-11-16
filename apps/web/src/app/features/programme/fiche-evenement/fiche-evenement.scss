@@ -264,3 +264,77 @@
     color: var(--tui-text-secondary);
   }
 }
+
+.time-edit-zone {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.time-edit {
+  display: grid;
+  gap: 0.6rem;
+  flex: 1;
+  min-width: 20rem;
+}
+
+.time-fields {
+  display: flex;
+  gap: 0.75rem;
+
+  label {
+    display: grid;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+  }
+
+  input {
+    padding: 0.4rem 0.55rem;
+    border: 1px solid var(--tui-border-normal);
+    border-radius: 0.5rem;
+    font: inherit;
+    background: var(--tui-background-base);
+  }
+}
+
+.sync-parallel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.hint {
+  margin: 0;
+  color: var(--tui-text-secondary);
+  font-size: 0.85rem;
+}
+
+.time-preview {
+  border: 1px solid var(--tui-border-normal);
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  display: grid;
+  gap: 0.4rem;
+
+  &.blocked {
+    border-color: var(--tui-status-negative);
+  }
+
+  .preview-title {
+    margin: 0;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    font-size: 0.9rem;
+  }
+}
+
+.planning-link {
+  font-size: 0.85rem;
+}

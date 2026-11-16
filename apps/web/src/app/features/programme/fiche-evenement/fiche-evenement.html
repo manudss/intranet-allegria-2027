@@ -147,14 +147,101 @@
                 <dl class="details-list">
                   <div><dt>Lieu</dt><dd>{{ sequence.location }}</dd></div>
                   <div><dt>Horaire</dt><dd>{{ sequence.startTime }} – {{ sequence.endTime }} ({{ sequence.durationMinutes }} min)</dd></div>
-                  <div>
-                    <dt></dt>
-                    <dd>
-                      <a class="planning-link" [routerLink]="['/programme']" [queryParams]="{ date: sequence.eventDate, lieu: sequence.location }">
-                        Modifier les horaires dans le planning (aperçu du recalcul de chaîne)
-                      </a>
-                    </dd>
-                  </div>
+                  @if (canEdit() && sequence.status !== ProgramSequenceStatus.FROZEN) {
+                    <div>
+                      <dt></dt>
+                      <dd class="time-edit-zone">
+                        @if (timeEdit(); as tedit) {
+                          <div class="time-edit">
+                            <div class="time-fields">
+                              <label>
+                                Début
+                                <input
+                                  type="time"
+                                  [ngModel]="tedit.startTime"
+                                  (ngModelChange)="updateTimeEdit({ startTime: $event })"
+                                  name="fiche-debut"
+                                />
+                              </label>
+                              <label>
+                                Durée (min)
+                                <input
+                                  type="number"
+                                  min="5"
+                                  step="5"
+                                  [ngModel]="tedit.durationMinutes"
+                                  (ngModelChange)="updateTimeEdit({ durationMinutes: +$event })"
+                                  name="fiche-duree"
+                                />
+                              </label>
+                            </div>
+                            @if (isChainHead() && startChanged()) {
+                              <p class="hint">Premier créneau de la chaîne : son début ne peut pas être décalé.</p>
+                            }
+                            @if (durationChanged() && chainContext().parallels.length) {
+                              <label class="sync-parallel">
+                                <input
+                                  type="checkbox"
+                                  [ngModel]="syncParallel()"
+                                  (ngModelChange)="syncParallel.set($event); timePreview.set(null); parallelPreview.set(null)"
+                                  name="fiche-sync-parallele"
+                                />
+                                Appliquer aussi cette durée à la voie parallèle
+                                ({{ TRACK_LABELS[chainContext().parallels[0].track] }})
+                              </label>
+                            }
+                            @if (timeError()) {
+                              <p class="inline-error" role="alert">{{ timeError() }}</p>
+                            }
+                            <footer class="form-actions">
+                              <button tuiButton appearance="secondary" size="s" type="button" [disabled]="busy()" (click)="previewTimeChange()">
+                                Prévisualiser le recalcul
+                              </button>
+                              <button tuiButton appearance="flat" size="s" type="button" (click)="cancelTimeEdit()">Annuler</button>
+                            </footer>
+                            @if (timePreview(); as preview) {
+                              <div class="time-preview" [class.blocked]="preview.outcome !== 'ok'">
+                                <p class="preview-title">Aperçu du recalcul : {{ preview.message }}</p>
+                                <ul>
+                                  @for (diff of preview.affected; track diff.sequenceId) {
+                                    <li>
+                                      {{ diff.title }} : {{ diff.before.startTime }}–{{ diff.before.endTime }}
+                                      → {{ diff.after.startTime }}–{{ diff.after.endTime }}
+                                    </li>
+                                  }
+                                </ul>
+                                @if (parallelPreview(); as pp) {
+                                  <p class="preview-title">Voie parallèle : {{ pp.message }}</p>
+                                  <ul>
+                                    @for (diff of pp.affected; track diff.sequenceId) {
+                                      <li>
+                                        {{ diff.title }} : {{ diff.before.startTime }}–{{ diff.before.endTime }}
+                                        → {{ diff.after.startTime }}–{{ diff.after.endTime }}
+                                      </li>
+                                    }
+                                  </ul>
+                                }
+                                @if (preview.outcome === 'ok' && (!parallelPreview() || parallelPreview()!.outcome === 'ok')) {
+                                  <button tuiButton appearance="primary" size="s" type="button" [disabled]="busy()" (click)="applyTimeChange()">
+                                    Appliquer le recalcul
+                                  </button>
+                                } @else {
+                                  <p class="hint">Recalcul impossible tel quel (créneau figé ou durée minimale) : ajustez la valeur.</p>
+                                }
+                              </div>
+                            }
+                          </div>
+                        } @else {
+                          <button tuiButton appearance="flat" size="xs" type="button" (click)="startTimeEdit()">
+                            Modifier les horaires
+                          </button>
+                          <a class="planning-link" [routerLink]="['/programme']" [queryParams]="{ date: sequence.eventDate, lieu: sequence.location }">
+                            Ouvrir dans le planning
+                          </a>
+                        }
+                      </dd>
+                    </div>
+                  }
                   <div><dt>Piste</dt><dd>{{ TRACK_LABELS[sequence.track] }}</dd></div>
                   <div><dt>Visibilité</dt><dd>{{ VISIBILITY_LABELS[sequence.visibility] }}</dd></div>
                   <div><dt>Statut</dt><dd>{{ sequence.status === ProgramSequenceStatus.FROZEN ? 'Figé' : 'Mobile' }}</dd></div>

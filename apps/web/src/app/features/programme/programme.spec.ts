@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { AuthService } from '../../core/auth.service';
-import { ProgramInsertPreview, ProgramSequence, ProgramSequenceStatus } from '../../models/models';
+import { ProgramInsertPreview, ProgramSequence, ProgramSequenceStatus, ProgramSequenceTrack } from '../../models/models';
 import { ProgrammePage } from './programme';
 import { PROGRAM_EVENT_DAYS } from './schedule-chain.util';
 
@@ -24,6 +24,7 @@ function seq(
     durationMinutes: 60,
     endTime: '00:00',
     status: ProgramSequenceStatus.MOBILE,
+    track: ProgramSequenceTrack.COMMON,
     minDurationMinutes: 30,
     minMarginMinutes: null,
     previousSequenceId,
@@ -275,6 +276,114 @@ describe('ProgrammePage', () => {
     req.flush(seq(9, '09:00', null, { location: 'Salle C' }));
     flushDay([seq(9, '09:00', null, { location: 'Salle C' })]);
     expect(component.location()).toBe('Salle C');
+    http.verify();
+  });
+
+  it('filtre les créneaux par piste dans le calendrier, sans toucher aux données', () => {
+    const { component, flushDay } = setup(['VIEWER']);
+    flushDay([
+      seq(1, '08:00', null, { track: ProgramSequenceTrack.TA }),
+      seq(2, '09:00', 1, { track: ProgramSequenceTrack.ES }),
+      seq(3, '10:00', 2),
+    ]);
+
+    expect(component.columns()[0].blocks).toHaveLength(3);
+    component.setTrackFilter(ProgramSequenceTrack.TA);
+    expect(component.columns()[0].blocks.map((b) => b.sequence?.id)).toEqual([1]);
+    component.setTrackFilter(ProgramSequenceTrack.ES);
+    expect(component.columns()[0].blocks.map((b) => b.sequence?.id)).toEqual([2]);
+    component.setTrackFilter(ProgramSequenceTrack.COMMON);
+    expect(component.columns()[0].blocks.map((b) => b.sequence?.id)).toEqual([3]);
+    component.setTrackFilter('ALL');
+    expect(component.columns()[0].blocks).toHaveLength(3);
+  });
+
+  it('vue « Par piste » : communs pleine largeur, TA/ES appariés sur le même horaire, filtre appliqué', () => {
+    const { component, flushDay } = setup(['VIEWER']);
+    flushDay([
+      seq(1, '09:00', null, { title: 'Rassemblement' }), // commun
+      seq(2, '10:00', 1, { title: 'Jeu ville', track: ProgramSequenceTrack.TA }),
+      seq(3, '10:00', 2, { title: 'Atelier', track: ProgramSequenceTrack.ES }),
+      seq(4, '14:00', 3, { title: 'Sortie', track: ProgramSequenceTrack.TA }),
+    ]);
+
+    component.setDayLayout('tracks');
+    const rows = component.trackRows();
+    expect(rows.map((r) => (r.common ? 'common' : 'pair'))).toEqual(['common', 'pair', 'pair']);
+    expect(rows[0].common?.title).toBe('Rassemblement');
+    expect(rows[1].ta?.title).toBe('Jeu ville');
+    expect(rows[1].es?.title).toBe('Atelier'); // appariés : même horaire
+    expect(rows[2].ta?.title).toBe('Sortie');
+    expect(rows[2].es).toBeNull(); // TA seul : moitié vide, pas de déplacement
+
+    // Le filtre par piste s'applique aussi à cette vue.
+    component.setTrackFilter(ProgramSequenceTrack.ES);
+    const filtered = component.trackRows();
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].es?.title).toBe('Atelier');
+  });
+
+  it('vue « Par piste » : le cadre de scission noté « Temps séparé » n\u2019est pas rendu en double', () => {
+    const { component, flushDay } = setup(['VIEWER']);
+    const split = 'Temps séparé : un programme par groupe (TA / ES).';
+    flushDay([
+      // Cadre noté + paire ancrée au même horaire : masqué.
+      seq(1, '09:00', null, { title: 'Messe en paroisse', notes: split, endTime: '11:00' }),
+      seq(2, '09:00', 1, { title: 'Messe TA', track: ProgramSequenceTrack.TA, anchorSequenceId: 1, endTime: '11:00' }),
+      seq(3, '09:00', 2, { title: 'Messe ES', track: ProgramSequenceTrack.ES, anchorSequenceId: 1, endTime: '11:00' }),
+      // Cadre noté non ancré (créneau de branche suivant) mais même fenêtre : masqué aussi.
+      seq(4, '14:00', 3, { title: 'Jeu (cadre)', notes: split, endTime: '16:30' }),
+      seq(5, '14:00', 4, { title: 'Jeu TA', track: ProgramSequenceTrack.TA, endTime: '16:30' }),
+      seq(6, '14:00', 5, { title: 'Jeu ES', track: ProgramSequenceTrack.ES, endTime: '16:30' }),
+      // Vrai temps commun au même horaire qu\u2019un créneau TA, SANS la note : toujours rendu.
+      seq(7, '18:30', 6, { title: 'Dîner', endTime: '19:45' }),
+      seq(8, '18:30', 7, { title: 'Dîner TA', track: ProgramSequenceTrack.TA, endTime: '19:45' }),
+      // Cadre noté mais chevauchement partiel seulement (branches déplacées) : rendu, pas masqué.
+      seq(9, '20:00', 8, { title: 'Veillée (cadre)', notes: split, endTime: '21:30' }),
+      seq(10, '20:30', 9, { title: 'Veillée TA', track: ProgramSequenceTrack.TA, endTime: '21:30' }),
+      seq(11, '12:00', 10, { title: 'Repas' }),
+    ]);
+
+    component.setDayLayout('tracks');
+    const rows = component.trackRows();
+    expect(rows.map((r) => (r.common ? r.common.title : 'pair'))).toEqual([
+      'pair', 'Repas', 'pair', 'Dîner', 'pair', 'Veillée (cadre)', 'pair',
+    ]);
+    expect(rows[0].ta?.title).toBe('Messe TA');
+    expect(rows[0].es?.title).toBe('Messe ES');
+    expect(rows[2].ta?.title).toBe('Jeu TA');
+    expect(rows[2].es?.title).toBe('Jeu ES');
+    // Le dîner commun et son homonyme TA cohabitent : pas de masquage générique par horaire.
+    expect(rows[3].common?.title).toBe('Dîner');
+    expect(rows[4].ta?.title).toBe('Dîner TA');
+    // Cadre noté dont les branches ont glissé : rendu pour ne pas perdre l\u2019information.
+    expect(rows[5].common?.title).toBe('Veillée (cadre)');
+    expect(rows[6].ta?.startTime).toBe('20:30');
+  });
+
+  it('envoie la piste choisie à la création comme à l’édition', () => {
+    const { component, http, flushDay } = setup(['COORDINATOR']);
+    flushDay();
+
+    component.openCreateForm();
+    component.updateCreateDraft({ title: 'Atelier', location: 'Salle C', track: ProgramSequenceTrack.TA });
+    component.submitCreate();
+    const createReq = http.expectOne('/api/program/sequences');
+    expect(createReq.request.body).toMatchObject({ track: ProgramSequenceTrack.TA });
+    createReq.flush(seq(9, '09:00', null, { location: 'Salle C', track: ProgramSequenceTrack.TA }));
+    flushDay();
+
+    component.openEditForm(component.chain()[0]);
+    expect(component.editDraft().track).toBe(ProgramSequenceTrack.COMMON);
+    component.updateEditDraft({ track: ProgramSequenceTrack.ES });
+    // Équipe et missions chargées en parallèle de l'ouverture.
+    http.expectOne('/api/volunteer-teams').flush([]);
+    http.expectOne('/api/volunteer-missions').flush([]);
+    component.submitEdit();
+    const editReq = http.expectOne('/api/program/sequences/1');
+    expect(editReq.request.body).toMatchObject({ track: ProgramSequenceTrack.ES });
+    editReq.flush(seq(1, '08:00', null, { track: ProgramSequenceTrack.ES }));
+    flushDay();
     http.verify();
   });
 

@@ -148,3 +148,20 @@
   padding-top: 0.35rem;
   margin-top: 0.25rem;
 }
+
+/* Pistes TA / ES / temps commun */
+.card {
+  border-left: 4px solid transparent;
+}
+
+.track-logos {
+  display: inline-flex;
+  gap: 0.15rem;
+}
+
+.track-logo {
+  inline-size: 1.1rem;
+  block-size: 1.1rem;
+  border-radius: 50%;
+  object-fit: cover;
+}

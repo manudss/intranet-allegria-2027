@@ -6,6 +6,7 @@ import {
   ProgramChangeLogAction,
   ProgramSequence,
   ProgramSequenceStatus,
+  ProgramSequenceTrack,
 } from '../entities';
 import { ProgramRecalcService } from './program-recalc.service';
 import { ProgramService } from './program.service';
@@ -268,6 +269,45 @@ describe('ProgramService', () => {
       service.updateSequence(USER, 2, { documentLinks: [{ label: 'x', url: 'javascript:alert(1)' }] }),
     ).rejects.toBeInstanceOf(BadRequestException);
     await expect(service.updateSequence(USER, 2, {})).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('gère la piste : création TA, temps commun par défaut, édition, rejet des valeurs invalides', async () => {
+    const { service } = createFakeDataSource();
+    const ta = await service.createSequence(USER, {
+      eventDate: '2027-11-01',
+      location: 'Salle TA',
+      title: 'Atelier TA',
+      startTime: '14:00',
+      durationMinutes: 45,
+      track: ProgramSequenceTrack.TA,
+    });
+    expect(ta.track).toBe(ProgramSequenceTrack.TA);
+
+    const common = await service.createSequence(USER, {
+      eventDate: '2027-11-01',
+      location: 'Salle B',
+      title: 'Plénière',
+      startTime: '16:00',
+      durationMinutes: 30,
+    });
+    expect(common.track).toBe(ProgramSequenceTrack.COMMON);
+
+    const updated = await service.updateSequence(USER, 2, { track: ProgramSequenceTrack.ES });
+    expect(updated.track).toBe(ProgramSequenceTrack.ES);
+
+    await expect(
+      service.updateSequence(USER, 2, { track: 'JT' as ProgramSequenceTrack }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.createSequence(USER, {
+        eventDate: '2027-11-01',
+        location: 'Salle C',
+        title: 'Invalide',
+        startTime: '18:00',
+        durationMinutes: 15,
+        track: 'XX' as ProgramSequenceTrack,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('deleteSequence reconnecte la suivante, refuse une séquence figée', async () => {

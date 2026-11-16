@@ -723,3 +723,113 @@ $header-height: 2.5rem;
   .pending-bar .pending-hint { display: none; }
   .pending-bar { padding: 0.5rem 0.75rem; font-size: 0.85rem; }
 }
+
+/* Pistes TA / ES / temps commun : la couleur de la bordure gauche existante est posée en ligne. */
+
+.track-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.track-logo {
+  inline-size: 1rem;
+  block-size: 1rem;
+  border-radius: 50%;
+  object-fit: cover;
+  vertical-align: -0.15rem;
+}
+
+.track-inline {
+  display: inline-flex;
+  gap: 0.15rem;
+  margin-left: 0.25rem;
+}
+
+.track-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin: 0 0.35rem;
+}
+
+.track-picker {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0;
+}
+
+.track-picker-label {
+  font-size: 0.8rem;
+  color: var(--tui-text-secondary);
+  margin-right: 0.25rem;
+}
+
+/* Vue « Par piste » : deux colonnes TA / ES, temps communs pleine largeur (maquette validée). */
+.tracks-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.tracks-head {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.tracks-col {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.tracks-col .track-logo {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+}
+
+.tracks-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.track-card {
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  inline-size: 100%;
+  border: 1px solid var(--tui-border-normal);
+  border-left: 4px solid transparent;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--tui-background-base);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.track-card header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.track-card.common {
+  background: #efe9e2;
+}
+
+.track-meta {
+  font-size: 0.8rem;
+  color: var(--tui-text-secondary);
+}

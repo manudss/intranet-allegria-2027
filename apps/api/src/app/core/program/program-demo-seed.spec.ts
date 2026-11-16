@@ -1,6 +1,6 @@
 import { EntityManager } from 'typeorm';
 import { describe, expect, it } from 'vitest';
-import { ProgramSequenceStatus } from '../entities';
+import { ProgramSequenceStatus, ProgramSequenceTrack } from '../entities';
 import { ProgramRecalcService } from './program-recalc.service';
 import { ProgramSequenceData } from './program-recalc.types';
 import { insertProgramDemoDay, PROGRAM_SEED_DAYS } from './program-demo-seed';
@@ -28,6 +28,7 @@ describe('programme de démonstration', () => {
     );
     for (const day of [monday, tuesday]) {
       expect(day.branches.map((branch) => branch.location)).toEqual(['Groupe TA', 'Groupe ES']);
+      expect(day.branches.map((branch) => branch.track)).toEqual(['TA', 'ES']);
     }
     expect(tuesday.branches[0].items.map((item) => item.title)).toContain('Veillée SPI - TA');
     expect(tuesday.branches[1].items.map((item) => item.title)).toContain('Veillée SPI - ES');
@@ -83,6 +84,34 @@ describe('programme de démonstration', () => {
     expect(frozen.every((row) => row['frozenByUserId'] === 3)).toBe(true);
     expect(new Set(saved.map((row) => row['volunteerTeamId']))).toEqual(new Set([10, 11]));
     expect(saved.some((row) => row['anchorSequenceId'] !== null)).toBe(true);
+  });
+
+  it('insertProgramDemoDay marque les pistes : temps commun sur la chaîne, TA / ES sur les branches', async () => {
+    const saved: Record<string, unknown>[] = [];
+    const repository = {
+      create: (value: Record<string, unknown>) => value,
+      save: async (value: Record<string, unknown>) => {
+        const row = { ...value, id: saved.length + 1 };
+        saved.push(row);
+        return row;
+      },
+    };
+    const manager = { getRepository: () => repository } as unknown as EntityManager;
+    // Lundi : jour avec branches TA / ES.
+    await insertProgramDemoDay(manager, PROGRAM_SEED_DAYS[1], { teamIds: [10], coordinatorId: 3 });
+
+    const main = saved.filter((row) => row['location'] === 'Grande salle');
+    expect(main.length).toBeGreaterThan(0);
+    expect(main.every((row) => row['track'] === ProgramSequenceTrack.COMMON)).toBe(true);
+    const ta = saved.filter((row) => row['location'] === 'Groupe TA');
+    const es = saved.filter((row) => row['location'] === 'Groupe ES');
+    expect(ta.length).toBeGreaterThan(0);
+    expect(es.length).toBeGreaterThan(0);
+    expect(ta.every((row) => row['track'] === ProgramSequenceTrack.TA)).toBe(true);
+    expect(es.every((row) => row['track'] === ProgramSequenceTrack.ES)).toBe(true);
+    // Les activités de branche (messes, jeux) ne portent pas d'équipe bénévole responsable.
+    expect(ta.every((row) => row['volunteerTeamId'] === null)).toBe(true);
+    expect(es.every((row) => row['volunteerTeamId'] === null)).toBe(true);
   });
 
   it.each(PROGRAM_SEED_DAYS.map((day) => [day.eventDate, day] as const))(

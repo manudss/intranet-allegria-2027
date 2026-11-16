@@ -12,6 +12,7 @@ import {
   ProgramSequenceDiff,
   ProgramSequenceDraft,
   ProgramSequenceStatus,
+  ProgramSequenceTrack,
   VolunteerMission,
   VolunteerTeam,
 } from '../../models/models';
@@ -21,6 +22,35 @@ import { buildChain, PROGRAM_EVENT_DAYS } from './schedule-chain.util';
 import { minutesToTime, timeToMinutes } from './schedule-time.util';
 
 const MAIN_LOCATION = 'Grande salle';
+
+/** Couleurs de branche, identiques à l'impression des badges (badge-print.logic.ts). */
+const TRACK_COLORS: Record<ProgramSequenceTrack, string> = {
+  [ProgramSequenceTrack.TA]: '#fe0002',
+  [ProgramSequenceTrack.ES]: '#00b2b2',
+  [ProgramSequenceTrack.COMMON]: '#6b5f52',
+};
+
+const TRACK_LABELS: Record<ProgramSequenceTrack, string> = {
+  [ProgramSequenceTrack.TA]: 'TA',
+  [ProgramSequenceTrack.ES]: 'ES',
+  [ProgramSequenceTrack.COMMON]: 'Commun',
+};
+
+type TrackFilter = 'ALL' | ProgramSequenceTrack;
+
+/**
+ * Marqueur explicite d'un temps commun « cadre de scission » dans les notes (posé par le seed,
+ * SPLIT_NOTE côté API) : le créneau n'est qu'un repère horaire, le programme réel est
+ * dans les lieux « Groupe TA » / « Groupe ES ».
+ */
+const SPLIT_FRAME_NOTE = 'Temps séparé';
+
+const TRACK_FILTERS: { value: TrackFilter; label: string }[] = [
+  { value: 'ALL', label: 'Tous' },
+  { value: ProgramSequenceTrack.TA, label: 'TA' },
+  { value: ProgramSequenceTrack.ES, label: 'ES' },
+  { value: ProgramSequenceTrack.COMMON, label: 'Temps communs' },
+];
 
 /** Nombre de catégories de couleur disponibles pour les blocs du calendrier. */
 const CATEGORY_COUNT = 6;
@@ -62,6 +92,7 @@ type ActionMessage = { appearance: 'positive' | 'negative' | 'warning'; text: st
 const EMPTY_DRAFT = (): ProgramSequenceDraft => ({
   title: '',
   durationMinutes: 30,
+  track: ProgramSequenceTrack.COMMON,
   volunteerTeamId: null,
   notes: null,
 });
@@ -79,6 +110,7 @@ const CHANGE_LOG_LABELS: Record<ProgramChangeLogAction, string> = {
 interface EditDraft {
   title: string;
   notes: string;
+  track: ProgramSequenceTrack;
   volunteerTeamId: number | null;
   missionIds: number[];
   documentLinks: ProgramDocumentLink[];
@@ -89,6 +121,7 @@ interface CreateDraft {
   title: string;
   startTime: string;
   durationMinutes: number;
+  track: ProgramSequenceTrack;
 }
 
 interface BlockView {
@@ -105,6 +138,14 @@ interface BlockView {
   justChanged: boolean;
   frozen: boolean;
   category: number;
+}
+
+/** Une ligne de la vue « Par piste » : temps commun pleine largeur, ou paire TA / ES côte à côte. */
+interface TrackRow {
+  key: string;
+  common: ProgramSequence | null;
+  ta: ProgramSequence | null;
+  es: ProgramSequence | null;
 }
 
 interface CalendarColumn {
@@ -134,8 +175,46 @@ export class ProgrammePage {
   private readonly auth = inject(AuthService);
 
   readonly ProgramSequenceStatus = ProgramSequenceStatus;
+  readonly ProgramSequenceTrack = ProgramSequenceTrack;
   readonly changeLogLabels = CHANGE_LOG_LABELS;
   readonly days = PROGRAM_EVENT_DAYS;
+  readonly trackFilters = TRACK_FILTERS;
+  readonly trackOptions = TRACK_FILTERS.filter(
+    (option): option is { value: ProgramSequenceTrack; label: string } => option.value !== 'ALL',
+  );
+  readonly trackFilter = signal<TrackFilter>('ALL');
+
+  /** Disposition de la vue jour : calendrier par lieu (existant) ou deux colonnes TA / ES (maquette validée). */
+  readonly dayLayout = signal<'locations' | 'tracks'>('locations');
+
+  setDayLayout(mode: 'locations' | 'tracks'): void {
+    this.dayLayout.set(mode);
+  }
+
+  trackColor(track: ProgramSequenceTrack): string {
+    return TRACK_COLORS[track] ?? TRACK_COLORS[ProgramSequenceTrack.COMMON];
+  }
+
+  trackLabel(track: ProgramSequenceTrack): string {
+    return TRACK_LABELS[track] ?? TRACK_LABELS[ProgramSequenceTrack.COMMON];
+  }
+
+  /** Logos de branche (assets de l'impression des badges) ; les temps communs portent les deux. */
+  trackLogos(track: ProgramSequenceTrack): string[] {
+    if (track === ProgramSequenceTrack.TA) return ['/assets/branches/ta.jpg'];
+    if (track === ProgramSequenceTrack.ES) return ['/assets/branches/es.jpg'];
+    return ['/assets/branches/ta.jpg', '/assets/branches/es.jpg'];
+  }
+
+  setTrackFilter(value: TrackFilter): void {
+    this.trackFilter.set(value);
+  }
+
+  /** Filtre d'affichage par piste (n'altère ni les chaînes ni les données). */
+  private matchesTrack(sequence: ProgramSequence): boolean {
+    const filter = this.trackFilter();
+    return filter === 'ALL' || (sequence.track ?? ProgramSequenceTrack.COMMON) === filter;
+  }
 
   readonly dayIndex = signal(0); // J1 par défaut
   readonly eventDate = computed(() => this.days[this.dayIndex()]);
@@ -275,7 +354,9 @@ export class ProgrammePage {
     const sequences = this.allSequences();
 
     return this.locationsForDay().map((name) => {
-      const blocks: BlockView[] = buildChain(sequences, date, name).map((sequence) => {
+      const blocks: BlockView[] = buildChain(sequences, date, name)
+        .filter((sequence) => this.matchesTrack(sequence))
+        .map((sequence) => {
         const after = projected.get(sequence.id);
         const startTime = after?.startTime ?? sequence.startTime;
         const endTime = after?.endTime ?? sequence.endTime;
@@ -386,6 +467,62 @@ export class ProgrammePage {
   readonly overview = signal<OverviewDay[]>([]);
   readonly overviewLoading = signal(false);
 
+  /**
+   * Lignes de la vue « Par piste » : les temps communs sur toute la largeur, les créneaux TA et ES
+   * en deux colonnes, appariés quand ils partagent exactement le même horaire. Affichage seul.
+   */
+  readonly trackRows = computed<TrackRow[]>(() => {
+    const date = this.eventDate();
+    const sequences = this.allSequences()
+      .filter((s) => s.eventDate === date)
+      .filter((s) => this.matchesTrack(s));
+    const byStart = (a: ProgramSequence, b: ProgramSequence) => a.startTime.localeCompare(b.startTime);
+    // Cadre de scission : temps commun portant la note explicite « Temps séparé » (seed)
+    // ET repris par des créneaux de branche (ancrage, ou fenêtre horaire exactement égale).
+    // Seuls ces cadres-là ne sont pas rendus en plus de la paire TA / ES : un vrai temps
+    // commun, même au même horaire qu'un créneau de branche, n'est jamais masqué.
+    const branchAnchorIds = new Set(
+      sequences.map((s) => s.anchorSequenceId).filter((id): id is number => id !== null),
+    );
+    const branchWindows = sequences
+      .filter((s) => s.track === ProgramSequenceTrack.TA || s.track === ProgramSequenceTrack.ES)
+      .map((s) => `${s.startTime}-${s.endTime}`);
+    const isSplitFrame = (s: ProgramSequence): boolean =>
+      (s.notes ?? '').includes(SPLIT_FRAME_NOTE) &&
+      (branchAnchorIds.has(s.id) || branchWindows.includes(`${s.startTime}-${s.endTime}`));
+    const commons = sequences
+      .filter((s) => (s.track ?? ProgramSequenceTrack.COMMON) === ProgramSequenceTrack.COMMON)
+      .filter((s) => !isSplitFrame(s))
+      .sort(byStart);
+    const tas = sequences.filter((s) => s.track === ProgramSequenceTrack.TA).sort(byStart);
+    const ess = sequences.filter((s) => s.track === ProgramSequenceTrack.ES).sort(byStart);
+
+    const rows: TrackRow[] = commons.map((common) => ({ key: `c${common.id}`, common, ta: null, es: null }));
+    const pairedEs = new Set<number>();
+    for (const ta of tas) {
+      const match = ess.find(
+        (es) => !pairedEs.has(es.id) && es.startTime === ta.startTime && es.endTime === ta.endTime,
+      );
+      if (match) pairedEs.add(match.id);
+      rows.push({ key: `t${ta.id}`, common: null, ta, es: match ?? null });
+    }
+    for (const es of ess.filter((e) => !pairedEs.has(e.id))) {
+      rows.push({ key: `e${es.id}`, common: null, ta: null, es });
+    }
+    const firstTime = (row: TrackRow) => (row.common ?? row.ta ?? row.es)!.startTime;
+    return rows.sort((a, b) => firstTime(a).localeCompare(firstTime(b)));
+  });
+
+  /** Vue d'ensemble filtrée par piste : lieux vidés par le filtre masqués. */
+  readonly filteredOverview = computed<OverviewDay[]>(() =>
+    this.overview().map((day) => ({
+      ...day,
+      locations: day.locations
+        .map((loc) => ({ ...loc, sequences: loc.sequences.filter((s) => this.matchesTrack(s)) }))
+        .filter((loc) => loc.sequences.length > 0),
+    })),
+  );
+
   readonly teams = signal<VolunteerTeam[]>([]);
   readonly teamItems = computed(() => [null, ...this.teams().map((team) => team.id)]);
 
@@ -413,6 +550,7 @@ export class ProgrammePage {
   readonly editDraft = signal<EditDraft>({
     title: '',
     notes: '',
+    track: ProgramSequenceTrack.COMMON,
     volunteerTeamId: null,
     missionIds: [],
     documentLinks: [],
@@ -426,6 +564,7 @@ export class ProgrammePage {
     title: '',
     startTime: '09:00',
     durationMinutes: 30,
+    track: ProgramSequenceTrack.COMMON,
   });
 
   constructor() {
@@ -705,6 +844,7 @@ export class ProgrammePage {
       title: '',
       startTime,
       durationMinutes: 30,
+      track: ProgramSequenceTrack.COMMON,
     });
     this.createOpen.set(true);
     this.revealPanel();
@@ -723,6 +863,7 @@ export class ProgrammePage {
         title: draft.title,
         startTime: draft.startTime,
         durationMinutes: draft.durationMinutes,
+        track: draft.track,
       })
       .subscribe({
         next: (created) => {
@@ -743,6 +884,7 @@ export class ProgrammePage {
     this.editDraft.set({
       title: sequence.title,
       notes: sequence.notes ?? '',
+      track: sequence.track ?? ProgramSequenceTrack.COMMON,
       volunteerTeamId: sequence.volunteerTeamId,
       missionIds: [...sequence.missionIds],
       documentLinks: sequence.documentLinks.map((link) => ({ ...link })),
@@ -792,6 +934,7 @@ export class ProgrammePage {
       .updateSequence(id, {
         title: draft.title,
         notes: draft.notes,
+        track: draft.track,
         volunteerTeamId: draft.volunteerTeamId,
         missionIds: draft.missionIds,
         documentLinks: draft.documentLinks,

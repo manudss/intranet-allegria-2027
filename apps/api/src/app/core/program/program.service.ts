@@ -13,6 +13,7 @@ import {
   ProgramDocumentLink,
   ProgramSequence,
   ProgramSequenceStatus,
+  ProgramSequenceTrack,
 } from '../entities';
 import { ProgramRecalcService } from './program-recalc.service';
 import { computeEndTime, minutesToTime, timeToMinutes } from './program-time.util';
@@ -60,6 +61,7 @@ function toData(sequence: ProgramSequence): ProgramSequenceData {
     durationMinutes: sequence.durationMinutes,
     endTime: sequence.endTime,
     status: sequence.status,
+    track: sequence.track ?? ProgramSequenceTrack.COMMON,
     minDurationMinutes: sequence.minDurationMinutes,
     minMarginMinutes: sequence.minMarginMinutes,
     previousSequenceId: sequence.previousSequenceId,
@@ -306,6 +308,7 @@ export class ProgramService {
           durationMinutes: dto.durationMinutes,
           endTime: computeEndTime(dto.startTime, dto.durationMinutes),
           status: ProgramSequenceStatus.MOBILE,
+          track: ProgramSequenceTrack.COMMON,
           previousSequenceId: null,
           anchorSequenceId,
           missionIds: [],
@@ -539,6 +542,7 @@ export class ProgramService {
       location: anchor.location,
       title: dto.title.trim(),
       durationMinutes: dto.durationMinutes,
+      track: this.assertTrack(dto.track),
       volunteerTeamId: dto.volunteerTeamId ?? null,
       notes: dto.notes ?? null,
       minDurationMinutes: dto.minDurationMinutes ?? null,
@@ -651,8 +655,12 @@ export class ProgramService {
     minMarginMinutes?: number | null;
     missionIds?: number[];
     documentLinks?: ProgramDocumentLink[];
+    track?: ProgramSequenceTrack;
   }): Partial<ProgramSequence> {
     const patch: Partial<ProgramSequence> = {};
+    if (dto.track !== undefined) {
+      patch.track = this.assertTrack(dto.track);
+    }
     if (dto.notes !== undefined) {
       patch.notes = dto.notes?.trim() ? dto.notes.trim() : null;
     }
@@ -678,6 +686,15 @@ export class ProgramService {
       patch.documentLinks = this.normalizeLinks(dto.documentLinks);
     }
     return patch;
+  }
+
+  /** Valide une piste fournie ; renvoie la valeur par défaut (temps commun) si absente. */
+  private assertTrack(track: ProgramSequenceTrack | undefined): ProgramSequenceTrack {
+    if (track === undefined || track === null) return ProgramSequenceTrack.COMMON;
+    if (!Object.values(ProgramSequenceTrack).includes(track)) {
+      throw new BadRequestException('Piste invalide : TA, ES ou COMMON attendu.');
+    }
+    return track;
   }
 
   private assertOptionalInt(value: number | null, label: string, min: number, max?: number) {

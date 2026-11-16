@@ -1,5 +1,5 @@
 import { EntityManager } from 'typeorm';
-import { ProgramSequence, ProgramSequenceStatus } from '../entities';
+import { ProgramSequence, ProgramSequenceStatus, ProgramSequenceTrack } from '../entities';
 
 /**
  * Programme des 4 jours d'ALLEGRIA 2027 (dim. 31 oct. - mer. 3 nov.), d'après le premier planning projeté
@@ -30,6 +30,8 @@ export const MAIN_LOCATION = 'Grande salle';
 /** Un lieu parallèle : ses séquences suivent les créneaux (`slot`) de la chaîne principale du jour. */
 export interface ProgramSeedBranch {
   location: string;
+  /** Piste portée par les séquences de la branche. */
+  track: 'TA' | 'ES';
   items: { slot: number; title: string; durationMinutes?: number; notes?: string }[];
 }
 
@@ -100,6 +102,7 @@ export const PROGRAM_SEED_DAYS: ProgramSeedDay[] = [
     branches: [
       {
         location: 'Groupe TA',
+          track: 'TA',
         items: [
           { slot: 2, title: 'Temps de la Parole - Messe en paroisse' },
           { slot: 6, title: 'Jeu dans la ville collaboratif avec ES - Rassemblement au Musée de la Mine' },
@@ -107,6 +110,7 @@ export const PROGRAM_SEED_DAYS: ProgramSeedDay[] = [
       },
       {
         location: 'Groupe ES',
+          track: 'ES',
         items: [
           { slot: 2, title: 'Temps de la parole - Messe en (autre) paroisse' },
           { slot: 6, title: 'Jeu dans la ville collaboratif avec TA - Rassemblement au Musée de la mine' },
@@ -142,6 +146,7 @@ export const PROGRAM_SEED_DAYS: ProgramSeedDay[] = [
     branches: [
       {
         location: 'Groupe TA',
+          track: 'TA',
         items: [
           { slot: 2, title: 'Ateliers Défis / Actions / Services (avec des témoins)' },
           { slot: 5, title: 'Grand Jeu au Crêt des 6 soleils' },
@@ -150,6 +155,7 @@ export const PROGRAM_SEED_DAYS: ProgramSeedDay[] = [
       },
       {
         location: 'Groupe ES',
+          track: 'ES',
         items: [
           { slot: 2, title: 'Table ronde avec des témoins qui ont choisi la Joie + 2 ateliers' },
           { slot: 5, title: "Ballade jusqu'au crêt des 6 soleils" },
@@ -201,6 +207,7 @@ export async function insertProgramDemoDay(
         repository.create({
           eventDate: day.eventDate,
           location: MAIN_LOCATION,
+          track: ProgramSequenceTrack.COMMON,
           title: item.title,
           startTime: item.startTime,
           durationMinutes: item.durationMinutes,
@@ -227,6 +234,7 @@ export async function insertProgramDemoDay(
         repository.create({
           eventDate: day.eventDate,
           location: branch.location,
+          track: branch.track === 'TA' ? ProgramSequenceTrack.TA : ProgramSequenceTrack.ES,
           title: entry.title,
           startTime: slot.startTime,
           durationMinutes,
@@ -235,7 +243,9 @@ export async function insertProgramDemoDay(
           // Seule la tête de branche est rattachée à la chaîne principale.
           anchorSequenceId: previousId === null ? slot.id : null,
           previousSequenceId: previousId,
-          volunteerTeamId: nextTeamId(),
+          // Les créneaux de branche sont des activités de participants (messes, jeux) :
+          // pas d'équipe bénévole responsable (sinon la rotation leur attribue n'importe quelle équipe).
+          volunteerTeamId: null,
           notes: entry.notes ?? null,
         }),
       );

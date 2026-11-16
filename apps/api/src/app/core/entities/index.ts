@@ -38,6 +38,7 @@ export { PersonSource } from './person-source.enum';
 export { VolunteerApplicationStatus } from './volunteer-application-status.enum';
 export { VolunteerApplication } from './volunteer-application.entity';
 export { ProgramSequenceStatus } from './program-sequence-status.enum';
+export { ProgramSequenceTrack } from './program-sequence-track.enum';
 export { ProgramChangeLogAction } from './program-change-log-action.enum';
 export { ProgramSequence } from './program-sequence.entity';
 export type { ProgramDocumentLink } from './program-sequence.entity';

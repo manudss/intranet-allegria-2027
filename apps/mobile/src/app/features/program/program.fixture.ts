@@ -2,6 +2,7 @@ import {
   ProgramDay,
   ProgramSequence,
   ProgramSequenceStatus,
+  ProgramSequenceTrack,
 } from '../../models/models';
 
 export function seq(
@@ -18,6 +19,7 @@ export function seq(
     durationMinutes: 60,
     endTime: '13:00',
     status: ProgramSequenceStatus.MOBILE,
+    track: ProgramSequenceTrack.COMMON,
     volunteerTeamId: null,
     volunteerTeamName: null,
     notes: null,

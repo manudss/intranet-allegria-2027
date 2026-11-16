@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ProgramSequenceStatus } from '../entities';
+import { ProgramSequenceStatus, ProgramSequenceTrack } from '../entities';
 import { computeEndTime, minutesToTime, timeToMinutes } from './program-time.util';
 import {
   ProgramInsertPreview,
@@ -162,6 +162,7 @@ export class ProgramRecalcService {
         durationMinutes: duration,
         endTime: computeEndTime(newStartTime, duration),
         status: ProgramSequenceStatus.MOBILE,
+        track: draft.track ?? ProgramSequenceTrack.COMMON,
         minDurationMinutes: draft.minDurationMinutes ?? null,
         minMarginMinutes: draft.minMarginMinutes ?? null,
         previousSequenceId: previous.id,

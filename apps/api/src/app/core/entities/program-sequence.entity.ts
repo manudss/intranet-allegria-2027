@@ -9,6 +9,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { ProgramSequenceStatus } from './program-sequence-status.enum';
+import { ProgramSequenceTrack } from './program-sequence-track.enum';
 import { User } from './user.entity';
 import { VolunteerTeam } from './volunteer-team.entity';
 
@@ -51,6 +52,19 @@ export class ProgramSequence {
     default: ProgramSequenceStatus.MOBILE,
   })
   status!: ProgramSequenceStatus;
+
+  /**
+   * Piste du créneau : branche TA / ES, ou temps commun aux deux. Indépendant du lieu
+   * (« location ») : un temps commun peut se tenir dans n'importe quel lieu, et une branche
+   * occupe parfois plusieurs lieux.
+   */
+  @Column({
+    type: 'enum',
+    enum: ProgramSequenceTrack,
+    enumName: 'program_sequence_track_enum',
+    default: ProgramSequenceTrack.COMMON,
+  })
+  track!: ProgramSequenceTrack;
 
   @Column({ type: 'int', nullable: true })
   minDurationMinutes!: number | null;

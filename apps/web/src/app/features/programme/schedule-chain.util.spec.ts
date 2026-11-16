@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ProgramSequence, ProgramSequenceStatus } from '../../models/models';
+import { ProgramSequence, ProgramSequenceStatus, ProgramSequenceTrack } from '../../models/models';
 import { ALLEGRIA_2027_EVENT_DATES } from '../../shared/event-date-selector/event-date.config';
 import { buildChain, PROGRAM_EVENT_DAYS } from './schedule-chain.util';
 
@@ -13,6 +13,7 @@ function seq(id: number, previousSequenceId: number | null, location = 'A'): Pro
     durationMinutes: 60,
     endTime: '09:00',
     status: ProgramSequenceStatus.MOBILE,
+    track: ProgramSequenceTrack.COMMON,
     minDurationMinutes: null,
     minMarginMinutes: null,
     previousSequenceId,

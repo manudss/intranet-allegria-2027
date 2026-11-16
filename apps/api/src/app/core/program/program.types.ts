@@ -1,5 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ProgramChangeLogAction, ProgramDocumentLink, ProgramSequenceStatus } from '../entities';
+import {
+  ProgramChangeLogAction,
+  ProgramDocumentLink,
+  ProgramSequenceStatus,
+  ProgramSequenceTrack,
+} from '../entities';
 
 export class InsertSequenceDto {
   @ApiProperty({ example: 'Atelier surprise' })
@@ -19,6 +24,12 @@ export class InsertSequenceDto {
 
   @ApiPropertyOptional({ example: 5, nullable: true })
   minMarginMinutes?: number | null;
+
+  @ApiPropertyOptional({
+    enum: ProgramSequenceTrack,
+    description: 'Piste visée : TA, ES ou temps commun (défaut : COMMON)',
+  })
+  track?: ProgramSequenceTrack;
 }
 
 export class InsertSequenceApplyDto extends InsertSequenceDto {
@@ -82,6 +93,9 @@ export class UpdateSequenceDto {
 
   @ApiPropertyOptional({ type: [DocumentLinkDto] })
   documentLinks?: DocumentLinkDto[];
+
+  @ApiPropertyOptional({ enum: ProgramSequenceTrack })
+  track?: ProgramSequenceTrack;
 }
 
 export class ChangeLogQueryDto {
@@ -94,6 +108,7 @@ export interface ProgramSequenceView {
   eventDate: string;
   location: string;
   title: string;
+  track: ProgramSequenceTrack;
   startTime: string;
   durationMinutes: number;
   endTime: string;

@@ -9,9 +9,11 @@
 
 ## Vérifications locales
 - Migration additive exécutée sur PostgreSQL 14 isolé, puis seed existant `seed:api:small`.
-- API : 449 tests ; web : 186 ; mobile : 64 ; site : 53 ; shared : 1. Tous verts sur la révision testée.
+- API : 449 tests ; web : 187 ; mobile : 64 ; site : 53 ; shared : 1. Tous verts sur la révision testée.
 - Builds production API et web réussis ; lint API/web sans erreur (avertissements existants).
 - API réelle : classement, aperçu/application du pilotage, refus d'ancien pilote incorrect, refus du retrait de mission pilotée, propagation depuis le prédécesseur, version périmée, autorisation lecture seule et audit.
+- Contrôles complémentaires API réels : reprise de pilote explicite puis restauration, refus sur événement figé, batch et double application concurrente (une réussite, une version périmée 409).
+- Champs horaires Taiga explicites HH:MM, indépendants du rendu AM/PM natif du navigateur. Capture mobile française inspectée.
 - Base réelle : modification directe d'un créneau piloté refusée ; écriture concurrente bloquée par le verrou transactionnel ; rollback restaure les horaires.
 - Navigateur réel : fiche groupée et panneau desktop/mobile ; menu Taiga au-dessus du panneau ; annulation conserve les retouches ; inspection des captures après corrections d'empilement et largeur mobile.
 

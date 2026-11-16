@@ -58,21 +58,21 @@
         ><label tuiLabel for="event-quick-editor-2">Début</label
         ><input
           id="event-quick-editor-2"
-          tuiInput
-          type="time"
+          tuiInputTime
+          mode="HH:MM"
           [disabled]="busy() || event().status === 'FROZEN'"
-          [ngModel]="start()"
-          (ngModelChange)="start.set($event);preview.set(null)"
+          [ngModel]="startTimeValue()"
+          (ngModelChange)="setTime('start',$event)"
       /></tui-textfield>
       <tui-textfield [tuiTextfieldCleaner]="false"
         ><label tuiLabel for="event-quick-editor-3">Fin</label
         ><input
           id="event-quick-editor-3"
-          tuiInput
-          type="time"
+          tuiInputTime
+          mode="HH:MM"
           [disabled]="busy() || event().status === 'FROZEN'"
-          [ngModel]="end()"
-          (ngModelChange)="end.set($event);preview.set(null)"
+          [ngModel]="endTimeValue()"
+          (ngModelChange)="setTime('end',$event)"
       /></tui-textfield>
     </div>
     <p class="hint">

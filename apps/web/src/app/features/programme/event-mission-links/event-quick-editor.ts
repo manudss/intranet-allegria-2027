@@ -8,6 +8,8 @@ import {
   output,
   signal,
 } from '@angular/core';
+import { TuiTime } from '@taiga-ui/cdk';
+import { TuiInputTime } from '@taiga-ui/kit';
 import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { SHARED_IMPORTS } from '../../../shared/shared-imports';
@@ -33,6 +35,7 @@ import { timeToMinutes } from '../schedule-time.util';
   selector: 'app-event-quick-editor',
   imports: [
     ...SHARED_IMPORTS,
+    TuiInputTime,
     EventMissionLinksComponent,
     ShiftChangesComponent,
     EventChoiceComponent,
@@ -60,6 +63,8 @@ export class EventQuickEditorComponent implements OnChanges {
   readonly teamId = signal<number | null>(null);
   readonly start = signal('');
   readonly end = signal('');
+  readonly startTimeValue = computed(() => this.timeValue(this.start()));
+  readonly endTimeValue = computed(() => this.timeValue(this.end()));
   readonly preview = signal<ProgramResizePreview | null>(null);
   readonly timeTarget = signal<number | null>(null);
   readonly documents = signal<{ label: string; url: string }[]>([]);
@@ -87,6 +92,13 @@ export class EventQuickEditorComponent implements OnChanges {
       .filter((g) => !this.sequence()?.groupIds.includes(g.id))
       .map((g) => ({ value: g.id, label: g.name })),
   );
+  timeValue(value: string): TuiTime | null {
+    return /^\d{2}:\d{2}$/.test(value) ? TuiTime.fromString(value) : null;
+  }
+  setTime(field: 'start' | 'end', value: TuiTime | null) {
+    this[field].set(value?.toString('HH:MM') ?? '');
+    this.preview.set(null);
+  }
   snapshot() {
     return JSON.stringify([
       this.title(),

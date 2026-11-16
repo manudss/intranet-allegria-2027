@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -319,6 +320,19 @@ export class VolunteerMissionsService {
     this.assertMissionInScope(scope, mission, false);
 
     const shift = await this.findShift(missionId, shiftId);
+    if (
+      (dto.startAt !== undefined || dto.endAt !== undefined) &&
+      this.shiftsRepository.manager?.query
+    ) {
+      const pilots = await this.shiftsRepository.manager.query(
+        'SELECT sequence_id FROM program_shift_bindings WHERE shift_id=$1',
+        [shiftId],
+      );
+      if (pilots.length)
+        throw new ConflictException(
+          `Créneau piloté par l'événement #${pilots[0].sequence_id} : modifier depuis son aperçu ou désactiver explicitement ce pilotage.`,
+        );
+    }
 
     if (Object.prototype.hasOwnProperty.call(dto, 'startAt') && dto.startAt) {
       shift.startAt = this.parseDateTime(dto.startAt, 'startAt');

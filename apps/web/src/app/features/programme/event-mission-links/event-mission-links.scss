@@ -109,3 +109,27 @@ button {
     font-size: 0.8rem;
   }
 }
+
+.mission-actions app-event-choice {
+  width: 10rem;
+  flex: 0 0 10rem;
+}
+
+.shift-hours {
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--tui-text-primary);
+  margin: 0.5rem 0;
+}
+.shift-hours span {
+  color: var(--tui-text-secondary);
+}
+@media (max-width: 500px) {
+  .mission-actions app-event-choice {
+    width: 100%;
+    flex: 1 0 100%;
+  }
+  .mission-actions button {
+    flex: 1 0 100%;
+  }
+}

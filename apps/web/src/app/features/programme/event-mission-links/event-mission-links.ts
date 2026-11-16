@@ -330,6 +330,9 @@ export class EventMissionLinksComponent implements OnChanges {
       error.error?.message ?? 'Impossible de terminer cette action. Vos saisies sont conservées.',
     );
   }
+  pilotFor(shiftId: number) {
+    return this.timing().bindings.find((b) => b.shiftId === shiftId)?.sequenceId ?? null;
+  }
   date(value: string) {
     return new Intl.DateTimeFormat('fr-FR', {
       timeZone: 'Europe/Paris',

@@ -137,9 +137,10 @@
       [value]="teamId()"
       (valueChange)="teamId.set($event)"
     />
-    <tui-textfield [tuiTextfieldCleaner]="false"
-      ><label tuiLabel for="event-quick-editor-5">Notes pour les bénévoles</label
-      ><textarea
+    <label for="event-quick-editor-5">Notes pour les bénévoles</label>
+    <tui-textfield [tuiTextfieldCleaner]="false">
+      <textarea
+        rows="4"
         id="event-quick-editor-5"
         tuiTextarea
         [ngModel]="notes()"

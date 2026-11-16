@@ -28,7 +28,16 @@ null) {
   <article class="mission">
     <strong>{{ mission.title }}</strong
     ><small>{{ mission.volunteerTeam?.name ?? 'Sans équipe' }}</small>
-    @if (editable()) {
+    @for (shift of mission.shifts ?? []; track shift.id) {
+    <p class="shift-hours">
+      {{ date(shift.startAt) }} → {{ date(shift.endAt) }}<br />
+      @if(pilotFor(shift.id); as pilot){<span>Suit l'événement #{{ pilot }}</span>} @else {<span
+        >Horaire indépendant</span
+      >}
+    </p>
+    } @empty {
+    <p class="hint">Aucun créneau bénévole.</p>
+    } @if (editable()) {
     <div class="mission-actions">
       <app-event-choice
         label="Phase"

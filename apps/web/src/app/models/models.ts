@@ -873,3 +873,59 @@ export interface ApplyJeunesRepartitionEntry {
 export interface ApplyJeunesRepartitionResult {
   applied: number;
 }
+
+// --- Consignes & documents ---
+
+export type DocumentFileType = 'PDF' | 'DOCX' | 'XLSX' | 'PPTX' | 'OTHER';
+
+export type DocumentVisibility = 'ALL' | 'TEAMS';
+
+export interface DocumentCategory {
+  id: number;
+  code: string;
+  label: string;
+  parentId: number | null;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface DocumentLinkTeamRef {
+  id: number;
+  name: string;
+  code: string;
+  isActive: boolean;
+}
+
+export interface DocumentLink {
+  id: number;
+  title: string;
+  description: string | null;
+  url: string;
+  fileType: DocumentFileType;
+  visibility: DocumentVisibility;
+  categoryId: number | null;
+  category: { id: number; code: string; label: string } | null;
+  teams: DocumentLinkTeamRef[];
+  createdByUserId: number | null;
+  updatedByUserId: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DocumentLinkPayload {
+  title: string;
+  description?: string | null;
+  url: string;
+  fileType?: DocumentFileType;
+  categoryId?: number | null;
+  visibility: DocumentVisibility;
+  teamIds?: number[];
+}
+
+export interface DocumentCategoryPayload {
+  code: string;
+  label: string;
+  parentId?: number | null;
+  sortOrder?: number;
+  isActive?: boolean;
+}

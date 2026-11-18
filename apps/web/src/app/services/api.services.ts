@@ -84,6 +84,10 @@ import {
   VolunteerTeamMembershipPayload,
   VolunteerTeamPayload,
   VolunteerPayload,
+  DocumentCategory,
+  DocumentCategoryPayload,
+  DocumentLink,
+  DocumentLinkPayload,
 } from '../models/models';
 
 @Injectable()
@@ -829,4 +833,24 @@ export class ProgramApiService {
     if (sequenceId) params = params.set('sequenceId', sequenceId);
     return this.http.get<ProgramChangeLogEntry[]>(`${this.base}/change-log`, { params });
   }
+}
+
+// --- Consignes & documents ---
+
+@Injectable({ providedIn: 'root' })
+export class DocumentLinksApiService extends CrudApi<DocumentLink, DocumentLinkPayload> {
+  protected readonly path = '/api/document-links';
+
+  /** Catalogue filtré côté serveur selon les droits de l'utilisateur connecté. */
+  listCatalog(filters?: { search?: string; categoryId?: number | null }): Observable<DocumentLink[]> {
+    let params = new HttpParams();
+    if (filters?.search) params = params.set('search', filters.search);
+    if (filters?.categoryId != null) params = params.set('categoryId', String(filters.categoryId));
+    return this.http.get<DocumentLink[]>(this.path, { params });
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class DocumentCategoriesApiService extends CrudApi<DocumentCategory, DocumentCategoryPayload> {
+  protected readonly path = '/api/document-categories';
 }

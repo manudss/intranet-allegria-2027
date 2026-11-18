@@ -244,7 +244,20 @@ export const appRoutes: Route[] = [
       {
         path: 'consignes-docs',
         title: 'Consignes & documents',
-        loadComponent: () => import('./pages/consignes-docs').then((m) => m.ConsignesDocs),
+        loadComponent: () =>
+          import('./features/consignes-docs/consignes-docs-catalog').then(
+            (m) => m.ConsignesDocsCatalogPage,
+          ),
+      },
+      {
+        path: 'consignes-docs/gestion',
+        title: 'Gestion du catalogue',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'COORDINATOR'] },
+        loadComponent: () =>
+          import('./features/consignes-docs/consignes-docs-manage').then(
+            (m) => m.ConsignesDocsManagePage,
+          ),
       },
       {
         path: 'parametres-roles',

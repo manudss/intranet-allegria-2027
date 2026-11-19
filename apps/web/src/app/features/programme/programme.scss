@@ -904,3 +904,16 @@ $header-height: 2.5rem;
   color: #fff;
 }
 
+
+/* Recherche : les créneaux correspondants sont surlignés, les autres estompés (rien n'est masqué). */
+.sequence-block.search-dim,
+.track-card.search-dim {
+  opacity: 0.35;
+}
+
+.sequence-block.search-hit,
+.track-card.search-hit {
+  outline: 3px solid var(--allegria-primary, #d52f57);
+  outline-offset: 1px;
+  box-shadow: 0 6px 18px rgba(60, 20, 20, 0.25);
+}

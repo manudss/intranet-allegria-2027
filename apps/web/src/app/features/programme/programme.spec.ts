@@ -300,36 +300,6 @@ describe('ProgrammePage', () => {
     http.verify();
   });
 
-  it('modifie une séquence (équipe, liens) via l’API puis recharge le jour', () => {
-    const { component, http, flushDay } = setup(['COORDINATOR']);
-    flushDay();
-
-    component.openEditForm(component.chain()[1]);
-    http.expectOne('/api/volunteer-teams').flush([]);
-    http.expectOne('/api/volunteer-missions').flush([
-      { id: 5, title: 'Accueil', location: 'Hall' },
-      { id: 6, title: 'Buvette', location: null },
-    ]);
-    component.toggleMission(5);
-    component.updateEditDraft({ title: 'Titre édité', volunteerTeamId: 3 });
-    component.addDocumentLink();
-    component.updateDocumentLink(0, { label: 'RoS', url: 'https://drive.example.org/ros' });
-    component.submitEdit();
-
-    const req = http.expectOne('/api/program/sequences/2');
-    expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toMatchObject({
-      title: 'Titre édité',
-      volunteerTeamId: 3,
-      missionIds: [5],
-      documentLinks: [{ label: 'RoS', url: 'https://drive.example.org/ros' }],
-    });
-    req.flush(SEQUENCES[1]);
-    flushDay();
-    expect(component.editSequenceId()).toBeNull();
-    http.verify();
-  });
-
   it('crée la première séquence d’un lieu vide', () => {
     const { component, http, flushDay } = setup(['COORDINATOR']);
     flushDay([]);
@@ -435,7 +405,7 @@ describe('ProgrammePage', () => {
     expect(rows[6].ta?.startTime).toBe('20:30');
   });
 
-  it('envoie la piste choisie à la création comme à l’édition', () => {
+  it('envoie la piste choisie à la création', () => {
     const { component, http, flushDay } = setup(['COORDINATOR']);
     flushDay();
 
@@ -447,17 +417,6 @@ describe('ProgrammePage', () => {
     createReq.flush(seq(9, '09:00', null, { location: 'Salle C', track: ProgramSequenceTrack.TA }));
     flushDay();
 
-    component.openEditForm(component.chain()[0]);
-    expect(component.editDraft().track).toBe(ProgramSequenceTrack.COMMON);
-    component.updateEditDraft({ track: ProgramSequenceTrack.ES });
-    // Équipe et missions chargées en parallèle de l'ouverture.
-    http.expectOne('/api/volunteer-teams').flush([]);
-    http.expectOne('/api/volunteer-missions').flush([]);
-    component.submitEdit();
-    const editReq = http.expectOne('/api/program/sequences/1');
-    expect(editReq.request.body).toMatchObject({ track: ProgramSequenceTrack.ES });
-    editReq.flush(seq(1, '08:00', null, { track: ProgramSequenceTrack.ES }));
-    flushDay();
     http.verify();
   });
 
@@ -696,7 +655,7 @@ describe('ProgrammePage', () => {
     http.verify();
   });
 
-  it('recherche : seuls les créneaux correspondant au texte restent affichés', () => {
+  it('recherche : les créneaux correspondants sont surlignés, les autres estompés, rien n\'est masqué', () => {
     const { component, flushDay } = setup(['VIEWER']);
     flushDay([
       seq(1, '08:00', null, { title: 'Grand Jeu', location: 'Stade' }),
@@ -704,20 +663,37 @@ describe('ProgrammePage', () => {
       seq(3, '10:00', 2, { title: 'Veillée', location: 'Chapelle' }),
     ]);
 
-    expect(component.columns().flatMap((column) => column.blocks)).toHaveLength(3);
+    const states = () =>
+      component
+        .columns()
+        .flatMap((column) => column.blocks)
+        .map((b) => [b.sequence?.id, b.searchState])
+        .sort((a, b) => (a[0] as number) - (b[0] as number));
+    expect(component.searchActive()).toBe(false);
+    expect(states()).toEqual([
+      [1, 'none'],
+      [2, 'none'],
+      [3, 'none'],
+    ]);
     component.setSearchQuery('grand');
-    expect(
-      component.columns().flatMap((column) => column.blocks).map((b) => b.sequence?.id),
-    ).toEqual([1]);
+    expect(component.searchActive()).toBe(true);
+    expect(states()).toEqual([
+      [1, 'hit'],
+      [2, 'dim'],
+      [3, 'dim'],
+    ]);
+    // La recherche porte aussi sur le lieu.
     component.setSearchQuery('chapelle');
-    expect(
-      component.columns().flatMap((column) => column.blocks).map((b) => b.sequence?.id),
-    ).toEqual([3]);
+    expect(states()).toEqual([
+      [1, 'dim'],
+      [2, 'dim'],
+      [3, 'hit'],
+    ]);
     component.setSearchQuery('');
     expect(component.columns().flatMap((column) => column.blocks)).toHaveLength(3);
   });
 
-  it('la recherche s’applique aussi à la vue « Par piste »', () => {
+  it('la recherche surligne aussi dans la vue « Par piste »', () => {
     const { component, flushDay } = setup(['VIEWER']);
     flushDay([
       seq(1, '08:00', null, { title: 'Grand Jeu', track: ProgramSequenceTrack.TA }),
@@ -727,8 +703,13 @@ describe('ProgrammePage', () => {
     expect(component.trackRows()).toHaveLength(2);
     component.setSearchQuery('repas');
     const rows = component.trackRows();
-    expect(rows).toHaveLength(1);
-    expect(rows[0].es?.id).toBe(2);
+    expect(rows).toHaveLength(2);
+    expect(rows.map((row) => component.searchStateOf((row.common ?? row.ta ?? row.es)!))).toEqual([
+      'dim',
+      'hit',
+    ]);
+    component.setSearchQuery('');
+    expect(component.trackRows()).toHaveLength(2);
   });
 
   it('clic sur un créneau : le menu d’actions s’ouvre près du pointeur puis se ferme', () => {
@@ -799,8 +780,7 @@ describe('ProgrammePage', () => {
     component.onSequenceClick(new MouseEvent('click', { clientX: 10, clientY: 10 }), sequence);
     component.menuQuickEdit();
 
-    http.expectOne('/api/volunteer-teams').flush([]);
-    http.expectOne('/api/volunteer-missions').flush([]);
+    // L'éditeur rapide est autonome : aucun chargement équipe/mission au simple affichage.
     expect(component.editingSequence()?.id).toBe(sequence.id);
     expect(component.sequenceMenu()).toBeNull();
     http.verify();
@@ -929,7 +909,7 @@ describe('ProgrammePage — vue « Par groupe »', () => {
     http.verify();
   });
 
-  it('applique la recherche à la vue par groupe', () => {
+  it('la recherche surligne aussi dans la vue par groupe', () => {
     const { http, flushDay, fixture, component } = setup(['COORDINATOR']);
     flushDay([
       seq(1, '08:00', null, { title: 'Grand Jeu', groupIds: [7] }),
@@ -940,9 +920,10 @@ describe('ProgrammePage — vue « Par groupe »', () => {
     component.setSearchQuery('repas');
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
-    const cards = [...root.querySelectorAll('.groups-view .track-card')].map((el) => el.textContent);
-    expect(cards).toHaveLength(1);
-    expect(cards[0]).toContain('Repas');
+    const cards = [...root.querySelectorAll('.groups-view .track-card')];
+    expect(cards).toHaveLength(2);
+    expect(cards.map((el) => el.classList.contains('search-hit'))).toEqual([false, true]);
+    expect(cards.map((el) => el.classList.contains('search-dim'))).toEqual([true, false]);
     http.verify();
   });
 });

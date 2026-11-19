@@ -24,7 +24,7 @@
       [class.on]="dayFilter() === i"
       (click)="setDayFilter(i)"
     >
-      J{{ i + 1 }} · {{ day }} ({{ dayCount(i) }})
+      J{{ i + 1 }} · {{ day | date: 'dd/MM' }} ({{ dayCount(i) }})
     </button>
     }
   </div>

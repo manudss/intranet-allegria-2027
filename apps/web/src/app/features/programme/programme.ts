@@ -1,15 +1,21 @@
 import { EventQuickEditorComponent } from './event-mission-links/event-quick-editor';
 import { ShiftChangesComponent } from './event-mission-links/shift-changes';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, HostListener, inject, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  HostListener,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { ActivatedRoute, ParamMap, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
-import { TuiDataListWrapper } from '@taiga-ui/kit';
 import { AuthService } from '../../core/auth.service';
 import {
   Group,
   ProgramChangeLogEntry,
-  ProgramDocumentLink,
   ProgramPreview,
   ProgramSequence,
   ProgramSequenceDiff,
@@ -17,14 +23,10 @@ import {
   ProgramSequenceStatus,
   ProgramSequenceTrack,
   ProgramSequenceVisibility,
-  VolunteerMission,
-  VolunteerTeam,
 } from '../../models/models';
 import {
   GroupsApiService,
   ProgramApiService,
-  VolunteerMissionsApiService,
-  VolunteerTeamsApiService,
 } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { buildChain, PROGRAM_EVENT_DAYS } from './schedule-chain.util';
@@ -107,16 +109,6 @@ const EMPTY_DRAFT = (): ProgramSequenceDraft => ({
   visibility: ProgramSequenceVisibility.INTERNAL,
 });
 
-interface EditDraft {
-  title: string;
-  notes: string;
-  track: ProgramSequenceTrack;
-  visibility: ProgramSequenceVisibility;
-  volunteerTeamId: number | null;
-  missionIds: number[];
-  documentLinks: ProgramDocumentLink[];
-}
-
 interface CreateDraft {
   location: string;
   title: string;
@@ -140,6 +132,8 @@ interface BlockView {
   justChanged: boolean;
   frozen: boolean;
   category: number;
+  /** État face à la recherche : surligné, estompé, ou recherche inactive. */
+  searchState: 'none' | 'hit' | 'dim';
 }
 
 /** Une ligne de la vue « Par piste » : temps commun pleine largeur, ou paire TA / ES côte à côte. */
@@ -170,7 +164,6 @@ interface OverviewDay {
     EventQuickEditorComponent,
     ShiftChangesComponent,
     ...SHARED_IMPORTS,
-    TuiDataListWrapper,
     RouterLink,
   ],
   templateUrl: './programme.html',
@@ -179,10 +172,9 @@ interface OverviewDay {
 export class ProgrammePage {
   private readonly api = inject(ProgramApiService);
   private readonly groupsApi = inject(GroupsApiService);
-  private readonly teamsApi = inject(VolunteerTeamsApiService);
-  private readonly missionsApi = inject(VolunteerMissionsApiService);
   private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly ProgramSequenceStatus = ProgramSequenceStatus;
   readonly ProgramSequenceTrack = ProgramSequenceTrack;
@@ -221,13 +213,14 @@ export class ProgrammePage {
   /**
    * Lanes de la vue « Par groupe » : une lane par groupe de rassemblement lié aux créneaux du
    * jour (un créneau lié à plusieurs groupes apparaît dans chaque lane), puis les créneaux sans
-   * groupe. La recherche et les filtres de piste s'appliquent comme dans les autres vues.
+   * groupe. Le filtre de piste s'applique comme dans les autres vues ; la recherche surligne
+   * et estompe sans retirer les créneaux.
    */
   readonly groupLanes = computed(() => {
     const names = new Map(this.groups().map((group) => [group.id, group.name]));
     const lanes = new Map<string, ProgramSequence[]>();
     for (const sequence of this.daySequences()) {
-      if (!this.matchesDisplay(sequence)) continue;
+      if (!this.matchesTrack(sequence)) continue;
       const groupIds = sequence.groupIds ?? [];
       if (groupIds.length === 0) {
         lanes.set('', [...(lanes.get('') ?? []), sequence]);
@@ -294,6 +287,18 @@ export class ProgrammePage {
     return this.matchesTrack(sequence) && this.matchesSearch(sequence);
   }
 
+  /** Recherche active : du texte est saisi dans le champ de recherche. */
+  readonly searchActive = computed(() => this.searchQuery().trim().length > 0);
+
+  /**
+   * État visuel d'un créneau face à la recherche : les correspondants sont surlignés,
+   * les autres estompés, mais tous restent affichés (le planning garde sa structure).
+   */
+  searchStateOf(sequence: ProgramSequence): 'none' | 'hit' | 'dim' {
+    if (!this.searchActive()) return 'none';
+    return this.matchesSearch(sequence) ? 'hit' : 'dim';
+  }
+
   /** Menu d'actions ouvert au clic sur un créneau, positionné près du pointeur. */
   readonly sequenceMenu = signal<{ sequence: ProgramSequence; x: number; y: number } | null>(null);
   private suppressMenuClick = false;
@@ -308,7 +313,7 @@ export class ProgrammePage {
     }
     event.stopPropagation();
     this.selectLocation(sequence.location);
-    this.openSequenceMenuAt(sequence, event.clientX, event.clientY);
+    this.openSequenceMenuAt(sequence, event.clientX, event.clientY, event);
   }
 
   /** Ouvre le menu au clavier (Entrée/Espace sur un bloc focusable), positionné sur le bloc. */
@@ -321,17 +326,33 @@ export class ProgrammePage {
       block.sequence,
       rect.left + rect.width / 2,
       rect.top + rect.height / 2,
+      event,
     );
   }
 
-  private openSequenceMenuAt(sequence: ProgramSequence, x: number, y: number): void {
+  /** Élément déclencheur du menu (bloc cliqué) : le focus y revient quand le menu se ferme. */
+  private menuTrigger: HTMLElement | null = null;
+
+  private openSequenceMenuAt(
+    sequence: ProgramSequence,
+    x: number,
+    y: number,
+    event?: Event,
+  ): void {
     const maxX = Math.max(8, window.innerWidth - ProgrammePage.MENU_WIDTH - 8);
     const maxY = Math.max(8, window.innerHeight - ProgrammePage.MENU_HEIGHT - 8);
+    this.menuTrigger =
+      event?.currentTarget instanceof HTMLElement ? event.currentTarget : null;
     this.sequenceMenu.set({
       sequence,
       x: Math.min(Math.max(x, 8), maxX),
       y: Math.min(Math.max(y, 8), maxY),
     });
+    // Déplace le focus dans le menu (navigation clavier / lecteur d'écran).
+    setTimeout(() => {
+      const first = document.querySelector<HTMLElement>('.sequence-menu .menu-item');
+      first?.focus({ preventScroll: true });
+    }, 0);
   }
 
   onBlockClick(event: MouseEvent, block: BlockView): void {
@@ -339,12 +360,23 @@ export class ProgrammePage {
     this.onSequenceClick(event, block.sequence);
   }
 
-  closeSequenceMenu(): void {
+  closeSequenceMenu(restoreFocus = false): void {
+    if (!this.sequenceMenu()) return;
     this.sequenceMenu.set(null);
+    if (restoreFocus && this.menuTrigger?.isConnected) {
+      this.menuTrigger.focus({ preventScroll: true });
+    }
+    this.menuTrigger = null;
   }
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
+    this.closeSequenceMenu(true);
+  }
+
+  /** Le menu est positionné près du pointeur : il se ferme si la fenêtre change de taille. */
+  @HostListener('window:resize')
+  onWindowResize(): void {
     this.closeSequenceMenu();
   }
 
@@ -539,7 +571,7 @@ export class ProgrammePage {
 
     return this.locationsForDay().map((name) => {
       const blocks: BlockView[] = buildChain(sequences, date, name)
-        .filter((sequence) => this.matchesDisplay(sequence))
+        .filter((sequence) => this.matchesTrack(sequence))
         .map((sequence) => {
           const after = projected.get(sequence.id);
           const startTime = after?.startTime ?? sequence.startTime;
@@ -569,6 +601,7 @@ export class ProgrammePage {
             justChanged: recent.has(sequence.id),
             frozen: sequence.status === ProgramSequenceStatus.FROZEN,
             category: this.categoryIndex(sequence),
+            searchState: this.searchStateOf(sequence),
           } satisfies BlockView;
         });
 
@@ -587,6 +620,7 @@ export class ProgrammePage {
           justChanged: false,
           frozen: false,
           category: 0,
+          searchState: 'none',
         });
       }
       return { name, selected: name === this.location(), blocks };
@@ -679,7 +713,7 @@ export class ProgrammePage {
     const date = this.eventDate();
     const sequences = this.allSequences()
       .filter((s) => s.eventDate === date)
-      .filter((s) => this.matchesDisplay(s));
+      .filter((s) => this.matchesTrack(s));
     const byStart = (a: ProgramSequence, b: ProgramSequence) =>
       a.startTime.localeCompare(b.startTime);
     // Cadre de scission : temps commun portant la note explicite « Temps séparé » (seed)
@@ -736,29 +770,6 @@ export class ProgrammePage {
     })),
   );
 
-  readonly teams = signal<VolunteerTeam[]>([]);
-  readonly teamItems = computed(() => [null, ...this.teams().map((team) => team.id)]);
-
-  stringifyTeam = (id: number | null): string =>
-    id === null ? 'Aucune' : (this.teams().find((team) => team.id === id)?.name ?? `Équipe ${id}`);
-  private teamsLoaded = false;
-
-  readonly missions = signal<VolunteerMission[]>([]);
-  readonly missionFilter = signal('');
-  private missionsLoaded = false;
-
-  /** Missions proposées dans le formulaire : filtrées par texte, les missions déjà liées restent visibles. */
-  readonly filteredMissions = computed(() => {
-    const term = this.missionFilter().trim().toLocaleLowerCase('fr');
-    const selected = new Set(this.editDraft().missionIds);
-    return this.missions().filter(
-      (mission) =>
-        selected.has(mission.id) ||
-        !term ||
-        `${mission.title} ${mission.location ?? ''}`.toLocaleLowerCase('fr').includes(term),
-    );
-  });
-
   readonly editingSequence = signal<ProgramSequence | null>(null);
   readonly quickEditor = viewChild(EventQuickEditorComponent);
   canDeactivate() {
@@ -768,15 +779,6 @@ export class ProgrammePage {
     this.loadDay();
   }
   readonly editSequenceId = signal<number | null>(null);
-  readonly editDraft = signal<EditDraft>({
-    title: '',
-    notes: '',
-    track: ProgramSequenceTrack.COMMON,
-    visibility: ProgramSequenceVisibility.INTERNAL,
-    volunteerTeamId: null,
-    missionIds: [],
-    documentLinks: [],
-  });
 
   readonly createOpen = signal(false);
   readonly deleteTargetId = signal<number | null>(null);
@@ -794,6 +796,19 @@ export class ProgrammePage {
     // Lien profond (ex. depuis la fiche événement) : /programme?date=YYYY-MM-DD&lieu=…
     this.applyQueryParams(this.route.snapshot.queryParamMap);
     this.loadDay();
+    // Le menu contextuel est positionné près du pointeur : tout défilement (page ou grille)
+    // le détacherait de son créneau, on le ferme donc. On écoute wheel/touchmove plutôt que
+    // scroll : un défilement déclenché par le code (ex. mise au point d'un créneau avant clic)
+    // ne doit pas fermer le menu qui vient de s'ouvrir.
+    if (typeof window !== 'undefined') {
+      const closeOnScroll = () => this.closeSequenceMenu();
+      window.addEventListener('wheel', closeOnScroll, { capture: true, passive: true });
+      window.addEventListener('touchmove', closeOnScroll, { capture: true, passive: true });
+      this.destroyRef.onDestroy(() => {
+        window.removeEventListener('wheel', closeOnScroll, true);
+        window.removeEventListener('touchmove', closeOnScroll, true);
+      });
+    }
   }
 
   /** Pré-positionne le jour et le lieu demandés par un lien profond, s'ils sont connus. */
@@ -1109,78 +1124,9 @@ export class ProgrammePage {
 
   openEditForm(sequence: ProgramSequence): void {
     this.closeForms();
-    this.loadTeamsOnce();
-    this.loadMissionsOnce();
-    this.missionFilter.set('');
-    this.editDraft.set({
-      title: sequence.title,
-      notes: sequence.notes ?? '',
-      track: sequence.track ?? ProgramSequenceTrack.COMMON,
-      visibility: sequence.visibility,
-      volunteerTeamId: sequence.volunteerTeamId,
-      missionIds: [...sequence.missionIds],
-      documentLinks: sequence.documentLinks.map((link) => ({ ...link })),
-    });
     this.editSequenceId.set(sequence.id);
     this.editingSequence.set(sequence);
     this.revealPanel();
-  }
-
-  toggleMission(missionId: number): void {
-    const current = this.editDraft().missionIds;
-    this.updateEditDraft({
-      missionIds: current.includes(missionId)
-        ? current.filter((id) => id !== missionId)
-        : [...current, missionId],
-    });
-  }
-
-  updateEditDraft(patch: Partial<EditDraft>): void {
-    this.editDraft.update((draft) => ({ ...draft, ...patch }));
-  }
-
-  addDocumentLink(): void {
-    this.updateEditDraft({
-      documentLinks: [...this.editDraft().documentLinks, { label: '', url: '' }],
-    });
-  }
-
-  updateDocumentLink(index: number, patch: Partial<ProgramDocumentLink>): void {
-    this.updateEditDraft({
-      documentLinks: this.editDraft().documentLinks.map((link, i) =>
-        i === index ? { ...link, ...patch } : link,
-      ),
-    });
-  }
-
-  removeDocumentLink(index: number): void {
-    this.updateEditDraft({
-      documentLinks: this.editDraft().documentLinks.filter((_, i) => i !== index),
-    });
-  }
-
-  submitEdit(): void {
-    const id = this.editSequenceId();
-    if (!id) return;
-    const draft = this.editDraft();
-    this.api
-      .updateSequence(id, {
-        title: draft.title,
-        notes: draft.notes,
-        track: draft.track,
-        visibility: draft.visibility,
-        volunteerTeamId: draft.volunteerTeamId,
-        missionIds: draft.missionIds,
-        documentLinks: draft.documentLinks,
-      })
-      .subscribe({
-        next: () => {
-          this.actionMessage.set({ appearance: 'positive', text: 'Séquence mise à jour.' });
-          this.closeForms();
-          this.loadDay();
-        },
-        error: (error: HttpErrorResponse) => this.showError(error),
-      });
   }
 
   /** Bouton « Mettre à jour la liste publique » : régénère l'instantané statique (jamais automatique). */
@@ -1293,25 +1239,6 @@ export class ProgrammePage {
 
   showDayView(): void {
     this.viewMode.set('day');
-  }
-
-  private loadTeamsOnce(): void {
-    if (this.teamsLoaded) return;
-    this.teamsLoaded = true;
-    this.teamsApi.list().subscribe({
-      next: (teams) => this.teams.set(teams.filter((team) => team.isActive)),
-      error: () => (this.teamsLoaded = false),
-    });
-  }
-
-  private loadMissionsOnce(): void {
-    if (this.missionsLoaded) return;
-    this.missionsLoaded = true;
-    this.missionsApi.list().subscribe({
-      next: (missions) =>
-        this.missions.set([...missions].sort((a, b) => a.title.localeCompare(b.title, 'fr'))),
-      error: () => (this.missionsLoaded = false),
-    });
   }
 
   /** Affiche l'aperçu ; sur petit écran, ramène le panneau de validation à l'écran. */

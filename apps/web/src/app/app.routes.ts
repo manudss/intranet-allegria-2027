@@ -193,7 +193,7 @@ export const appRoutes: Route[] = [
           (component: { canDeactivate: () => boolean | Promise<boolean> }) =>
             component.canDeactivate(),
         ],
-        title: 'Planning & Ordonnancement',
+        title: 'Agenda & Ordonnancement',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'LOGISTICS', 'VIEWER'] },
         loadComponent: () => import('./features/programme/programme').then((m) => m.ProgrammePage),

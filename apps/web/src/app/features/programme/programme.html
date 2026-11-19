@@ -1,5 +1,5 @@
 <app-page-layout
-  title="Planning & Ordonnancement"
+  title="Agenda & Ordonnancement"
   description="Planification en chaîne des séquences du programme"
 >
   <div actions class="header-actions">
@@ -85,7 +85,7 @@
     <div class="seg" role="group" aria-label="Jour">
       @for (day of days; track day; let i = $index) {
       <button type="button" class="seg-btn" [class.on]="dayIndex() === i" (click)="setDay(i)">
-        J{{ i + 1 }} · {{ day }}
+        J{{ i + 1 }} · {{ day | date: 'dd/MM' }}
       </button>
       }
     </div>
@@ -222,7 +222,6 @@
         class="pending-bar"
         role="status"
         [class.positive]="pending.outcome === 'ok'"
-        [class.warning]="false"
         [class.negative]="pending.outcome !== 'ok'"
       >
         <div class="pending-text">
@@ -278,7 +277,13 @@
           </span>
         </div>
         @for (row of trackRows(); track row.key) { @if (row.common; as common) {
-        <button type="button" class="track-card common" (click)="onSequenceClick($event, common)">
+        <button
+          type="button"
+          class="track-card common"
+          [class.search-hit]="searchStateOf(common) === 'hit'"
+          [class.search-dim]="searchStateOf(common) === 'dim'"
+          (click)="onSequenceClick($event, common)"
+        >
           <header>
             <span class="track-inline">
               <img class="track-logo" src="/assets/branches/ta.jpg" alt="TA" />
@@ -295,6 +300,8 @@
             type="button"
             class="track-card"
             [style.border-left-color]="trackColor(ProgramSequenceTrack.TA)"
+            [class.search-hit]="searchStateOf(ta) === 'hit'"
+            [class.search-dim]="searchStateOf(ta) === 'dim'"
             (click)="onSequenceClick($event, ta)"
           >
             <header>
@@ -310,6 +317,8 @@
             type="button"
             class="track-card"
             [style.border-left-color]="trackColor(ProgramSequenceTrack.ES)"
+            [class.search-hit]="searchStateOf(es) === 'hit'"
+            [class.search-dim]="searchStateOf(es) === 'dim'"
             (click)="onSequenceClick($event, es)"
           >
             <header>
@@ -334,7 +343,13 @@
         @for (lane of groupLanes(); track lane.name) {
         <h3 class="groups-lane">{{ lane.name || 'Sans groupe' }}</h3>
         @for (sequence of lane.sequences; track sequence.id) {
-        <button type="button" class="track-card" (click)="onSequenceClick($event, sequence)">
+        <button
+          type="button"
+          class="track-card"
+          [class.search-hit]="searchStateOf(sequence) === 'hit'"
+          [class.search-dim]="searchStateOf(sequence) === 'dim'"
+          (click)="onSequenceClick($event, sequence)"
+        >
           <header>
             <strong>{{ sequence.startTime }} – {{ sequence.endTime }} · {{ sequence.title }}</strong>
           </header>
@@ -390,6 +405,8 @@
                   [class.blocked]="block.change === 'blocked'"
                   [class.is-new]="block.change === 'new'"
                   [class.just-changed]="block.justChanged"
+                  [class.search-hit]="block.searchState === 'hit'"
+                  [class.search-dim]="block.searchState === 'dim'"
                   [class.compact]="liveHeight(block) < 64"
                   [class.dragging]="!!block.sequence && dragState()?.sequenceId === block.sequence.id"
                   [style.top.px]="block.topPx"

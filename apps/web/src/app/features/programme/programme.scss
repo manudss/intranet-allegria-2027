@@ -48,6 +48,7 @@
 
 .seg {
   display: inline-flex;
+  flex-wrap: wrap;
   gap: 0.125rem;
   padding: 0.15rem;
   border-radius: 0.55rem;
@@ -147,7 +148,10 @@
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
-  min-inline-size: 14rem;
+  inline-size: 16rem;
+  max-inline-size: calc(100vw - 16px);
+  max-block-size: calc(100vh - 16px);
+  overflow-y: auto;
   padding: 0.4rem;
   border-radius: 0.75rem;
   border: 1px solid var(--tui-border-normal);

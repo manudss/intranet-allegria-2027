@@ -1,3 +1,5 @@
+import { ShiftChangesComponent } from '../event-mission-links/shift-changes';
+import { EventMissionLinksComponent } from '../event-mission-links/event-mission-links';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -95,7 +97,13 @@ interface TaskDraft {
 @Component({
   selector: 'app-fiche-evenement',
   standalone: true,
-  imports: [...SHARED_IMPORTS, RouterLink, TuiTabs],
+  imports: [
+    ShiftChangesComponent,
+    ...SHARED_IMPORTS,
+    RouterLink,
+    TuiTabs,
+    EventMissionLinksComponent,
+  ],
   templateUrl: './fiche-evenement.html',
   styleUrl: './fiche-evenement.scss',
 })
@@ -154,6 +162,7 @@ export class FicheEvenementPage {
 
   // ---- Édition des horaires via les opérations chaînées (aperçu puis validation) ----
   readonly timeEdit = signal<{ startTime: string; durationMinutes: number } | null>(null);
+  private batchTargets: { id: number; durationMinutes: number }[] | null = null;
   readonly timePreview = signal<ProgramResizePreview | null>(null);
   readonly timePreviewTarget = signal<ProgramSequence | null>(null);
   readonly parallelPreview = signal<ProgramResizePreview | null>(null);
@@ -177,9 +186,7 @@ export class FicheEvenementPage {
     const sequence = this.sequence();
     if (!sequence) return [];
     const byId = new Map(this.groups().map((g) => [g.id, g]));
-    return sequence.groupIds
-      .map((id) => byId.get(id))
-      .filter((g): g is Group => !!g);
+    return sequence.groupIds.map((id) => byId.get(id)).filter((g): g is Group => !!g);
   });
 
   readonly availableGroups = computed(() => {
@@ -193,9 +200,7 @@ export class FicheEvenementPage {
     const sequence = this.sequence();
     if (!sequence) return [];
     const byId = new Map(this.missions().map((m) => [m.id, m]));
-    return sequence.missionIds
-      .map((id) => byId.get(id))
-      .filter((m): m is VolunteerMission => !!m);
+    return sequence.missionIds.map((id) => byId.get(id)).filter((m): m is VolunteerMission => !!m);
   });
 
   readonly availableMissions = computed(() => {
@@ -265,7 +270,7 @@ export class FicheEvenementPage {
         });
       },
       error: () => {
-        this.loadError.set("Impossible de charger la fiche de ce créneau.");
+        this.loadError.set('Impossible de charger la fiche de ce créneau.');
         this.loading.set(false);
       },
     });
@@ -412,6 +417,26 @@ export class FicheEvenementPage {
       target = previous;
     }
 
+    const parallel =
+      this.durationChanged() && this.syncParallel() ? this.chainContext().parallels[0] : null;
+    this.batchTargets = null;
+    if (parallel) {
+      this.batchTargets = [
+        { id: target.id, durationMinutes: newDuration },
+        { id: parallel.id, durationMinutes: draft.durationMinutes },
+      ];
+      this.busy.set(true);
+      this.api.previewResizeBatch(this.batchTargets).subscribe({
+        next: (preview) => {
+          this.timePreview.set(preview);
+          this.timePreviewTarget.set(target);
+          this.parallelPreview.set(null);
+          this.busy.set(false);
+        },
+        error: () => this.failTime("L'aperçu commun a échoué. Aucune voie modifiée."),
+      });
+      return;
+    }
     this.busy.set(true);
     this.api.previewResize(target.id, newDuration).subscribe({
       next: (preview) => {
@@ -444,20 +469,37 @@ export class FicheEvenementPage {
     if (!preview || !target || preview.outcome !== 'ok' || this.busy()) return;
     if (parallel && parallel.outcome !== 'ok') return;
     this.busy.set(true);
+    if (this.batchTargets) {
+      this.api.applyResizeBatch(this.batchTargets, preview.version).subscribe({
+        next: () => {
+          this.batchTargets = null;
+          this.finishTimeChange();
+        },
+        error: () =>
+          this.failTime(
+            "L'aperçu commun a changé. Aucune voie modifiée : prévisualiser à nouveau.",
+          ),
+      });
+      return;
+    }
     this.api.applyResize(target.id, preview.newDurationMinutes, preview.version).subscribe({
       next: () => {
         if (parallel) {
-          this.api.applyResize(parallel.sequenceId, parallel.newDurationMinutes, parallel.version).subscribe({
-            next: () => this.finishTimeChange(),
-            error: () => this.failTime(
-              'Le créneau a été modifié mais la voie parallèle a refusé le changement : rechargez la fiche.',
-            ),
-          });
+          this.api
+            .applyResize(parallel.sequenceId, parallel.newDurationMinutes, parallel.version)
+            .subscribe({
+              next: () => this.finishTimeChange(),
+              error: () =>
+                this.failTime(
+                  'Le créneau a été modifié mais la voie parallèle a refusé le changement : rechargez la fiche.',
+                ),
+            });
         } else {
           this.finishTimeChange();
         }
       },
-      error: () => this.failTime("L'application a échoué (la chaîne a peut-être changé entre-temps)."),
+      error: () =>
+        this.failTime("L'application a échoué (la chaîne a peut-être changé entre-temps)."),
     });
   }
 

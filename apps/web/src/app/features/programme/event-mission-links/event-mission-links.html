@@ -1,0 +1,282 @@
+@if (loading()) { <tui-loader /> } @if (error()) {
+<p class="error" role="alert">{{ error() }}</p>
+}
+<header class="section-heading">
+  <h3>Missions liées <small>{{ linked().length }}</small></h3>
+  @if (editable()) {
+  <button
+    tuiButton
+    appearance="secondary"
+    size="s"
+    type="button"
+    [disabled]="busy()"
+    (click)="addOpen.set(!addOpen())"
+  >
+    Lier ou créer
+  </button>
+  }
+</header>
+<p class="hint">
+  Les changements de liens, de phase et de pilotage sont enregistrés ici, indépendamment des
+  retouches descriptives.
+</p>
+@for (phase of phases; track phase.value) { @if (inPhase(phase.value).length || phase.value !==
+null) {
+<section class="phase">
+  <h4>{{ phase.label }} <small>{{ inPhase(phase.value).length }} mission(s)</small></h4>
+  @for (mission of inPhase(phase.value); track mission.id) {
+  <article class="mission">
+    <strong>{{ mission.title }}</strong
+    ><small>{{ mission.volunteerTeam?.name ?? 'Sans équipe' }}</small>
+    @for (shift of mission.shifts ?? []; track shift.id) {
+    <p class="shift-hours">
+      {{ date(shift.startAt) }} → {{ date(shift.endAt) }}<br />
+      @if(pilotFor(shift.id); as pilot){<span>Suit l'événement #{{ pilot }}</span>} @else {<span
+        >Horaire indépendant</span
+      >}
+    </p>
+    } @empty {
+    <p class="hint">Aucun créneau bénévole.</p>
+    } @if (editable()) {
+    <div class="mission-actions">
+      <app-event-choice
+        label="Phase"
+        [choices]="phaseChoices"
+        [value]="phaseOf(mission.id)"
+        [disabled]="busy()"
+        (valueChange)="setPhase(mission.id,$event)"
+      />
+      <button
+        tuiButton
+        appearance="secondary"
+        size="s"
+        type="button"
+        [disabled]="busy()"
+        (click)="configure(mission)"
+      >
+        Horaires liés
+      </button>
+      <button
+        tuiButton
+        appearance="flat"
+        size="s"
+        type="button"
+        [disabled]="busy()"
+        (click)="unlink(mission)"
+      >
+        Retirer le lien
+      </button>
+    </div>
+    }
+  </article>
+  } @empty {
+  <p class="hint">Aucune mission {{ phase.label.toLowerCase() }}.</p>
+  }
+</section>
+} } @if (addOpen() && editable()) {
+<section class="link-form">
+  <h4>Lier une mission ou en créer une</h4>
+  <app-event-choice
+    label="Phase pour cet événement"
+    [choices]="phaseChoices"
+    [value]="addPhase()"
+    (valueChange)="addPhase.set($event)"
+  />
+  <tui-textfield [tuiTextfieldCleaner]="false"
+    ><label tuiLabel for="event-mission-links-1">Rechercher par nom ou équipe</label
+    ><input
+      id="event-mission-links-1"
+      tuiInput
+      [ngModel]="filter()"
+      (ngModelChange)="filter.set($event)"
+  /></tui-textfield>
+  <app-event-choice
+    label="Mission existante"
+    [choices]="missionChoices()"
+    [value]="chosen()"
+    (valueChange)="chosen.set($event)"
+  />
+  <div class="buttons">
+    <button
+      tuiButton
+      appearance="primary"
+      size="s"
+      type="button"
+      [disabled]="busy() || !chosen() || !addPhase()"
+      (click)="add()"
+    >
+      Lier</button
+    ><button
+      tuiButton
+      appearance="secondary"
+      size="s"
+      type="button"
+      [disabled]="busy()"
+      (click)="createOpen.set(!createOpen())"
+    >
+      Créer une mission
+    </button>
+  </div>
+  @if (createOpen()) {
+  <tui-textfield [tuiTextfieldCleaner]="false"
+    ><label tuiLabel for="event-mission-links-2">Intitulé de la nouvelle mission</label
+    ><input
+      id="event-mission-links-2"
+      tuiInput
+      maxlength="200"
+      [ngModel]="newTitle()"
+      (ngModelChange)="newTitle.set($event)"
+  /></tui-textfield>
+  <app-event-choice
+    label="Équipe responsable"
+    [choices]="teamChoices()"
+    [value]="newTeam()"
+    (valueChange)="newTeam.set($event)"
+  />
+  <button
+    tuiButton
+    appearance="primary"
+    size="s"
+    type="button"
+    [disabled]="busy() || !newTitle().trim() || !addPhase()"
+    (click)="create()"
+  >
+    Créer et lier
+  </button>
+  }
+</section>
+} @if (configMission(); as mission) {
+<section class="link-form" aria-label="Configuration des horaires liés">
+  <h4>Horaires liés · {{ mission.title }}</h4>
+  <p class="hint">
+    Chaque créneau se règle séparément. Avant / Pendant / Après n'impose aucune durée. Les décalages
+    sont exprimés en minutes.
+  </p>
+  <app-event-choice
+    label="Créneau bénévole"
+    [choices]="shiftChoices()"
+    [value]="shiftId()"
+    [disabled]="busy()"
+    (valueChange)="selectShift($event)"
+  />
+  @if (!busy() && !shifts().length) {
+  <p class="hint">
+    Cette mission n'a pas de créneau bénévole. Créez un créneau dans la page Missions bénévoles,
+    puis revenez ici.
+  </p>
+  } @if (shiftId()) { @if (currentBinding(); as binding) {
+  <p class="hint">Événement pilote actuel : #{{ binding.sequenceId }}.</p>
+  @if (binding.sequenceId !== sequenceId()) {
+  <label class="check"
+    ><input
+      type="checkbox"
+      [ngModel]="pilotConfirmed()"
+      (ngModelChange)="pilotConfirmed.set($event);preview.set(null)"
+    />Remplacer explicitement ce pilote par cet événement</label
+  >
+  } } @else {
+  <p class="hint">Aucun pilote actuel. Ce réglage fera de cet événement le pilote de ce créneau.</p>
+  }
+  <div class="grid">
+    <app-event-choice
+      label="Début du créneau : repère"
+      [choices]="anchorChoices"
+      [value]="startAnchor()"
+      (valueChange)="startAnchor.set($event);preview.set(null)"
+    />
+    <tui-textfield [tuiTextfieldCleaner]="false"
+      ><label tuiLabel for="event-mission-links-3">Décalage début (min)</label
+      ><input
+        id="event-mission-links-3"
+        tuiInput
+        type="number"
+        step="1"
+        [ngModel]="startOffset()"
+        (ngModelChange)="startOffset.set($event);preview.set(null)"
+    /></tui-textfield>
+    <app-event-choice
+      label="Fin du créneau : repère"
+      [choices]="anchorChoices"
+      [value]="endAnchor()"
+      (valueChange)="endAnchor.set($event);preview.set(null)"
+    />
+    <tui-textfield [tuiTextfieldCleaner]="false"
+      ><label tuiLabel for="event-mission-links-4">Décalage fin (min)</label
+      ><input
+        id="event-mission-links-4"
+        tuiInput
+        type="number"
+        step="1"
+        [ngModel]="endOffset()"
+        (ngModelChange)="endOffset.set($event);preview.set(null)"
+    /></tui-textfield>
+  </div>
+  <button
+    tuiButton
+    appearance="secondary"
+    size="s"
+    type="button"
+    [disabled]="busy() || !draft()"
+    (click)="previewTiming()"
+  >
+    Prévisualiser le lien horaire
+  </button>
+  } @if (preview(); as p) {
+  <div class="binding-preview">
+    <h4>Avant / après</h4>
+    @for (diff of p.shifts; track diff.shiftId) {
+    <p>
+      <strong>{{ diff.title }}</strong><br />Avant : {{ date(diff.before.startAt) }} → {{
+      date(diff.before.endAt) }}<br />Après : {{ date(diff.after.startAt) }} → {{
+      date(diff.after.endAt) }}
+    </p>
+    } @for (conflict of p.conflicts; track conflict) {
+    <p role="alert" class="error">{{ conflict }}</p>
+    }
+    <button
+      tuiButton
+      appearance="primary"
+      size="s"
+      type="button"
+      [disabled]="busy() || !!p.conflicts.length"
+      (click)="applyTiming()"
+    >
+      Confirmer le lien et les horaires
+    </button>
+  </div>
+  } @if (currentBinding()?.sequenceId === sequenceId()) { @if (removeShift() === shiftId()) {
+  <p class="hint">Désactiver le pilotage conserve les horaires actuels du créneau. Confirmer ?</p>
+  <button
+    tuiButton
+    appearance="secondary"
+    size="s"
+    type="button"
+    [disabled]="busy()"
+    (click)="detach()"
+  >
+    Désactiver le pilotage
+  </button>
+  } @else {
+  <button
+    tuiButton
+    appearance="flat"
+    size="s"
+    type="button"
+    [disabled]="busy()"
+    (click)="removeShift.set(shiftId())"
+  >
+    Désactiver ce lien horaire…
+  </button>
+  } }
+  <button
+    tuiButton
+    appearance="flat"
+    size="s"
+    type="button"
+    [disabled]="busy()"
+    (click)="configMission.set(null)"
+  >
+    Fermer ce réglage
+  </button>
+</section>
+}

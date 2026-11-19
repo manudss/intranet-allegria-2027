@@ -1,3 +1,5 @@
+import { ProgramMissionTimingService } from './program-mission-timing.service';
+import { MissionPhase, ShiftBindingDraft } from './mission-timing.util';
 import {
   BadRequestException,
   Body,
@@ -49,9 +51,68 @@ function requireVersion(version: string | undefined): string {
 @UseGuards(AuthTokenGuard, RoleGuard)
 @Controller('program')
 export class ProgramController {
-  constructor(private readonly service: ProgramService) {}
+  constructor(
+    private readonly service: ProgramService,
+    private readonly timing?: ProgramMissionTimingService,
+  ) {}
 
-  @ApiOperation({ summary: 'Régénère la liste publique statique (bouton « Mettre à jour la liste publique »)' })
+  @Roles(...READ_ROLES)
+  @Get('sequences/:id/mission-timing')
+  missionTiming(@Param('id', ParseIntPipe) id: number) {
+    return this.timing!.list(id);
+  }
+
+  @Roles(...WRITE_ROLES)
+  @Put('sequences/:id/missions/:missionId/phase')
+  missionPhase(
+    @Req() req: UserRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('missionId', ParseIntPipe) missionId: number,
+    @Body() dto: { phase: MissionPhase },
+  ) {
+    return this.timing!.setPhase(id, missionId, dto.phase, req.user.id);
+  }
+  @Roles(...WRITE_ROLES)
+  @Post('sequences/:id/shift-binding/preview')
+  previewBinding(@Param('id', ParseIntPipe) id: number, @Body() dto: ShiftBindingDraft) {
+    return this.timing!.previewBinding(id, dto);
+  }
+  @Roles(...WRITE_ROLES)
+  @Post('sequences/:id/shift-binding/apply')
+  applyBinding(
+    @Req() req: UserRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ShiftBindingDraft & { version: string },
+  ) {
+    return this.timing!.applyBinding(id, dto, requireVersion(dto.version), req.user.id);
+  }
+  @Roles(...WRITE_ROLES)
+  @Delete('sequences/:id/shift-binding/:shiftId')
+  removeBinding(
+    @Req() req: UserRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('shiftId', ParseIntPipe) shiftId: number,
+  ) {
+    return this.timing!.removeBinding(id, shiftId, req.user.id);
+  }
+
+  @Roles(...WRITE_ROLES)
+  @Post('resize-batch/preview')
+  previewBatch(@Body() dto: { targets: { id: number; durationMinutes: number }[] }) {
+    return this.service.previewResizeBatch(dto.targets);
+  }
+  @Roles(...WRITE_ROLES)
+  @Post('resize-batch/apply')
+  applyBatch(
+    @Req() req: UserRequest,
+    @Body() dto: { targets: { id: number; durationMinutes: number }[]; version: string },
+  ) {
+    return this.service.applyResizeBatch(req.user, dto.targets, requireVersion(dto.version));
+  }
+
+  @ApiOperation({
+    summary: 'Régénère la liste publique statique (bouton « Mettre à jour la liste publique »)',
+  })
   @Roles(...WRITE_ROLES)
   @Post('public-export')
   regeneratePublicExport(@Req() req: UserRequest) {
@@ -194,7 +255,9 @@ export class ProgramController {
     return this.service.createTask(req.user, id, dto);
   }
 
-  @ApiOperation({ summary: 'Modifie une tâche de préparation (intitulé, échéance, responsable, fait)' })
+  @ApiOperation({
+    summary: 'Modifie une tâche de préparation (intitulé, échéance, responsable, fait)',
+  })
   @Roles(...WRITE_ROLES)
   @Patch('sequences/:id/tasks/:taskId')
   updateTask(

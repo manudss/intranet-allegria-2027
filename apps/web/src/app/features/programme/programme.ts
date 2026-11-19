@@ -7,6 +7,7 @@ import { forkJoin } from 'rxjs';
 import { TuiDataListWrapper } from '@taiga-ui/kit';
 import { AuthService } from '../../core/auth.service';
 import {
+  Group,
   ProgramChangeLogEntry,
   ProgramDocumentLink,
   ProgramPreview,
@@ -20,12 +21,13 @@ import {
   VolunteerTeam,
 } from '../../models/models';
 import {
+  GroupsApiService,
   ProgramApiService,
   VolunteerMissionsApiService,
   VolunteerTeamsApiService,
 } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
-import { buildChain, PROGRAM_CHANGE_LOG_LABELS, PROGRAM_EVENT_DAYS } from './schedule-chain.util';
+import { buildChain, PROGRAM_EVENT_DAYS } from './schedule-chain.util';
 import { minutesToTime, timeToMinutes } from './schedule-time.util';
 
 const MAIN_LOCATION = 'Grande salle';
@@ -176,6 +178,7 @@ interface OverviewDay {
 })
 export class ProgrammePage {
   private readonly api = inject(ProgramApiService);
+  private readonly groupsApi = inject(GroupsApiService);
   private readonly teamsApi = inject(VolunteerTeamsApiService);
   private readonly missionsApi = inject(VolunteerMissionsApiService);
   private readonly auth = inject(AuthService);
@@ -196,11 +199,54 @@ export class ProgrammePage {
   readonly trackFilter = signal<TrackFilter>('ALL');
 
   /** Disposition de la vue jour : calendrier par lieu (existant) ou deux colonnes TA / ES (maquette validée). */
-  readonly dayLayout = signal<'locations' | 'tracks'>('locations');
+  readonly dayLayout = signal<'locations' | 'tracks' | 'groups'>('locations');
 
-  setDayLayout(mode: 'locations' | 'tracks'): void {
+  setDayLayout(mode: 'locations' | 'tracks' | 'groups'): void {
     this.dayLayout.set(mode);
+    if (mode === 'groups') this.loadGroupsOnce();
   }
+
+  readonly groups = signal<Group[]>([]);
+  private groupsLoaded = false;
+
+  private loadGroupsOnce(): void {
+    if (this.groupsLoaded) return;
+    this.groupsLoaded = true;
+    this.groupsApi.list().subscribe({
+      next: (groups) => this.groups.set(groups),
+      error: () => (this.groupsLoaded = false),
+    });
+  }
+
+  /**
+   * Lanes de la vue « Par groupe » : une lane par groupe de rassemblement lié aux créneaux du
+   * jour (un créneau lié à plusieurs groupes apparaît dans chaque lane), puis les créneaux sans
+   * groupe. La recherche et les filtres de piste s'appliquent comme dans les autres vues.
+   */
+  readonly groupLanes = computed(() => {
+    const names = new Map(this.groups().map((group) => [group.id, group.name]));
+    const lanes = new Map<string, ProgramSequence[]>();
+    for (const sequence of this.daySequences()) {
+      if (!this.matchesDisplay(sequence)) continue;
+      const groupIds = sequence.groupIds ?? [];
+      if (groupIds.length === 0) {
+        lanes.set('', [...(lanes.get('') ?? []), sequence]);
+        continue;
+      }
+      for (const groupId of groupIds) {
+        const name = names.get(groupId) ?? `Groupe #${groupId}`;
+        lanes.set(name, [...(lanes.get(name) ?? []), sequence]);
+      }
+    }
+    return Array.from(lanes.entries())
+      .map(([name, sequences]) => ({
+        name,
+        sequences: [...sequences].sort((a, b) => a.startTime.localeCompare(b.startTime)),
+      }))
+      .sort((a, b) =>
+        a.name === '' ? 1 : b.name === '' ? -1 : a.name.localeCompare(b.name, 'fr'),
+      );
+  });
 
   trackColor(track: ProgramSequenceTrack): string {
     return TRACK_COLORS[track] ?? TRACK_COLORS[ProgramSequenceTrack.COMMON];
@@ -262,12 +308,29 @@ export class ProgrammePage {
     }
     event.stopPropagation();
     this.selectLocation(sequence.location);
+    this.openSequenceMenuAt(sequence, event.clientX, event.clientY);
+  }
+
+  /** Ouvre le menu au clavier (Entrée/Espace sur un bloc focusable), positionné sur le bloc. */
+  onBlockKey(event: Event, block: BlockView): void {
+    if (!block.sequence) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    this.openSequenceMenuAt(
+      block.sequence,
+      rect.left + rect.width / 2,
+      rect.top + rect.height / 2,
+    );
+  }
+
+  private openSequenceMenuAt(sequence: ProgramSequence, x: number, y: number): void {
     const maxX = Math.max(8, window.innerWidth - ProgrammePage.MENU_WIDTH - 8);
     const maxY = Math.max(8, window.innerHeight - ProgrammePage.MENU_HEIGHT - 8);
     this.sequenceMenu.set({
       sequence,
-      x: Math.min(Math.max(event.clientX, 8), maxX),
-      y: Math.min(Math.max(event.clientY, 8), maxY),
+      x: Math.min(Math.max(x, 8), maxX),
+      y: Math.min(Math.max(y, 8), maxY),
     });
   }
 

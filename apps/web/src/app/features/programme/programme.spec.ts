@@ -901,3 +901,48 @@ describe('ProgrammePage', () => {
     expect(fixture.nativeElement.querySelector('.demo-reset')).toBeNull();
   });
 });
+
+describe('ProgrammePage — vue « Par groupe »', () => {
+  const GROUPS = [
+    { id: 7, name: 'Lyon 1', diocese: 'Lyon', arrivalDatetime: null, departureDatetime: null, notes: null },
+    { id: 9, name: 'Grenoble 1', diocese: 'Grenoble', arrivalDatetime: null, departureDatetime: null, notes: null },
+  ];
+
+  it('regroupe les créneaux par groupe de rassemblement, « Sans groupe » en dernier', () => {
+    const { http, flushDay, fixture, component } = setup(['COORDINATOR']);
+    flushDay([
+      seq(1, '08:00', null, { title: 'Grand Jeu', groupIds: [7] }),
+      seq(2, '09:00', 1, { title: 'Repas' }),
+      seq(3, '10:00', 2, { title: 'Veillée', groupIds: [7, 9] }),
+    ]);
+    component.setDayLayout('groups');
+    http.expectOne('/api/groups').flush(GROUPS);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const lanes = [...root.querySelectorAll('.groups-lane')].map((el) => el.textContent?.trim());
+    expect(lanes).toEqual(['Grenoble 1', 'Lyon 1', 'Sans groupe']);
+    const cards = [...root.querySelectorAll('.groups-view .track-card')].map((el) => el.textContent);
+    // « Veillée » est liée à deux groupes : elle apparaît dans les deux lanes.
+    expect(cards.filter((card) => card?.includes('Veillée'))).toHaveLength(2);
+    expect(cards.some((card) => card?.includes('Repas'))).toBe(true);
+    expect(cards.some((card) => card?.includes('Grand Jeu'))).toBe(true);
+    http.verify();
+  });
+
+  it('applique la recherche à la vue par groupe', () => {
+    const { http, flushDay, fixture, component } = setup(['COORDINATOR']);
+    flushDay([
+      seq(1, '08:00', null, { title: 'Grand Jeu', groupIds: [7] }),
+      seq(2, '09:00', 1, { title: 'Repas' }),
+    ]);
+    component.setDayLayout('groups');
+    http.expectOne('/api/groups').flush(GROUPS);
+    component.setSearchQuery('repas');
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const cards = [...root.querySelectorAll('.groups-view .track-card')].map((el) => el.textContent);
+    expect(cards).toHaveLength(1);
+    expect(cards[0]).toContain('Repas');
+    http.verify();
+  });
+});

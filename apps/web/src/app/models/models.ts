@@ -575,6 +575,8 @@ export interface ProgramSequence {
   frozenByUserId: number | null;
   frozenByUserName: string | null;
   frozenAt: string | null;
+  /** Groupes de rassemblement liés (uniquement dans la réponse de la vue jour). */
+  groupIds?: number[];
 }
 
 export interface ProgramDay {

@@ -106,6 +106,14 @@
       >
         Par piste
       </button>
+      <button
+        type="button"
+        class="seg-btn"
+        [class.on]="dayLayout() === 'groups'"
+        (click)="setDayLayout('groups')"
+      >
+        Par groupe
+      </button>
     </div>
     <div class="seg" role="group" aria-label="Filtrer par piste">
       @for (option of trackFilters; track option.value) {
@@ -318,6 +326,23 @@
         <p class="empty-state">Aucune séquence pour ce filtre.</p>
         }
       </section>
+      } @else if (dayLayout() === 'groups') {
+      <section class="groups-view" aria-label="Vue par groupe">
+        @if (groupLanes().length === 0) {
+        <p class="empty-state">Aucun créneau pour ce jour.</p>
+        }
+        @for (lane of groupLanes(); track lane.name) {
+        <h3 class="groups-lane">{{ lane.name || 'Sans groupe' }}</h3>
+        @for (sequence of lane.sequences; track sequence.id) {
+        <button type="button" class="track-card" (click)="onSequenceClick($event, sequence)">
+          <header>
+            <strong>{{ sequence.startTime }} – {{ sequence.endTime }} · {{ sequence.title }}</strong>
+          </header>
+          <span class="track-meta">{{ trackLabel(sequence.track) }} · {{ sequence.location }}</span>
+        </button>
+        }
+        }
+      </section>
       } @else if (columns().length) {
       <div class="calendar-scroll">
         <div class="calendar" [style.--calendar-height.px]="calendarHeightPx()">
@@ -373,6 +398,10 @@
                   [style.transform]="block.sequence ? dragTransform(block.sequence) : null"
                   (pointerdown)="block.sequence && startDrag($event, block.sequence)"
                   (click)="onBlockClick($event, block)"
+                  role="button"
+                  tabindex="0"
+                  (keydown.enter)="onBlockKey($event, block)"
+                  (keydown.space)="onBlockKey($event, block)"
                 >
                   <header>
                     <span class="sequence-time">{{ block.startTime }} – {{ block.endTime }}</span>

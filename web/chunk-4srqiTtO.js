@@ -1,1 +1,0 @@
-function i(n){let[t,r]=n.split(":").map(e=>Number(e));return t*60+r}function o(n){let t=(n%1440+1440)%1440,r=Math.floor(t/60),e=t%60;return `${String(r).padStart(2,"0")}:${String(e).padStart(2,"0")}`}export{i,o};

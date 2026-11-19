@@ -199,6 +199,16 @@ export const appRoutes: Route[] = [
         loadComponent: () => import('./features/programme/programme').then((m) => m.ProgrammePage),
       },
       {
+        path: 'programme/journal',
+        title: 'Journal des modifications',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'LOGISTICS', 'VIEWER'] },
+        loadComponent: () =>
+          import('./features/programme/journal/programme-journal').then(
+            (m) => m.ProgrammeJournalPage,
+          ),
+      },
+      {
         path: 'programme/evenements/:id',
         title: 'Fiche événement',
         canActivate: [roleGuard],

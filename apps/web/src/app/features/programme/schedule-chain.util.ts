@@ -1,4 +1,4 @@
-import { ProgramSequence } from '../../models/models';
+import { ProgramChangeLogAction, ProgramSequence } from '../../models/models';
 import { ALLEGRIA_2027_EVENT_DATES } from '../../shared/event-date-selector/event-date.config';
 
 /** Les 4 jours de l'événement (YYYY-MM-DD), calculés en UTC pour éviter tout décalage de fuseau. */
@@ -31,3 +31,14 @@ export function buildChain(
   }
   return chain;
 }
+
+/** Libellés du journal des modifications du programme (planning + page journal). */
+export const PROGRAM_CHANGE_LOG_LABELS: Record<ProgramChangeLogAction, string> = {
+  INSERT: 'Insertion',
+  RESIZE: 'Redimensionnement',
+  MOVE: 'Déplacement',
+  FREEZE: 'Figement',
+  UNFREEZE: 'Défigement',
+  DELETE: 'Suppression',
+  UPDATE: 'Modification',
+};

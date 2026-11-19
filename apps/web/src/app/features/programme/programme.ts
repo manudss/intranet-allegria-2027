@@ -1,13 +1,12 @@
 import { EventQuickEditorComponent } from './event-mission-links/event-quick-editor';
 import { ShiftChangesComponent } from './event-mission-links/shift-changes';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, HostListener, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, ParamMap, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { TuiDataListWrapper } from '@taiga-ui/kit';
 import { AuthService } from '../../core/auth.service';
 import {
-  ProgramChangeLogAction,
   ProgramChangeLogEntry,
   ProgramDocumentLink,
   ProgramPreview,
@@ -26,7 +25,7 @@ import {
   VolunteerTeamsApiService,
 } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
-import { buildChain, PROGRAM_EVENT_DAYS } from './schedule-chain.util';
+import { buildChain, PROGRAM_CHANGE_LOG_LABELS, PROGRAM_EVENT_DAYS } from './schedule-chain.util';
 import { minutesToTime, timeToMinutes } from './schedule-time.util';
 
 const MAIN_LOCATION = 'Grande salle';
@@ -105,16 +104,6 @@ const EMPTY_DRAFT = (): ProgramSequenceDraft => ({
   notes: null,
   visibility: ProgramSequenceVisibility.INTERNAL,
 });
-
-const CHANGE_LOG_LABELS: Record<ProgramChangeLogAction, string> = {
-  INSERT: 'Insertion',
-  RESIZE: 'Redimensionnement',
-  MOVE: 'Déplacement',
-  FREEZE: 'Figement',
-  UNFREEZE: 'Défigement',
-  DELETE: 'Suppression',
-  UPDATE: 'Modification',
-};
 
 interface EditDraft {
   title: string;
@@ -199,7 +188,6 @@ export class ProgrammePage {
     { eventDate: string; generatedAt: string; sequenceCount: number }[] | null
   >(null);
   readonly publishingPublic = signal(false);
-  readonly changeLogLabels = CHANGE_LOG_LABELS;
   readonly days = PROGRAM_EVENT_DAYS;
   readonly trackFilters = TRACK_FILTERS;
   readonly trackOptions = TRACK_FILTERS.filter(
@@ -237,6 +225,106 @@ export class ProgrammePage {
   private matchesTrack(sequence: ProgramSequence): boolean {
     const filter = this.trackFilter();
     return filter === 'ALL' || (sequence.track ?? ProgramSequenceTrack.COMMON) === filter;
+  }
+
+  // ─── Phase 3 : recherche, menu contextuel, chiffres du jour ──────
+
+  /** Recherche libre dans le titre, le lieu et l'équipe responsable (affichage seul). */
+  readonly searchQuery = signal('');
+
+  setSearchQuery(value: string): void {
+    this.searchQuery.set(value);
+  }
+
+  private matchesSearch(sequence: ProgramSequence): boolean {
+    const term = this.searchQuery().trim().toLocaleLowerCase('fr');
+    if (!term) return true;
+    return `${sequence.title} ${sequence.location} ${sequence.volunteerTeamName ?? ''}`
+      .toLocaleLowerCase('fr')
+      .includes(term);
+  }
+
+  private matchesDisplay(sequence: ProgramSequence): boolean {
+    return this.matchesTrack(sequence) && this.matchesSearch(sequence);
+  }
+
+  /** Menu d'actions ouvert au clic sur un créneau, positionné près du pointeur. */
+  readonly sequenceMenu = signal<{ sequence: ProgramSequence; x: number; y: number } | null>(null);
+  private suppressMenuClick = false;
+
+  private static readonly MENU_WIDTH = 260;
+  private static readonly MENU_HEIGHT = 330;
+
+  onSequenceClick(event: MouseEvent, sequence: ProgramSequence): void {
+    if (this.suppressMenuClick) {
+      this.suppressMenuClick = false;
+      return;
+    }
+    event.stopPropagation();
+    this.selectLocation(sequence.location);
+    const maxX = Math.max(8, window.innerWidth - ProgrammePage.MENU_WIDTH - 8);
+    const maxY = Math.max(8, window.innerHeight - ProgrammePage.MENU_HEIGHT - 8);
+    this.sequenceMenu.set({
+      sequence,
+      x: Math.min(Math.max(event.clientX, 8), maxX),
+      y: Math.min(Math.max(event.clientY, 8), maxY),
+    });
+  }
+
+  onBlockClick(event: MouseEvent, block: BlockView): void {
+    if (!block.sequence) return;
+    this.onSequenceClick(event, block.sequence);
+  }
+
+  closeSequenceMenu(): void {
+    this.sequenceMenu.set(null);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.closeSequenceMenu();
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.sequenceMenu()) return;
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('.sequence-menu, .sequence-block, .track-card')) return;
+    this.closeSequenceMenu();
+  }
+
+  private menuSequence(): ProgramSequence | null {
+    return this.sequenceMenu()?.sequence ?? null;
+  }
+
+  menuQuickEdit(): void {
+    const sequence = this.menuSequence();
+    this.closeSequenceMenu();
+    if (sequence) this.openEditForm(sequence);
+  }
+
+  menuInsertAfter(): void {
+    const sequence = this.menuSequence();
+    this.closeSequenceMenu();
+    if (sequence) this.openInsertForm(sequence.id);
+  }
+
+  menuResize(): void {
+    const sequence = this.menuSequence();
+    this.closeSequenceMenu();
+    if (sequence) this.openResizeForm(sequence);
+  }
+
+  menuToggleFreeze(): void {
+    const sequence = this.menuSequence();
+    this.closeSequenceMenu();
+    if (sequence) this.toggleFreeze(sequence);
+  }
+
+  menuDelete(): void {
+    const sequence = this.menuSequence();
+    this.closeSequenceMenu();
+    if (sequence) this.deleteSequence(sequence);
   }
 
   readonly dayIndex = signal(0); // J1 par défaut
@@ -388,7 +476,7 @@ export class ProgrammePage {
 
     return this.locationsForDay().map((name) => {
       const blocks: BlockView[] = buildChain(sequences, date, name)
-        .filter((sequence) => this.matchesTrack(sequence))
+        .filter((sequence) => this.matchesDisplay(sequence))
         .map((sequence) => {
           const after = projected.get(sequence.id);
           const startTime = after?.startTime ?? sequence.startTime;
@@ -462,26 +550,46 @@ export class ProgrammePage {
       this.editSequenceId() !== null ||
       this.insertAfterId() !== null ||
       this.resizeSequenceId() !== null ||
-      this.preview() !== null ||
-      this.changeLogOpen(),
+      this.preview() !== null,
   );
 
   readonly dragState = signal<DragState | null>(null);
   readonly resizeDragState = signal<ResizeDragState | null>(null);
 
-  branchesFor(sequenceId: number): ProgramSequence[] {
-    return this.allSequences().filter((s) => s.anchorSequenceId === sequenceId);
-  }
-
-  readonly kpis = computed(() => {
-    const chain = this.chain();
-    const frozenCount = chain.filter((s) => s.status === ProgramSequenceStatus.FROZEN).length;
-    const branchesCount = chain.reduce((sum, s) => sum + this.branchesFor(s.id).length, 0);
+  /** Chiffres du jour affiché (tous lieux, filtre piste appliqué), réduits à des pastilles. */
+  readonly dayStats = computed(() => {
+    const sequences = this.daySequences().filter((s) => this.matchesTrack(s));
+    const frozenCount = sequences.filter(
+      (s) => s.status === ProgramSequenceStatus.FROZEN,
+    ).length;
     return {
-      total: chain.length,
-      mobile: chain.length - frozenCount,
+      total: sequences.length,
+      mobile: sequences.length - frozenCount,
       frozen: frozenCount,
-      branches: branchesCount,
+      branches: sequences.filter((s) => s.anchorSequenceId !== null).length,
+    };
+  });
+
+  /** Entrées du journal du jour affiché (le bouton « Journal » porte ce compteur). */
+  readonly journalCount = computed(
+    () => this.changeLog().filter((entry) => entry.eventDate === this.eventDate()).length,
+  );
+
+  /** Bandeau liste publique : jamais générée, à republier (N modifications depuis) ou à jour. */
+  readonly exportBanner = computed(() => {
+    const status = this.publicExportStatus();
+    if (status === null) return null;
+    if (!status.length) return { kind: 'never' as const, generatedAt: null, changesSince: 0 };
+    const generatedAt = status
+      .map((entry) => entry.generatedAt)
+      .reduce((a, b) => (a > b ? a : b));
+    const changesSince = this.changeLog().filter(
+      (entry) => entry.createdAt > generatedAt,
+    ).length;
+    return {
+      kind: changesSince > 0 ? ('stale' as const) : ('fresh' as const),
+      generatedAt,
+      changesSince,
     };
   });
 
@@ -489,7 +597,6 @@ export class ProgrammePage {
 
   readonly preview = signal<ProgramPreview | null>(null);
   readonly actionMessage = signal<ActionMessage | null>(null);
-  readonly changeLogOpen = signal(false);
 
   readonly insertAfterId = signal<number | null>(null);
   readonly insertDraft = signal<ProgramSequenceDraft>(EMPTY_DRAFT());
@@ -509,7 +616,7 @@ export class ProgrammePage {
     const date = this.eventDate();
     const sequences = this.allSequences()
       .filter((s) => s.eventDate === date)
-      .filter((s) => this.matchesTrack(s));
+      .filter((s) => this.matchesDisplay(s));
     const byStart = (a: ProgramSequence, b: ProgramSequence) =>
       a.startTime.localeCompare(b.startTime);
     // Cadre de scission : temps commun portant la note explicite « Temps séparé » (seed)
@@ -558,7 +665,10 @@ export class ProgrammePage {
     this.overview().map((day) => ({
       ...day,
       locations: day.locations
-        .map((loc) => ({ ...loc, sequences: loc.sequences.filter((s) => this.matchesTrack(s)) }))
+        .map((loc) => ({
+          ...loc,
+          sequences: loc.sequences.filter((s) => this.matchesDisplay(s)),
+        }))
         .filter((loc) => loc.sequences.length > 0),
     })),
   );
@@ -738,6 +848,7 @@ export class ProgrammePage {
     const state = this.resizeDragState();
     this.resizeDragState.set(null);
     if (!state || state.deltaMinutes === 0) return;
+    this.suppressMenuClick = true;
     const newDuration = state.baseDuration + state.deltaMinutes;
     if (newDuration < DRAG_SNAP_MINUTES) return;
 
@@ -758,10 +869,17 @@ export class ProgrammePage {
    * Fin du glisser-déposer : convertit le delta en aperçu de redimensionnement du prédécesseur
    * (jamais d'application directe — l'utilisateur doit confirmer dans le panneau de prévisualisation).
    */
-  endDrag(): void {
+  endDrag(event?: PointerEvent): void {
     const state = this.dragState();
     this.dragState.set(null);
-    if (!state || state.deltaMinutes === 0) return;
+    if (!state) return;
+    if (state.deltaMinutes === 0) {
+      // Simple clic souris sur un créneau déplaçable : ouvrir le menu d'actions du créneau.
+      const sequence = this.allSequences().find((s) => s.id === state.sequenceId);
+      if (sequence && event) this.onSequenceClick(event, sequence);
+      return;
+    }
+    this.suppressMenuClick = true;
 
     const newDuration = state.baseDuration + state.deltaMinutes;
     if (newDuration < DRAG_SNAP_MINUTES) return;
@@ -815,27 +933,6 @@ export class ProgrammePage {
       next: (result) => this.showPreview(result),
       error: (error: HttpErrorResponse) => this.showError(error),
     });
-  }
-
-  /** Horaires affichés dans « Détails et actions » : avant/après quand un aperçu est en cours. */
-  detailTimes(sequence: ProgramSequence): {
-    before: string;
-    after: string | null;
-    blocked: boolean;
-  } {
-    const before = `${sequence.startTime} - ${sequence.endTime}`;
-    const after = this.projectedTimes().get(sequence.id);
-    if (
-      !after ||
-      (after.startTime === sequence.startTime && after.durationMinutes === sequence.durationMinutes)
-    ) {
-      return { before, after: null, blocked: false };
-    }
-    return {
-      before,
-      after: `${after.startTime} - ${after.endTime}`,
-      blocked: this.preview()?.outcome !== 'ok',
-    };
   }
 
   confirmPreview(): void {
@@ -901,12 +998,6 @@ export class ProgrammePage {
       next: () => this.loadDay(),
       error: (error: HttpErrorResponse) => this.showError(error),
     });
-  }
-
-  toggleChangeLog(): void {
-    this.viewMode.set('day');
-    this.changeLogOpen.update((value) => !value);
-    if (this.changeLogOpen()) this.loadChangeLog();
   }
 
   // ─── Création / édition / suppression ──────────────────────────────
@@ -1191,6 +1282,7 @@ export class ProgrammePage {
   /** Recharge les séquences du jour affiché (source de vérité = serveur). */
   private loadDay(): void {
     this.loadPublicExportStatus();
+    this.loadChangeLog();
     const date = this.eventDate();
     this.loading.set(true);
     this.api.getDay(date).subscribe({
@@ -1203,7 +1295,6 @@ export class ProgrammePage {
         if (locations.length && !locations.includes(this.location())) {
           this.location.set(locations[0]);
         }
-        if (this.changeLogOpen()) this.loadChangeLog();
       },
       error: (error: HttpErrorResponse) => {
         this.loading.set(false);
@@ -1212,8 +1303,9 @@ export class ProgrammePage {
     });
   }
 
+  /** Journal complet : compteur du bouton « Journal » et bandeau « N modifications depuis ». */
   private loadChangeLog(): void {
-    this.api.getChangeLog(this.eventDate()).subscribe({
+    this.api.getChangeLog().subscribe({
       next: (entries) => this.changeLog.set(entries),
       error: (error: HttpErrorResponse) => this.showError(error),
     });

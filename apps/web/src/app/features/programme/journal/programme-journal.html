@@ -1,0 +1,58 @@
+<app-page-layout
+  title="Journal des modifications"
+  description="Historique des changements du planning (insertions, déplacements, figements…)"
+>
+  <div actions class="header-actions">
+    <a tuiButton appearance="flat" iconStart="@tui.arrow-left" routerLink="/programme">
+      Planning
+    </a>
+  </div>
+
+  <div class="seg" role="group" aria-label="Filtrer par jour">
+    <button
+      type="button"
+      class="seg-btn"
+      [class.on]="dayFilter() === null"
+      (click)="setDayFilter(null)"
+    >
+      Tous ({{ entries().length }})
+    </button>
+    @for (day of days; track day; let i = $index) {
+    <button
+      type="button"
+      class="seg-btn"
+      [class.on]="dayFilter() === i"
+      (click)="setDayFilter(i)"
+    >
+      J{{ i + 1 }} · {{ day }} ({{ dayCount(i) }})
+    </button>
+    }
+  </div>
+
+  @if (loading()) {
+  <p class="empty-state">Chargement…</p>
+  } @else if (loadError()) {
+  <p class="empty-state">Le journal ne peut pas être chargé. Réessayez plus tard.</p>
+  } @else if (!filtered().length) {
+  <p class="empty-state">Aucune modification enregistrée.</p>
+  } @else {
+  <ul class="journal-list">
+    @for (entry of filtered(); track entry.id) {
+    <li class="journal-entry">
+      <div class="entry-head">
+        <span class="entry-action">{{ labels[entry.action] }}</span>
+        <span class="entry-meta">
+          {{ entry.authorUserName ?? 'Coordination' }} ·
+          {{ entry.createdAt | date: 'dd/MM/yyyy à HH:mm' }} · J{{
+            days.indexOf(entry.eventDate) + 1
+          }}
+        </span>
+      </div>
+      @if (entry.comment) {
+      <p class="entry-comment">{{ entry.comment }}</p>
+      }
+    </li>
+    }
+  </ul>
+  }
+</app-page-layout>

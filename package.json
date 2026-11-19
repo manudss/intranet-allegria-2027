@@ -27,6 +27,7 @@
     "seed:api": "tsx apps/api/src/database/seeds/seed.ts --profile=medium",
     "seed:api:small": "tsx apps/api/src/database/seeds/seed.ts --profile=small",
     "seed:api:large": "tsx apps/api/src/database/seeds/seed.ts --profile=large",
+    "seed:document-library": "tsx apps/api/src/database/seeds/document-library-demo-seed.ts",
     "mobile:config": "node scripts/write-web-config.mjs mobile",
     "build:mobile": "npm run mobile:config && nx build mobile --configuration production",
     "serve:mobile": "npm run mobile:config && nx serve mobile"

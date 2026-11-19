@@ -1701,7 +1701,7 @@ async function run(): Promise<void> {
 
     await seedAccessTestkit(dataSource, adminUser, demoPasswordHash);
 
-    const documentLibraryCount = await insertDocumentLibraryDemo(dataSource);
+    const documentLibrary = await insertDocumentLibraryDemo(dataSource);
 
     console.log('Seed termine.');
     console.log(`Profil: ${profileName}`);
@@ -1719,7 +1719,9 @@ async function run(): Promise<void> {
     console.log(`Host families: ${hostFamilies.length}`);
     console.log(`Assignments: ${assignmentsToCreate.length}`);
     console.log(`Health records: ${participantHealthToCreate.length}`);
-    console.log(`Document library: ${documentLibraryCount} fiches (categories: 11)`);
+    console.log(
+      `Document library: ${documentLibrary.linksCreated} fiches inserees, ${documentLibrary.linksSkipped} conservees, ${documentLibrary.linksOmittedMissingTeam.length} omises (equipe introuvable), ${documentLibrary.categoriesCreated} categories creees`,
+    );
     console.log(
       `Access control: ${accessControlSeed.badges} badges (lot L2027-A), ${accessControlSeed.assignments} attributions`,
     );

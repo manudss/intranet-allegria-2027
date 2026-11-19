@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import type { DataSource } from 'typeorm';
 import {
   DocumentCategory,
@@ -9,7 +10,7 @@ import {
   VolunteerTeam,
 } from '../../app/core/entities';
 
-const CATEGORY_SEED: Array<{ code: string; label: string; sortOrder: number }> = [
+export const DOCUMENT_CATEGORY_SEED: Array<{ code: string; label: string; sortOrder: number }> = [
   { code: 'MUSIQUE', label: 'Musique', sortOrder: 10 },
   { code: 'ANIMATION', label: 'Animation', sortOrder: 20 },
   { code: 'ANIMATION_SPIRITUELLE', label: 'Animation spirituelle', sortOrder: 30 },
@@ -23,6 +24,14 @@ const CATEGORY_SEED: Array<{ code: string; label: string; sortOrder: number }> =
   { code: 'BENEVOLES', label: 'Bénévoles', sortOrder: 110 },
 ];
 
+export type DocumentLibrarySeedResult = {
+  categoriesCreated: number;
+  linksCreated: number;
+  linksSkipped: number;
+  /** Fiches restreintes non créées car l'équipe cible est introuvable. */
+  linksOmittedMissingTeam: string[];
+};
+
 /**
  * Données de démonstration de la rubrique « Consignes & documents ».
  * Les 22 fiches reprennent les documents de démonstration déposés dans le
@@ -30,27 +39,7 @@ const CATEGORY_SEED: Array<{ code: string; label: string; sortOrder: number }> =
  * contenus fictifs, aucune donnée réelle. Leur ouverture exige un compte
  * Microsoft autorisé sur ce SharePoint ; il n'y a pas de lien anonyme.
  */
-export async function insertDocumentLibraryDemo(dataSource: DataSource): Promise<number> {
-  const categoryRepository = dataSource.getRepository(DocumentCategory);
-  const linkRepository = dataSource.getRepository(DocumentLink);
-  const linkTeamRepository = dataSource.getRepository(DocumentLinkTeam);
-  const teamRepository = dataSource.getRepository(VolunteerTeam);
-  const userRepository = dataSource.getRepository(User);
-
-  const categories = await categoryRepository.save(
-    CATEGORY_SEED.map((seed) => categoryRepository.create(seed)),
-  );
-  const categoryByCode = new Map(categories.map((category) => [category.code, category]));
-
-  const admin = await userRepository.findOneBy({ email: 'admin@allegria.local' });
-  const teamByCodePrefix = async (prefix: string): Promise<VolunteerTeam | null> =>
-    (await teamRepository
-      .createQueryBuilder('team')
-      .where('team.code LIKE :prefix', { prefix: `${prefix}-%` })
-      .orderBy('team.code', 'ASC')
-      .getOne()) ?? null;
-
-  const demoLinks: Array<{
+export const DEMO_DOCUMENT_LINKS: Array<{
     title: string;
     description: string | null;
     url: string;
@@ -240,30 +229,146 @@ export async function insertDocumentLibraryDemo(dataSource: DataSource): Promise
     },
   ];
 
-  let created = 0;
-  for (const demo of demoLinks) {
+
+/**
+ * Insère les données de démonstration de la bibliothèque de documents.
+ *
+ * IDEMPOTENT, SANS PURGE, SANS ÉCRASEMENT : contrairement au seed complet
+ * (seed.ts, qui TRUNCATE), cette fonction ne supprime rien et ne modifie
+ * aucune donnée existante ; elle peut être relancée sur une base qui contient
+ * déjà des données, y compris des fiches et des retouches saisies à la main :
+ * - catégories : retrouvées par leur code (unique) ; une catégorie existante
+ *   est conservée TELLE QUELLE (libellé et ordre retouchés à la main sont
+ *   préservés) ; seules les catégories absentes sont créées ;
+ * - fiches : retrouvées par leur URL ; une fiche déjà présente est conservée
+ *   telle quelle (comptée dans linksSkipped) ;
+ * - restrictions d'équipe : ajoutées seulement si absentes ;
+ * - fiche restreinte dont l'équipe cible est introuvable : JAMAIS créée sans
+ *   restriction (elle serait visible des seuls ADMIN/COORDINATOR et
+ *   semblerait perdue) ; elle est omise et listée dans
+ *   linksOmittedMissingTeam. Si la fiche existe déjà, elle est conservée.
+ *
+ * Utilisée par le seed complet (base jetable, tables vidées juste avant) et
+ * par l'exécution autonome `npm run seed:document-library` (base de preview,
+ * sans reset).
+ */
+export async function insertDocumentLibraryDemo(
+  dataSource: DataSource,
+): Promise<DocumentLibrarySeedResult> {
+  const categoryRepository = dataSource.getRepository(DocumentCategory);
+  const linkRepository = dataSource.getRepository(DocumentLink);
+  const linkTeamRepository = dataSource.getRepository(DocumentLinkTeam);
+  const teamRepository = dataSource.getRepository(VolunteerTeam);
+  const userRepository = dataSource.getRepository(User);
+
+  const result: DocumentLibrarySeedResult = {
+    categoriesCreated: 0,
+    linksCreated: 0,
+    linksSkipped: 0,
+    linksOmittedMissingTeam: [],
+  };
+
+  const categoryByCode = new Map<string, DocumentCategory>();
+  for (const seed of DOCUMENT_CATEGORY_SEED) {
+    const existing = await categoryRepository.findOne({ where: { code: seed.code } });
+    if (existing) {
+      categoryByCode.set(seed.code, existing);
+    } else {
+      const created = await categoryRepository.save(categoryRepository.create(seed));
+      result.categoriesCreated += 1;
+      categoryByCode.set(seed.code, created);
+    }
+  }
+
+  const admin = await userRepository.findOneBy({ email: 'admin@allegria.local' });
+  const teamByCodePrefix = async (prefix: string): Promise<VolunteerTeam | null> =>
+    (await teamRepository
+      .createQueryBuilder('team')
+      .where('team.code LIKE :prefix', { prefix: `${prefix}-%` })
+      .orderBy('team.code', 'ASC')
+      .getOne()) ?? null;
+
+  for (const demo of DEMO_DOCUMENT_LINKS) {
     const category = categoryByCode.get(demo.categoryCode) ?? null;
-    const link = await linkRepository.save(
-      linkRepository.create({
-        title: demo.title,
-        description: demo.description,
-        url: demo.url,
-        fileType: demo.fileType,
-        categoryId: category?.id ?? null,
-        visibility: demo.visibility,
-        createdByUserId: admin?.id ?? null,
-        updatedByUserId: admin?.id ?? null,
-      }),
-    );
-    if (demo.visibility === DocumentLinkVisibility.TEAMS && demo.teamPrefix) {
-      const team = await teamByCodePrefix(demo.teamPrefix);
-      if (team) {
+
+    let team: VolunteerTeam | null = null;
+    if (demo.visibility === DocumentLinkVisibility.TEAMS) {
+      team = demo.teamPrefix ? await teamByCodePrefix(demo.teamPrefix) : null;
+      if (!team) {
+        const existing = await linkRepository.findOne({ where: { url: demo.url } });
+        if (existing) {
+          result.linksSkipped += 1;
+        } else {
+          result.linksOmittedMissingTeam.push(demo.title);
+        }
+        continue;
+      }
+    }
+
+    let link = await linkRepository.findOne({ where: { url: demo.url } });
+    if (link) {
+      result.linksSkipped += 1;
+    } else {
+      link = await linkRepository.save(
+        linkRepository.create({
+          title: demo.title,
+          description: demo.description,
+          url: demo.url,
+          fileType: demo.fileType,
+          categoryId: category?.id ?? null,
+          visibility: demo.visibility,
+          createdByUserId: admin?.id ?? null,
+          updatedByUserId: admin?.id ?? null,
+        }),
+      );
+      result.linksCreated += 1;
+    }
+    if (team) {
+      const existingRestriction = await linkTeamRepository.findOne({
+        where: { documentLinkId: link.id, volunteerTeamId: team.id },
+      });
+      if (!existingRestriction) {
         await linkTeamRepository.save(
           linkTeamRepository.create({ documentLinkId: link.id, volunteerTeamId: team.id }),
         );
       }
     }
-    created += 1;
   }
-  return created;
+  return result;
+}
+
+/**
+ * Exécution autonome, pensée pour les bases de preview :
+ *   npm run seed:document-library
+ * (tsx apps/api/src/database/seeds/document-library-demo-seed.ts, mêmes
+ * variables DATABASE_URL / DATABASE_URL_DIRECT / DB_SSL que le seed complet).
+ * Aucun TRUNCATE, aucun écrasement : les données existantes, essais et
+ * retouches manuels compris, sont conservées.
+ */
+async function main(): Promise<void> {
+  const { default: dataSource } = await import('../typeorm.config');
+  await dataSource.initialize();
+  try {
+    const result = await insertDocumentLibraryDemo(dataSource);
+    console.log('Seed document-library termine (ajout idempotent, aucune purge, aucun ecrasement).');
+    console.log(
+      `Categories: ${result.categoriesCreated} creees, ${DOCUMENT_CATEGORY_SEED.length - result.categoriesCreated} deja presentes (conservees)`,
+    );
+    console.log(
+      `Fiches: ${result.linksCreated} inserees, ${result.linksSkipped} deja presentes (conservees), ${result.linksOmittedMissingTeam.length} omises (equipe introuvable)`,
+    );
+    for (const title of result.linksOmittedMissingTeam) {
+      console.log(`- omise (equipe introuvable): ${title}`);
+    }
+  } finally {
+    await dataSource.destroy();
+  }
+}
+
+// Compatible tsx CJS/ESM : pas d'import.meta ici.
+if (process.argv[1]?.endsWith('document-library-demo-seed.ts')) {
+  main().catch((error) => {
+    console.error('Echec du seed document-library:', error);
+    process.exitCode = 1;
+  });
 }

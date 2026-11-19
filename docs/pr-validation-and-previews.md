@@ -21,6 +21,28 @@ Le programme (Planning & Ordonnancement) est rempli par ce seed pour les 4 jours
 ni migration qui insère des données : l'application s'installe sans aucune donnée (migrations seules, planning vide), et
 seuls les scripts de seed (`npm run seed:api*`, workflow `neon-db.yml` sur `main` ou en dispatch avec `seed=true`) peuplent
 une base fictive. Un seed relancé vide les tables : à ne lancer que sur une base de preview.
+
+Sur la preview Render de la PR39, le build de l'API enchaîne `npm run db:migrate` (buildCommand
+constaté sur le service `al-pr39-api` : `npm ci --include=dev && npm run db:migrate && npm run
+build:api`), qui lance aussi `scripts/seed-preview-demo.mjs` après les migrations. Ce wrapper
+n'exécute le seed de démonstration de la rubrique Consignes & documents (`seed:document-library`,
+idempotent, sans purge ni écrasement : les fiches et retouches manuels sont conservées ; testé par
+`document-library-demo-seed.spec.ts`) que lorsque le contexte déclaré est cette preview exacte :
+`RENDER=true`, branche `feature/consignes-docs` et service `al-pr39-api` (nom attribué par
+`render-pr-previews.mjs`). Ce contexte identifie le service de build, pas la base ciblée : la cible
+exacte (branche Neon `preview/pr-39`) reste attestée par le workflow de confiance qui affecte les
+identifiants au service. En complément, un contrôle de cohérence refuse l'écriture si les comptes
+de la base ne sont pas tous des comptes fictifs `@allegria.local` (ce contrôle ne prouve ni la
+branche Neon ni l'absence de données réelles). Contrôle et écriture utilisent la même cible
+effective, la résolution d'URL répliquant `typeorm.config.ts` (`DATABASE_URL_DIRECT` puis
+`DATABASE_URL` puis `NEON_DATABASE_URL`, sinon `DB_HOST`). Partout ailleurs (poste de dev,
+GitHub Actions, job de migrations de production, autre PR ou branche) le wrapper saute sans rien
+faire. Une fois le contexte reconnu, toute erreur (aucune cible DB déclarée, contrôle illisible,
+cohérence refusée, seed en échec ou comptage post-seed illisible) interrompt le build : un déploiement de preview ne doit pas
+réussir en laissant croire que les fiches sont chargées. Les compteurs (catégories, fiches
+créées/conservées/omises, totaux post-seed) sont imprimés dans le journal de build, et le même
+chemin est rejoué de bout en bout en CI (job `api-auth-smoke`, étape « Seed documentaire demo »)
+contre un Postgres éphémère.
 Les comptes de test (`admin@allegria.local`, etc.) sont publics dans le dépôt : à n'utiliser que sur ces bases fictives.
 
 ## Preview de PR sur Render (gratuit) — déploiement à la demande

@@ -3,7 +3,7 @@ name: PR42 Lyam free preview
 # Explicit label only, internal PR42 only. Never runs on main or on a push.
 on:
   pull_request:
-    types: [labeled]
+    types: [labeled, closed]
 permissions:
   contents: read
   packages: write
@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   preview:
-    if: github.event.label.name == 'deploy-preview-lyam' && github.event.pull_request.number == 42 && github.event.pull_request.head.ref == 'feat/family-registration' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event.action == 'labeled' && github.event.label.name == 'deploy-preview-lyam' && github.event.pull_request.number == 42 && github.event.pull_request.head.ref == 'feat/family-registration' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -55,3 +55,20 @@ jobs:
           PREVIEW_DB_URL_DIRECT: ${{ steps.creds.outputs.db_url }}
           PREVIEW_IMAGE: ghcr.io/${{ github.repository }}@${{ steps.image.outputs.digest }}
         run: node scripts/render-pr42-lyam.mjs
+
+  cleanup:
+    if: github.event.action == 'closed' && github.event.pull_request.number == 42 && github.event.pull_request.head.ref == 'feat/family-registration' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.15.0
+      - name: Delete only the verified disposable PR42 Lyam preview
+        env:
+          RENDER_LYAM_PREVIEW_API_KEY: ${{ secrets.RENDER_LYAM_PREVIEW_API_KEY }}
+        run: node scripts/render-pr42-lyam-cleanup.mjs

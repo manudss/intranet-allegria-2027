@@ -2,7 +2,13 @@ import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/com
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
-import { HEALTH_FIELDS, FOOD_ALLERGENS, EMPTY_HEALTH, cateringSummary } from '@mej-allegria/shared';
+import {
+  HEALTH_FIELDS,
+  FOOD_ALLERGENS,
+  EMPTY_HEALTH,
+  cateringSummary,
+  ageOn,
+} from '@mej-allegria/shared';
 import type { StructuredHealth } from '@mej-allegria/shared';
 import { FamilyRegistrationService, digest, plainObject } from './family-registration.service';
 export function seal(value: unknown, key: Buffer, context: string) {
@@ -34,6 +40,13 @@ export class RegistrationHealthService {
       this.config.get('FAMILY_HEALTH_DECLARATION_TEXT')
     );
   }
+  declaration() {
+    this.key();
+    return {
+      version: this.config.get<string>('FAMILY_HEALTH_DECLARATION_VERSION'),
+      text: this.config.get<string>('FAMILY_HEALTH_DECLARATION_TEXT'),
+    };
+  }
   private key() {
     if (!this.enabled())
       throw new ForbiddenException(
@@ -47,12 +60,16 @@ export class RegistrationHealthService {
     this.key();
     this.families.youth(await this.families.get(familyId), youthId);
     const [row] = await this.db.query(
-      'SELECT envelope FROM registration_health WHERE family_id=$1 AND "youthId"=$2',
+      'SELECT envelope,"signatureValid" FROM registration_health WHERE family_id=$1 AND "youthId"=$2',
       [familyId, youthId],
     );
-    return row
-      ? unseal(row.envelope, this.key(), familyId + ':' + youthId)
-      : structuredClone(EMPTY_HEALTH);
+    if (!row) return structuredClone(EMPTY_HEALTH);
+    const data = unseal(row.envelope, this.key(), familyId + ':' + youthId);
+    if (!row.signatureValid) {
+      data.signature = null;
+      delete data.signedPayload;
+    }
+    return data;
   }
   async save(familyId: string, youthId: string, revision: number, raw: unknown) {
     const key = this.key(),
@@ -76,7 +93,11 @@ export class RegistrationHealthService {
     )
       throw new BadRequestException('Champ sanitaire invalide');
     return this.db.transaction(async (m) => {
-      await m.query('SELECT id FROM registration_families WHERE id=$1 FOR UPDATE', [familyId]);
+      const [fresh] = await m.query(
+        'SELECT dossier FROM registration_families WHERE id=$1 FOR UPDATE',
+        [familyId],
+      );
+      this.families.editable(this.families.youth(fresh.dossier, youthId));
       const [row] = await m.query(
         'SELECT revision FROM registration_health WHERE family_id=$1 AND "youthId"=$2',
         [familyId, youthId],
@@ -91,7 +112,7 @@ export class RegistrationHealthService {
         signature: null,
       };
       await m.query(
-        'INSERT INTO registration_health(family_id,"youthId",envelope,revision) VALUES($1,$2,$3,$4) ON CONFLICT(family_id,"youthId") DO UPDATE SET envelope=excluded.envelope,revision=excluded.revision,"updatedAt"=now()',
+        'INSERT INTO registration_health(family_id,"youthId",envelope,revision) VALUES($1,$2,$3,$4) ON CONFLICT(family_id,"youthId") DO UPDATE SET envelope=excluded.envelope,revision=excluded.revision,"signatureValid"=false,"updatedAt"=now()',
         [familyId, youthId, seal(data, key, familyId + ':' + youthId), data.revision],
       );
       await m.query(
@@ -103,46 +124,72 @@ export class RegistrationHealthService {
   }
   async sign(familyId: string, youthId: string, revision: number, raw: unknown) {
     const p = plainObject(raw),
-      h = await this.get(familyId, youthId);
+      key = this.key();
     if (
+      p.version !== this.config.get('FAMILY_HEALTH_DECLARATION_VERSION') ||
       p.accepted !== true ||
       typeof p.name !== 'string' ||
       !p.name.trim() ||
       p.name.length > 180 ||
-      !['LEGAL', 'SELF_ADULT'].includes(String(p.capacity)) ||
-      h.revision !== revision
+      !['LEGAL', 'SELF_ADULT'].includes(String(p.capacity))
     )
       throw new BadRequestException('Relisez la fiche et identifiez le signataire.');
-    const family = await this.families.get(familyId),
-      y = this.families.youth(family, youthId);
-    this.families.editable(y);
-    h.signature = {
-      name: p.name.trim(),
-      capacity: String(p.capacity),
-      at: new Date().toISOString(),
-      digest: digest(
-        JSON.stringify({
-          identity: y.identity,
-          contact: family.contact,
-          answers: h.answers,
-          foodAllergens: h.foodAllergens,
-          declarationVersion: this.config.get('FAMILY_HEALTH_DECLARATION_VERSION'),
-          declaration: this.config.get('FAMILY_HEALTH_DECLARATION_TEXT'),
-        }),
-      ),
-    };
-    h.revision++;
-    const rows = await this.db.query(
-      'UPDATE registration_health SET envelope=$1,revision=$2,"updatedAt"=now() WHERE family_id=$3 AND "youthId"=$4 AND revision=$5 RETURNING revision',
-      [seal(h, this.key(), familyId + ':' + youthId), h.revision, familyId, youthId, revision],
-    );
-    if (!rows.length) throw new BadRequestException('Sauvegardez la fiche avant de signer.');
-    return h;
+    return this.db.transaction(async (m) => {
+      const [row] = await m.query(
+        'SELECT dossier FROM registration_families WHERE id=$1 FOR UPDATE',
+        [familyId],
+      );
+      if (!row) throw new BadRequestException('Dossier introuvable');
+      const family = row.dossier,
+        y = this.families.youth(family, youthId);
+      this.families.editable(y);
+      if (
+        p.capacity === 'SELF_ADULT' &&
+        (ageOn(y.identity.dateOfBirth, new Date().toISOString().slice(0, 10)) ?? -1) < 18
+      )
+        throw new BadRequestException('Un représentant légal est nécessaire pour un mineur.');
+      const [stored] = await m.query(
+        'SELECT envelope,revision FROM registration_health WHERE family_id=$1 AND "youthId"=$2',
+        [familyId, youthId],
+      );
+      if (!stored || stored.revision !== revision)
+        throw new BadRequestException('Sauvegardez la fiche avant de signer.');
+      const h = unseal(stored.envelope, key, familyId + ':' + youthId);
+      h.signedPayload = JSON.stringify({
+        identity: y.identity,
+        contact: family.contact,
+        answers: h.answers,
+        foodAllergens: h.foodAllergens,
+        declarationVersion: this.config.get('FAMILY_HEALTH_DECLARATION_VERSION'),
+        declaration: this.config.get('FAMILY_HEALTH_DECLARATION_TEXT'),
+      });
+      h.signature = {
+        name: String(p.name).trim(),
+        capacity: String(p.capacity),
+        at: new Date().toISOString(),
+        digest: digest(h.signedPayload),
+      };
+      h.revision++;
+      const envelope = seal(h, key, familyId + ':' + youthId);
+      await m.query(
+        'UPDATE registration_health SET envelope=$1,revision=$2,"signatureValid"=true,"updatedAt"=now() WHERE family_id=$3 AND "youthId"=$4',
+        [envelope, h.revision, familyId, youthId],
+      );
+      await m.query(
+        'INSERT INTO registration_health_versions(family_id,"youthId",envelope) VALUES($1,$2,$3)',
+        [familyId, youthId, envelope],
+      );
+      await m.query(
+        `INSERT INTO registration_audit(family_id,"youthId",action,actor) VALUES($1,$2,'HEALTH_ATTESTED',$3)`,
+        [familyId, youthId, family.email],
+      );
+      return h;
+    });
   }
   async catering() {
     const key = this.key();
     const rows = await this.db.query(
-      'SELECT family_id,"youthId",envelope FROM registration_health',
+      'SELECT family_id,"youthId",envelope FROM registration_health WHERE "signatureValid"=true',
     );
     const records = rows
       .map((r: { family_id: string; youthId: string; envelope: string }) =>

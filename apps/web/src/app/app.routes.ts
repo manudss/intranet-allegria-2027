@@ -21,6 +21,8 @@ export const appRoutes: Route[] = [
     canActivate: [authGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'accueil' },
+      { path: 'inscriptions-familles', title: 'Inscriptions des familles', canActivate:[roleGuard],data:{roles:['ADMIN','COORDINATOR']},loadComponent:()=>import('./features/family-registrations/family-registrations').then(m=>m.FamilyRegistrationsPage)},
+      { path: 'restauration-besoins',title:'Restauration',canActivate:[roleGuard],data:{roles:['CATERING']},loadComponent:()=>import('./features/family-registrations/catering-needs').then(m=>m.CateringNeedsPage)},
       {
         path: 'accueil',
         title: 'Accueil',

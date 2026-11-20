@@ -155,7 +155,8 @@ export function ageOn(dateOfBirth: string, reference: string): number | null {
   if (
     !Number.isFinite(+birth) ||
     birth.toISOString().slice(0, 10) !== dateOfBirth ||
-    !Number.isFinite(+at)
+    !Number.isFinite(+at) ||
+    at.toISOString().slice(0, 10) !== reference
   )
     return null;
   return (
@@ -181,8 +182,15 @@ export function missingRequirements(
     legalCapacity: 'Lien et qualité du responsable',
   }))
     if (!i[key as keyof YouthIdentity]?.trim()) missing.push(label);
-  if (i.dateOfBirth && ageOn(i.dateOfBirth, new Date().toISOString().slice(0, 10)) === null)
+  if (i.dateOfBirth && (ageOn(i.dateOfBirth, new Date().toISOString().slice(0, 10)) ?? -1) < 0)
     missing.push('Date de naissance valide');
+  if (i.legalCapacity && !['LEGAL', 'SELF_ADULT'].includes(i.legalCapacity))
+    missing.push('Qualité du responsable valide');
+  if (
+    i.legalCapacity === 'SELF_ADULT' &&
+    (ageOn(i.dateOfBirth, new Date().toISOString().slice(0, 10)) ?? -1) < 18
+  )
+    missing.push('Un représentant légal pour un mineur');
   if (i.sex && !['FEMALE', 'MALE', 'OTHER', 'UNDISCLOSED'].includes(i.sex))
     missing.push('Sexe valide');
   if (i.mejAgeGroup && !['TA', 'ES'].includes(i.mejAgeGroup)) missing.push('Tranche MEJ valide');

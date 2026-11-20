@@ -93,7 +93,10 @@
       }
       <ul>
         <li>Documents et signatures propres à ce jeune</li>
-        <li>Fiche sanitaire : remise confidentielle à organiser</li>
+        <li>
+          Fiche sanitaire : {{rules().healthMode==='PAPER'?'remise confidentielle à organiser':'à
+          compléter dans le volet santé'}}
+        </li>
         <li>{{simulationLabels[y.simulation]}}</li>
       </ul>
       <button type="button" (click)="openYouth(y)">
@@ -317,6 +320,9 @@
     <label for="l-notes">Précisions logistiques, sans donnée de santé</label
     ><textarea id="l-notes" [formField]="editForm.notes" (input)="changed()"></textarea>} @case(3){
     <legend>Santé et adaptations : un circuit confidentiel</legend>
+    @if(rules().healthMode==='DIGITAL_APPROVED'){<app-family-health
+      [youthId]="youth()!.id"
+    />}@else{
     <aside>
       <strong>Collecte numérique non activée</strong>
       <p>{{rules().healthNotice}}</p>
@@ -339,7 +345,8 @@
       Aucune information médicale ne doit être saisie dans les autres pages ou envoyée par e-mail.
       La famille et l'équipe santé organiseront la remise confidentielle selon le circuit validé.
     </p>
-    } @case(4){
+    }} @case(4){
+    <app-family-documents [youthId]="youth()!.id" />
     <legend>Lire avant de signer</legend>
     <p>
       Chaque document est propre à ce jeune. Vérifiez son identité, le texte entier, la version et
@@ -366,10 +373,13 @@
       Les modèles validés et les signataires requis seront précisés par l'organisation. Aucun texte
       d'autorisation n'est inventé ni signé à votre place.
     </aside>
-    }@for(s of youth()!.signatures;track s.templateId){
+    }@for(s of youth()!.signatures;track $index){
     <p>
       {{s.templateId}} · version {{s.version}} · {{s.withdrawnAt?'À relire et attester de
       nouveau':'Attesté par '+s.signerName}} · {{s.signedAt}}
+      <a [href]="'/api/public/family-space/youths/'+youth()!.id+'/signatures/'+$index+'/pdf'"
+        >Télécharger mon exemplaire</a
+      >
     </p>
     }} @case(5){
     <legend>Paiement : simulation uniquement</legend>

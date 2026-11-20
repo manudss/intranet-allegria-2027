@@ -1,3 +1,6 @@
+import { UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { RegistrationDocumentsService } from './registration-documents.service';
 import { UseInterceptors } from '@nestjs/common';
 import { PrivateResponseInterceptor } from './private-response.interceptor';
 import { RegistrationHealthService } from './registration-health.service';
@@ -42,6 +45,7 @@ export class FamilyRegistrationController {
   constructor(
     private readonly service: FamilyRegistrationService,
     private readonly health: RegistrationHealthService,
+    private readonly documents: RegistrationDocumentsService,
   ) {}
   private checkOrigin(r: Request) {
     const origin = r.headers.origin;
@@ -120,6 +124,38 @@ export class FamilyRegistrationController {
   ) {
     const p = plainObject(raw);
     return this.service.sign(await this.owner(r, true), id, revision(p), p);
+  }
+  @Get('youths/:id/documents') async documentList(@Req() r: Request, @Param('id') id: string) {
+    return this.documents.list(await this.owner(r), id);
+  }
+  @Post('youths/:id/documents')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 2 * 1024 * 1024, files: 1 } }))
+  async documentUpload(
+    @Req() r: Request,
+    @Param('id') id: string,
+    @UploadedFile() file: { buffer: Buffer; originalname: string },
+  ) {
+    return this.documents.upload(await this.owner(r, true), id, file);
+  }
+  @Get('youths/:id/documents/:documentId') async documentDownload(
+    @Req() r: Request,
+    @Param('id') id: string,
+    @Param('documentId') documentId: string,
+    @Res() res: Response,
+  ) {
+    const d = await this.documents.download(await this.owner(r), id, documentId);
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Type', d.mime);
+    res.setHeader('Content-Disposition', 'attachment; filename="document"');
+    res.setHeader('Content-Security-Policy', "sandbox; default-src 'none'");
+    res.send(d.content);
+  }
+  @Get('youths/:id/health/declaration') async healthDeclaration(
+    @Req() r: Request,
+    @Param('id') id: string,
+  ) {
+    this.service.youth(await this.service.get(await this.owner(r)), id);
+    return this.health.declaration();
   }
   @Get('youths/:id/health') async healthGet(@Req() r: Request, @Param('id') id: string) {
     return this.health.get(await this.owner(r), id);
@@ -219,9 +255,10 @@ export class FamilyRegistrationStaffController {
     @Param('id') id: string,
     @Param('youthId') youthId: string,
     @Body() raw: unknown,
+    @Req() req: Request & { user: { email: string } },
   ) {
     const p = plainObject(raw);
-    return this.service.review(id, youthId, revision(p), p.state, p.reason);
+    return this.service.review(id, youthId, revision(p), p.state, p.reason, req.user.email);
   }
 }
 

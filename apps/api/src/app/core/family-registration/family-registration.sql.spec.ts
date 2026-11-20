@@ -2,11 +2,13 @@ import { PGlite } from '@electric-sql/pglite';
 import { beforeEach, afterEach, describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { FamilyRegistration1790600000000 } from '../../../database/migrations/1790600000000-FamilyRegistration';
+import { RegistrationHealthService } from './registration-health.service';
+import { randomBytes } from 'node:crypto';
 import { FamilyRegistrationService, digest, strings } from './family-registration.service';
 import { EMPTY_CONTACT, DEFAULT_FAMILY_RULES } from '@mej-allegria/shared';
 import type { FamilySpace } from '@mej-allegria/shared';
 describe('Family registration SQL, fictitious database only', () => {
-  let pg: PGlite, service: FamilyRegistrationService;
+  let pg: PGlite, service: FamilyRegistrationService, health: RegistrationHealthService;
   beforeEach(async () => {
     pg = new PGlite();
     const query = async (sql: string, params: unknown[] = []) => (await pg.query(sql, params)).rows;
@@ -28,6 +30,17 @@ describe('Family registration SQL, fictitious database only', () => {
       },
     };
     service = new FamilyRegistrationService(db as never, { get: () => undefined } as never);
+    const config: Record<string, string> = {
+      FAMILY_HEALTH_APPROVAL_REFERENCE: 'TEST-ONLY',
+      FAMILY_HEALTH_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
+      FAMILY_HEALTH_DECLARATION_VERSION: 'test-v1',
+      FAMILY_HEALTH_DECLARATION_TEXT: 'Déclaration fictive de test',
+    };
+    health = new RegistrationHealthService(
+      db as never,
+      { get: (k: string) => config[k] } as never,
+      service,
+    );
   });
   afterEach(async () => {
     await pg.close();
@@ -112,5 +125,65 @@ describe('Family registration SQL, fictitious database only', () => {
   it('never accepts health or unknown fields in an administrative contact', () => {
     expect(() => strings({ allergies: 'x' }, EMPTY_CONTACT)).toThrow();
     expect(() => strings(JSON.parse('{"__proto__":"x"}'), EMPTY_CONTACT)).toThrow();
+  });
+  it('freezes health content atomically, rejects a stale page and keeps signed history after changes', async () => {
+    const a = await access('health-fiction@example.test');
+    let s = await service.add(a.familyId, 0);
+    const id = s.youths[0].id;
+    const h = await health.save(a.familyId, id, 0, {
+      answers: { foodAllergy: 'Test fictif' },
+      foodAllergens: ['MILK'],
+      page: 3,
+    });
+    await expect(
+      health.sign(a.familyId, id, h.revision, {
+        name: 'Parent fictif',
+        capacity: 'LEGAL',
+        accepted: true,
+        version: 'old',
+      }),
+    ).rejects.toThrow();
+    const signed = await health.sign(a.familyId, id, h.revision, {
+      name: 'Parent fictif',
+      capacity: 'LEGAL',
+      accepted: true,
+      version: 'test-v1',
+    });
+    expect(signed.signature?.digest).toHaveLength(64);
+    expect(JSON.parse(signed.signedPayload!).answers.foodAllergy).toBe('Test fictif');
+    await expect(
+      health.save(a.familyId, id, h.revision, { answers: {}, foodAllergens: [], page: 0 }),
+    ).rejects.toThrow('autre fenêtre');
+    s = await service.saveYouth(a.familyId, id, s.revision, {
+      identity: { firstName: 'Prénom modifié' },
+    });
+    expect((await health.get(a.familyId, id)).signature).toBeNull();
+    expect((await health.get(a.familyId, id)).answers.foodAllergy).toBe('Test fictif');
+    expect(
+      (await pg.query('SELECT count(*)::int AS n FROM registration_health_versions')).rows[0],
+    ).toMatchObject({ n: 1 });
+  });
+  it('rejects duplicate templates, impossible dates and text changes without a new version', async () => {
+    await expect(
+      service.configure({ ...DEFAULT_FAMILY_RULES, ageReferenceDate: '2027-02-31' }),
+    ).rejects.toThrow();
+    const template = {
+      id: 'a',
+      version: '1',
+      title: 'Document fictif',
+      text: 'Texte test',
+      enabled: true,
+      required: true,
+    };
+    await service.configure({ ...DEFAULT_FAMILY_RULES, templates: [template] });
+    await expect(
+      service.configure({
+        ...DEFAULT_FAMILY_RULES,
+        templates: [{ ...template, text: 'Texte changé' }],
+      }),
+    ).rejects.toThrow('nouvelle version');
+    await expect(
+      service.configure({ ...DEFAULT_FAMILY_RULES, templates: [template, template] }),
+    ).rejects.toThrow();
   });
 });

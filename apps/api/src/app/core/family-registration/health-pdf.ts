@@ -11,9 +11,16 @@ export async function healthPdf(
   h: StructuredHealth,
   declaration: string,
 ) {
+  if (h.signature && h.signedPayload) {
+    const saved = JSON.parse(h.signedPayload);
+    family = { ...family, contact: saved.contact };
+    youth = { ...youth, identity: saved.identity };
+    declaration = saved.declaration;
+  }
   const paths = [
     join(__dirname, 'assets/registration/health-form-source-2026.pdf'),
     join(process.cwd(), 'apps/api/src/assets/registration/health-form-source-2026.pdf'),
+    join(process.cwd(), 'src/assets/registration/health-form-source-2026.pdf'),
   ];
   let source: Buffer | undefined;
   for (const path of paths) {
@@ -31,22 +38,50 @@ export async function healthPdf(
   function text(page: number, x: number, y: number, value: string, max = 68) {
     pdf
       .getPage(page)
-      .drawText(safe(value).slice(0, max), { x, y, size: 8, font, color: rgb(0.08, 0.2, 0.35) });
+      .drawText(safe(value).length > max ? safe(value).slice(0, max - 3) + '...' : safe(value), {
+        x,
+        y,
+        size: 8,
+        font,
+        color: rgb(0.08, 0.2, 0.35),
+      });
   }
   const i = youth.identity,
     c = family.contact;
   text(0, 95, 698, i.lastName);
   text(0, 110, 670, i.firstName);
-  text(0, 95, 640, i.sex);
+  text(
+    0,
+    95,
+    640,
+    (
+      { FEMALE: 'Féminin', MALE: 'Masculin', OTHER: 'Autre', UNDISCLOSED: 'Non précisé' } as Record<
+        string,
+        string
+      >
+    )[i.sex] || i.sex,
+  );
   text(0, 175, 613, i.dateOfBirth + ' ' + (h.answers.birthPlace || ''));
   text(0, 120, 585, c.address + ' ' + c.postalCode + ' ' + c.city);
   text(0, 40, 472, c.name, 28);
-  text(0, 200, 472, i.legalCapacity, 25);
+  text(
+    0,
+    200,
+    472,
+    i.legalCapacity === 'SELF_ADULT' ? 'Adulte concerné' : 'Représentant légal',
+    25,
+  );
   text(0, 340, 472, c.phone, 20);
-  text(0, 40, 445, h.answers.guardian2 || 'Voir annexe complète', 70);
+  text(0, 40, 445, h.answers.guardian2 ? 'Voir annexe : autre responsable' : 'Non renseigné', 28);
   text(0, 40, 388, c.emergencyName, 25);
   text(0, 340, 388, c.emergencyPhone, 20);
-  text(0, 40, 355, h.answers.doctor || 'À compléter', 90);
+  text(
+    0,
+    40,
+    340,
+    h.answers.doctor ? 'Médecin : voir réponse intégrale en annexe' : 'Médecin : non renseigné',
+    90,
+  );
   text(
     0,
     40,
@@ -69,9 +104,11 @@ export async function healthPdf(
     110,
   );
   text(2, 285, 720, 'Besoins et adaptations : voir réponses intégrales en annexe.', 65);
-  text(3, 145, 265, h.signature?.name || 'NON SIGNÉ', 72);
-  text(3, 145, 201, h.signature?.at || '', 55);
-  text(3, 300, 201, h.signature ? 'Attestation : voir preuve en annexe' : 'Document non signé', 50);
+  text(3, 165, 395, h.signature?.name || 'NON SIGNÉ', 50);
+  text(3, 145, 320, h.signature?.at?.slice(0, 10) || '', 20);
+  text(3, 190, 292, h.signature ? 'Attestation : voir preuve en annexe' : 'Document non signé', 50);
+  text(3, 250, 650, 'Équipements : voir annexe complète.', 55);
+  text(3, 185, 435, 'Peurs et phobies : voir annexe complète.', 70);
   for (let n = 0; n < 4; n++) {
     text(
       n,

@@ -13,6 +13,8 @@ import { createHash, randomBytes, randomInt, randomUUID, timingSafeEqual } from 
 import { createTransport } from 'nodemailer';
 import {
   DEFAULT_FAMILY_RULES,
+  DIOCESES,
+  ageOn,
   EMPTY_CONTACT,
   EMPTY_IDENTITY,
   EMPTY_LOGISTICS,
@@ -183,6 +185,7 @@ export class FamilyRegistrationService {
     action: string,
     work: (space: FamilySpace, m: EntityManager) => Promise<void>,
     youthId?: string,
+    actor?: string,
   ) {
     return this.db.transaction(async (m) => {
       const [row] = await m.query(
@@ -204,7 +207,7 @@ export class FamilyRegistrationService {
       ]);
       await m.query(
         'INSERT INTO registration_audit(family_id,"youthId",action,actor) VALUES($1,$2,$3,$4)',
-        [id, youthId || null, action, s.email],
+        [id, youthId || null, action, actor || s.email],
       );
       return s;
     });
@@ -229,7 +232,8 @@ export class FamilyRegistrationService {
   }
   saveContact(id: string, revision: number, raw: unknown) {
     const contact = strings(raw, EMPTY_CONTACT) as FamilyContact;
-    return this.mutate(id, revision, 'CONTACT_SAVED', async (s) => {
+    return this.mutate(id, revision, 'CONTACT_SAVED', async (s, m) => {
+      if (JSON.stringify(s.contact) === JSON.stringify(contact)) return;
       if (s.youths.some((y) => !['DRAFT', 'CORRECTION'].includes(y.state)))
         throw new ForbiddenException(
           'Des dossiers sont déjà envoyés : contactez l’organisation pour corriger les contacts communs.',
@@ -240,6 +244,9 @@ export class FamilyRegistrationService {
             ...a,
             withdrawnAt: a.withdrawnAt || new Date().toISOString(),
           }));
+      await m.query('UPDATE registration_health SET "signatureValid"=false WHERE family_id=$1', [
+        id,
+      ]);
       s.contact = contact;
     });
   }
@@ -255,7 +262,7 @@ export class FamilyRegistrationService {
       id,
       revision,
       'DRAFT_SAVED',
-      async (s) => {
+      async (s, m) => {
         const y = this.youth(s, youthId);
         this.editable(y);
         const before = JSON.stringify([y.identity, y.logistics]);
@@ -275,8 +282,16 @@ export class FamilyRegistrationService {
             throw new BadRequestException();
           y.simulation = p.simulation as YouthDossier['simulation'];
         }
-        if (before !== JSON.stringify([y.identity, y.logistics]))
-          y.signatures = y.signatures.map((a) => ({ ...a, withdrawnAt: new Date().toISOString() }));
+        if (before !== JSON.stringify([y.identity, y.logistics])) {
+          y.signatures = y.signatures.map((a) => ({
+            ...a,
+            withdrawnAt: a.withdrawnAt || new Date().toISOString(),
+          }));
+          await m.query(
+            'UPDATE registration_health SET "signatureValid"=false WHERE family_id=$1 AND "youthId"=$2',
+            [id, youthId],
+          );
+        }
         y.revision++;
       },
       youthId,
@@ -304,6 +319,11 @@ export class FamilyRegistrationService {
       async (s) => {
         const y = this.youth(s, youthId);
         this.editable(y);
+        if (
+          p.capacity === 'SELF_ADULT' &&
+          (ageOn(y.identity.dateOfBirth, new Date().toISOString().slice(0, 10)) ?? -1) < 18
+        )
+          throw new BadRequestException('Un représentant légal est nécessaire pour un mineur.');
         const content = JSON.stringify({
           template,
           identity: y.identity,
@@ -346,6 +366,14 @@ export class FamilyRegistrationService {
         const missing = missingRequirements(y, s.contact, rules);
         if (missing.length)
           throw new BadRequestException({ message: 'Dossier à compléter', missing });
+        if (rules.healthMode === 'DIGITAL_APPROVED') {
+          const [health] = await m.query(
+            'SELECT "signatureValid" FROM registration_health WHERE family_id=$1 AND "youthId"=$2',
+            [id, youthId],
+          );
+          if (!health?.signatureValid)
+            throw new BadRequestException('Relisez et attestez la fiche sanitaire avant envoi.');
+        }
         const repo = m.getRepository(Participant);
         const participant = await repo.save(
           repo.create({
@@ -355,7 +383,10 @@ export class FamilyRegistrationService {
             dateOfBirth: y.identity.dateOfBirth,
             sex: y.identity.sex as ParticipantSex,
             mejAgeGroup: y.identity.mejAgeGroup as MejAgeGroup,
-            diocese: y.identity.dioceseId,
+            diocese:
+              DIOCESES.find((d) => d.id === y.identity.dioceseId)?.name ||
+              y.identity.otherDiocese ||
+              'Non renseigné',
             city: y.identity.city || s.contact.city,
             emergencyContactName: s.contact.emergencyName,
             emergencyContactPhone: s.contact.emergencyPhone,
@@ -372,7 +403,7 @@ export class FamilyRegistrationService {
   }
   async list() {
     const rows = await this.db.query(
-      'SELECT id,email,dossier FROM registration_families ORDER BY "updatedAt" DESC LIMIT 500',
+      'SELECT id,email,dossier FROM registration_families ORDER BY "updatedAt" DESC ',
     );
     return rows.map((r: { id: string; email: string; dossier: FamilySpace }) => ({
       id: r.id,
@@ -382,7 +413,14 @@ export class FamilyRegistrationService {
       revision: r.dossier.revision,
     }));
   }
-  async review(id: string, youthId: string, revision: number, state: unknown, reason: unknown) {
+  async review(
+    id: string,
+    youthId: string,
+    revision: number,
+    state: unknown,
+    reason: unknown,
+    actor = 'staff',
+  ) {
     if (!['CORRECTION', 'VALIDATED', 'CONFIRMED', 'REFUSED', 'CANCELLED'].includes(String(state)))
       throw new BadRequestException();
     if (state === 'CORRECTION' && (typeof reason !== 'string' || !reason.trim()))
@@ -402,28 +440,55 @@ export class FamilyRegistrationService {
             .update(y.participantId, { status: ParticipantRegistrationStatus.CONFIRMED });
       },
       youthId,
+      actor,
     );
   }
   async configure(raw: unknown) {
     const p = plainObject(raw);
+    if (Object.keys(p).some((k) => !Object.prototype.hasOwnProperty.call(DEFAULT_FAMILY_RULES, k)))
+      throw new BadRequestException('Règle inconnue');
     const rules = { ...DEFAULT_FAMILY_RULES, ...p, healthMode: 'PAPER' } as FamilyRules;
     if (
       typeof rules.registrationOpen !== 'boolean' ||
+      typeof rules.ageReferenceDate !== 'string' ||
+      (rules.ageReferenceDate && ageOn(rules.ageReferenceDate, rules.ageReferenceDate) !== 0) ||
+      typeof rules.healthNotice !== 'string' ||
+      typeof rules.finalDeclaration !== 'string' ||
+      !rules.finalDeclaration.trim() ||
       !Array.isArray(rules.templates) ||
-      rules.templates.length > 20
+      rules.templates.length > 20 ||
+      [rules.minAge, rules.maxAge].some(
+        (v) => v !== null && (!Number.isInteger(v) || v < 0 || v > 120),
+      ) ||
+      (rules.minAge !== null && rules.maxAge !== null && rules.minAge > rules.maxAge)
     )
-      throw new BadRequestException();
+      throw new BadRequestException('Règles invalides');
+    const seen = new Set<string>();
     for (const t of rules.templates) {
       if (
-        !t.id ||
-        !t.title ||
-        !t.version ||
+        !t ||
+        typeof t !== 'object' ||
+        ['id', 'title', 'version'].some(
+          (k) =>
+            typeof t[k as keyof typeof t] !== 'string' ||
+            !String(t[k as keyof typeof t]).trim() ||
+            String(t[k as keyof typeof t]).length > 180,
+        ) ||
         typeof t.text !== 'string' ||
+        !t.text.trim() ||
         t.text.length > 30000 ||
         typeof t.enabled !== 'boolean' ||
-        typeof t.required !== 'boolean'
+        typeof t.required !== 'boolean' ||
+        seen.has(t.id)
       )
         throw new BadRequestException('Modèle invalide');
+      seen.add(t.id);
+    }
+    const previous = await this.rules();
+    for (const t of rules.templates) {
+      const old = previous.templates.find((v) => v.id === t.id && v.version === t.version);
+      if (old && old.text !== t.text)
+        throw new BadRequestException('Un texte modifié doit porter une nouvelle version.');
     }
     if (rules.registrationOpen && !rules.ageReferenceDate)
       throw new BadRequestException('Fixez la date de référence des âges avant ouverture.');

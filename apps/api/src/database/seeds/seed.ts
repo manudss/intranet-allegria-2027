@@ -1,4 +1,6 @@
 import 'dotenv/config';
+import { newYouth, EMPTY_CONTACT, DEFAULT_FAMILY_RULES } from '@mej-allegria/shared';
+import { randomUUID } from 'node:crypto';
 import { seedAccessTestkit } from './access-testkit';
 import { fakerFR as faker } from '@faker-js/faker';
 import type { DataSource } from 'typeorm';
@@ -298,6 +300,7 @@ const ROLE_CODES = {
   badgeManager: 'BADGE_MANAGER',
   coordinator: 'COORDINATOR',
   health: 'HEALTH',
+  catering: 'CATERING',
   animator: 'ANIMATOR',
   logistics: 'LOGISTICS',
   volunteers: 'VOLUNTEERS',
@@ -310,6 +313,7 @@ const roleLabels: Record<string, string> = {
   BADGE_MANAGER: 'Gestion des badges',
   COORDINATOR: 'Coordinateur',
   HEALTH: 'Equipe sante',
+  CATERING: 'Restauration : besoins agrégés',
   ANIMATOR: 'Animateur',
   LOGISTICS: 'Logistique',
   VOLUNTEERS: 'Bénévoles',
@@ -550,7 +554,6 @@ async function seedProgram(
   }
 }
 
-
 /** Données de démo du contrôle d'accès QR (plan validé le 12/11/2026). */
 async function seedAccessControl(
   dataSource: DataSource,
@@ -570,8 +573,16 @@ async function seedAccessControl(
   const metaRepository = dataSource.getRepository(AccessControlMeta);
 
   const scanTypes = await scanTypeRepository.save([
-    scanTypeRepository.create({ code: 'ENTREE', label: 'Entree', duplicateRule: AccessScanDuplicateRule.ALLOW }),
-    scanTypeRepository.create({ code: 'SORTIE', label: 'Sortie', duplicateRule: AccessScanDuplicateRule.ALLOW }),
+    scanTypeRepository.create({
+      code: 'ENTREE',
+      label: 'Entree',
+      duplicateRule: AccessScanDuplicateRule.ALLOW,
+    }),
+    scanTypeRepository.create({
+      code: 'SORTIE',
+      label: 'Sortie',
+      duplicateRule: AccessScanDuplicateRule.ALLOW,
+    }),
     scanTypeRepository.create({
       code: 'REPAS',
       label: 'Repas',
@@ -583,7 +594,11 @@ async function seedAccessControl(
       label: 'Appel du matin',
       duplicateRule: AccessScanDuplicateRule.UNIQUE_PER_DAY,
     }),
-    scanTypeRepository.create({ code: 'BUS', label: 'Montee bus', duplicateRule: AccessScanDuplicateRule.ALLOW }),
+    scanTypeRepository.create({
+      code: 'BUS',
+      label: 'Montee bus',
+      duplicateRule: AccessScanDuplicateRule.ALLOW,
+    }),
   ]);
   const scanTypeByCode = new Map(scanTypes.map((scanType) => [scanType.code, scanType]));
 
@@ -627,7 +642,11 @@ async function seedAccessControl(
   // Stock pré-imprimé de démo : un lot de 120 codes opaques.
   const lot = 'L2027-A';
   const badgesToCreate = Array.from({ length: 120 }, () =>
-    badgeRepository.create({ code: randomBytes(16).toString('hex'), lot, status: AccessBadgeStatus.AVAILABLE }),
+    badgeRepository.create({
+      code: randomBytes(16).toString('hex'),
+      lot,
+      status: AccessBadgeStatus.AVAILABLE,
+    }),
   );
   const badges = await badgeRepository.save(badgesToCreate, { chunk: 500 });
 
@@ -685,6 +704,9 @@ async function run(): Promise<void> {
     try {
       await queryRunner.query(`
         TRUNCATE TABLE
+          "registration_families",
+          "registration_settings",
+          "registration_challenges",
           "access_scan_events",
           "access_scan_sessions",
           "access_badge_assignments",
@@ -760,6 +782,48 @@ async function run(): Promise<void> {
         }),
       ),
     );
+
+    // Fictitious family drafts only. No digital health activation, outgoing email or real signatures.
+    const exampleFamily = randomUUID(),
+      first = newYouth(randomUUID(), 'Lyon'),
+      second = newYouth(randomUUID(), 'Lyon');
+    first.identity = {
+      ...first.identity,
+      firstName: 'Camille',
+      lastName: 'Exemple fictif',
+      dioceseId: 'lyon',
+    };
+    second.identity = { ...second.identity, firstName: 'Alexis', lastName: 'Exemple fictif' };
+    second.currentPage = 2;
+    second.simulation = 'SUCCESS';
+    await dataSource.query('INSERT INTO registration_families(id,email,dossier) VALUES($1,$2,$3)', [
+      exampleFamily,
+      'famille-demo@example.test',
+      {
+        id: exampleFamily,
+        email: 'famille-demo@example.test',
+        contact: { ...EMPTY_CONTACT, name: 'Parent exemple fictif', city: 'Lyon' },
+        youths: [first, second],
+        revision: 0,
+        updatedAt: new Date().toISOString(),
+      },
+    ]);
+    await dataSource.query('INSERT INTO registration_settings(id,rules) VALUES(1,$1)', [
+      {
+        ...DEFAULT_FAMILY_RULES,
+        templates: [
+          {
+            id: 'demo-autorisation',
+            title: 'Exemple fictif, modèle à remplacer',
+            version: 'demo-1',
+            text: 'Démonstration uniquement. Ce texte ne vaut pas autorisation réelle. L’organisation doit fournir et valider ses modèles avant ouverture.',
+            required: false,
+            enabled: true,
+          },
+        ],
+      },
+    ]);
+
     const roleByCode = new Map(roles.map((role) => [role.code, role]));
 
     const pushRole = (list: UserRole[], user: User, code: string): void => {
@@ -1196,7 +1260,10 @@ async function run(): Promise<void> {
       const group = groups[groupIndex];
       const allLocalJeunes = faker.helpers.shuffle(participantsByGroupSaved.get(group.id) ?? []);
       // ~10 % des jeunes restent sans equipe (voir assignableJeunesCount).
-      const localParticipants = allLocalJeunes.slice(0, assignableJeunesCount(allLocalJeunes.length));
+      const localParticipants = allLocalJeunes.slice(
+        0,
+        assignableJeunesCount(allLocalJeunes.length),
+      );
       const localAnimateurs = animateursByGroupSaved.get(group.id) ?? [];
       const localTeams = teamsByGroupSaved.get(group.id) ?? [];
       const teamSizes = buildTeamSizes(localParticipants.length, localTeams.length);
@@ -1251,8 +1318,11 @@ async function run(): Promise<void> {
     // Appartenances a creer apres le save des fiches : avec { chunk }, save()
     // ne reinjecte pas les ids dans les instances d'entree ; il faut utiliser
     // les entites retournees (comme le bloc jeunes ci-dessus).
-    const adultMembershipsPending: { team: Team; role: TeamParticipantRole; notes: string | null }[] =
-      [];
+    const adultMembershipsPending: {
+      team: Team;
+      role: TeamParticipantRole;
+      notes: string | null;
+    }[] = [];
     const teamFreeSeats = new Map<number, number>();
     let teamlessTotal = 0;
     let benevolesPlaced = 0;
@@ -1525,10 +1595,13 @@ async function run(): Promise<void> {
           email: chance(0.9)
             ? `famille.${normalizeText(familyLastName)}.${i + 1}@example.org`
             : null,
-          accommodationType: i % 40 === 39 ? AccommodationType.COLLECTIVE : AccommodationType.FAMILY,
+          accommodationType:
+            i % 40 === 39 ? AccommodationType.COLLECTIVE : AccommodationType.FAMILY,
           maxCapacity: i % 40 === 39 ? 24 : capacity,
-          maxUnder18: i % 40 === 39 ? 24 : Math.max(0, capacity - faker.number.int({ min: 0, max: 2 })),
-          maxAnimators: i % 40 === 39 ? null : chance(0.6) ? faker.number.int({ min: 1, max: 2 }) : null,
+          maxUnder18:
+            i % 40 === 39 ? 24 : Math.max(0, capacity - faker.number.int({ min: 0, max: 2 })),
+          maxAnimators:
+            i % 40 === 39 ? null : chance(0.6) ? faker.number.int({ min: 1, max: 2 }) : null,
           parish: chance(0.7) ? `Paroisse ${faker.person.lastName()}` : null,
           notes: chance(0.1) ? 'Animaux de compagnie presents.' : null,
           hostingGroup: hostingGroupFor(i),
@@ -1555,7 +1628,9 @@ async function run(): Promise<void> {
           volunteerId: volunteer.id,
           team: membership.team,
           teamId: membership.team.id,
-          room: chance(0.4) ? `Dortoir ${faker.string.alpha({ length: 1, casing: 'upper' })}` : null,
+          room: chance(0.4)
+            ? `Dortoir ${faker.string.alpha({ length: 1, casing: 'upper' })}`
+            : null,
           notes: chance(0.15) ? 'Arrivée possible dès le jeudi soir.' : null,
           startAt: '2027-10-31',
           endAt: '2027-11-03',
@@ -1702,11 +1777,15 @@ async function run(): Promise<void> {
     console.log(`Users: ${users.length}`);
     console.log(`Roles: ${roles.length}`);
     console.log(`Groups: ${groups.length}`);
-    console.log(`Volunteers: ${volunteers.length} (sans équipe au rassemblement: ${teamlessTotal - benevolesPlaced})`);
+    console.log(
+      `Volunteers: ${volunteers.length} (sans équipe au rassemblement: ${teamlessTotal - benevolesPlaced})`,
+    );
     console.log(
       `Participants: ${participants.length} jeunes + ${adultParticipantsToCreate.length} adultes`,
     );
-    console.log(`Teams: ${teams.length} (1/5 pleines, 1/5 à moitié, le reste avec 2-4 places libres)`);
+    console.log(
+      `Teams: ${teams.length} (1/5 pleines, 1/5 à moitié, le reste avec 2-4 places libres)`,
+    );
     console.log(
       `Team memberships: ${teamParticipantsToCreate.length} jeunes + ${adultTeamParticipants.length} adultes`,
     );
@@ -1724,8 +1803,12 @@ async function run(): Promise<void> {
     console.log('- admin@allegria.local (ADMIN)');
     console.log('- sante@allegria.local (sante)');
     console.log('- coordination@allegria.local (coordination)');
-    console.log('- animator.1@allegria.local, animator.2@allegria.local, ... (benevoles lies a leur fiche, acces Mon espace)');
-    console.log('- logistic.1@allegria.local, logistic.2@allegria.local, ... (logistique, gestion badges; les premiers ont aussi le role scanner)');
+    console.log(
+      '- animator.1@allegria.local, animator.2@allegria.local, ... (benevoles lies a leur fiche, acces Mon espace)',
+    );
+    console.log(
+      '- logistic.1@allegria.local, logistic.2@allegria.local, ... (logistique, gestion badges; les premiers ont aussi le role scanner)',
+    );
   } finally {
     await dataSource.destroy();
   }

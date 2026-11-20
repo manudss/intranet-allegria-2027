@@ -1,3 +1,5 @@
+import { FamilyDocuments } from './family-documents';
+import { FamilyHealthPage } from './family-health';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -6,6 +8,7 @@ import {
   computed,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { form, FormField } from '@angular/forms/signals';
@@ -21,7 +24,7 @@ import {
 import type { FamilyContact, FamilyRules, FamilySpace, YouthDossier } from '@mej-allegria/shared';
 @Component({
   selector: 'app-family-space',
-  imports: [FormField, RouterLink],
+  imports: [FormField, RouterLink, FamilyHealthPage, FamilyDocuments],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './family-space.html',
   styleUrl: './family-space.scss',
@@ -104,9 +107,11 @@ export class FamilySpacePage implements OnInit, OnDestroy {
     FAILURE: 'Échec simulé',
     CANCELLED: 'Annulation simulée',
   };
+  private healthEditor = viewChild(FamilyHealthPage);
   private timer: ReturnType<typeof setTimeout> | undefined;
   private chain = Promise.resolve();
   private dirty = false;
+  private generation = 0;
   private readonly beforeUnload = (event: BeforeUnloadEvent) => {
     if (this.dirty) {
       event.preventDefault();
@@ -182,8 +187,7 @@ export class FamilySpacePage implements OnInit, OnDestroy {
     });
   }
   protected async addYouth() {
-    await this.flush();
-    if (this.dirty) return;
+    if (!(await this.flush())) return;
     await this.run(async () => {
       const s = this.space()!;
       const next = await firstValueFrom(
@@ -210,10 +214,10 @@ export class FamilySpacePage implements OnInit, OnDestroy {
     this.error.set('');
   }
   protected async dashboard() {
-    await this.flush();
-    if (!this.dirty) this.selected.set('');
+    if (await this.flush()) this.selected.set('');
   }
   protected changed() {
+    this.generation++;
     this.dirty = true;
     this.status.set('Modifications en attente de sauvegarde…');
     clearTimeout(this.timer);
@@ -226,16 +230,23 @@ export class FamilySpacePage implements OnInit, OnDestroy {
   }
 
   protected async flush() {
+    const editor = this.healthEditor();
+    if (editor && !(await editor.flush())) {
+      this.error.set('Sauvegardez les informations santé avant de quitter cette page.');
+      return false;
+    }
     clearTimeout(this.timer);
     await this.chain;
     if (this.dirty) await this.save();
+    return !this.dirty;
   }
   protected save() {
     this.chain = this.chain.then(async () => {
       if (!this.dirty || !this.youth()) return;
       const s = this.space()!,
         y = this.youth()!,
-        m = this.editModel();
+        m = this.editModel(),
+        generation = this.generation;
       this.busy.set(true);
       this.error.set('');
       try {
@@ -278,7 +289,13 @@ export class FamilySpacePage implements OnInit, OnDestroy {
           );
         }
         this.space.set(updated);
-        this.dirty = false;
+        this.dirty = generation !== this.generation;
+        if (this.dirty) {
+          this.status.set('Nouvelles modifications en attente…');
+          clearTimeout(this.timer);
+          this.timer = setTimeout(() => void this.save(), 100);
+          return;
+        }
         this.status.set('Enregistré dans votre espace. Vous pouvez revenir plus tard.');
       } catch (e) {
         this.fail(e);
@@ -289,8 +306,7 @@ export class FamilySpacePage implements OnInit, OnDestroy {
     return this.chain;
   }
   protected async go(page: number) {
-    await this.flush();
-    if (this.dirty) return;
+    if (!(await this.flush())) return;
     this.page.set(page);
     if (!['DRAFT', 'CORRECTION'].includes(this.youth()!.state)) return;
     const s = this.space()!,
@@ -307,8 +323,7 @@ export class FamilySpacePage implements OnInit, OnDestroy {
     });
   }
   protected async simulate(simulation: string) {
-    await this.flush();
-    if (this.dirty) return;
+    if (!(await this.flush())) return;
     await this.run(async () => {
       const s = this.space()!,
         y = this.youth()!;
@@ -324,8 +339,7 @@ export class FamilySpacePage implements OnInit, OnDestroy {
     });
   }
   protected async sign(templateId: string, version: string) {
-    await this.flush();
-    if (this.dirty) return;
+    if (!(await this.flush())) return;
     const m = this.signatureModel();
     await this.run(async () => {
       const s = this.space()!,
@@ -346,8 +360,7 @@ export class FamilySpacePage implements OnInit, OnDestroy {
     });
   }
   protected async submit() {
-    await this.flush();
-    if (this.dirty) return;
+    if (!(await this.flush())) return;
     await this.run(async () => {
       const s = this.space()!,
         y = this.youth()!;

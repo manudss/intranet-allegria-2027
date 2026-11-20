@@ -1,3 +1,4 @@
+import { RegistrationDocumentsService } from './registration-documents.service';
 import { RegistrationHealthService } from './registration-health.service';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -22,6 +23,6 @@ import {
     FamilyRegistrationStaffController,
     CateringNeedsController,
   ],
-  providers: [FamilyRegistrationService, RegistrationHealthService],
+  providers: [FamilyRegistrationService, RegistrationHealthService, RegistrationDocumentsService],
 })
 export class FamilyRegistrationModule {}

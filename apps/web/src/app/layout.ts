@@ -77,6 +77,7 @@ export class Layout {
       icon: '@tui.users',
       items: [
         { label: 'Participants', path: '/participants', icon: '@tui.users' },
+        { label: 'Inscriptions familles', path: '/inscriptions-familles', icon: '@tui.clipboard-list' },
         { label: 'Équipes rassemblement', path: '/equipes', icon: '@tui.users-round' },
         { label: 'Répartition jeunes', path: '/equipes/repartition', icon: '@tui.shuffle' },
         { label: "Familles d'accueil", path: '/familles', icon: '@tui.home' },
@@ -91,6 +92,7 @@ export class Layout {
         { label: 'Équipes opérationnelles', path: '/equipes-operationnelles', icon: '@tui.users' },
         { label: 'Missions bénévoles', path: '/missions-benevoles', icon: '@tui.clipboard-list' },
         { label: 'Transports', path: '/transports', icon: '@tui.bus' },
+        { label: 'Restauration : besoins', path: '/restauration-besoins', icon: '@tui.utensils' },
         { label: 'Hébergement', path: '/hebergement', icon: '@tui.building' },
       ],
     },

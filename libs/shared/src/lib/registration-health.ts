@@ -84,6 +84,7 @@ export interface StructuredHealth {
   foodAllergens: string[];
   page: number;
   revision: number;
+  signedPayload?: string;
   signature: null | { name: string; capacity: string; at: string; digest: string };
 }
 export const HEALTH_FIELDS = HEALTH_FORM_PAGES.flatMap((p) => p.fields.map((f) => f[0]));
@@ -103,3 +104,20 @@ export function cateringSummary(records: StructuredHealth[]) {
       : [{ allergen, range: n < 10 ? '5–9' : n < 20 ? '10–19' : n < 50 ? '20–49' : '50+' }];
   });
 }
+
+export const FOOD_ALLERGEN_LABELS: Record<string, string> = {
+  GLUTEN: 'Céréales contenant du gluten',
+  CRUSTACEANS: 'Crustacés',
+  EGGS: 'Œufs',
+  FISH: 'Poissons',
+  PEANUTS: 'Arachides',
+  SOYA: 'Soja',
+  MILK: 'Lait',
+  NUTS: 'Fruits à coque',
+  CELERY: 'Céleri',
+  MUSTARD: 'Moutarde',
+  SESAME: 'Sésame',
+  SULPHITES: 'Sulfites',
+  LUPIN: 'Lupin',
+  MOLLUSCS: 'Mollusques',
+};

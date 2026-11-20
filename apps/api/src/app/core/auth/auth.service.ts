@@ -59,6 +59,11 @@ export class AuthService {
       return null;
     }
 
+    const current = await this.usersRepository.findOneBy({ id: sessionUser.id });
+    if (!current?.isActive) {
+      this.sessions.delete(token);
+      return null;
+    }
     // Reload roles from DB to keep RBAC checks up to date even with long-lived sessions.
     const freshRoles = await this.findUserRoleCodes(sessionUser.id);
 

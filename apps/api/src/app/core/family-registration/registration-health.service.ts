@@ -172,7 +172,7 @@ export class RegistrationHealthService {
     const p = plainObject(raw),
       key = this.key();
     if (
-      p.version !== this.config.get('FAMILY_HEALTH_DECLARATION_VERSION') ||
+      p.version !== this.declaration().version ||
       p.accepted !== true ||
       typeof p.name !== 'string' ||
       !p.name.trim() ||

@@ -10,6 +10,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 import {
   HEALTH_FIELDS,
   HEALTH_MODEL_ITEMS,
+  HEALTH_WEB_ITEMS,
   FOOD_ALLERGENS,
   EMPTY_HEALTH,
   cateringSummary,
@@ -100,7 +101,7 @@ export class RegistrationHealthService {
     if (
       Object.entries(presence).some(
         ([key, value]) =>
-          !HEALTH_MODEL_ITEMS.some((item) => item.id === key) ||
+          ![...HEALTH_MODEL_ITEMS, ...HEALTH_WEB_ITEMS].some((item) => item.id === key) ||
           !['YES', 'NO'].includes(String(value)),
       )
     )
@@ -144,7 +145,9 @@ export class RegistrationHealthService {
       const content = (h: StructuredHealth) =>
         JSON.stringify({
           answers: HEALTH_FIELDS.map((k) => h.answers[k] || ''),
-          presence: HEALTH_MODEL_ITEMS.map((i) => h.presence?.[i.id] || ''),
+          presence: [...HEALTH_MODEL_ITEMS, ...HEALTH_WEB_ITEMS].map(
+            (i) => h.presence?.[i.id] || '',
+          ),
           foodAllergens: [...h.foodAllergens].sort(),
         });
       if (previous && row.signatureValid && content(previous) === content(data)) {

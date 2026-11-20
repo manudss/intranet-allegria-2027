@@ -6,7 +6,12 @@ import { FOOD_ALLERGEN_LABELS } from '@mej-allegria/shared';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { HEALTH_FORM_PAGES, HEALTH_MODEL_ITEMS, HEALTH_EXTRA_FIELDS } from '@mej-allegria/shared';
+import {
+  HEALTH_FORM_PAGES,
+  HEALTH_MODEL_ITEMS,
+  HEALTH_EXTRA_FIELDS,
+  HEALTH_WEB_ITEMS,
+} from '@mej-allegria/shared';
 import type { YouthIdentity, FamilyContact, StructuredHealth } from '@mej-allegria/shared';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 interface HealthRow {
@@ -135,6 +140,15 @@ interface HealthRow {
   </app-page-layout>`,
   styles: [
     `
+      button[tuiButton] {
+        max-width: 100%;
+        white-space: normal;
+        height: auto;
+        min-height: 48px;
+        padding-block: 0.8rem;
+        text-align: center;
+        overflow-wrap: anywhere;
+      }
       button[appearance='secondary'] {
         color: #8f1838;
       }
@@ -179,7 +193,7 @@ export class FamilyHealthStaffPage implements OnInit {
   protected auth = inject(AuthService);
   private route = inject(ActivatedRoute);
   protected allergenLabels: Record<string, string> = FOOD_ALLERGEN_LABELS;
-  protected modelItems = HEALTH_MODEL_ITEMS;
+  protected modelItems = [...HEALTH_MODEL_ITEMS, ...HEALTH_WEB_ITEMS];
   protected extraFields = HEALTH_EXTRA_FIELDS;
   protected presenceLabel(value?: string) {
     return value === 'YES' ? 'Oui' : value === 'NO' ? 'Non' : 'Non renseigné';

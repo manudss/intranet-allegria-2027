@@ -366,6 +366,9 @@ export const HEALTH_MODEL_ITEMS = [
   },
   { id: 'vertigo', label: 'Vertige', page: 5, answerKey: 'fears', pdfPage: 3, y: 470.4, x: 129.1 },
 ] as const;
+export const HEALTH_WEB_ITEMS = [
+  { id: 'fearOther', label: 'Autre peur', page: 5, answerKey: 'fears' },
+] as const;
 /** Presentation only. Stable identifiers keep old free-text answers and explicit choices intact. */
 export const HEALTH_SHEET_SECTIONS = [
   { id: 'identity', title: 'Identité et contacts', legacyPage: 0 },
@@ -401,7 +404,9 @@ export const HEALTH_CONTACT_COLUMNS = [
   ['phone2', 'Téléphone 2'],
 ] as const;
 export const HEALTH_EXTRA_FIELDS: readonly (readonly [string, string])[] = [
-  ...HEALTH_MODEL_ITEMS.map((i) => ['detail_' + i.id, 'Précisions : ' + i.label] as const),
+  ...[...HEALTH_MODEL_ITEMS, ...HEALTH_WEB_ITEMS].map(
+    (i) => ['detail_' + i.id, 'Précisions : ' + i.label] as const,
+  ),
   ...HEALTH_VACCINES.flatMap(
     (v, n) =>
       [
@@ -437,7 +442,8 @@ export function healthSheetItems(section: string) {
   );
   const count =
     section === 'adaptations' ? 17 : section === 'daily' ? 9 : section === 'fears' ? 4 : 0;
-  return count ? HEALTH_MODEL_ITEMS.slice(start, start + count) : [];
+  const result = count ? [...HEALTH_MODEL_ITEMS.slice(start, start + count)] : [];
+  return section === 'fears' ? [...result, ...HEALTH_WEB_ITEMS] : result;
 }
 
 export type HealthPresence = 'YES' | 'NO';

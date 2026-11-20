@@ -245,12 +245,13 @@ describe('Family registration SQL, fictitious database only', () => {
     };
     const saved = await health.save(a.familyId, id, 0, {
       answers,
-      presence: { foodAllergy: 'YES' },
+      presence: { foodAllergy: 'YES', fearOther: 'NO' },
       foodAllergens: [],
       page: 3,
     });
     expect((await health.get(a.familyId, id)).answers).toEqual(answers);
     expect((await health.get(a.familyId, id)).presence?.animalAllergy).toBeUndefined();
+    expect((await health.get(a.familyId, id)).presence?.fearOther).toBe('NO');
     const signed = await health.sign(a.familyId, id, saved.revision, {
       name: 'Parent FICTIF',
       capacity: 'LEGAL',
@@ -260,7 +261,7 @@ describe('Family registration SQL, fictitious database only', () => {
     expect(JSON.parse(signed.signedPayload!).answers).toEqual(answers);
     const same = await health.save(a.familyId, id, signed.revision, {
       answers,
-      presence: { foodAllergy: 'YES' },
+      presence: { foodAllergy: 'YES', fearOther: 'NO' },
       foodAllergens: [],
       page: 0,
     });

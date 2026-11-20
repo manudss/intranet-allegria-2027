@@ -6,6 +6,7 @@ import {
   HEALTH_FORM_PAGES,
   HEALTH_MODEL_ITEMS,
   HEALTH_EXTRA_FIELDS,
+  HEALTH_WEB_ITEMS,
   FOOD_ALLERGEN_LABELS,
 } from '@mej-allegria/shared';
 import type { StructuredHealth, FamilySpace, YouthDossier } from '@mej-allegria/shared';
@@ -179,7 +180,7 @@ export async function healthPdf(
     lines.push(p.title);
     for (const [key, label] of p.fields)
       lines.push(label + ' : ' + (h.answers[key] || 'Non renseigné'));
-    for (const item of HEALTH_MODEL_ITEMS.filter(
+    for (const item of [...HEALTH_MODEL_ITEMS, ...HEALTH_WEB_ITEMS].filter(
       (item) => item.page === HEALTH_FORM_PAGES.indexOf(p),
     ))
       lines.push(

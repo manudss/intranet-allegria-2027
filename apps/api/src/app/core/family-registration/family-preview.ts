@@ -4,7 +4,9 @@ export const PREVIEW_FAMILY_EMAIL = 'famille-demo@example.test';
 export function familyPreviewEnabled(config: Pick<ConfigService, 'get'>): boolean {
   return (
     config.get('FAMILY_PREVIEW_DEMO_ENABLED') === 'pr42-fictional-only' &&
-    config.get('RENDER_SERVICE_NAME') === 'al-pr42-api' &&
+    (config.get('RENDER_SERVICE_NAME') === 'al-pr42-api' ||
+      (config.get('RENDER_SERVICE_NAME') === 'al-pr42-api-hz8q' &&
+        config.get('RENDER_SERVICE_ID') === 'srv-dc06l5mc6qcc73b9ar00')) &&
     (config.get('RENDER_GIT_BRANCH') === 'feat/family-registration' ||
       (!config.get('RENDER_GIT_BRANCH') &&
         config.get('FAMILY_PREVIEW_IMAGE_ENABLED') === 'pr42-prebuilt-only')) &&

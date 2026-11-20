@@ -70,3 +70,17 @@ it('allows the exact isolated image service with a separate explicit opt-in, nev
     false,
   );
 });
+
+it('accepts only the verified second-account unique name with its exact service ID', () => {
+  const image = {
+    ...valid,
+    RENDER_GIT_BRANCH: '',
+    FAMILY_PREVIEW_IMAGE_ENABLED: 'pr42-prebuilt-only',
+    RENDER_SERVICE_NAME: 'al-pr42-api-hz8q',
+    RENDER_SERVICE_ID: 'srv-dc06l5mc6qcc73b9ar00',
+    RENDER_EXTERNAL_HOSTNAME: 'al-pr42-api-hz8q.onrender.com',
+  };
+  expect(familyPreviewEnabled(config(image))).toBe(true);
+  expect(familyPreviewEnabled(config({ ...image, RENDER_SERVICE_ID: 'other' }))).toBe(false);
+  expect(familyPreviewEnabled(config({ ...image, RENDER_GIT_BRANCH: 'main' }))).toBe(false);
+});

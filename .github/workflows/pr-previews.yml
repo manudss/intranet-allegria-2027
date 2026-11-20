@@ -41,7 +41,7 @@ concurrency:
 jobs:
   ensure:
     name: Neon branch + preview status comment (no deploy)
-    if: github.event_name == 'pull_request_target' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request_target' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository && !(github.event.pull_request.number == 42 && contains(github.event.pull_request.labels.*.name, 'deploy-preview-lyam'))
     runs-on: ubuntu-latest
     steps:
       - name: Check out the default branch (trusted code)
@@ -94,6 +94,11 @@ jobs:
         with:
           node-version: 24
 
+      - name: Refuse the legacy route for PR42 using the Lyam preview
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/guard-pr42-preview-route.mjs
+
       - name: Safety expiry for the Neon branch (14 days)
         run: echo "EXPIRES_AT=$(date -u --date '+14 days' +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
 
@@ -143,6 +148,11 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: 24
+
+      - name: Refuse the legacy route for PR42 using the Lyam preview
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/guard-pr42-preview-route.mjs
 
       - name: Safety expiry for the Neon branch (14 days)
         run: echo "EXPIRES_AT=$(date -u --date '+14 days' +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
@@ -207,3 +217,21 @@ jobs:
           project_id: ${{ vars.NEON_PROJECT_ID }}
           api_key: ${{ secrets.NEON_API_KEY }}
           branch: preview/pr-${{ github.event.pull_request.number }}
+
+  cleanup-pr42-lyam:
+    name: Delete only the dedicated PR42 Lyam service
+    if: github.event_name == 'pull_request_target' && github.event.action == 'closed' && github.event.pull_request.number == 42 && contains(github.event.pull_request.labels.*.name, 'deploy-preview-lyam') && github.event.pull_request.head.ref == 'feat/family-registration' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Verify the exact free service before deletion
+        env:
+          RENDER_LYAM_PREVIEW_API_KEY: ${{ secrets.RENDER_LYAM_PREVIEW_API_KEY }}
+        run: node scripts/render-pr42-lyam-cleanup.mjs

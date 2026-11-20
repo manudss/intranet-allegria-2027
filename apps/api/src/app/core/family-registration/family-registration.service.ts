@@ -1,3 +1,4 @@
+import { familyPreviewHealthEnabled } from './family-preview';
 import {
   familyPreviewEnabled,
   familyPreviewMailEnabled,
@@ -81,14 +82,18 @@ export class FamilyRegistrationService {
           ? rows[0].rules.previewHealthSamples
           : undefined,
       healthMode:
-        !familyPreviewEnabled(this.config) &&
-        this.config.get('FAMILY_HEALTH_APPROVAL_REFERENCE') &&
+        familyPreviewHealthEnabled(this.config) &&
         Buffer.from(this.config.get<string>('FAMILY_HEALTH_ENCRYPTION_KEY', ''), 'base64')
-          .length === 32 &&
-        this.config.get('FAMILY_HEALTH_DECLARATION_TEXT') &&
-        this.config.get('FAMILY_HEALTH_DECLARATION_VERSION')
-          ? 'DIGITAL_APPROVED'
-          : 'PAPER',
+          .length === 32
+          ? 'DIGITAL_DEMO'
+          : !familyPreviewEnabled(this.config) &&
+              this.config.get('FAMILY_HEALTH_APPROVAL_REFERENCE') &&
+              Buffer.from(this.config.get<string>('FAMILY_HEALTH_ENCRYPTION_KEY', ''), 'base64')
+                .length === 32 &&
+              this.config.get('FAMILY_HEALTH_DECLARATION_TEXT') &&
+              this.config.get('FAMILY_HEALTH_DECLARATION_VERSION')
+            ? 'DIGITAL_APPROVED'
+            : 'PAPER',
     };
   }
   async previewSession() {
@@ -378,7 +383,7 @@ export class FamilyRegistrationService {
         const missing = missingRequirements(y, s.contact, rules);
         if (missing.length)
           throw new BadRequestException({ message: 'Dossier à compléter', missing });
-        if (rules.healthMode === 'DIGITAL_APPROVED') {
+        if (rules.healthMode !== 'PAPER') {
           const [health] = await m.query(
             'SELECT envelope,"signatureValid" FROM registration_health WHERE family_id=$1 AND "youthId"=$2',
             [id, youthId],

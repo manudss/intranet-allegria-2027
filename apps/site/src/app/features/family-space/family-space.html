@@ -4,9 +4,11 @@
     <strong>DÉMONSTRATION PR42 : données fictives partagées entre testeurs</strong>
     <p>
       Ne saisissez aucune information personnelle ou médicale réelle. Les brouillons administratifs
-      sont enregistrés dans la base isolée de cette preview. Les exemples santé sont uniquement
-      consultables, sans collecte. Aucun paiement réel. @if(rules().previewMailEnabled){Les codes de
-      connexion sont envoyés uniquement à l’adresse de test autorisée.} @else{Aucun e-mail réel.}
+      sont enregistrés dans la base isolée de cette preview.
+      @if(rules().healthMode==='DIGITAL_DEMO'){Les fiches santé sont modifiables pour les tests
+      fictifs uniquement.}@else{Les exemples santé sont uniquement consultables, sans collecte.}
+      Aucun paiement réel. @if(rules().previewMailEnabled){Les codes de connexion sont envoyés
+      uniquement à l’adresse de test autorisée.} @else{Aucun e-mail réel.}
     </p>
   </aside>
   }
@@ -353,11 +355,17 @@
     <label for="l-notes">Précisions logistiques, sans donnée de santé</label
     ><textarea id="l-notes" [formField]="editForm.notes" (input)="changed()"></textarea>} @case(3){
     <legend>Santé et adaptations : un circuit confidentiel</legend>
-    @if(rules().healthMode==='DIGITAL_APPROVED' ||
-    rules().previewHealthSamples?.[youth()!.id]){<app-family-health
+    @if(rules().healthMode!=='PAPER' || rules().previewHealthSamples?.[youth()!.id]){
+    @if(rules().healthMode==='DIGITAL_DEMO'){
+    <p class="notice">
+      Démonstration sanitaire : saisissez uniquement des données fictives. Aucune donnée médicale
+      réelle.
+    </p>
+    }
+    <app-family-health
       [youthId]="youth()!.id"
-      [readOnly]="readOnly() || !!rules().previewHealthSamples?.[youth()!.id]"
-      [previewSample]="rules().previewHealthSamples?.[youth()!.id]"
+      [readOnly]="readOnly() || (rules().healthMode==='PAPER' && !!rules().previewHealthSamples?.[youth()!.id])"
+      [previewSample]="rules().healthMode==='PAPER' ? rules().previewHealthSamples?.[youth()!.id] : undefined"
     />}@else{
     <aside>
       <strong>Collecte numérique non activée</strong>

@@ -90,7 +90,7 @@ export interface FamilyRules {
   ageReferenceDate: string;
   minAge: number | null;
   maxAge: number | null;
-  healthMode: 'PAPER' | 'DIGITAL_APPROVED';
+  healthMode: 'PAPER' | 'DIGITAL_APPROVED' | 'DIGITAL_DEMO';
   healthNotice: string;
   templates: FamilyDocumentTemplate[];
   registrationOpen: boolean;

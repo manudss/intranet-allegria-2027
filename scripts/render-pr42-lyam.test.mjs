@@ -57,8 +57,11 @@ test('creates only an isolated free immutable image service and never mutates Ly
   assert.equal(body.image.imagePath, env.PREVIEW_IMAGE);
   assert.equal(body.repo, undefined);
   assert.equal(
-    body.envVars.some((x) => x.key === 'FAMILY_HEALTH_ENCRYPTION_KEY'),
-    false,
+    body.envVars.some(
+      (x) =>
+        x.key === 'FAMILY_HEALTH_ENCRYPTION_KEY' && Buffer.from(x.value, 'base64').length === 32,
+    ),
+    true,
   );
   assert.equal(
     body.envVars.some((x) => x.key === 'FAMILY_MAIL_PROVIDER'),

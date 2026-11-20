@@ -1,4 +1,8 @@
-import { familyPreviewEnabled } from './family-preview';
+import {
+  familyPreviewEnabled,
+  familyPreviewHealthEnabled,
+  PREVIEW_FAMILY_EMAIL,
+} from './family-preview';
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
@@ -35,7 +39,12 @@ export class RegistrationHealthService {
     private readonly families: FamilyRegistrationService,
   ) {}
   enabled() {
-    if (familyPreviewEnabled(this.config)) return false;
+    if (familyPreviewEnabled(this.config))
+      return (
+        familyPreviewHealthEnabled(this.config) &&
+        Buffer.from(this.config.get<string>('FAMILY_HEALTH_ENCRYPTION_KEY', ''), 'base64')
+          .length === 32
+      );
     return (
       this.config.get('FAMILY_HEALTH_APPROVAL_REFERENCE') &&
       this.config.get('FAMILY_HEALTH_ENCRYPTION_KEY') &&
@@ -46,8 +55,12 @@ export class RegistrationHealthService {
   declaration() {
     this.key();
     return {
-      version: this.config.get<string>('FAMILY_HEALTH_DECLARATION_VERSION'),
-      text: this.config.get<string>('FAMILY_HEALTH_DECLARATION_TEXT'),
+      version: familyPreviewHealthEnabled(this.config)
+        ? 'demo-fiction-1'
+        : this.config.get<string>('FAMILY_HEALTH_DECLARATION_VERSION'),
+      text: familyPreviewHealthEnabled(this.config)
+        ? 'DÉMONSTRATION : données fictives uniquement. Cette attestation de test ne vaut ni collecte qualifiée ni prise en charge réelle.'
+        : this.config.get<string>('FAMILY_HEALTH_DECLARATION_TEXT'),
     };
   }
   private key() {
@@ -66,7 +79,10 @@ export class RegistrationHealthService {
       'SELECT envelope,"signatureValid" FROM registration_health WHERE family_id=$1 AND "youthId"=$2',
       [familyId, youthId],
     );
-    if (!row) return structuredClone(EMPTY_HEALTH);
+    if (!row) {
+      const sample = await this.demoSample(familyId, youthId);
+      return sample || structuredClone(EMPTY_HEALTH);
+    }
     const data = unseal(row.envelope, this.key(), familyId + ':' + youthId);
     if (!row.signatureValid) {
       data.signature = null;
@@ -191,8 +207,8 @@ export class RegistrationHealthService {
         answers: h.answers,
         presence: h.presence || {},
         foodAllergens: h.foodAllergens,
-        declarationVersion: this.config.get('FAMILY_HEALTH_DECLARATION_VERSION'),
-        declaration: this.config.get('FAMILY_HEALTH_DECLARATION_TEXT'),
+        declarationVersion: this.declaration().version,
+        declaration: this.declaration().text,
       });
       h.signature = {
         name: String(p.name).trim(),
@@ -217,6 +233,15 @@ export class RegistrationHealthService {
       return h;
     });
   }
+  private async demoSample(familyId: string, youthId: string) {
+    if (!familyPreviewHealthEnabled(this.config)) return null;
+    const family = await this.families.get(familyId);
+    if (family.email !== PREVIEW_FAMILY_EMAIL) return null;
+    const rules = await this.families.rules();
+    return rules.previewHealthSamples?.[youthId]
+      ? structuredClone(rules.previewHealthSamples[youthId])
+      : null;
+  }
   async catering() {
     const key = this.key();
     const rows = await this.db.query(
@@ -238,6 +263,26 @@ export class RegistrationHealthService {
     const rows = await this.db.query(
       `SELECT f.id,f.dossier,h."youthId",true AS "signatureValid",h."submittedAt" AS "updatedAt" FROM registration_health_submissions h JOIN registration_families f ON f.id=h.family_id ORDER BY h."submittedAt" DESC`,
     );
+    if (familyPreviewHealthEnabled(this.config)) {
+      const all: FamilySpace[] = await this.families.list();
+      for (const f of all.filter((f) => f.email === PREVIEW_FAMILY_EMAIL)) {
+        for (const y of f.youths.filter((y) => y.state !== 'DRAFT')) {
+          if (
+            !rows.some(
+              (r: { id: string; youthId: string }) => r.id === f.id && r.youthId === y.id,
+            ) &&
+            (await this.demoSample(f.id, y.id))
+          )
+            rows.push({
+              id: f.id,
+              dossier: f,
+              youthId: y.id,
+              signatureValid: !!(await this.demoSample(f.id, y.id))?.signature,
+              updatedAt: y.submittedAt || '',
+            });
+        }
+      }
+    }
     return rows.flatMap(
       (r: {
         id: string;
@@ -271,8 +316,11 @@ export class RegistrationHealthService {
       'SELECT envelope FROM registration_health_submissions WHERE family_id=$1 AND "youthId"=$2',
       [family, youth],
     );
-    if (!row) throw new BadRequestException('Aucune fiche sanitaire transmise');
-    const data = unseal(row.envelope, this.key(), family + ':' + youth);
+    this.key();
+    const data = row
+      ? unseal(row.envelope, this.key(), family + ':' + youth)
+      : await this.demoSample(family, youth);
+    if (!data) throw new BadRequestException('Aucune fiche sanitaire transmise');
     const snapshot = data.signedPayload ? JSON.parse(data.signedPayload) : null;
     await this.db.query(
       `INSERT INTO registration_audit(family_id,"youthId",action,actor) VALUES($1,$2,'HEALTH_READ',$3)`,

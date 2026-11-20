@@ -55,6 +55,7 @@ export async function deploy(e, fetcher = fetch) {
     { key: 'DATABASE_URL_DIRECT', value: e.PREVIEW_DB_URL_DIRECT },
     { key: 'DB_SSL', value: 'true' },
     { key: 'FAMILY_PREVIEW_DEMO_ENABLED', value: 'pr42-fictional-only' },
+    { key: 'FAMILY_PREVIEW_HEALTH_ENABLED', value: 'fictional-health-only' },
     { key: 'FAMILY_PREVIEW_IMAGE_ENABLED', value: 'pr42-prebuilt-only' },
     { key: 'FAMILY_PREVIEW_MAIL_ENABLED', value: 'owner-only-test' },
     { key: 'FAMILY_PREVIEW_MAIL_TO', value: 'emmanueldesaintsteban@gmail.com' },
@@ -66,7 +67,11 @@ export async function deploy(e, fetcher = fetch) {
       ownerId: OWNER,
       autoDeployTrigger: 'off',
       image: { ownerId: OWNER, imagePath: e.PREVIEW_IMAGE },
-      envVars: [...env, { key: 'JWT_SECRET', value: randomBytes(48).toString('hex') }],
+      envVars: [
+        ...env,
+        { key: 'FAMILY_HEALTH_ENCRYPTION_KEY', value: randomBytes(32).toString('base64') },
+        { key: 'JWT_SECRET', value: randomBytes(48).toString('hex') },
+      ],
       serviceDetails: {
         runtime: 'image',
         plan: 'free',
@@ -77,6 +82,11 @@ export async function deploy(e, fetcher = fetch) {
     });
     service = response.service ?? response;
   } else {
+    const current = await api('GET', `/services/${service.id}/env-vars`);
+    if (!current.some((x) => (x.envVar ?? x).key === 'FAMILY_HEALTH_ENCRYPTION_KEY'))
+      await api('PUT', `/services/${service.id}/env-vars/FAMILY_HEALTH_ENCRYPTION_KEY`, {
+        value: randomBytes(32).toString('base64'),
+      });
     for (const { key, value } of env)
       await api('PUT', `/services/${service.id}/env-vars/${key}`, { value });
     // Changing the immutable image requires an explicit deployment, never a source build.

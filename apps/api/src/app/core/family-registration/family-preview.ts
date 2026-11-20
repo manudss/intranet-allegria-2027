@@ -30,3 +30,11 @@ export function familyPreviewRecipientAllowed(
 ): boolean {
   return familyPreviewMailEnabled(config) && email === config.get('FAMILY_PREVIEW_MAIL_TO');
 }
+
+/** Demo health is never the production approval circuit. */
+export function familyPreviewHealthEnabled(config: Pick<ConfigService, 'get'>): boolean {
+  return (
+    familyPreviewEnabled(config) &&
+    config.get('FAMILY_PREVIEW_HEALTH_ENABLED') === 'fictional-health-only'
+  );
+}

@@ -134,7 +134,7 @@
     }
   </div>
   <button class="secondary wide" type="button" (click)="addYouth()" [disabled]="busy()">
-    + Ajouter un autre jeune
+    {{space()!.youths.length ? '+ Ajouter un autre jeune' : '+ Ajouter mon premier jeune'}}
   </button>
   <p class="help">
     Seules les coordonnées communes sont réutilisées. La santé, les pièces et les signatures ne sont

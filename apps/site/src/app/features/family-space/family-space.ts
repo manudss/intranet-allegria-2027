@@ -84,7 +84,8 @@ export class FamilySpacePage implements OnInit, OnDestroy {
   private focusTitle() {
     setTimeout(() => {
       const heading = this.host?.nativeElement.querySelector<HTMLElement>('h1');
-      heading?.focus();
+      heading?.focus({ preventScroll: true });
+      heading?.scrollIntoView({ behavior: 'instant', block: 'start' });
     }, 0);
   }
   protected readonly space = signal<FamilySpace | null>(null);

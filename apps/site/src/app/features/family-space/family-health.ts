@@ -410,7 +410,11 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
   protected async go(page: number) {
     if (!(await this.flush())) return;
     this.page.set(page);
-    setTimeout(() => this.host?.nativeElement.querySelector<HTMLElement>('h2')?.focus(), 0);
+    setTimeout(() => {
+      const heading = this.host?.nativeElement.querySelector<HTMLElement>('h2');
+      heading?.focus({ preventScroll: true });
+      heading?.scrollIntoView({ behavior: 'instant', block: 'start' });
+    }, 0);
     if (!this.readOnly()) this.changed();
   }
   protected async sign() {

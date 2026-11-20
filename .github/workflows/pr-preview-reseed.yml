@@ -25,7 +25,7 @@ concurrency:
 jobs:
   reseed:
     name: Migrate and reseed the PR preview database
-    if: github.event.label.name == 'reseed-preview' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event.label.name == 'reseed-preview' && github.event.pull_request.head.repo.full_name == github.repository && !(github.event.pull_request.number == 42 && contains(github.event.pull_request.labels.*.name, 'deploy-preview-lyam'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

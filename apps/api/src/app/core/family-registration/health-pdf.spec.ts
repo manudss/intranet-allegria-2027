@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
 import { writeFile } from 'node:fs/promises';
+import { digest } from './family-registration.service';
 import { healthPdf } from './health-pdf';
 import { newYouth, EMPTY_CONTACT, EMPTY_HEALTH, HEALTH_FIELDS } from '@mej-allegria/shared';
 describe('Health source model and complete annex', () => {
@@ -53,7 +54,34 @@ describe('Health source model and complete annex', () => {
     );
     const doc = await PDFDocument.load(bytes);
     expect(doc.getPageCount()).toBeGreaterThan(5);
-    if (process.env.WRITE_HEALTH_SAMPLE === 'true')
+    if (process.env.WRITE_HEALTH_SAMPLE === 'true') {
       await writeFile('/downloads/allegria-health-fiction.pdf', bytes);
+      const payload = JSON.stringify({
+        identity: y.identity,
+        contact: f.contact,
+        answers: h.answers,
+        foodAllergens: h.foodAllergens,
+        declaration: 'Attestation FICTIVE de test, aucun dossier réel.',
+      });
+      const signed = {
+        ...h,
+        signedPayload: payload,
+        signature: {
+          name: 'Parent FICTIF',
+          capacity: 'LEGAL',
+          at: '2026-11-20T12:00:00Z',
+          digest: digest(payload),
+        },
+      };
+      await writeFile(
+        '/downloads/allegria-health-signed-fiction.pdf',
+        await healthPdf(
+          f,
+          { ...y, identity: { ...y.identity, firstName: 'NOM MODIFIE APRES SIGNATURE' } },
+          signed,
+          'Texte modifié non applicable',
+        ),
+      );
+    }
   });
 });

@@ -77,6 +77,7 @@ export class Layout {
       icon: '@tui.users',
       items: [
         { label: 'Participants', path: '/participants', icon: '@tui.users' },
+        {label:'Dossiers sanitaires',path:'/dossiers-sanitaires',icon:'@tui.heart-pulse'},
         { label: 'Inscriptions familles', path: '/inscriptions-familles', icon: '@tui.clipboard-list' },
         { label: 'Équipes rassemblement', path: '/equipes', icon: '@tui.users-round' },
         { label: 'Répartition jeunes', path: '/equipes/repartition', icon: '@tui.shuffle' },

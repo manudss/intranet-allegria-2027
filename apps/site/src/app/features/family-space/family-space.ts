@@ -113,13 +113,33 @@ export class FamilySpacePage implements OnInit, OnDestroy {
   private dirty = false;
   private generation = 0;
   private readonly beforeUnload = (event: BeforeUnloadEvent) => {
-    if (this.dirty) {
+    if (this.dirty || this.healthEditor()?.hasUnsaved()) {
       event.preventDefault();
       event.returnValue = '';
     }
   };
   async ngOnInit() {
     if (typeof window === 'undefined') return;
+    // Public static site delegates the private portal to the API's same-origin host.
+    if (!window.location.pathname.startsWith('/familles/')) {
+      try {
+        const response = await fetch(new URL('app-config.json', document.baseURI), {
+          cache: 'no-store',
+        });
+        if (response.ok) {
+          const config = await response.json();
+          if (config.apiBaseUrl) {
+            const target = new URL('/familles/espace-famille', config.apiBaseUrl);
+            if (target.origin !== window.location.origin && target.protocol === 'https:') {
+              window.location.replace(target.href);
+              return;
+            }
+          }
+        }
+      } catch {
+        /* Local same-origin builds need no external configuration. */
+      }
+    }
     window.addEventListener('beforeunload', this.beforeUnload);
     try {
       this.rules.set(
@@ -176,7 +196,7 @@ export class FamilySpacePage implements OnInit, OnDestroy {
     this.contactModel.set({ ...s.contact });
   }
   protected async logout() {
-    if (this.dirty) {
+    if (!(await this.flush())) {
       this.error.set('Sauvegardez votre saisie avant de vous déconnecter.');
       return;
     }
@@ -202,6 +222,11 @@ export class FamilySpacePage implements OnInit, OnDestroy {
       this.error.set('Sauvegardez cette page avant de changer de dossier.');
       return;
     }
+    this.contactModel.set({
+      ...(!['DRAFT', 'CORRECTION'].includes(y.state) && y.contactAtSubmission
+        ? y.contactAtSubmission
+        : this.space()!.contact),
+    });
     this.selected.set(y.id);
     this.page.set(y.currentPage);
     this.editModel.set({ ...y.identity, ...y.logistics });
@@ -217,6 +242,7 @@ export class FamilySpacePage implements OnInit, OnDestroy {
     if (await this.flush()) this.selected.set('');
   }
   protected changed() {
+    this.signatureModel.update((m) => ({ ...m, accepted: false, finalAccepted: false }));
     this.generation++;
     this.dirty = true;
     this.status.set('Modifications en attente de sauvegarde…');
@@ -356,6 +382,7 @@ export class FamilySpacePage implements OnInit, OnDestroy {
           }),
         ),
       );
+      this.signatureModel.update((m) => ({ ...m, accepted: false, finalAccepted: false }));
       this.status.set('Attestation enregistrée pour ce jeune et cette version du document.');
     });
   }

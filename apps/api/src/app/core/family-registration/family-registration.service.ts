@@ -67,7 +67,8 @@ export class FamilyRegistrationService {
       ...rows[0]?.rules,
       healthMode:
         this.config.get('FAMILY_HEALTH_APPROVAL_REFERENCE') &&
-        this.config.get('FAMILY_HEALTH_ENCRYPTION_KEY') &&
+        Buffer.from(this.config.get<string>('FAMILY_HEALTH_ENCRYPTION_KEY', ''), 'base64')
+          .length === 32 &&
         this.config.get('FAMILY_HEALTH_DECLARATION_TEXT') &&
         this.config.get('FAMILY_HEALTH_DECLARATION_VERSION')
           ? 'DIGITAL_APPROVED'
@@ -234,19 +235,16 @@ export class FamilyRegistrationService {
     const contact = strings(raw, EMPTY_CONTACT) as FamilyContact;
     return this.mutate(id, revision, 'CONTACT_SAVED', async (s, m) => {
       if (JSON.stringify(s.contact) === JSON.stringify(contact)) return;
-      if (s.youths.some((y) => !['DRAFT', 'CORRECTION'].includes(y.state)))
-        throw new ForbiddenException(
-          'Des dossiers sont déjà envoyés : contactez l’organisation pour corriger les contacts communs.',
+      for (const y of s.youths.filter((y) => ['DRAFT', 'CORRECTION'].includes(y.state))) {
+        y.signatures = y.signatures.map((a) => ({
+          ...a,
+          withdrawnAt: a.withdrawnAt || new Date().toISOString(),
+        }));
+        await m.query(
+          'UPDATE registration_health SET "signatureValid"=false WHERE family_id=$1 AND "youthId"=$2',
+          [id, y.id],
         );
-      if (JSON.stringify(s.contact) !== JSON.stringify(contact))
-        for (const y of s.youths)
-          y.signatures = y.signatures.map((a) => ({
-            ...a,
-            withdrawnAt: a.withdrawnAt || new Date().toISOString(),
-          }));
-      await m.query('UPDATE registration_health SET "signatureValid"=false WHERE family_id=$1', [
-        id,
-      ]);
+      }
       s.contact = contact;
     });
   }
@@ -368,11 +366,15 @@ export class FamilyRegistrationService {
           throw new BadRequestException({ message: 'Dossier à compléter', missing });
         if (rules.healthMode === 'DIGITAL_APPROVED') {
           const [health] = await m.query(
-            'SELECT "signatureValid" FROM registration_health WHERE family_id=$1 AND "youthId"=$2',
+            'SELECT envelope,"signatureValid" FROM registration_health WHERE family_id=$1 AND "youthId"=$2',
             [id, youthId],
           );
           if (!health?.signatureValid)
             throw new BadRequestException('Relisez et attestez la fiche sanitaire avant envoi.');
+          await m.query(
+            'INSERT INTO registration_health_submissions(family_id,"youthId",envelope) VALUES($1,$2,$3) ON CONFLICT(family_id,"youthId") DO UPDATE SET envelope=excluded.envelope,"submittedAt"=now()',
+            [id, youthId, health.envelope],
+          );
         }
         const repo = m.getRepository(Participant);
         const participant = await repo.save(
@@ -395,6 +397,7 @@ export class FamilyRegistrationService {
           }),
         );
         y.participantId = participant.id;
+        y.contactAtSubmission = structuredClone(s.contact);
         y.state = 'SUBMITTED';
         y.submittedAt = new Date().toISOString();
       },
@@ -434,10 +437,13 @@ export class FamilyRegistrationService {
         if (y.state === 'DRAFT') throw new BadRequestException('Dossier non envoyé');
         y.state = state as YouthDossier['state'];
         y.correction = typeof reason === 'string' ? reason.slice(0, 500) : '';
-        if (y.participantId && state === 'CONFIRMED')
-          await m
-            .getRepository(Participant)
-            .update(y.participantId, { status: ParticipantRegistrationStatus.CONFIRMED });
+        if (y.participantId)
+          await m.getRepository(Participant).update(y.participantId, {
+            status:
+              state === 'CONFIRMED'
+                ? ParticipantRegistrationStatus.CONFIRMED
+                : ParticipantRegistrationStatus.PENDING,
+          });
       },
       youthId,
       actor,

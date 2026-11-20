@@ -1,13 +1,16 @@
+import { FamilyRulesEditor } from './family-rules-editor';
+import { StaffFamilyDocuments } from './staff-documents';
+import { DIOCESES } from '@mej-allegria/shared';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { form, FormField } from '@angular/forms/signals';
 import { firstValueFrom } from 'rxjs';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { FamilyRegistrationsApiService } from '../../services/api.services';
 import { AuthService } from '../../core/auth.service';
-import type { FamilySpace, FamilyRules } from '../../models/models';
+import type { FamilySpace } from '../../models/models';
 @Component({
   selector: 'app-family-registrations',
-  imports: [...SHARED_IMPORTS, FormField],
+  imports: [...SHARED_IMPORTS, FormField, StaffFamilyDocuments, FamilyRulesEditor],
   template: `
     <app-page-layout
       title="Inscriptions des familles"
@@ -34,26 +37,31 @@ import type { FamilySpace, FamilyRules } from '../../models/models';
           <article class="dossier">
             <h2>{{ row.youth.identity.firstName }} {{ row.youth.identity.lastName }}</h2>
             <p>
-              <span tuiBadge>{{ row.youth.state }}</span> · {{ row.youth.identity.dioceseId }}
+              <span tuiBadge>{{ stateLabels[row.youth.state] || row.youth.state }}</span> ·
+              {{ dioceseName(row.youth.identity.dioceseId) }}
             </p>
             <p>{{ row.family.contact.name }} · {{ row.family.email }}</p>
             <p>
               {{ row.youth.signatures.length }} attestation(s) · Simulation :
-              {{ row.youth.simulation }}
+              {{ simulationLabels[row.youth.simulation] || row.youth.simulation }}
             </p>
             @if (row.youth.correction) {
               <p>Retour : {{ row.youth.correction }}</p>
             }
-            <details>
+            <details (toggle)="openDossier.set($any($event.target).open ? row.youth.id : null)">
               <summary>Voir le dossier administratif</summary>
               <dl>
                 <dt>Naissance</dt>
                 <dd>{{ row.youth.identity.dateOfBirth }}</dd>
                 <dt>Responsable</dt>
-                <dd>{{ row.family.contact.name }} · {{ row.family.contact.phone }}</dd>
+                <dd>
+                  {{ (row.youth.contactAtSubmission || row.family.contact).name }} ·
+                  {{ (row.youth.contactAtSubmission || row.family.contact).phone }}
+                </dd>
                 <dt>Contact d'urgence</dt>
                 <dd>
-                  {{ row.family.contact.emergencyName }} · {{ row.family.contact.emergencyPhone }}
+                  {{ (row.youth.contactAtSubmission || row.family.contact).emergencyName }} ·
+                  {{ (row.youth.contactAtSubmission || row.family.contact).emergencyPhone }}
                 </dd>
                 <dt>Participation</dt>
                 <dd>{{ row.youth.logistics.presence }}</dd>
@@ -62,6 +70,9 @@ import type { FamilySpace, FamilyRules } from '../../models/models';
                   {{ row.youth.logistics.transport }} · {{ row.youth.logistics.accommodation }}
                 </dd>
               </dl>
+              @if (openDossier() === row.youth.id) {
+                <app-staff-family-documents [family]="row.family.id" [youth]="row.youth.id" />
+              }
             </details>
             @if (row.youth.state !== 'DRAFT') {
               <button
@@ -92,8 +103,10 @@ import type { FamilySpace, FamilyRules } from '../../models/models';
             ><label tuiLabel for="review-reason">Motif ou précision administrative</label
             ><textarea
               tuiTextarea
+              [min]="4"
               id="review-reason"
-              [formField]="$any(reviewForm.reason)"
+              [ngModel]="reviewModel().reason"
+              (ngModelChange)="reviewModel.set({ reason: $event })"
             ></textarea></tui-textfield
           ><button tuiButton appearance="secondary" (click)="review('CORRECTION')">
             Demander une correction</button
@@ -116,15 +129,7 @@ import type { FamilySpace, FamilyRules } from '../../models/models';
             santé reste verrouillé tant que le circuit et les prérequis de déploiement ne sont pas
             validés.
           </p>
-          <tui-textfield
-            ><label tuiLabel for="rules-json">Règles et modèles (JSON)</label
-            ><textarea
-              tuiTextarea
-              id="rules-json"
-              [value]="ruleText()"
-              (input)="ruleText.set($any($event.target).value)"
-            ></textarea></tui-textfield
-          ><button tuiButton (click)="configure()">Enregistrer les règles et versions</button>
+          <app-family-rules-editor />
         </details>
       }
     </app-page-layout>
@@ -169,12 +174,31 @@ import type { FamilySpace, FamilyRules } from '../../models/models';
   ],
 })
 export class FamilyRegistrationsPage implements OnInit {
+  protected openDossier = signal<string | null>(null);
+  protected stateLabels: Record<string, string> = {
+    DRAFT: 'À compléter',
+    SUBMITTED: 'En vérification',
+    CORRECTION: 'Correction demandée',
+    VALIDATED: 'Dossier validé',
+    CONFIRMED: 'Participation confirmée',
+    REFUSED: 'Participation refusée',
+    CANCELLED: 'Annulée',
+  };
+  protected simulationLabels: Record<string, string> = {
+    NOT_TESTED: 'Non testée',
+    SUCCESS: 'Réussie, aucun paiement',
+    FAILURE: 'Échec simulé',
+    CANCELLED: 'Annulation simulée',
+  };
+  protected dioceseName(id: string) {
+    return DIOCESES.find((d) => d.id === id)?.name || id;
+  }
   private api = inject(FamilyRegistrationsApiService);
   protected auth = inject(AuthService);
   protected rows = signal<FamilySpace[]>([]);
   protected query = signal('');
   protected error = signal('');
-  protected ruleText = signal('');
+
   protected reviewTarget = signal<{ family: FamilySpace; youth: string } | null>(null);
   protected reviewModel = signal({ reason: '' });
   protected reviewForm = form(this.reviewModel);
@@ -189,12 +213,6 @@ export class FamilyRegistrationsPage implements OnInit {
   );
   async ngOnInit() {
     await this.load();
-    if (this.auth.hasRole('ADMIN'))
-      try {
-        this.ruleText.set(JSON.stringify(await firstValueFrom(this.api.rules()), null, 2));
-      } catch {
-        this.error.set('Lecture des règles impossible.');
-      }
   }
   protected async load() {
     try {
@@ -219,15 +237,6 @@ export class FamilyRegistrationsPage implements OnInit {
       await this.load();
     } catch {
       this.error.set('Décision non enregistrée. Actualisez et vérifiez le motif.');
-    }
-  }
-  protected async configure() {
-    try {
-      const rules = JSON.parse(this.ruleText()) as FamilyRules;
-      this.ruleText.set(JSON.stringify(await firstValueFrom(this.api.configure(rules)), null, 2));
-      this.error.set('');
-    } catch {
-      this.error.set('Règles refusées. Vérifiez le format, les versions et la date de référence.');
     }
   }
 }

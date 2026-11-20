@@ -1,4 +1,5 @@
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { registrationFont } from './pdf-font';
+import { PDFDocument, rgb } from 'pdf-lib';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { HEALTH_FORM_PAGES } from '@mej-allegria/shared';
@@ -33,8 +34,7 @@ export async function healthPdf(
   }
   if (!source) throw new Error('Health source model unavailable');
   const pdf = await PDFDocument.load(source),
-    font = await pdf.embedFont(StandardFonts.Helvetica);
-  const safe = (s: string) => s.replace(/[\u2018\u2019]/g, "'").replace(/[^\u0020-\u00ff]/g, ' ');
+    { font, safe } = await registrationFont(pdf);
   function text(page: number, x: number, y: number, value: string, max = 68) {
     pdf
       .getPage(page)
@@ -98,17 +98,48 @@ export async function healthPdf(
   text(1, 455, 482, 'Voir justificatif', 22);
   text(
     1,
-    40,
-    210,
+    95,
+    250,
     'Vaccinations déclarées : voir annexe et justificatif ; vérification réservée au référent santé.',
     110,
   );
-  text(2, 285, 720, 'Besoins et adaptations : voir réponses intégrales en annexe.', 65);
+  const adaptationRows = [
+    ['communication', 737],
+    ['communication', 709],
+    ['sleep', 682],
+    ['mobility', 654],
+    ['learning', 627],
+    ['learning', 599],
+    ['mobility', 572],
+    ['sensory', 535],
+    ['sleep', 517],
+    ['other', 489],
+    ['learning', 451],
+    ['mental', 434],
+    ['mental', 407],
+    ['sleep', 379],
+    ['learning', 351],
+    ['learning', 324],
+    ['other', 296],
+  ] as const;
+  for (const [key, y] of adaptationRows)
+    text(
+      2,
+      292,
+      y,
+      `Voir annexe : ${HEALTH_FORM_PAGES[5].fields.find((f) => f[0] === key)?.[1]?.split(':')[0] || key}`,
+      55,
+    );
+  text(2, 255, 215, 'Voir annexe : aisance aquatique', 55);
+  text(2, 255, 195, 'Voir annexe : équipements', 55);
+  text(2, 255, 165, 'Voir annexe : vie quotidienne', 55);
+  text(2, 255, 138, 'Voir annexe : vie quotidienne', 55);
   text(3, 165, 395, h.signature?.name || 'NON SIGNÉ', 50);
   text(3, 145, 320, h.signature?.at?.slice(0, 10) || '', 20);
   text(3, 190, 292, h.signature ? 'Attestation : voir preuve en annexe' : 'Document non signé', 50);
-  text(3, 250, 650, 'Équipements : voir annexe complète.', 55);
-  text(3, 185, 435, 'Peurs et phobies : voir annexe complète.', 70);
+  for (const y of [755, 728, 700, 673, 645])
+    text(3, 250, y, 'Voir annexe : équipements / vie quotidienne.', 55);
+  for (const y of [554, 527, 500, 472, 445]) text(3, 185, y, 'Voir annexe : peurs et phobies.', 70);
   for (let n = 0; n < 4; n++) {
     text(
       n,
@@ -145,6 +176,14 @@ export async function healthPdf(
       'Date : ' + h.signature.at,
       'Empreinte du contenu figé : ' + h.signature.digest,
     );
+  await pdf.attach(
+    Buffer.from(
+      JSON.stringify({ identity: i, contact: c, health: h, declaration }, null, 2),
+      'utf8',
+    ),
+    'fiche-integrale-utf8.json',
+    { mimeType: 'application/json', description: 'Données intégrales et preuve de cette fiche' },
+  );
   const annex = await PDFDocument.load(await registrationPdf(lines));
   for (const p of await pdf.copyPages(annex, annex.getPageIndices())) pdf.addPage(p);
   return pdf.save();

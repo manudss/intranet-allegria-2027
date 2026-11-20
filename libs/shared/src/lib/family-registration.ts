@@ -62,6 +62,7 @@ export interface YouthDossier {
   correction: string;
   submittedAt: string | null;
   participantId: number | null;
+  contactAtSubmission?: FamilyContact;
 }
 export interface FamilySpace {
   id: string;

@@ -241,10 +241,43 @@ export class FamilyRegistrationController {
 @UseGuards(RoleGuard)
 @Roles('ADMIN', 'COORDINATOR')
 export class FamilyRegistrationStaffController {
-  constructor(private readonly service: FamilyRegistrationService) {}
+  constructor(
+    private readonly service: FamilyRegistrationService,
+    private readonly documents: RegistrationDocumentsService,
+  ) {}
   @Get() list() {
     return this.service.list();
   }
+  @Get(':family/youths/:youth/documents') documentsList(
+    @Param('family') family: string,
+    @Param('youth') youth: string,
+  ) {
+    return this.documents.list(family, youth);
+  }
+  @Patch(':family/youths/:youth/documents/:document') reviewDocument(
+    @Param('family') family: string,
+    @Param('youth') youth: string,
+    @Param('document') document: string,
+    @Body() raw: unknown,
+    @Req() r: Request & { user: { email: string } },
+  ) {
+    const p = plainObject(raw);
+    return this.documents.staffReview(family, youth, document, p.status, p.reason, r.user.email);
+  }
+  @Get(':family/youths/:youth/documents/:document') async downloadDocument(
+    @Param('family') family: string,
+    @Param('youth') youth: string,
+    @Param('document') document: string,
+    @Req() r: Request & { user: { email: string } },
+    @Res() res: Response,
+  ) {
+    const d = await this.documents.staffDownload(family, youth, document, r.user.email);
+    res.setHeader('Content-Type', d.mime);
+    res.setHeader('Content-Disposition', 'attachment; filename="piece-administrative"');
+    res.setHeader('Content-Security-Policy', "sandbox; default-src 'none'");
+    res.send(d.content);
+  }
+
   @Get('rules') rules() {
     return this.service.rules();
   }
@@ -270,5 +303,44 @@ export class CateringNeedsController {
   @Get() async list(@Res({ passthrough: true }) res: Response) {
     res.setHeader('Cache-Control', 'no-store');
     return this.health.catering();
+  }
+}
+
+@UseInterceptors(PrivateResponseInterceptor)
+@UseGuards(RoleGuard)
+@Roles('HEALTH')
+@Controller('family-health')
+export class FamilyHealthStaffController {
+  constructor(
+    private readonly health: RegistrationHealthService,
+    private readonly families: FamilyRegistrationService,
+  ) {}
+  @Get() list() {
+    return this.health.staffList();
+  }
+  @Get(':family/youths/:youth') read(
+    @Param('family') family: string,
+    @Param('youth') youth: string,
+    @Req() r: Request & { user: { email: string } },
+  ) {
+    return this.health.staffRead(family, youth, r.user.email);
+  }
+  @Get(':family/youths/:youth/pdf') async pdf(
+    @Param('family') family: string,
+    @Param('youth') youth: string,
+    @Req() r: Request & { user: { email: string } },
+    @Res() res: Response,
+  ) {
+    const data = await this.health.staffRead(family, youth, r.user.email);
+    const f = await this.families.get(family);
+    const bytes = await healthPdf(
+      { ...f, contact: data.contact },
+      this.families.youth(f, youth),
+      data.health,
+      this.health.declaration().text || '',
+    );
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="fiche-sanitaire.pdf"');
+    res.send(Buffer.from(bytes));
   }
 }

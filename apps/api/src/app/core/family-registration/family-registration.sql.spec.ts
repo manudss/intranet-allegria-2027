@@ -3,24 +3,41 @@ import { beforeEach, afterEach, describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { FamilyRegistration1790600000000 } from '../../../database/migrations/1790600000000-FamilyRegistration';
 import { RegistrationHealthService } from './registration-health.service';
+import { RegistrationDocumentsService } from './registration-documents.service';
 import { randomBytes } from 'node:crypto';
 import { FamilyRegistrationService, digest, strings } from './family-registration.service';
-import { EMPTY_CONTACT, DEFAULT_FAMILY_RULES } from '@mej-allegria/shared';
-import type { FamilySpace } from '@mej-allegria/shared';
+import { EMPTY_CONTACT, DEFAULT_FAMILY_RULES, DIOCESES } from '@mej-allegria/shared';
 describe('Family registration SQL, fictitious database only', () => {
-  let pg: PGlite, service: FamilyRegistrationService, health: RegistrationHealthService;
+  let pg: PGlite,
+    service: FamilyRegistrationService,
+    health: RegistrationHealthService,
+    documents: RegistrationDocumentsService;
   beforeEach(async () => {
     pg = new PGlite();
     const query = async (sql: string, params: unknown[] = []) => (await pg.query(sql, params)).rows;
     await new FamilyRegistration1790600000000().up({
       query: async (sql: string) => pg.exec(sql),
     } as never);
+    await pg.exec('CREATE TABLE test_participants(id serial PRIMARY KEY,data jsonb NOT NULL)');
+    const repository = {
+      create: (v: unknown) => v,
+      save: async (v: { id?: number }) => {
+        if (v.id) {
+          await query('UPDATE test_participants SET data=$1 WHERE id=$2', [v, v.id]);
+          return v;
+        }
+        const [r] = await query('INSERT INTO test_participants(data) VALUES($1) RETURNING id', [v]);
+        return { ...v, id: (r as { id: number }).id };
+      },
+      update: async (id: number, v: unknown) =>
+        query('UPDATE test_participants SET data=data||$1::jsonb WHERE id=$2', [v, id]),
+    };
     const db = {
       query,
       transaction: async (fn: (m: unknown) => unknown) => {
         await pg.exec('BEGIN');
         try {
-          const r = await fn({ query });
+          const r = await fn({ query, getRepository: () => repository });
           await pg.exec('COMMIT');
           return r;
         } catch (e) {
@@ -30,6 +47,7 @@ describe('Family registration SQL, fictitious database only', () => {
       },
     };
     service = new FamilyRegistrationService(db as never, { get: () => undefined } as never);
+    documents = new RegistrationDocumentsService(db as never, service);
     const config: Record<string, string> = {
       FAMILY_HEALTH_APPROVAL_REFERENCE: 'TEST-ONLY',
       FAMILY_HEALTH_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
@@ -185,5 +203,136 @@ describe('Family registration SQL, fictitious database only', () => {
     await expect(
       service.configure({ ...DEFAULT_FAMILY_RULES, templates: [template, template] }),
     ).rejects.toThrow();
+  });
+  it('submits once, freezes shared contacts, corrects and resubmits the same participant without duplication', async () => {
+    await service.configure({
+      ...DEFAULT_FAMILY_RULES,
+      registrationOpen: true,
+      ageReferenceDate: '2027-10-30',
+    });
+    const a = await access('submission-fiction@example.test');
+    let s = await service.add(a.familyId, 0);
+    const id = s.youths[0].id;
+    s = await service.saveContact(a.familyId, s.revision, {
+      ...EMPTY_CONTACT,
+      name: 'Parent initial',
+      phone: '0600000000',
+      emergencyName: 'Urgence fictive',
+      emergencyPhone: '0600000001',
+    });
+    s = await service.saveYouth(a.familyId, id, s.revision, {
+      identity: {
+        firstName: 'Camille',
+        lastName: 'FICTIF',
+        dateOfBirth: '2012-05-01',
+        sex: 'FEMALE',
+        mejAgeGroup: 'TA',
+        dioceseId: DIOCESES[0].id,
+        legalCapacity: 'LEGAL',
+      },
+      logistics: { presence: 'FULL' },
+    });
+    s = await service.submit(a.familyId, id, s.revision, true);
+    const participant = s.youths[0].participantId;
+    await expect(service.submit(a.familyId, id, s.revision, true)).rejects.toThrow('lecture seule');
+    s = await service.add(a.familyId, s.revision);
+    s = await service.saveContact(a.familyId, s.revision, { ...s.contact, name: 'Parent actuel' });
+    expect(s.youths[0].contactAtSubmission?.name).toBe('Parent initial');
+    expect(s.contact.name).toBe('Parent actuel');
+    s = await service.review(
+      a.familyId,
+      id,
+      s.revision,
+      'CONFIRMED',
+      'Test fictif',
+      'staff@example.test',
+    );
+    expect((await pg.query('SELECT data FROM test_participants')).rows[0]).toMatchObject({
+      data: { status: 'CONFIRMED', diocese: DIOCESES[0].name },
+    });
+    const documentId = randomUUID();
+    await pg.query(
+      'INSERT INTO registration_documents(id,family_id,"youthId",name,mime,content,digest) VALUES($1,$2,$3,$4,$5,$6,$7)',
+      [
+        documentId,
+        a.familyId,
+        id,
+        'Fictif.pdf',
+        'application/pdf',
+        Buffer.from('%PDF-TEST'),
+        '0'.repeat(64),
+      ],
+    );
+    await documents.staffReview(
+      a.familyId,
+      id,
+      documentId,
+      'CORRECTION',
+      'Préciser les coordonnées',
+      'staff@example.test',
+    );
+    s = await service.get(a.familyId);
+    expect(s.youths[0].state).toBe('CORRECTION');
+    expect((await pg.query('SELECT data FROM test_participants')).rows[0]).toMatchObject({
+      data: { status: 'PENDING' },
+    });
+    s = await service.submit(a.familyId, id, s.revision, true);
+    expect(s.youths[0].participantId).toBe(participant);
+    expect(
+      (await pg.query('SELECT count(*)::int AS n FROM test_participants')).rows[0],
+    ).toMatchObject({ n: 1 });
+    expect((await pg.query('SELECT data FROM test_participants')).rows[0]).toMatchObject({
+      data: { status: 'PENDING' },
+    });
+    const actors = await pg.query(
+      `SELECT actor FROM registration_audit WHERE action='DOCUMENT_REVIEWED'`,
+    );
+    expect(actors.rows[0]).toMatchObject({ actor: 'staff@example.test' });
+  });
+  it('only exposes transmitted signed health versions, not drafts or unsubmitted corrections, and audits every staff read', async () => {
+    const a = await access('private-health-fiction@example.test');
+    const s = await service.add(a.familyId, 0);
+    const id = s.youths[0].id;
+    const saved = await health.save(a.familyId, id, 0, {
+      answers: { foodAllergy: 'Ancienne consigne fictive' },
+      foodAllergens: ['MILK'],
+      page: 6,
+    });
+    const signed = await health.sign(a.familyId, id, saved.revision, {
+      name: 'Parent fictif',
+      capacity: 'LEGAL',
+      accepted: true,
+      version: 'test-v1',
+    });
+    expect(await health.staffList()).toEqual([]);
+    await expect(health.staffRead(a.familyId, id, 'health@example.test')).rejects.toThrow(
+      'non envoyé',
+    );
+    expect((await health.catering()).items).toEqual([]);
+    const [encrypted] = await pg
+      .query('SELECT envelope FROM registration_health WHERE family_id=$1', [a.familyId])
+      .then((r) => r.rows as { envelope: string }[]);
+    await pg.query(
+      'INSERT INTO registration_health_submissions(family_id,"youthId",envelope) VALUES($1,$2,$3)',
+      [a.familyId, id, encrypted.envelope],
+    );
+    const f = await service.get(a.familyId);
+    f.youths[0].state = 'CORRECTION';
+    await pg.query('UPDATE registration_families SET dossier=$1 WHERE id=$2', [f, a.familyId]);
+    await health.save(a.familyId, id, signed.revision, {
+      answers: { foodAllergy: 'Nouveau brouillon secret' },
+      foodAllergens: ['PEANUTS'],
+      page: 3,
+    });
+    const read = await health.staffRead(a.familyId, id, 'health@example.test');
+    expect(read.health.answers.foodAllergy).toBe('Ancienne consigne fictive');
+    expect(JSON.stringify(read)).not.toContain('Nouveau brouillon secret');
+    expect(
+      (
+        await pg.query(
+          `SELECT count(*)::int AS n FROM registration_audit WHERE action='HEALTH_READ' AND actor='health@example.test'`,
+        )
+      ).rows[0],
+    ).toMatchObject({ n: 1 });
   });
 });

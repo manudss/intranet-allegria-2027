@@ -31,7 +31,7 @@ interface Piece {
       @for (p of pieces(); track p.id) {
         <li>
           <a [href]="base() + '/' + p.id">{{ p.name }}</a> ·
-          {{ p.status === 'RECEIVED' ? 'Reçue, à vérifier' : p.status }}
+          {{ statusLabels[p.status] || p.status }}
           @if (p.reason) {
             : {{ p.reason }}
           }
@@ -62,6 +62,11 @@ interface Piece {
 export class FamilyDocuments implements OnInit {
   readonly youthId = input.required<string>();
   private http = inject(HttpClient);
+  protected statusLabels: Record<string, string> = {
+    RECEIVED: 'Reçue, à vérifier',
+    ACCEPTED: 'Acceptée',
+    CORRECTION: 'Correction demandée',
+  };
   protected pieces = signal<Piece[]>([]);
   protected busy = signal(false);
   protected error = signal('');

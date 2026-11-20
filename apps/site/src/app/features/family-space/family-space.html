@@ -145,7 +145,7 @@
   }
   <fieldset
     class="card"
-    [disabled]="busy() || (youth()!.state !== 'DRAFT' && youth()!.state !== 'CORRECTION')"
+    [disabled]="(youth()!.state !== 'DRAFT' && youth()!.state !== 'CORRECTION')"
   >
     @switch(page()){ @case(0){
     <legend>Qui participe ?</legend>

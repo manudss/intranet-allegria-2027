@@ -11,6 +11,7 @@ import {
   FamilyRegistrationController,
   FamilyRegistrationStaffController,
   CateringNeedsController,
+  FamilyHealthStaffController,
 } from './family-registration.controller';
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import {
     FamilyRegistrationController,
     FamilyRegistrationStaffController,
     CateringNeedsController,
+    FamilyHealthStaffController,
   ],
   providers: [FamilyRegistrationService, RegistrationHealthService, RegistrationDocumentsService],
 })

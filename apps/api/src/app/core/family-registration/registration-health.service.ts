@@ -9,7 +9,7 @@ import {
   cateringSummary,
   ageOn,
 } from '@mej-allegria/shared';
-import type { StructuredHealth } from '@mej-allegria/shared';
+import type { StructuredHealth, FamilySpace } from '@mej-allegria/shared';
 import { FamilyRegistrationService, digest, plainObject } from './family-registration.service';
 export function seal(value: unknown, key: Buffer, context: string) {
   const iv = randomBytes(12),
@@ -189,7 +189,7 @@ export class RegistrationHealthService {
   async catering() {
     const key = this.key();
     const rows = await this.db.query(
-      'SELECT family_id,"youthId",envelope FROM registration_health WHERE "signatureValid"=true',
+      `SELECT h.family_id,h."youthId",h.envelope FROM registration_health_submissions h JOIN registration_families f ON f.id=h.family_id WHERE EXISTS(SELECT 1 FROM jsonb_array_elements(f.dossier->'youths') y WHERE y->>'id'=h."youthId"::text AND y->>'state' IN ('SUBMITTED','VALIDATED','CONFIRMED'))`,
     );
     const records = rows
       .map((r: { family_id: string; youthId: string; envelope: string }) =>
@@ -200,6 +200,56 @@ export class RegistrationHealthService {
       notice:
         'Besoins alimentaires agrégés. Aucun nom ni donnée médicale détaillée. Effectifs inférieurs à cinq non affichés. Cette vue ne remplace pas les consignes confidentielles de prise en charge.',
       items: cateringSummary(records),
+    };
+  }
+  async staffList() {
+    this.key();
+    const rows = await this.db.query(
+      `SELECT f.id,f.dossier,h."youthId",true AS "signatureValid",h."submittedAt" AS "updatedAt" FROM registration_health_submissions h JOIN registration_families f ON f.id=h.family_id ORDER BY h."submittedAt" DESC`,
+    );
+    return rows.flatMap(
+      (r: {
+        id: string;
+        dossier: FamilySpace;
+        youthId: string;
+        signatureValid: boolean;
+        updatedAt: string;
+      }) => {
+        const y = r.dossier.youths.find((y) => y.id === r.youthId);
+        return y && !['DRAFT'].includes(y.state)
+          ? [
+              {
+                familyId: r.id,
+                youthId: y.id,
+                name: y.identity.firstName + ' ' + y.identity.lastName,
+                state: y.state,
+                attested: r.signatureValid,
+                updatedAt: r.updatedAt,
+              },
+            ]
+          : [];
+      },
+    );
+  }
+  async staffRead(family: string, youth: string, actor: string) {
+    const f = await this.families.get(family),
+      y = this.families.youth(f, youth);
+    if (y.state === 'DRAFT') throw new ForbiddenException('Dossier non envoyé');
+    const [row] = await this.db.query(
+      'SELECT envelope FROM registration_health_submissions WHERE family_id=$1 AND "youthId"=$2',
+      [family, youth],
+    );
+    if (!row) throw new BadRequestException('Aucune fiche sanitaire transmise');
+    const data = unseal(row.envelope, this.key(), family + ':' + youth);
+    const snapshot = data.signedPayload ? JSON.parse(data.signedPayload) : null;
+    await this.db.query(
+      `INSERT INTO registration_audit(family_id,"youthId",action,actor) VALUES($1,$2,'HEALTH_READ',$3)`,
+      [family, youth, actor],
+    );
+    return {
+      identity: snapshot?.identity || y.identity,
+      contact: snapshot?.contact || y.contactAtSubmission || f.contact,
+      health: data,
     };
   }
 }

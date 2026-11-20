@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  OnDestroy,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { form, FormField } from '@angular/forms/signals';
 import { firstValueFrom } from 'rxjs';
@@ -202,7 +210,7 @@ import type { StructuredHealth } from '@mej-allegria/shared';
     `,
   ],
 })
-export class FamilyHealthPage implements OnInit {
+export class FamilyHealthPage implements OnInit, OnDestroy {
   readonly youthId = input.required<string>();
   private http = inject(HttpClient);
   protected declaration = signal({ text: '', version: '' });
@@ -243,6 +251,12 @@ export class FamilyHealthPage implements OnInit {
       this.fail(e);
     }
   }
+  ngOnDestroy() {
+    clearTimeout(this.timer);
+  }
+  hasUnsaved() {
+    return this.dirty || this.busy();
+  }
   private fail(e: unknown) {
     this.error.set(
       e instanceof HttpErrorResponse && typeof e.error?.message === 'string'
@@ -251,6 +265,7 @@ export class FamilyHealthPage implements OnInit {
     );
   }
   protected changed() {
+    this.model.update((m) => ({ ...m, accepted: false }));
     this.generation++;
     clearTimeout(this.timer);
     this.timer = setTimeout(() => void this.save(), 1000);

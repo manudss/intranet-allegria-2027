@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { newYouth, EMPTY_CONTACT, DEFAULT_FAMILY_RULES } from '@mej-allegria/shared';
+import { newYouth, EMPTY_CONTACT, DEFAULT_FAMILY_RULES, DIOCESES } from '@mej-allegria/shared';
 import { randomUUID } from 'node:crypto';
 import { seedAccessTestkit } from './access-testkit';
 import { fakerFR as faker } from '@faker-js/faker';
@@ -791,11 +791,25 @@ async function run(): Promise<void> {
       ...first.identity,
       firstName: 'Camille',
       lastName: 'Exemple fictif',
-      dioceseId: 'lyon',
+      dioceseId: DIOCESES.find((d) => d.name === 'Lyon')?.id || DIOCESES[0].id,
     };
     second.identity = { ...second.identity, firstName: 'Alexis', lastName: 'Exemple fictif' };
     second.currentPage = 2;
     second.simulation = 'SUCCESS';
+    const transmitted = ['SUBMITTED', 'CORRECTION', 'VALIDATED', 'CONFIRMED', 'REFUSED'] as const;
+    const cases = transmitted.map((state, index) => {
+      const y = newYouth(randomUUID(), 'Lyon');
+      y.identity = {
+        ...first.identity,
+        firstName: ['Louise', 'Gabriel', 'Emma', 'Louis', 'Jade'][index],
+      };
+      y.state = state;
+      y.submittedAt = new Date().toISOString();
+      y.contactAtSubmission = { ...EMPTY_CONTACT, name: 'Parent exemple fictif', city: 'Lyon' };
+      if (state === 'CORRECTION')
+        y.correction = 'Exemple fictif : merci de compléter le téléphone du contact d’urgence.';
+      return y;
+    });
     await dataSource.query('INSERT INTO registration_families(id,email,dossier) VALUES($1,$2,$3)', [
       exampleFamily,
       'famille-demo@example.test',
@@ -803,7 +817,7 @@ async function run(): Promise<void> {
         id: exampleFamily,
         email: 'famille-demo@example.test',
         contact: { ...EMPTY_CONTACT, name: 'Parent exemple fictif', city: 'Lyon' },
-        youths: [first, second],
+        youths: [first, second, ...cases],
         revision: 0,
         updatedAt: new Date().toISOString(),
       },

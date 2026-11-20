@@ -1,16 +1,15 @@
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { registrationFont } from './pdf-font';
+import { PDFDocument, rgb } from 'pdf-lib';
 /** Paginated immutable copy of the complete attested document and its evidence. */
 export async function registrationPdf(lines: string[]): Promise<Uint8Array> {
   const pdf = await PDFDocument.create(),
-    font = await pdf.embedFont(StandardFonts.Helvetica);
+    { font, safe } = await registrationFont(pdf);
   let page = pdf.addPage(),
     y = 800;
-  const safe = (s: string) =>
-    s
-      .replace(/[\u2018\u2019]/g, "'")
-      .replace(/[\u201c\u201d]/g, '"')
-      .replace(/[\u2192]/g, '>')
-      .replace(/[^\u0020-\u00ff\n]/g, ' ');
+  await pdf.attach(Buffer.from(lines.join('\n'), 'utf8'), 'contenu-integral-utf8.txt', {
+    mimeType: 'text/plain',
+    description: 'Contenu intégral UTF-8 sans perte de caractères',
+  });
   for (const line of lines) {
     let remaining = safe(line).replace(/\n/g, ' / ');
     while (remaining.length) {

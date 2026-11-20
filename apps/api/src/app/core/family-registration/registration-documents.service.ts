@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { Participant, ParticipantRegistrationStatus } from '../entities';
 import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { FamilyRegistrationService, digest } from './family-registration.service';
@@ -45,7 +46,9 @@ export class RegistrationDocumentsService {
             ),
           );
       });
-      p.stdin.on('error', () => { /* Process close/error supplies the fail-closed outcome. */ });
+      p.stdin.on('error', () => {
+        /* Process close/error supplies the fail-closed outcome. */
+      });
       p.stdin.end(content);
     });
   }
@@ -58,7 +61,7 @@ export class RegistrationDocumentsService {
       mime =
         b.subarray(0, 5).toString() === '%PDF-'
           ? 'application/pdf'
-          : b[0] === 137 && b.subarray(1, 4).toString() === 'PNG'
+          : b.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
             ? 'image/png'
             : b[0] === 255 && b[1] === 216
               ? 'image/jpeg'
@@ -67,10 +70,26 @@ export class RegistrationDocumentsService {
     await this.scan(b);
     const id = randomUUID(),
       name = file.originalname.replace(/[^\p{L}\p{N} ._-]/gu, '').slice(0, 150) || 'document';
-    await this.db.query(
-      'INSERT INTO registration_documents(id,family_id,"youthId",name,mime,content,digest) VALUES($1,$2,$3,$4,$5,$6,$7)',
-      [id, family, youth, name, mime, b, digest(b)],
-    );
+    await this.db.transaction(async (m) => {
+      const [fresh] = await m.query(
+        'SELECT dossier FROM registration_families WHERE id=$1 FOR UPDATE',
+        [family],
+      );
+      this.families.editable(this.families.youth(fresh.dossier, youth));
+      const [{ n }] = await m.query(
+        'SELECT count(*)::int AS n FROM registration_documents WHERE family_id=$1 AND "youthId"=$2',
+        [family, youth],
+      );
+      if (n >= 20)
+        throw new BadRequestException(
+          'Vingt pièces maximum par jeune. Contactez l’organisation avant un nouveau dépôt.',
+        );
+
+      await m.query(
+        'INSERT INTO registration_documents(id,family_id,"youthId",name,mime,content,digest) VALUES($1,$2,$3,$4,$5,$6,$7)',
+        [id, family, youth, name, mime, b, digest(b)],
+      );
+    });
     return this.list(family, youth);
   }
   async download(family: string, youth: string, id: string) {
@@ -80,6 +99,63 @@ export class RegistrationDocumentsService {
       [id, family, youth],
     );
     if (!d) throw new BadRequestException('Pièce introuvable');
+    return d;
+  }
+  async staffReview(
+    family: string,
+    youth: string,
+    id: string,
+    status: unknown,
+    reason: unknown,
+    actor: string,
+  ) {
+    if (
+      !['RECEIVED', 'ACCEPTED', 'CORRECTION'].includes(String(status)) ||
+      typeof reason !== 'string' ||
+      reason.length > 500 ||
+      (status === 'CORRECTION' && !reason.trim())
+    )
+      throw new BadRequestException('Statut et motif administratif requis');
+    await this.db.transaction(async (m) => {
+      const [f] = await m.query(
+        'SELECT dossier FROM registration_families WHERE id=$1 FOR UPDATE',
+        [family],
+      );
+      if (!f) throw new BadRequestException('Dossier introuvable');
+      const y = this.families.youth(f.dossier, youth);
+      const [doc] = await m.query(
+        'UPDATE registration_documents SET status=$1,reason=$2 WHERE id=$3 AND family_id=$4 AND "youthId"=$5 RETURNING id',
+        [status, reason, id, family, youth],
+      );
+      if (!doc) throw new BadRequestException('Pièce introuvable');
+      if (status === 'CORRECTION') {
+        y.state = 'CORRECTION';
+        if (y.participantId)
+          await m
+            .getRepository(Participant)
+            .update(y.participantId, { status: ParticipantRegistrationStatus.PENDING });
+        y.correction = 'Pièce administrative à corriger : ' + reason;
+        f.dossier.revision++;
+        f.dossier.updatedAt = new Date().toISOString();
+        await m.query('UPDATE registration_families SET dossier=$1,"updatedAt"=now() WHERE id=$2', [
+          f.dossier,
+          family,
+        ]);
+      }
+
+      await m.query(
+        `INSERT INTO registration_audit(family_id,"youthId",action,actor) VALUES($1,$2,'DOCUMENT_REVIEWED',$3)`,
+        [family, youth, actor],
+      );
+    });
+    return this.list(family, youth);
+  }
+  async staffDownload(family: string, youth: string, id: string, actor: string) {
+    const d = await this.download(family, youth, id);
+    await this.db.query(
+      `INSERT INTO registration_audit(family_id,"youthId",action,actor) VALUES($1,$2,'DOCUMENT_READ',$3)`,
+      [family, youth, actor],
+    );
     return d;
   }
 }

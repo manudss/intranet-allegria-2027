@@ -1,5 +1,6 @@
 import { PGlite } from '@electric-sql/pglite';
-import { beforeEach, afterEach, describe, expect, it } from 'vitest';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import { FamilyRegistration1790600000000 } from '../../../database/migrations/1790600000000-FamilyRegistration';
 import { RegistrationHealthService } from './registration-health.service';
@@ -61,6 +62,7 @@ describe('Family registration SQL, fictitious database only', () => {
     );
   });
   afterEach(async () => {
+    vi.unstubAllGlobals();
     await pg.close();
   });
   async function access(email: string) {
@@ -139,6 +141,54 @@ describe('Family registration SQL, fictitious database only', () => {
   it('does not send or expose access codes when mail is not configured', async () => {
     await expect(service.challenge('a@example.fr')).rejects.toThrow('pas encore configuré');
     expect((await pg.query('SELECT * FROM registration_challenges')).rows).toHaveLength(0);
+  });
+  it.each([429, 500])(
+    'removes the challenge after a provider HTTP%s without leaking provider details',
+    async (status) => {
+      const query = async (sql: string, params: unknown[] = []) =>
+        (await pg.query(sql, params)).rows;
+      const mail = new FamilyRegistrationService(
+        { query } as never,
+        new ConfigService({
+          FAMILY_MAIL_PROVIDER: 'resend',
+          FAMILY_MAIL_FROM: 'fiction@example.test',
+          FAMILY_RESEND_API_KEY: 'test-only',
+        }),
+      );
+      const fetcher = vi.fn().mockResolvedValue({ ok: false, status });
+      vi.stubGlobal('fetch', fetcher);
+      await expect(mail.challenge('fiction@example.test')).rejects.toThrow(
+        "Le code n'a pas pu être envoyé",
+      );
+      expect((await pg.query('SELECT * FROM registration_challenges')).rows).toHaveLength(0);
+      expect(fetcher).toHaveBeenCalledTimes(1);
+    },
+  );
+  it('stores only a digest after a provider acknowledges an access email', async () => {
+    const query = async (sql: string, params: unknown[] = []) => (await pg.query(sql, params)).rows;
+    const mail = new FamilyRegistrationService(
+      { query } as never,
+      new ConfigService({
+        FAMILY_MAIL_PROVIDER: 'resend',
+        FAMILY_MAIL_FROM: 'fiction@example.test',
+        FAMILY_RESEND_API_KEY: 'test-only',
+      }),
+    );
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => ({ id: 'provider-fiction' }) });
+    vi.stubGlobal('fetch', fetcher);
+    const result = await mail.challenge('fiction@example.test');
+    const row = (await pg.query('SELECT * FROM registration_challenges')).rows[0] as {
+      id: string;
+      digest: string;
+    };
+    expect(result.challengeId).toBe(row.id);
+    const payload = JSON.parse(fetcher.mock.calls[0][1].body);
+    const code = payload.text.match(/\d{8}/)[0];
+    expect(row.digest).toBe(digest(row.id + code));
+    expect(JSON.stringify(row)).not.toContain(code);
+    expect(JSON.stringify(result)).not.toContain(code);
   });
   it('never accepts health or unknown fields in an administrative contact', () => {
     expect(() => strings({ allergies: 'x' }, EMPTY_CONTACT)).toThrow();

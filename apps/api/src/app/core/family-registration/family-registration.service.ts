@@ -11,7 +11,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { DataSource, EntityManager } from 'typeorm';
 import { createHash, randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
-import { createTransport } from 'nodemailer';
+import { familyMailSettings, sendFamilyAccessCode } from './family-mail';
 import {
   DEFAULT_FAMILY_RULES,
   DIOCESES,
@@ -109,12 +109,7 @@ export class FamilyRegistrationService {
     const email = emailValue(raw),
       id = randomUUID(),
       code = String(randomInt(10000000, 100000000));
-    const host = this.config.get<string>('FAMILY_SMTP_HOST'),
-      from = this.config.get<string>('FAMILY_MAIL_FROM');
-    if (!host || !from)
-      throw new ServiceUnavailableException(
-        "L'envoi des codes n'est pas encore configuré. Contactez l'organisation ; aucune inscription n'a été perdue.",
-      );
+    familyMailSettings(this.config);
     const recent = await this.db.query(
       'SELECT count(*)::int AS n FROM registration_challenges WHERE email=$1 AND "createdAt">now()-interval \'10 minutes\'',
       [email],
@@ -127,24 +122,7 @@ export class FamilyRegistrationService {
       [id, email, digest(id + code)],
     );
     try {
-      await createTransport({
-        host,
-        port: Number(this.config.get('FAMILY_SMTP_PORT', 587)),
-        secure: this.config.get('FAMILY_SMTP_SECURE') === 'true',
-        requireTLS: true,
-        auth: this.config.get('FAMILY_SMTP_USER')
-          ? {
-              user: this.config.get('FAMILY_SMTP_USER'),
-              pass: this.config.get('FAMILY_SMTP_PASSWORD'),
-            }
-          : undefined,
-        connectionTimeout: 10000,
-      }).sendMail({
-        from,
-        to: email,
-        subject: 'Votre accès aux inscriptions Alegria',
-        text: `Votre code à usage unique : ${code}\nIl expire dans dix minutes. Ne le partagez pas. Si vous n'avez rien demandé, ignorez ce message.`,
-      });
+      await sendFamilyAccessCode(this.config, email, code, id);
     } catch {
       await this.db.query('DELETE FROM registration_challenges WHERE id=$1', [id]);
       throw new ServiceUnavailableException("Le code n'a pas pu être envoyé. Réessayez plus tard.");

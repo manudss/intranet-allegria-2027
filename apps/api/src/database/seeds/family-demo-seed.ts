@@ -85,6 +85,7 @@ export function buildFamilyDemo() {
       simulation: y.simulation,
       paperHealth: y.paperHealth,
       submittedAt: y.submittedAt,
+      participantId: y.participantId,
     });
   }
   return {

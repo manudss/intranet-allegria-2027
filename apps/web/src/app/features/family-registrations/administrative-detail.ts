@@ -121,12 +121,16 @@ export class FamilyAdministrativeDetail {
         ? 'Autre : ' + i.otherDiocese
         : DIOCESES.find((d) => d.id === i.dioceseId)?.name || i.dioceseId;
   }
+  birthDate(value: string) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || '');
+    return match ? `${match[3]}/${match[2]}/${match[1]}` : value;
+  }
   identityRows() {
     const i = this.youth().identity;
     return [
       ['Prénom', i.firstName],
       ['Nom', i.lastName],
-      ['Naissance', i.dateOfBirth],
+      ['Naissance', this.birthDate(i.dateOfBirth)],
       ['Sexe', this.label(i.sex)],
       ['Tranche MEJ', i.mejAgeGroup],
       ['Diocèse ou juridiction', this.diocese()],

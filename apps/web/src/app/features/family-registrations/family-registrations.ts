@@ -164,6 +164,7 @@ import type { FamilySpace } from '../../models/models';
       }
       .grid {
         display: grid;
+        align-items: start;
         grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
         gap: 1rem;
         margin: 1rem 0;

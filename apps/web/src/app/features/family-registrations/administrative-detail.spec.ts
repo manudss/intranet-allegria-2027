@@ -61,7 +61,7 @@ describe('Complete administrative view', () => {
       ...Object.values(y.logistics).filter((v) => v !== 'FULL'),
       'Camille',
       'FICTIF',
-      '2012-05-01',
+      '01/05/2012',
       'Féminin',
       'TA',
       'Pays fictif',

@@ -92,6 +92,27 @@ export class FamilyRegistrationController {
     res.setHeader('Cache-Control', 'no-store');
     return this.service.get(result.familyId);
   }
+  @Throttle({ default: { limit: 10, ttl: 600000 } })
+  @Post('preview-demo')
+  async previewDemo(
+    @Req() r: Request,
+    @Body() raw: unknown,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    this.checkOrigin(r);
+    if (Object.keys(plainObject(raw)).length)
+      throw new BadRequestException('La famille fictive ne peut pas être changée');
+    const result = await this.service.previewSession();
+    res.cookie('alegria_family', result.token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      maxAge: 4 * 60 * 60 * 1000,
+      path: '/api/public/family-space',
+    });
+    res.setHeader('Cache-Control', 'no-store');
+    return this.service.get(result.familyId);
+  }
   @Get() async get(@Req() r: Request, @Res({ passthrough: true }) res: Response) {
     res.setHeader('Cache-Control', 'no-store');
     return this.service.get(await this.owner(r));
@@ -196,6 +217,32 @@ export class FamilyRegistrationController {
     res.setHeader('Content-Disposition', 'attachment; filename="fiche-sanitaire.pdf"');
     res.send(Buffer.from(bytes));
   }
+  @Get('youths/:id/templates/:templateId/pdf')
+  async unsignedPdf(
+    @Req() r: Request,
+    @Param('id') id: string,
+    @Param('templateId') templateId: string,
+    @Res() res: Response,
+  ) {
+    const family = await this.service.get(await this.owner(r));
+    const youth = this.service.youth(family, id);
+    const template = (await this.service.rules()).templates.find(
+      (t) => t.id === templateId && t.enabled,
+    );
+    if (!template) throw new BadRequestException('Modèle indisponible');
+    const bytes = await registrationPdf([
+      template.title,
+      'Version ' + template.version,
+      'Jeune : ' + youth.identity.firstName + ' ' + youth.identity.lastName,
+      ...template.text.split('\n'),
+      'DOCUMENT SANS ATTESTATION',
+      'Ce téléchargement ne signe pas le document. Une signature externe doit être vérifiée séparément.',
+    ]);
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="document-a-signer.pdf"');
+    res.send(Buffer.from(bytes));
+  }
   @Get('youths/:id/signatures/:index/pdf')
   async signedPdf(
     @Req() r: Request,
@@ -215,8 +262,12 @@ export class FamilyRegistrationController {
       ...String(snap.template.text).split('\n'),
       'Attestation simple (non qualifiée)',
       'Signataire : ' + signature.signerName,
-      'Qualité : ' + signature.capacity,
-      'Date : ' + signature.signedAt,
+      'Qualité : ' +
+        ({ LEGAL: 'Représentant légal', SELF_ADULT: 'Adulte concerné' }[signature.capacity] ||
+          signature.capacity),
+      'Date : ' +
+        new Date(signature.signedAt).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' }) +
+        ' (Europe/Paris)',
       'Empreinte SHA-256 du contenu figé : ' + signature.digest,
       signature.withdrawnAt
         ? 'Remplacée / retirée le ' + signature.withdrawnAt

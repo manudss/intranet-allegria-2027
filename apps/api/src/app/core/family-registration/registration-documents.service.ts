@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { Participant, ParticipantRegistrationStatus } from '../entities';
 import { randomUUID } from 'node:crypto';
@@ -53,6 +58,10 @@ export class RegistrationDocumentsService {
     });
   }
   async upload(family: string, youth: string, file: { buffer: Buffer; originalname: string }) {
+    if ((await this.families.rules()).previewDemo)
+      throw new ForbiddenException(
+        'Preview : les pièces fictives viennent des seeds. Aucun fichier réel ne peut être déposé.',
+      );
     const s = await this.families.get(family);
     this.families.editable(this.families.youth(s, youth));
     if (!file?.buffer || file.buffer.length > 2 * 1024 * 1024)

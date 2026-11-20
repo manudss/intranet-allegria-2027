@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   OnInit,
   OnDestroy,
   inject,
@@ -24,8 +25,14 @@ import type { StructuredHealth } from '@mej-allegria/shared';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="health">
+      @if (previewSample()) {
+        <p>
+          EXEMPLE SANITAIRE FICTIF EN LECTURE SEULE : aucune donnée de santé réelle ne peut être
+          enregistrée ici.
+        </p>
+      }
       <p class="private">ESPACE SANTÉ RESTREINT</p>
-      <h2>{{ pages[page()].title }}</h2>
+      <h2 tabindex="-1">{{ pages[page()].title }}</h2>
       <p>
         Étape sanitaire {{ page() + 1 }} sur 7. Indiquez seulement ce qui est utile à l'accueil.
         Aucune réponse « non » n'est présélectionnée.
@@ -34,97 +41,106 @@ import type { StructuredHealth } from '@mej-allegria/shared';
       @if (error()) {
         <p class="error" role="alert">{{ error() }}</p>
       }
-      @if (page() < 6) {
-        @for (field of pages[page()].fields; track field[0]) {
-          <label [for]="'health-' + field[0]">{{ field[1] }}</label
-          ><textarea
-            [id]="'health-' + field[0]"
-            [formField]="$any(healthForm.answers)[field[0]]"
-            (input)="changed()"
-          ></textarea>
-        }
-        @if (modelItemsForPage().length) {
-          <details>
-            <summary>Reporter les choix Oui / Non du modèle fourni (facultatif)</summary>
+      <fieldset [disabled]="readOnly()">
+        <legend>Réponses sanitaires du jeune</legend>
+        @if (page() < 6) {
+          @for (field of pages[page()].fields; track field[0]) {
+            <label [for]="'health-' + field[0]">{{ field[1] }}</label
+            ><textarea
+              [id]="'health-' + field[0]"
+              [formField]="$any(healthForm.answers)[field[0]]"
+              (input)="changed()"
+            ></textarea>
+          }
+          @if (modelItemsForPage().length) {
+            <details>
+              <summary>Reporter les choix Oui / Non du modèle fourni (facultatif)</summary>
+              <p>
+                Recopiez seulement vos réponses explicites. Laissez « Non renseigné » si vous ne
+                souhaitez pas répondre ici. Aucun diagnostic n'est déduit des textes. Vous pouvez
+                demander un échange confidentiel.
+              </p>
+              @for (item of modelItemsForPage(); track item.id) {
+                <label [for]="'model-' + item.id">{{ item.label }}</label>
+                <select
+                  [id]="'model-' + item.id"
+                  [value]="data().presence?.[item.id] || ''"
+                  (change)="presence(item.id, $any($event.target).value)"
+                >
+                  <option value="">Non renseigné</option>
+                  <option value="YES">Oui, déclaré explicitement</option>
+                  <option value="NO">Non, déclaré explicitement</option>
+                </select>
+              }
+            </details>
+          }
+          @if (page() === 3) {
+            <h3>Besoins alimentaires pour la préparation des repas</h3>
             <p>
-              Recopiez seulement vos réponses explicites. Laissez « Non renseigné » si vous ne
-              souhaitez pas répondre ici. Aucun diagnostic n'est déduit des textes. Vous pouvez
-              demander un échange confidentiel.
+              Ces catégories servent seulement à une synthèse non nominative. Les consignes
+              individuelles restent dans le circuit santé autorisé.
             </p>
-            @for (item of modelItemsForPage(); track item.id) {
-              <label [for]="'model-' + item.id">{{ item.label }}</label>
-              <select
-                [id]="'model-' + item.id"
-                [value]="data().presence?.[item.id] || ''"
-                (change)="presence(item.id, $any($event.target).value)"
-              >
-                <option value="">Non renseigné</option>
-                <option value="YES">Oui, déclaré explicitement</option>
-                <option value="NO">Non, déclaré explicitement</option>
-              </select>
-            }
-          </details>
-        }
-        @if (page() === 3) {
-          <h3>Besoins alimentaires pour la préparation des repas</h3>
+            <div class="allergens">
+              @for (a of allergens; track a) {
+                <label
+                  ><input
+                    type="checkbox"
+                    [checked]="data().foodAllergens.includes(a)"
+                    (change)="allergen(a, $any($event.target).checked)"
+                  />{{ allergenLabels[a] }}</label
+                >
+              }
+            </div>
+          }
+        } @else {
+          <h3>Relire la fiche complète</h3>
           <p>
-            Ces catégories servent seulement à une synthèse non nominative. Les consignes
-            individuelles restent dans le circuit santé autorisé.
+            Le document reprend le modèle sanitaire fourni et une annexe lisible avec toutes les
+            réponses, sans les tronquer. Les rubriques internes de vérification et d'observations ne
+            sont pas remplies à votre place.
           </p>
-          <div class="allergens">
-            @for (a of allergens; track a) {
-              <label
-                ><input
-                  type="checkbox"
-                  [checked]="data().foodAllergens.includes(a)"
-                  (change)="allergen(a, $any($event.target).checked)"
-                />{{ allergenLabels[a] }}</label
-              >
+          @if (!previewSample()) {
+            <a [href]="base() + '/pdf'" target="_blank" rel="noopener"
+              >Ouvrir la fiche complète avant signature</a
+            >
+          }
+          <article class="declaration">
+            <h3>Déclaration applicable</h3>
+            <p>Version {{ declaration().version }}</p>
+            <pre style="white-space:pre-wrap;font:inherit">{{ declaration().text }}</pre>
+          </article>
+          <label for="health-signer">Nom du signataire</label
+          ><input id="health-signer" [formField]="healthForm.signer" /><label for="health-capacity"
+            >Qualité</label
+          ><select id="health-capacity" [formField]="healthForm.capacity">
+            <option value="LEGAL">Représentant légal</option>
+            <option value="SELF_ADULT">Adulte concerné</option></select
+          ><label class="check"
+            ><input type="checkbox" [formField]="healthForm.accepted" />J'ai relu la fiche complète
+            et la déclaration applicable. Je souhaite attester cette version.</label
+          ><button type="button" (click)="sign()" [disabled]="busy() || !model().accepted">
+            Attester la fiche sanitaire
+          </button>
+          @if (data().signature) {
+            <p>
+              Attestée par {{ data().signature!.name }} le {{ data().signature!.at }}. Une
+              modification demande une nouvelle attestation.
+            </p>
+            @if (!previewSample()) {
+              <a [href]="base() + '/pdf'">Télécharger la fiche et sa preuve</a>
             }
-          </div>
+          }
         }
-      } @else {
-        <h3>Relire la fiche complète</h3>
-        <p>
-          Le document reprend le modèle sanitaire fourni et une annexe lisible avec toutes les
-          réponses, sans les tronquer. Les rubriques internes de vérification et d'observations ne
-          sont pas remplies à votre place.
-        </p>
-        <a [href]="base() + '/pdf'" target="_blank" rel="noopener"
-          >Ouvrir la fiche complète avant signature</a
-        >
-        <article class="declaration">
-          <h3>Déclaration applicable</h3>
-          <p>Version {{ declaration().version }}</p>
-          <pre style="white-space:pre-wrap;font:inherit">{{ declaration().text }}</pre>
-        </article>
-        <label for="health-signer">Nom du signataire</label
-        ><input id="health-signer" [formField]="healthForm.signer" /><label for="health-capacity"
-          >Qualité</label
-        ><select id="health-capacity" [formField]="healthForm.capacity">
-          <option value="LEGAL">Représentant légal</option>
-          <option value="SELF_ADULT">Adulte concerné</option></select
-        ><label class="check"
-          ><input type="checkbox" [formField]="healthForm.accepted" />J'ai relu la fiche complète et
-          la déclaration applicable. Je souhaite attester cette version.</label
-        ><button type="button" (click)="sign()" [disabled]="busy() || !model().accepted">
-          Attester la fiche sanitaire
-        </button>
-        @if (data().signature) {
-          <p>
-            Attestée par {{ data().signature!.name }} le {{ data().signature!.at }}. Une
-            modification demande une nouvelle attestation.
-          </p>
-          <a [href]="base() + '/pdf'">Télécharger la fiche et sa preuve</a>
-        }
-      }
+      </fieldset>
       <div class="actions">
         @if (page() > 0) {
           <button type="button" (click)="go(page() - 1)" [disabled]="busy()">Précédent</button>
         }
-        <button type="button" (click)="save()" [disabled]="busy()">
-          Enregistrer cette page santé
-        </button>
+        @if (!readOnly()) {
+          <button type="button" (click)="save()" [disabled]="busy()">
+            Enregistrer cette page santé
+          </button>
+        }
         @if (page() < 6) {
           <button type="button" (click)="go(page() + 1)" [disabled]="busy()">
             Enregistrer et continuer
@@ -141,6 +157,14 @@ import type { StructuredHealth } from '@mej-allegria/shared';
     `
       :host {
         display: block;
+      }
+      fieldset {
+        border: 0;
+        padding: 0;
+        min-width: 0;
+      }
+      h2 {
+        scroll-margin-top: 7rem;
       }
       .health {
         padding: 1rem;
@@ -215,6 +239,8 @@ import type { StructuredHealth } from '@mej-allegria/shared';
       a {
         color: #a42a11;
       }
+      select:focus-visible,
+      summary:focus-visible,
       input:focus-visible,
       textarea:focus-visible,
       button:focus-visible,
@@ -235,6 +261,9 @@ import type { StructuredHealth } from '@mej-allegria/shared';
 })
 export class FamilyHealthPage implements OnInit, OnDestroy {
   readonly youthId = input.required<string>();
+  readonly readOnly = input(false);
+  readonly previewSample = input<StructuredHealth>();
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef, { optional: true });
   private http = inject(HttpClient);
   protected declaration = signal({ text: '', version: '' });
   protected pages = HEALTH_FORM_PAGES;
@@ -272,6 +301,17 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
     return '/api/public/family-space/youths/' + this.youthId() + '/health';
   }
   async ngOnInit() {
+    const sample = this.previewSample();
+    if (sample) {
+      this.data.set(structuredClone(sample));
+      this.page.set(sample.page);
+      this.model.update((m) => ({ ...m, answers: { ...m.answers, ...sample.answers } }));
+      this.declaration.set({
+        version: 'EXEMPLE-FICTIF',
+        text: 'Exemple fictif en lecture seule, sans attestation réelle.',
+      });
+      return;
+    }
     try {
       this.declaration.set(
         await firstValueFrom(
@@ -300,6 +340,7 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
     );
   }
   protected changed() {
+    if (this.readOnly()) return;
     this.model.update((m) => ({ ...m, accepted: false }));
     this.generation++;
     clearTimeout(this.timer);
@@ -317,6 +358,7 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
     this.changed();
   }
   protected save() {
+    if (this.readOnly()) return Promise.resolve();
     this.chain = this.chain.then(async () => {
       if (!this.dirty) return;
       this.busy.set(true);
@@ -337,6 +379,7 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
         );
         this.data.update((latest) => ({
           ...saved,
+          presence: generation === this.generation ? saved.presence : latest.presence,
           foodAllergens:
             generation === this.generation ? saved.foodAllergens : latest.foodAllergens,
         }));
@@ -367,9 +410,11 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
   protected async go(page: number) {
     if (!(await this.flush())) return;
     this.page.set(page);
-    this.changed();
+    setTimeout(() => this.host?.nativeElement.querySelector<HTMLElement>('h2')?.focus(), 0);
+    if (!this.readOnly()) this.changed();
   }
   protected async sign() {
+    if (this.readOnly()) return;
     if (!(await this.flush())) return;
     try {
       this.busy.set(true);

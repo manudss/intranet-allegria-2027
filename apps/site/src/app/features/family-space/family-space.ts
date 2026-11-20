@@ -1,8 +1,10 @@
+import { FamilyAttestation, AttestationInput } from './family-attestation';
 import { FamilyDocuments } from './family-documents';
 import { FamilyHealthPage } from './family-health';
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   OnDestroy,
   OnInit,
   computed,
@@ -11,7 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { form, FormField } from '@angular/forms/signals';
+import { form, FormField, required, pattern, maxLength } from '@angular/forms/signals';
 import { firstValueFrom } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import {
@@ -24,13 +26,67 @@ import {
 import type { FamilyContact, FamilyRules, FamilySpace, YouthDossier } from '@mej-allegria/shared';
 @Component({
   selector: 'app-family-space',
-  imports: [FormField, RouterLink, FamilyHealthPage, FamilyDocuments],
+  imports: [FormField, RouterLink, FamilyHealthPage, FamilyDocuments, FamilyAttestation],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './family-space.html',
   styleUrl: './family-space.scss',
 })
 export class FamilySpacePage implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef, { optional: true });
+  protected readonly readOnly = computed(
+    () => !!this.youth() && !['DRAFT', 'CORRECTION'].includes(this.youth()!.state),
+  );
+  protected readonly reviewContact = computed(() =>
+    this.readOnly() && this.youth()?.contactAtSubmission
+      ? this.youth()!.contactAtSubmission!
+      : this.space()!.contact,
+  );
+  protected readonly canRetrySave = signal(false);
+  protected dioceseLabel(id: string) {
+    return (
+      DIOCESES.find((d) => d.id === id)?.name ||
+      (
+        { UNKNOWN: 'Je ne sais pas', OTHER: 'Autre pays / autre juridiction' } as Record<
+          string,
+          string
+        >
+      )[id] ||
+      'Non renseigné'
+    );
+  }
+  protected capacityLabel(value: string) {
+    return (
+      (
+        {
+          LEGAL: 'Représentant légal',
+          SELF_ADULT: 'Adulte concerné',
+          DELEGATED: 'Responsable avec autorisation à vérifier',
+        } as Record<string, string>
+      )[value] || 'Non renseignée'
+    );
+  }
+  protected requirementPage(label: string) {
+    return label.startsWith('Signature')
+      ? 4
+      : label.startsWith('Présence')
+        ? 2
+        : /^(Responsable :|Contact d'urgence)/.test(label)
+          ? 1
+          : 0;
+  }
+  protected frenchDate(value: string) {
+    const d = new Date(value);
+    return Number.isNaN(d.valueOf())
+      ? 'Non renseigné'
+      : d.toLocaleDateString('fr-FR', { timeZone: 'UTC' });
+  }
+  private focusTitle() {
+    setTimeout(() => {
+      const heading = this.host?.nativeElement.querySelector<HTMLElement>('h1');
+      heading?.focus();
+    }, 0);
+  }
   protected readonly space = signal<FamilySpace | null>(null);
   protected readonly rules = signal<FamilyRules>(DEFAULT_FAMILY_RULES);
   protected readonly selected = signal('');
@@ -44,7 +100,12 @@ export class FamilySpacePage implements OnInit, OnDestroy {
   protected readonly busy = signal(false);
   protected readonly challengeId = signal('');
   protected readonly accessModel = signal({ email: '', code: '' });
-  protected readonly accessForm = form(this.accessModel);
+  protected readonly accessForm = form(this.accessModel, (p) => {
+    required(p.email);
+    pattern(p.email, /^[^\s@]+@[^\s@]+\.[^\s@]+$/);
+    pattern(p.code, /^\d{8}$/);
+    maxLength(p.code, 8);
+  });
   protected readonly editModel = signal({
     firstName: '',
     lastName: '',
@@ -108,12 +169,13 @@ export class FamilySpacePage implements OnInit, OnDestroy {
     CANCELLED: 'Annulation simulée',
   };
   private healthEditor = viewChild(FamilyHealthPage);
+  private documentEditor = viewChild(FamilyDocuments);
   private timer: ReturnType<typeof setTimeout> | undefined;
   private chain = Promise.resolve();
   private dirty = false;
   private generation = 0;
   private readonly beforeUnload = (event: BeforeUnloadEvent) => {
-    if (this.dirty || this.healthEditor()?.hasUnsaved()) {
+    if (this.dirty || this.healthEditor()?.hasUnsaved() || this.documentEditor()?.isUploading()) {
       event.preventDefault();
       event.returnValue = '';
     }
@@ -163,9 +225,25 @@ export class FamilySpacePage implements OnInit, OnDestroy {
           : 'Impossible de sauvegarder. Votre saisie reste visible. Réessayez avant de quitter.'
         : 'Une erreur est survenue. Réessayez.',
     );
-    this.status.set('Non enregistré');
+    this.status.set(this.dirty ? 'Non enregistré' : 'Opération non terminée');
+    this.canRetrySave.set(this.dirty);
+  }
+  protected async previewDemo() {
+    await this.run(async () => {
+      this.space.set(
+        await firstValueFrom(
+          this.http.post<FamilySpace>('/api/public/family-space/preview-demo', {}),
+        ),
+      );
+      this.contactModel.set({ ...this.space()!.contact });
+      this.focusTitle();
+    });
   }
   protected async requestCode() {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.accessModel().email)) {
+      this.error.set('Indiquez une adresse e-mail valide.');
+      return;
+    }
     await this.run(async () => {
       const r = await firstValueFrom(
         this.http.post<{ challengeId: string }>('/api/public/family-space/access', {
@@ -174,9 +252,17 @@ export class FamilySpacePage implements OnInit, OnDestroy {
       );
       this.challengeId.set(r.challengeId);
       this.status.set('Code envoyé. Vérifiez aussi vos courriers indésirables.');
+      setTimeout(
+        () => this.host?.nativeElement.querySelector<HTMLElement>('#family-code')?.focus(),
+        0,
+      );
     });
   }
   protected async verify() {
+    if (!/^\d{8}$/.test(this.accessModel().code)) {
+      this.error.set('Le code doit contenir huit chiffres.');
+      return;
+    }
     await this.run(async () => {
       this.space.set(
         await firstValueFrom(
@@ -188,6 +274,7 @@ export class FamilySpacePage implements OnInit, OnDestroy {
       );
       this.contactModel.set({ ...this.space()!.contact });
       this.status.set('Votre espace est prêt.');
+      this.focusTitle();
     });
   }
   protected async reload() {
@@ -237,11 +324,16 @@ export class FamilySpacePage implements OnInit, OnDestroy {
       finalAccepted: false,
     });
     this.error.set('');
+    this.focusTitle();
   }
   protected async dashboard() {
-    if (await this.flush()) this.selected.set('');
+    if (await this.flush()) {
+      this.selected.set('');
+      this.focusTitle();
+    }
   }
   protected changed() {
+    if (this.readOnly()) return;
     this.signatureModel.update((m) => ({ ...m, accepted: false, finalAccepted: false }));
     this.generation++;
     this.dirty = true;
@@ -256,6 +348,10 @@ export class FamilySpacePage implements OnInit, OnDestroy {
   }
 
   protected async flush() {
+    if (this.documentEditor()?.isUploading()) {
+      this.error.set('Attendez la fin du dépôt du fichier avant de changer de page.');
+      return false;
+    }
     const editor = this.healthEditor();
     if (editor && !(await editor.flush())) {
       this.error.set('Sauvegardez les informations santé avant de quitter cette page.');
@@ -267,6 +363,7 @@ export class FamilySpacePage implements OnInit, OnDestroy {
     return !this.dirty;
   }
   protected save() {
+    if (this.readOnly()) return Promise.resolve();
     this.chain = this.chain.then(async () => {
       if (!this.dirty || !this.youth()) return;
       const s = this.space()!,
@@ -334,6 +431,7 @@ export class FamilySpacePage implements OnInit, OnDestroy {
   protected async go(page: number) {
     if (!(await this.flush())) return;
     this.page.set(page);
+    this.focusTitle();
     if (!['DRAFT', 'CORRECTION'].includes(this.youth()!.state)) return;
     const s = this.space()!,
       y = this.youth()!;
@@ -364,9 +462,8 @@ export class FamilySpacePage implements OnInit, OnDestroy {
       this.status.set(this.simulationLabels[simulation]);
     });
   }
-  protected async sign(templateId: string, version: string) {
-    if (!(await this.flush())) return;
-    const m = this.signatureModel();
+  protected async sign(templateId: string, version: string, m: AttestationInput) {
+    if (this.readOnly() || !(await this.flush())) return;
     await this.run(async () => {
       const s = this.space()!,
         y = this.youth()!;

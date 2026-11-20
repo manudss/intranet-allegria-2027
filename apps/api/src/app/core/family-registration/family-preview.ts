@@ -1,0 +1,13 @@
+import type { ConfigService } from '@nestjs/config';
+/** Temporary PR42 demo access, fail closed outside this exact disposable deployment. */
+export const PREVIEW_FAMILY_EMAIL = 'famille-demo@example.test';
+export function familyPreviewEnabled(config: Pick<ConfigService, 'get'>): boolean {
+  return (
+    config.get('FAMILY_PREVIEW_DEMO_ENABLED') === 'pr42-fictional-only' &&
+    config.get('RENDER_SERVICE_NAME') === 'al-pr42-api' &&
+    config.get('RENDER_GIT_BRANCH') === 'feat/family-registration' &&
+    /^al-pr42-api(?:-[a-z0-9]+)?\.onrender\.com$/.test(
+      String(config.get('RENDER_EXTERNAL_HOSTNAME') || ''),
+    )
+  );
+}

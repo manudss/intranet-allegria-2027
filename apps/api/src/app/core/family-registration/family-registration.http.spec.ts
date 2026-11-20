@@ -26,7 +26,9 @@ import { RegistrationDocumentsService } from './registration-documents.service';
 import { EMPTY_CONTACT } from '@mej-allegria/shared';
 describe('Family HTTP contract with disposable real SQL storage, no mail sent', () => {
   let app: INestApplication, pg: PGlite, url: string, service: FamilyRegistrationService;
+  let configValues: Record<string, string>;
   beforeEach(async () => {
+    configValues = {};
     pg = new PGlite();
     await new FamilyRegistration1790600000000().up({
       query: (sql: string) => pg.exec(sql),
@@ -46,7 +48,10 @@ describe('Family HTTP contract with disposable real SQL storage, no mail sent', 
         }
       },
     };
-    service = new FamilyRegistrationService(db as never, { get: () => undefined } as never);
+    service = new FamilyRegistrationService(
+      db as never,
+      { get: (key: string) => configValues[key] } as never,
+    );
     const module = await Test.createTestingModule({
       imports: [ThrottlerModule.forRoot([{ name: 'default', ttl: 60000, limit: 120 }])],
       controllers: [
@@ -87,7 +92,7 @@ describe('Family HTTP contract with disposable real SQL storage, no mail sent', 
           provide: RegistrationHealthService,
           useValue: new RegistrationHealthService(
             db as never,
-            { get: () => undefined } as never,
+            { get: (key: string) => configValues[key] } as never,
             service,
           ),
         },
@@ -197,6 +202,73 @@ describe('Family HTTP contract with disposable real SQL storage, no mail sent', 
       ).status,
     ).toBe(200);
     expect((await fetch(path, { headers: { Cookie: a.cookie } })).status).toBe(401);
+  });
+  it('opens only the pre-seeded fictional preview family, never a caller-selected family or production', async () => {
+    const route = url + '/api/public/family-space/preview-demo';
+    const send = (body: unknown = {}, origin = url) =>
+      fetch(route, {
+        method: 'POST',
+        headers: { Origin: origin, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    expect((await send()).status).toBe(403);
+    Object.assign(configValues, {
+      FAMILY_PREVIEW_DEMO_ENABLED: 'pr42-fictional-only',
+      RENDER_SERVICE_NAME: 'al-pr42-api',
+      RENDER_GIT_BRANCH: 'feat/family-registration',
+      RENDER_EXTERNAL_HOSTNAME: 'al-pr42-api.onrender.com',
+    });
+    expect((await send()).status).toBe(403);
+    await login('famille-demo@example.test');
+    await pg.query('INSERT INTO registration_settings(id,rules) VALUES(1,$1)', [
+      { previewDemoSeed: true, registrationOpen: true },
+    ]);
+    expect((await send({ email: 'other@example.test' })).status).toBe(400);
+    expect((await send({}, 'https://other.test')).status).toBe(403);
+    const response = await send();
+    expect(response.status).toBe(201);
+    expect(response.headers.get('set-cookie')).toContain('Secure');
+    expect(response.headers.get('set-cookie')).toContain('HttpOnly');
+    expect((await response.json()).email).toBe('famille-demo@example.test');
+    configValues.RENDER_GIT_BRANCH = 'main';
+    expect((await send()).status).toBe(403);
+    expect((await service.rules()).previewDemo).toBe(false);
+    expect((await service.rules()).registrationOpen).toBe(false);
+  });
+  it('exports unsigned templates only for the owning family and enabled models', async () => {
+    const a = await login(),
+      b = await login('other@example.test'),
+      family = await service.add(a.space.id, 0),
+      id = family.youths[0].id;
+    await pg.query('INSERT INTO registration_settings(id,rules) VALUES(1,$1)', [
+      {
+        templates: [
+          {
+            id: 'demo',
+            title: 'FICTIF',
+            text: 'Texte fictif',
+            enabled: true,
+            required: false,
+            version: '1',
+          },
+        ],
+      },
+    ]);
+    const route = url + '/api/public/family-space/youths/' + id + '/templates/demo/pdf';
+    const pdf = await fetch(route, { headers: { Cookie: a.cookie } });
+    expect(pdf.status).toBe(200);
+    expect(pdf.headers.get('content-type')).toContain('application/pdf');
+    expect(pdf.headers.get('cache-control')).toContain('no-store');
+    expect(
+      Buffer.from(await pdf.arrayBuffer())
+        .subarray(0, 5)
+        .toString(),
+    ).toBe('%PDF-');
+    expect((await fetch(route, { headers: { Cookie: b.cookie } })).status).toBe(404);
+    expect((await fetch(route)).status).toBe(401);
+    expect(
+      (await fetch(route.replace('/demo/', '/unknown/'), { headers: { Cookie: a.cookie } })).status,
+    ).toBe(400);
   });
   it('rejects an executable administrative upload without retaining bytes', async () => {
     const a = await login(),

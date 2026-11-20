@@ -105,7 +105,7 @@ button {
 }
 button:disabled {
   opacity: 0.55;
-  cursor: wait;
+  cursor: not-allowed;
 }
 button.secondary {
   background: white;
@@ -260,5 +260,33 @@ footer {
   }
   .card {
     padding: 1rem;
+  }
+}
+
+h1 {
+  scroll-margin-top: 7rem;
+}
+h1:focus-visible {
+  outline: 2px solid #254c8c;
+  outline-offset: 4px;
+}
+pre {
+  overflow-wrap: anywhere;
+}
+input,
+select,
+textarea {
+  border-color: #887467;
+}
+
+.mobile-pages {
+  display: none;
+}
+@media (max-width: 620px) {
+  .mobile-pages {
+    display: block;
+  }
+  .page-nav {
+    display: none;
   }
 }

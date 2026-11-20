@@ -15,13 +15,27 @@ interface Piece {
       PDF, PNG ou JPEG, 2 Mo maximum. Ne déposez ici aucun document médical, ordonnance ni
       justificatif de vaccination : leur remise suit le circuit santé confidentiel.
     </p>
+    <details>
+      <summary>Vous avez signé un document administratif hors ligne ?</summary>
+      <p>
+        Téléchargez le modèle PDF du document ci-dessous, signez-le avec votre outil habituel ou sur
+        papier, puis déposez votre exemplaire PDF, JPEG ou PNG ici. Le dépôt reste privé et sera
+        vérifié par l'équipe. Aucune signature cryptographique n'est déclarée valide
+        automatiquement, et ce dépôt ne remplace pas à lui seul une attestation exigée par le
+        parcours.
+      </p>
+      <p>
+        Une fiche sanitaire signée sur papier doit suivre le circuit santé confidentiel, jamais ce
+        dépôt administratif.
+      </p>
+    </details>
     <label [for]="'piece-' + youthId()">Choisir une pièce administrative</label
     ><input
       type="file"
       [id]="'piece-' + youthId()"
       accept="application/pdf,image/png,image/jpeg"
       (change)="upload($event)"
-      [disabled]="busy()"
+      [disabled]="busy() || readOnly()"
     />
     <p role="status">{{ status() }}</p>
     @if (error()) {
@@ -61,6 +75,10 @@ interface Piece {
 })
 export class FamilyDocuments implements OnInit {
   readonly youthId = input.required<string>();
+  readonly readOnly = input(false);
+  isUploading() {
+    return this.busy();
+  }
   private http = inject(HttpClient);
   protected statusLabels: Record<string, string> = {
     RECEIVED: 'Reçue, à vérifier',
@@ -84,7 +102,7 @@ export class FamilyDocuments implements OnInit {
   protected async upload(event: Event) {
     const el = event.target as HTMLInputElement,
       file = el.files?.[0];
-    if (!file) return;
+    if (!file || this.readOnly()) return;
     if (file.size > 2 * 1024 * 1024) {
       this.error.set('La pièce dépasse 2 Mo.');
       el.value = '';

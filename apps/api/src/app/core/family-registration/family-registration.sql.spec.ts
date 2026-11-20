@@ -177,6 +177,14 @@ describe('Family registration SQL, fictitious database only', () => {
       accepted: true,
       version: 'test-v1',
     });
+    const navigated = await health.save(a.familyId, id, signed.revision, {
+      answers: signed.answers,
+      presence: signed.presence,
+      foodAllergens: signed.foodAllergens,
+      page: 5,
+    });
+    expect(navigated.signature?.digest).toBe(signed.signature?.digest);
+    expect(navigated.signedPayload).toBe(signed.signedPayload);
     expect(signed.signature?.digest).toHaveLength(64);
     expect(signed.signedPayload).toBeTruthy();
     const frozen = JSON.parse(signed.signedPayload || '{}');

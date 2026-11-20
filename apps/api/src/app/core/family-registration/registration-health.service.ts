@@ -1,3 +1,4 @@
+import { familyPreviewEnabled } from './family-preview';
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
@@ -34,6 +35,7 @@ export class RegistrationHealthService {
     private readonly families: FamilyRegistrationService,
   ) {}
   enabled() {
+    if (familyPreviewEnabled(this.config)) return false;
     return (
       this.config.get('FAMILY_HEALTH_APPROVAL_REFERENCE') &&
       this.config.get('FAMILY_HEALTH_ENCRYPTION_KEY') &&
@@ -109,7 +111,7 @@ export class RegistrationHealthService {
       );
       this.families.editable(this.families.youth(fresh.dossier, youthId));
       const [row] = await m.query(
-        'SELECT revision FROM registration_health WHERE family_id=$1 AND "youthId"=$2',
+        'SELECT revision,envelope,"signatureValid" FROM registration_health WHERE family_id=$1 AND "youthId"=$2',
         [familyId, youthId],
       );
       if ((row?.revision || 0) !== revision)
@@ -122,9 +124,26 @@ export class RegistrationHealthService {
         revision: revision + 1,
         signature: null,
       };
+      const previous = row?.envelope ? unseal(row.envelope, key, familyId + ':' + youthId) : null;
+      const content = (h: StructuredHealth) =>
+        JSON.stringify({
+          answers: HEALTH_FIELDS.map((k) => h.answers[k] || ''),
+          presence: HEALTH_MODEL_ITEMS.map((i) => h.presence?.[i.id] || ''),
+          foodAllergens: [...h.foodAllergens].sort(),
+        });
+      if (previous && row.signatureValid && content(previous) === content(data)) {
+        data.signature = previous.signature;
+        data.signedPayload = previous.signedPayload;
+      }
       await m.query(
-        'INSERT INTO registration_health(family_id,"youthId",envelope,revision) VALUES($1,$2,$3,$4) ON CONFLICT(family_id,"youthId") DO UPDATE SET envelope=excluded.envelope,revision=excluded.revision,"signatureValid"=false,"updatedAt"=now()',
-        [familyId, youthId, seal(data, key, familyId + ':' + youthId), data.revision],
+        'INSERT INTO registration_health(family_id,"youthId",envelope,revision,"signatureValid") VALUES($1,$2,$3,$4,$5) ON CONFLICT(family_id,"youthId") DO UPDATE SET envelope=excluded.envelope,revision=excluded.revision,"signatureValid"=excluded."signatureValid","updatedAt"=now()',
+        [
+          familyId,
+          youthId,
+          seal(data, key, familyId + ':' + youthId),
+          data.revision,
+          !!data.signature,
+        ],
       );
       await m.query(
         'INSERT INTO registration_audit(family_id,"youthId",action,actor) VALUES($1,$2,\'HEALTH_SAVED\',$3)',

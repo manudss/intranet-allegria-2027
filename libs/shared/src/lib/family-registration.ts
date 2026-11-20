@@ -1,3 +1,4 @@
+import type { StructuredHealth } from './registration-health';
 import { DIOCESES } from './dioceses';
 export type RegistrationState =
   'DRAFT' | 'SUBMITTED' | 'CORRECTION' | 'VALIDATED' | 'CONFIRMED' | 'REFUSED' | 'CANCELLED';
@@ -73,6 +74,8 @@ export interface FamilySpace {
   updatedAt: string;
 }
 export interface FamilyRules {
+  previewDemo?: boolean;
+  previewHealthSamples?: Record<string, StructuredHealth>;
   ageReferenceDate: string;
   minAge: number | null;
   maxAge: number | null;

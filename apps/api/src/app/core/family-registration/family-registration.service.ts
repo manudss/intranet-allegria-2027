@@ -1,3 +1,4 @@
+import { familyPreviewEnabled, PREVIEW_FAMILY_EMAIL } from './family-preview';
 import {
   BadRequestException,
   ConflictException,
@@ -65,7 +66,16 @@ export class FamilyRegistrationService {
     return {
       ...DEFAULT_FAMILY_RULES,
       ...rows[0]?.rules,
+      registrationOpen: rows[0]?.rules?.previewDemoSeed
+        ? familyPreviewEnabled(this.config) && rows[0].rules.registrationOpen === true
+        : rows[0]?.rules?.registrationOpen === true,
+      previewDemo: familyPreviewEnabled(this.config) && rows[0]?.rules?.previewDemoSeed === true,
+      previewHealthSamples:
+        familyPreviewEnabled(this.config) && rows[0]?.rules?.previewDemoSeed === true
+          ? rows[0].rules.previewHealthSamples
+          : undefined,
       healthMode:
+        !familyPreviewEnabled(this.config) &&
         this.config.get('FAMILY_HEALTH_APPROVAL_REFERENCE') &&
         Buffer.from(this.config.get<string>('FAMILY_HEALTH_ENCRYPTION_KEY', ''), 'base64')
           .length === 32 &&
@@ -75,7 +85,27 @@ export class FamilyRegistrationService {
           : 'PAPER',
     };
   }
+  async previewSession() {
+    if (!familyPreviewEnabled(this.config))
+      throw new ForbiddenException('Accès de démonstration indisponible');
+    const rules = await this.rules();
+    if (!rules.previewDemo) throw new ForbiddenException('Seeds de démonstration requis');
+    const [family] = await this.db.query('SELECT id FROM registration_families WHERE email=$1', [
+      PREVIEW_FAMILY_EMAIL,
+    ]);
+    if (!family) throw new ForbiddenException('Famille fictive indisponible');
+    const token = randomBytes(32).toString('hex');
+    await this.db.query(
+      `INSERT INTO registration_sessions(digest,family_id,"expiresAt") VALUES($1,$2,now()+interval '4 hours')`,
+      [digest(token), family.id],
+    );
+    return { token, familyId: family.id };
+  }
   async challenge(raw: unknown) {
+    if (familyPreviewEnabled(this.config))
+      throw new ForbiddenException(
+        'Preview fictive : utilisez uniquement l’entrée de démonstration. Aucun e-mail n’est envoyé.',
+      );
     const email = emailValue(raw),
       id = randomUUID(),
       code = String(randomInt(10000000, 100000000));

@@ -1,4 +1,14 @@
 <section class="family-shell">
+  @if(rules().previewDemo){
+  <aside>
+    <strong>DÉMONSTRATION PR42 : données fictives partagées entre testeurs</strong>
+    <p>
+      Ne saisissez aucune information personnelle ou médicale réelle. Les brouillons administratifs
+      sont enregistrés dans la base isolée de cette preview. Les exemples santé sont uniquement
+      consultables, sans collecte. Aucun e-mail ni paiement réel.
+    </p>
+  </aside>
+  }
   <header class="family-header">
     <div>
       <a routerLink="/inscription/jeunes">Alegria 2027</a>
@@ -8,15 +18,23 @@
   </header>
   @if(error()){
   <div class="error" role="alert">
-    {{error()}}
-    <button type="button" (click)="save()" [disabled]="busy()">Réessayer la sauvegarde</button>
+    {{error()}} @if(canRetrySave()){<button type="button" (click)="save()" [disabled]="busy()">
+      Réessayer la sauvegarde</button
+    >}
   </div>
   } @if(status()){
   <p class="save-state" role="status" aria-live="polite">{{status()}}</p>
   } @if(!space()){
   <article class="access card">
+    @if(rules().previewDemo){
+    <h2>Essayer les dossiers fictifs existants</h2>
+    <button type="button" (click)="previewDemo()" [disabled]="busy()">
+      Ouvrir la famille de démonstration
+    </button>
+    <p>L’accès e-mail ci-dessous est désactivé dans cette preview.</p>
+    }
     <p class="eyebrow">Une seule saisie, plusieurs dossiers</p>
-    <h1>Commençons votre espace famille</h1>
+    <h1 tabindex="-1">Commençons votre espace famille</h1>
     <p>
       Vérifiez votre adresse e-mail pour créer ou retrouver vos inscriptions. Vous pourrez compléter
       chaque dossier en plusieurs fois, jusqu'à son envoi final.
@@ -26,28 +44,37 @@
       <li>Premier jeune</li>
       <li>Votre espace</li>
     </ol>
-    <label for="family-email">Votre e-mail</label
-    ><input id="family-email" type="email" autocomplete="email" [formField]="accessForm.email" />
-    <p class="help">
-      Une adresse suffit pour tous les jeunes dont vous êtes responsable. Un contact d'urgence n'est
-      pas automatiquement un représentant légal.
-    </p>
-    @if(!challengeId()){<button type="button" (click)="requestCode()" [disabled]="busy()">
-      Recevoir mon code de vérification</button
-    >}@else{ <label for="family-code">Code reçu par e-mail</label
-    ><input
-      id="family-code"
-      inputmode="numeric"
-      autocomplete="one-time-code"
-      [formField]="accessForm.code"
-    />
-    <p class="help">
-      Huit chiffres, valables dix minutes. Votre code ne doit être partagé avec personne.
-    </p>
-    <button type="button" (click)="verify()" [disabled]="busy()">Ouvrir mon espace</button
-    ><button class="quiet" type="button" (click)="requestCode()" [disabled]="busy()">
-      Recevoir un nouveau code</button
-    >}
+    <form (submit)="$event.preventDefault(); challengeId() ? verify() : requestCode()">
+      <label for="family-email">Votre e-mail</label
+      ><input
+        id="family-email"
+        type="email"
+        aria-describedby="email-help"
+        autocomplete="email"
+        [formField]="accessForm.email"
+      />
+      <p class="help" id="email-help">
+        Une adresse suffit pour tous les jeunes dont vous êtes responsable. Un contact d'urgence
+        n'est pas automatiquement un représentant légal.
+      </p>
+      @if(!challengeId()){<button type="submit" [disabled]="busy()">
+        Recevoir mon code de vérification</button
+      >}@else{ <label for="family-code">Code reçu par e-mail</label
+      ><input
+        id="family-code"
+        aria-describedby="code-help"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        [formField]="accessForm.code"
+      />
+      <p class="help" id="code-help">
+        Huit chiffres, valables dix minutes. Votre code ne doit être partagé avec personne.
+      </p>
+      <button type="submit" [disabled]="busy()">Ouvrir mon espace</button
+      ><button class="quiet" type="button" (click)="requestCode()" [disabled]="busy()">
+        Recevoir un nouveau code</button
+      >}
+    </form>
     <aside>
       Vous avez déjà commencé ? Utilisez la même adresse : vos informations restent enregistrées,
       même après déconnexion.
@@ -57,7 +84,7 @@
   <div class="title-row">
     <div>
       <p class="eyebrow">Les inscriptions de ma famille</p>
-      <h1>Tous les jeunes, une seule vue</h1>
+      <h1 tabindex="-1">Tous les jeunes, une seule vue</h1>
       <p>
         Retrouvez chaque dossier et ce qu'il reste à faire. Vos coordonnées communes ne sont
         demandées qu'une fois.
@@ -118,9 +145,17 @@
   <div class="title-row">
     <div>
       <p class="eyebrow">Dossier de {{youth()!.identity.firstName || 'votre jeune'}}</p>
-      <h1>{{pages[page()]}}</h1>
+      <h1 tabindex="-1">{{pages[page()]}}</h1>
     </div>
     <span class="badge">{{states[youth()!.state]}}</span>
+  </div>
+  <div class="mobile-pages">
+    <label for="family-page">Page du dossier</label
+    ><select id="family-page" [value]="page()" (change)="go(+$any($event.target).value)">
+      @for(label of pages;track label;let i=$index){
+      <option [value]="i">{{i+1}} / {{pages.length}}. {{label}}</option>
+      }
+    </select>
   </div>
   <nav aria-label="Pages du dossier" class="page-nav">
     @for(label of pages;track label;let i=$index){<button
@@ -143,10 +178,7 @@
     <p>{{youth()!.correction}}</p>
   </aside>
   }
-  <fieldset
-    class="card"
-    [disabled]="(youth()!.state !== 'DRAFT' && youth()!.state !== 'CORRECTION')"
-  >
+  <fieldset class="card" [disabled]="readOnly() && page() < 3">
     @switch(page()){ @case(0){
     <legend>Qui participe ?</legend>
     <p>Les informations de cette page concernent ce jeune uniquement.</p>
@@ -320,8 +352,11 @@
     <label for="l-notes">Précisions logistiques, sans donnée de santé</label
     ><textarea id="l-notes" [formField]="editForm.notes" (input)="changed()"></textarea>} @case(3){
     <legend>Santé et adaptations : un circuit confidentiel</legend>
-    @if(rules().healthMode==='DIGITAL_APPROVED'){<app-family-health
+    @if(rules().healthMode==='DIGITAL_APPROVED' ||
+    rules().previewHealthSamples?.[youth()!.id]){<app-family-health
       [youthId]="youth()!.id"
+      [readOnly]="readOnly() || !!rules().previewHealthSamples?.[youth()!.id]"
+      [previewSample]="rules().previewHealthSamples?.[youth()!.id]"
     />}@else{
     <aside>
       <strong>Collecte numérique non activée</strong>
@@ -346,8 +381,8 @@
       La famille et l'équipe santé organiseront la remise confidentielle selon le circuit validé.
     </p>
     }} @case(4){
-    <app-family-documents [youthId]="youth()!.id" />
-    <legend>Lire avant de signer</legend>
+    <app-family-documents [youthId]="youth()!.id" [readOnly]="readOnly()" />
+    <legend>Documents et autorisations</legend>
     <p>
       Chaque document est propre à ce jeune. Vérifiez son identité, le texte entier, la version et
       votre qualité de signataire.
@@ -358,15 +393,18 @@
       <p>Version {{t.version}} · {{t.required?'Requis':'Facultatif'}}</p>
       <p>Jeune : {{youth()!.identity.firstName}} {{youth()!.identity.lastName}}</p>
       <pre>{{t.text}}</pre>
-      <label [for]="'signer-'+t.id">Nom du signataire</label
-      ><input [id]="'signer-'+t.id" [formField]="signatureForm.name" /><label class="check"
-        ><input type="checkbox" [formField]="signatureForm.accepted" /> J'ai lu cette version pour
-        ce jeune et je souhaite l'attester.</label
-      ><button type="button" (click)="sign(t.id,t.version)">Attester ce document</button>
-      <p class="help">
-        Attestation simple liée à votre accès e-mail vérifié. Ce parcours n'est pas présenté comme
-        une signature avancée ou qualifiée.
-      </p>
+      <a [href]="'/api/public/family-space/youths/'+youth()!.id+'/templates/'+t.id+'/pdf'"
+        >Télécharger ce document sans attestation (PDF)</a
+      >
+      @if(!readOnly()){
+      <app-family-attestation
+        [documentId]="t.id"
+        [signer]="space()!.contact.name"
+        [capacity]="youth()!.identity.legalCapacity"
+        [busy]="busy()"
+        (accepted)="sign(t.id,t.version,$event)"
+      />
+      }
     </article>
     }}@empty{
     <aside>
@@ -376,7 +414,7 @@
     }@for(s of youth()!.signatures;track $index){
     <p>
       {{s.templateId}} · version {{s.version}} · {{s.withdrawnAt?'À relire et attester de
-      nouveau':'Attesté par '+s.signerName}} · {{s.signedAt}}
+      nouveau':'Attesté par '+s.signerName}} · {{frenchDate(s.signedAt)}}
       <a [href]="'/api/public/family-space/youths/'+youth()!.id+'/signatures/'+$index+'/pdf'"
         >Télécharger mon exemplaire</a
       >
@@ -392,33 +430,78 @@
     </aside>
     <p>Le tarif réel n'est pas établi par cet écran.</p>
     <p class="badge">{{simulationLabels[youth()!.simulation]}}</p>
-    <button type="button" (click)="simulate('SUCCESS')">Simuler un paiement réussi</button
+    @if(!readOnly()){<button type="button" (click)="simulate('SUCCESS')">
+      Simuler un paiement réussi</button
     ><button class="secondary" type="button" (click)="simulate('FAILURE')">Simuler un échec</button
     ><button class="quiet" type="button" (click)="simulate('CANCELLED')">
       Simuler une annulation</button
-    >} @case(6){
+    >}} @case(6){
     <legend>Tout relire, puis envoyer</legend>
     <h2>{{youth()!.identity.firstName}} {{youth()!.identity.lastName}}</h2>
     <dl>
       <dt>Naissance</dt>
-      <dd>{{youth()!.identity.dateOfBirth}}</dd>
+      <dd>{{frenchDate(youth()!.identity.dateOfBirth)}}</dd>
       <dt>Diocèse</dt>
-      <dd>{{youth()!.identity.dioceseId}}</dd>
+      <dd>{{dioceseLabel(youth()!.identity.dioceseId)}}</dd>
+      <dt>Tranche MEJ</dt>
+      <dd>{{youth()!.identity.mejAgeGroup || 'Non renseignée'}}</dd>
+      <dt>Qualité du responsable</dt>
+      <dd>{{capacityLabel(youth()!.identity.legalCapacity)}}</dd>
+      <dt>Ville et groupe du jeune</dt>
+      <dd>
+        {{youth()!.identity.city || reviewContact().city || 'Non renseignée'}} ·
+        {{youth()!.identity.mejGroup || 'Groupe non renseigné'}}
+      </dd>
       <dt>Contact</dt>
-      <dd>{{space()!.contact.name}} · {{space()!.contact.phone}}</dd>
+      <dd>{{reviewContact().name}} · {{reviewContact().phone}}</dd>
+      <dt>Adresse du foyer</dt>
+      <dd>
+        {{reviewContact().address || 'Non renseignée'}} {{reviewContact().postalCode}}
+        {{reviewContact().city}}
+      </dd>
       <dt>Contact d'urgence</dt>
-      <dd>{{space()!.contact.emergencyName}} · {{space()!.contact.emergencyPhone}}</dd>
+      <dd>{{reviewContact().emergencyName}} · {{reviewContact().emergencyPhone}}</dd>
       <dt>Participation</dt>
-      <dd>{{youth()!.logistics.presence}}</dd>
+      <dd>
+        {{youth()!.logistics.presence==='FULL'?'Tout le
+        rassemblement':youth()!.logistics.presence==='PARTIAL'?'Présence partielle à confirmer':'Non
+        renseignée'}}
+      </dd>
+      <dt>Arrivée et départ</dt>
+      <dd>
+        {{youth()!.logistics.arrival || 'À préciser'}} / {{youth()!.logistics.departure || 'À
+        préciser'}}
+      </dd>
+      <dt>Transport et hébergement</dt>
+      <dd>
+        {{youth()!.logistics.transport || 'À préciser'}} / {{youth()!.logistics.accommodation || 'À
+        préciser'}}
+      </dd>
+      <dt>Précisions logistiques</dt>
+      <dd>{{youth()!.logistics.notes || 'Aucune'}}</dd>
+      <dt>Documents attestés</dt>
+      <dd>
+        {{youth()!.signatures.length}} attestation(s), détails et exemplaires à la page Documents et
+        autorisations.
+      </dd>
+      <dt>Santé</dt>
+      <dd>
+        À relire dans la page confidentielle Santé et adaptations, séparément des informations
+        administratives.
+      </dd>
       <dt>Paiement</dt>
       <dd>{{simulationLabels[youth()!.simulation]}}</dd>
     </dl>
-    @if(missing().length){
+    @if(!readOnly()){ @if(missing().length){
     <aside>
       <h2>Ce qu'il reste à compléter</h2>
       <ul>
         @for(label of missing();track label){
-        <li>{{label}}</li>
+        <li>
+          <button class="quiet" type="button" (click)="go(requirementPage(label))">
+            {{label}} : compléter la page {{requirementPage(label)+1}}
+          </button>
+        </li>
         }
       </ul>
     </aside>
@@ -441,7 +524,12 @@
       [disabled]="busy()||!!missing().length||!rules().registrationOpen||!signatureModel().finalAccepted"
     >
       Envoyer ce dossier pour vérification</button
-    >} }
+    >} @else{
+    <p>
+      Consultation de votre dossier envoyé. Les coordonnées ci-dessus sont celles conservées au
+      moment de l’envoi.
+    </p>
+    } } }
   </fieldset>
   @if(youth()!.state==='DRAFT'||youth()!.state==='CORRECTION'){
   <div class="page-actions">

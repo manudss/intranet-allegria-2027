@@ -1,5 +1,8 @@
+import { buildFamilyDemo } from './family-demo-seed';
+import { registrationPdf } from '../../app/core/family-registration/registration-pdf';
+import { digest } from '../../app/core/family-registration/family-registration.service';
 import 'dotenv/config';
-import { newYouth, EMPTY_CONTACT, DEFAULT_FAMILY_RULES, DIOCESES } from '@mej-allegria/shared';
+
 import { randomUUID } from 'node:crypto';
 import { seedAccessTestkit } from './access-testkit';
 import { fakerFR as faker } from '@faker-js/faker';
@@ -783,60 +786,39 @@ async function run(): Promise<void> {
       ),
     );
 
-    // Fictitious family drafts only. No digital health activation, outgoing email or real signatures.
-    const exampleFamily = randomUUID(),
-      first = newYouth(randomUUID(), 'Lyon'),
-      second = newYouth(randomUUID(), 'Lyon');
-    first.identity = {
-      ...first.identity,
-      firstName: 'Camille',
-      lastName: 'Exemple fictif',
-      dioceseId: DIOCESES.find((d) => d.name === 'Lyon')?.id || DIOCESES[0].id,
-    };
-    second.identity = { ...second.identity, firstName: 'Alexis', lastName: 'Exemple fictif' };
-    second.currentPage = 2;
-    second.simulation = 'SUCCESS';
-    const transmitted = ['SUBMITTED', 'CORRECTION', 'VALIDATED', 'CONFIRMED', 'REFUSED'] as const;
-    const cases = transmitted.map((state, index) => {
-      const y = newYouth(randomUUID(), 'Lyon');
-      y.identity = {
-        ...first.identity,
-        firstName: ['Louise', 'Gabriel', 'Emma', 'Louis', 'Jade'][index],
-      };
-      y.state = state;
-      y.submittedAt = new Date().toISOString();
-      y.contactAtSubmission = { ...EMPTY_CONTACT, name: 'Parent exemple fictif', city: 'Lyon' };
-      if (state === 'CORRECTION')
-        y.correction = 'Exemple fictif : merci de compléter le téléphone du contact d’urgence.';
-      return y;
-    });
+    const { family: familyDemo, rules: familyDemoRules } = buildFamilyDemo();
     await dataSource.query('INSERT INTO registration_families(id,email,dossier) VALUES($1,$2,$3)', [
-      exampleFamily,
-      'famille-demo@example.test',
-      {
-        id: exampleFamily,
-        email: 'famille-demo@example.test',
-        contact: { ...EMPTY_CONTACT, name: 'Parent exemple fictif', city: 'Lyon' },
-        youths: [first, second, ...cases],
-        revision: 0,
-        updatedAt: new Date().toISOString(),
-      },
+      familyDemo.id,
+      familyDemo.email,
+      familyDemo,
     ]);
     await dataSource.query('INSERT INTO registration_settings(id,rules) VALUES(1,$1)', [
-      {
-        ...DEFAULT_FAMILY_RULES,
-        templates: [
-          {
-            id: 'demo-autorisation',
-            title: 'Exemple fictif, modèle à remplacer',
-            version: 'demo-1',
-            text: 'Démonstration uniquement. Ce texte ne vaut pas autorisation réelle. L’organisation doit fournir et valider ses modèles avant ouverture.',
-            required: false,
-            enabled: true,
-          },
-        ],
-      },
+      familyDemoRules,
     ]);
+
+    // Existing seed pipeline only: fictional document states, never a real upload.
+    const demoPiece = Buffer.from(
+      await registrationPdf([
+        'EXEMPLE FICTIF UNIQUEMENT',
+        'Pièce administrative de démonstration, sans donnée réelle.',
+      ]),
+    );
+    for (const [index, status] of ['RECEIVED', 'ACCEPTED', 'CORRECTION'].entries()) {
+      await dataSource.query(
+        'INSERT INTO registration_documents(id,family_id,"youthId",name,mime,content,digest,status,reason) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+        [
+          randomUUID(),
+          familyDemo.id,
+          familyDemo.youths[0].id,
+          'EXEMPLE-FICTIF-' + status + '.pdf',
+          'application/pdf',
+          demoPiece,
+          digest(demoPiece),
+          status,
+          index === 2 ? 'Exemple fictif : document lisible à redéposer.' : '',
+        ],
+      );
+    }
 
     const roleByCode = new Map(roles.map((role) => [role.code, role]));
 

@@ -134,7 +134,8 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
     if (this.expanded().has(id) === open) return;
     this.expanded.update((s) => {
       const next = new Set(s);
-      open ? next.add(id) : next.delete(id);
+      if (open) next.add(id);
+      else next.delete(id);
       return next;
     });
   }

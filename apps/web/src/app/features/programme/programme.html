@@ -1,5 +1,5 @@
 <app-page-layout
-  title="Planning & Ordonnancement"
+  title="Agenda & Ordonnancement"
   description="Planification en chaîne des séquences du programme"
 >
   <div actions class="header-actions">
@@ -24,57 +24,9 @@
       Éditeur de jour
     </button>
     }
-    <button
-      tuiButton
-      appearance="secondary"
-      type="button"
-      iconStart="@tui.file-text"
-      (click)="toggleChangeLog()"
-    >
-      Journal des modifications
-    </button>
-    @if (canEdit() && viewMode() === 'day') {
-    <button
-      tuiButton
-      appearance="secondary"
-      type="button"
-      iconStart="@tui.map-pin"
-      (click)="openCreateForm()"
-    >
-      {{ chain().length ? 'Nouveau lieu' : 'Premier créneau' }}
-    </button>
-    <button
-      tuiButton
-      appearance="primary"
-      type="button"
-      iconStart="@tui.plus"
-      (click)="openInsertForm(chain()[chain().length - 1].id)"
-      [disabled]="!chain().length"
-    >
-      Nouveau créneau
-    </button>
-    <button
-      tuiButton
-      appearance="secondary"
-      type="button"
-      iconStart="@tui.globe"
-      (click)="publishPublicProgram()"
-      [disabled]="publishingPublic()"
-      title="Régénère la liste statique des grands temps publics (appli sans connexion)"
-    >
-      Mettre à jour la liste publique
-    </button>
-    }
   </div>
 
-  @if (publicExportStatus(); as exportStatus) {
-  <p class="public-export-status">
-    @if (exportStatus.length) { Liste publique générée le {{ exportStatus[exportStatus.length -
-    1].generatedAt | date: 'dd/MM/yyyy à HH:mm' }} ({{ exportStatus.length }} jour(s), grands temps
-    seulement). } @else { Liste publique jamais générée : l'appli sans connexion n'affiche aucun
-    grand temps. }
-  </p>
-  } @if (actionMessage(); as message) {
+  @if (actionMessage(); as message) {
   <div
     class="banner"
     [class.positive]="message.appearance === 'positive'"
@@ -129,73 +81,139 @@
     }
   </section>
   } @else {
-  <div class="toolbar">
-    <div class="day-tabs">
+  <div class="toolbar" role="toolbar" aria-label="Outils du planning">
+    <div class="seg" role="group" aria-label="Jour">
       @for (day of days; track day; let i = $index) {
-      <button
-        tuiButton
-        type="button"
-        size="s"
-        [appearance]="dayIndex() === i ? 'primary' : 'secondary'"
-        (click)="setDay(i)"
-      >
-        J{{ i + 1 }} · {{ day }}
+      <button type="button" class="seg-btn" [class.on]="dayIndex() === i" (click)="setDay(i)">
+        J{{ i + 1 }} · {{ day | date: 'dd/MM' }}
       </button>
       }
     </div>
-    <div class="track-filters" role="group" aria-label="Disposition de la vue jour">
+    <div class="seg" role="group" aria-label="Disposition de la vue jour">
       <button
-        tuiButton
         type="button"
-        size="s"
-        [appearance]="dayLayout() === 'locations' ? 'primary' : 'secondary'"
+        class="seg-btn"
+        [class.on]="dayLayout() === 'locations'"
         (click)="setDayLayout('locations')"
       >
         Par lieu
       </button>
       <button
-        tuiButton
         type="button"
-        size="s"
-        [appearance]="dayLayout() === 'tracks' ? 'primary' : 'secondary'"
+        class="seg-btn"
+        [class.on]="dayLayout() === 'tracks'"
         (click)="setDayLayout('tracks')"
       >
         Par piste
       </button>
+      <button
+        type="button"
+        class="seg-btn"
+        [class.on]="dayLayout() === 'groups'"
+        (click)="setDayLayout('groups')"
+      >
+        Par groupe
+      </button>
     </div>
-    <div class="track-filters" role="group" aria-label="Filtrer par piste">
+    <div class="seg" role="group" aria-label="Filtrer par piste">
       @for (option of trackFilters; track option.value) {
       <button
-        tuiButton
         type="button"
-        size="s"
-        [appearance]="trackFilter() === option.value ? 'primary' : 'secondary'"
+        class="seg-btn"
+        [class.on]="trackFilter() === option.value"
         (click)="setTrackFilter(option.value)"
       >
         {{ option.label }}
       </button>
       }
     </div>
+    <label class="search">
+      <tui-icon icon="@tui.search" />
+      <input
+        type="search"
+        placeholder="Rechercher un créneau…"
+        aria-label="Rechercher un créneau"
+        [ngModel]="searchQuery()"
+        (ngModelChange)="setSearchQuery($event)"
+      />
+    </label>
+    <div class="statchips" aria-label="Chiffres du jour">
+      <span class="statchip">{{ dayStats().total }} séquences</span>
+      <span class="statchip">{{ dayStats().mobile }} mobiles</span>
+      <span class="statchip">{{ dayStats().frozen }} figées</span>
+      <span class="statchip">{{ dayStats().branches }} branches</span>
+    </div>
+    <span class="toolbar-spacer"></span>
+    <a tuiButton appearance="secondary" size="s" iconStart="@tui.history" routerLink="/programme/journal">
+      Journal ({{ journalCount() }})
+    </a>
+    @if (canEdit()) {
+    <button
+      tuiButton
+      appearance="secondary"
+      size="s"
+      type="button"
+      iconStart="@tui.map-pin"
+      (click)="openCreateForm()"
+    >
+      {{ chain().length ? 'Nouveau lieu' : 'Premier créneau' }}
+    </button>
+    <button
+      tuiButton
+      appearance="secondary"
+      size="s"
+      type="button"
+      iconStart="@tui.globe"
+      (click)="publishPublicProgram()"
+      [disabled]="publishingPublic()"
+      title="Régénère la liste statique des grands temps publics (appli sans connexion)"
+    >
+      Mettre à jour la liste publique
+    </button>
+    <button
+      tuiButton
+      appearance="primary"
+      size="s"
+      type="button"
+      iconStart="@tui.plus"
+      (click)="openInsertForm(chain()[chain().length - 1].id)"
+      [disabled]="!chain().length"
+    >
+      Créneau
+    </button>
+    }
   </div>
 
-  <div class="kpis">
-    <div class="kpi-card">
-      <span class="kpi-value">{{ kpis().total }}</span>
-      <span class="kpi-label">Séquences</span>
-    </div>
-    <div class="kpi-card">
-      <span class="kpi-value">{{ kpis().mobile }}</span>
-      <span class="kpi-label">Mobiles</span>
-    </div>
-    <div class="kpi-card">
-      <span class="kpi-value">{{ kpis().frozen }}</span>
-      <span class="kpi-label">Figées</span>
-    </div>
-    <div class="kpi-card">
-      <span class="kpi-value">{{ kpis().branches }}</span>
-      <span class="kpi-label">Branches parallèles</span>
-    </div>
+  @if (exportBanner(); as banner) {
+  <div class="export-banner" [class.stale]="banner.kind !== 'fresh'">
+    <tui-icon icon="@tui.globe" />
+    @if (banner.kind === 'never') {
+    <span>Liste publique jamais générée : l'appli sans connexion n'affiche aucun grand temps.</span>
+    } @else if (banner.kind === 'stale') {
+    <span>
+      Liste publique générée le {{ banner.generatedAt | date: 'dd/MM/yyyy à HH:mm' }} — {{
+      banner.changesSince }} modification{{ banner.changesSince > 1 ? 's' : '' }} depuis.
+    </span>
+    } @else {
+    <span>
+      Liste publique à jour, générée le {{ banner.generatedAt | date: 'dd/MM/yyyy à HH:mm' }}
+      (grands temps seulement).
+    </span>
+    }
+    @if (canEdit() && banner.kind !== 'fresh') {
+    <button
+      tuiButton
+      appearance="secondary"
+      size="xs"
+      type="button"
+      (click)="publishPublicProgram()"
+      [disabled]="publishingPublic()"
+    >
+      {{ banner.kind === 'never' ? 'Publier' : 'Republier' }}
+    </button>
+    }
   </div>
+  }
 
   <div class="programme-layout" [class.panel-active]="panelActive()">
     <div class="chain-column">
@@ -204,7 +222,6 @@
         class="pending-bar"
         role="status"
         [class.positive]="pending.outcome === 'ok'"
-        [class.warning]="false"
         [class.negative]="pending.outcome !== 'ok'"
       >
         <div class="pending-text">
@@ -260,7 +277,13 @@
           </span>
         </div>
         @for (row of trackRows(); track row.key) { @if (row.common; as common) {
-        <button type="button" class="track-card common" (click)="selectLocation(common.location)">
+        <button
+          type="button"
+          class="track-card common"
+          [class.search-hit]="searchStateOf(common) === 'hit'"
+          [class.search-dim]="searchStateOf(common) === 'dim'"
+          (click)="onSequenceClick($event, common)"
+        >
           <header>
             <span class="track-inline">
               <img class="track-logo" src="/assets/branches/ta.jpg" alt="TA" />
@@ -277,7 +300,9 @@
             type="button"
             class="track-card"
             [style.border-left-color]="trackColor(ProgramSequenceTrack.TA)"
-            (click)="selectLocation(ta.location)"
+            [class.search-hit]="searchStateOf(ta) === 'hit'"
+            [class.search-dim]="searchStateOf(ta) === 'dim'"
+            (click)="onSequenceClick($event, ta)"
           >
             <header>
               <img class="track-logo" src="/assets/branches/ta.jpg" alt="TA" />
@@ -292,7 +317,9 @@
             type="button"
             class="track-card"
             [style.border-left-color]="trackColor(ProgramSequenceTrack.ES)"
-            (click)="selectLocation(es.location)"
+            [class.search-hit]="searchStateOf(es) === 'hit'"
+            [class.search-dim]="searchStateOf(es) === 'dim'"
+            (click)="onSequenceClick($event, es)"
           >
             <header>
               <img class="track-logo" src="/assets/branches/es.jpg" alt="ES" />
@@ -306,6 +333,29 @@
         </div>
         } } @empty {
         <p class="empty-state">Aucune séquence pour ce filtre.</p>
+        }
+      </section>
+      } @else if (dayLayout() === 'groups') {
+      <section class="groups-view" aria-label="Vue par groupe">
+        @if (groupLanes().length === 0) {
+        <p class="empty-state">Aucun créneau pour ce jour.</p>
+        }
+        @for (lane of groupLanes(); track lane.name) {
+        <h3 class="groups-lane">{{ lane.name || 'Sans groupe' }}</h3>
+        @for (sequence of lane.sequences; track sequence.id) {
+        <button
+          type="button"
+          class="track-card"
+          [class.search-hit]="searchStateOf(sequence) === 'hit'"
+          [class.search-dim]="searchStateOf(sequence) === 'dim'"
+          (click)="onSequenceClick($event, sequence)"
+        >
+          <header>
+            <strong>{{ sequence.startTime }} – {{ sequence.endTime }} · {{ sequence.title }}</strong>
+          </header>
+          <span class="track-meta">{{ trackLabel(sequence.track) }} · {{ sequence.location }}</span>
+        </button>
+        }
         }
       </section>
       } @else if (columns().length) {
@@ -325,7 +375,7 @@
           <div
             class="calendar-columns"
             (pointermove)="onDragMove($event)"
-            (pointerup)="endDrag(); endResize()"
+            (pointerup)="endDrag($event); endResize()"
             (pointercancel)="endDrag(); endResize()"
           >
             @for (column of columns(); track column.name) {
@@ -355,6 +405,8 @@
                   [class.blocked]="block.change === 'blocked'"
                   [class.is-new]="block.change === 'new'"
                   [class.just-changed]="block.justChanged"
+                  [class.search-hit]="block.searchState === 'hit'"
+                  [class.search-dim]="block.searchState === 'dim'"
                   [class.compact]="liveHeight(block) < 64"
                   [class.dragging]="!!block.sequence && dragState()?.sequenceId === block.sequence.id"
                   [style.top.px]="block.topPx"
@@ -362,6 +414,11 @@
                   [style.border-left-color]="block.sequence ? trackColor(block.sequence.track) : null"
                   [style.transform]="block.sequence ? dragTransform(block.sequence) : null"
                   (pointerdown)="block.sequence && startDrag($event, block.sequence)"
+                  (click)="onBlockClick($event, block)"
+                  role="button"
+                  tabindex="0"
+                  (keydown.enter)="onBlockKey($event, block)"
+                  (keydown.space)="onBlockKey($event, block)"
                 >
                   <header>
                     <span class="sequence-time">{{ block.startTime }} – {{ block.endTime }}</span>
@@ -402,109 +459,53 @@
           </div>
         </div>
       </div>
-      } @if (chain().length) {
-      <section class="sequence-list" aria-label="Détails et actions des séquences">
-        <h3>Détails et actions</h3>
-        @for (sequence of chain(); track sequence.id) {
-        <article class="sequence-detail" [attr.aria-label]="sequence.title">
-          <h4>
-            @if (detailTimes(sequence); as times) { @if (times.after) {
-            <span class="time-before">{{ times.before }}</span>
-            <span class="time-after" [class.blocked]="times.blocked">→ {{ times.after }}</span>
-            <span class="time-tag">{{ times.blocked ? 'Impossible' : 'Modifié' }}</span>
-            } @else { {{ times.before }} } } · {{ sequence.title }}
-          </h4>
-          <p class="sequence-meta">
-            <tui-icon icon="@tui.map-pin" />
-            {{ sequence.location }} @if (sequence.volunteerTeamName) { ·
-            <tui-icon icon="@tui.users" /> {{ sequence.volunteerTeamName }} }
-          </p>
-          @if (sequence.notes) {
-          <p class="sequence-notes">{{ sequence.notes }}</p>
-          } @if (sequence.documentLinks.length) {
-          <ul class="sequence-documents">
-            @for (doc of sequence.documentLinks; track doc.url) {
-            <li><a [href]="doc.url" target="_blank" rel="noopener">{{ doc.label }}</a></li>
-            }
-          </ul>
-          } @if (branchesFor(sequence.id).length) {
-          <div class="parallel-branches">
-            <div tuiBadge appearance="neutral">
-              {{ branchesFor(sequence.id).length }} voies parallèles
-            </div>
-            <ul>
-              @for (branch of branchesFor(sequence.id); track branch.id) {
-              <li>{{ branch.location }} — {{ branch.title }}</li>
-              }
-            </ul>
-          </div>
-          }
-
-          <footer class="sequence-actions">
-            <a
-              tuiButton
-              appearance="flat"
-              size="xs"
-              [routerLink]="['/programme/evenements', sequence.id]"
-            >
-              Ouvrir la fiche
-            </a>
-          </footer>
-
-          @if (canEdit()) {
-          <footer class="sequence-actions">
-            <button
-              tuiButton
-              appearance="flat"
-              size="xs"
-              type="button"
-              (click)="openInsertForm(sequence.id)"
-            >
-              Insérer après
-            </button>
-            <button
-              tuiButton
-              appearance="flat"
-              size="xs"
-              type="button"
-              [disabled]="sequence.status === ProgramSequenceStatus.FROZEN"
-              (click)="openResizeForm(sequence)"
-            >
-              Redimensionner
-            </button>
-            <button
-              tuiButton
-              appearance="flat"
-              size="xs"
-              type="button"
-              (click)="toggleFreeze(sequence)"
-            >
-              {{ sequence.status === ProgramSequenceStatus.FROZEN ? 'Défiger' : 'Figer' }}
-            </button>
-            <button
-              tuiButton
-              appearance="flat"
-              size="xs"
-              type="button"
-              (click)="openEditForm(sequence)"
-            >
-              Modifier
-            </button>
-            <button
-              tuiButton
-              appearance="flat"
-              size="xs"
-              type="button"
-              [disabled]="sequence.status === ProgramSequenceStatus.FROZEN"
-              (click)="deleteSequence(sequence)"
-            >
-              Supprimer
-            </button>
-          </footer>
-          }
-        </article>
-        }
-      </section>
+    @if (sequenceMenu(); as menu) {
+    <div class="sequence-menu" role="menu" [style.left.px]="menu.x" [style.top.px]="menu.y">
+      <div class="menu-title">
+        {{ menu.sequence.startTime }} – {{ menu.sequence.endTime }} · {{ menu.sequence.title }}
+      </div>
+      <a
+        role="menuitem"
+        class="menu-item"
+        [routerLink]="['/programme/evenements', menu.sequence.id]"
+        (click)="closeSequenceMenu()"
+      >
+        <tui-icon icon="@tui.file-text" /> Ouvrir la fiche
+      </a>
+      @if (canEdit()) {
+      <button role="menuitem" class="menu-item" type="button" (click)="menuQuickEdit()">
+        <tui-icon icon="@tui.pencil" /> Modification rapide
+      </button>
+      <button role="menuitem" class="menu-item" type="button" (click)="menuInsertAfter()">
+        <tui-icon icon="@tui.plus" /> Insérer après
+      </button>
+      <button
+        role="menuitem"
+        class="menu-item"
+        type="button"
+        [disabled]="menu.sequence.status === ProgramSequenceStatus.FROZEN"
+        (click)="menuResize()"
+      >
+        <tui-icon icon="@tui.move-vertical" /> Redimensionner
+      </button>
+      <button role="menuitem" class="menu-item" type="button" (click)="menuToggleFreeze()">
+        <tui-icon
+          [icon]="menu.sequence.status === ProgramSequenceStatus.FROZEN ? '@tui.unlock' : '@tui.lock'"
+        />
+        {{ menu.sequence.status === ProgramSequenceStatus.FROZEN ? 'Défiger' : 'Figer' }}
+      </button>
+      <button
+        role="menuitem"
+        class="menu-item danger"
+        type="button"
+        [disabled]="menu.sequence.status === ProgramSequenceStatus.FROZEN"
+        (click)="menuDelete()"
+      >
+        <tui-icon icon="@tui.trash-2" /> Supprimer
+      </button>
+      }
+    </div>
+    }
       } @if (!chain().length) {
       <p class="empty-state">Aucune séquence pour ce jour.</p>
       }
@@ -732,22 +733,6 @@
             Annuler
           </button>
         </div>
-      </div>
-      } @if (changeLogOpen()) {
-      <div class="changelog-card">
-        <h4>Journal des modifications</h4>
-        @if (!changeLog().length) {
-        <p class="empty-state">Aucune modification enregistrée.</p>
-        }
-        <ul>
-          @for (entry of changeLog(); track entry.id) {
-          <li>
-            <strong>{{ changeLogLabels[entry.action] }}</strong>
-            — {{ entry.authorUserName ?? 'Coordination' }} —
-            <span>{{ entry.comment }}</span>
-          </li>
-          }
-        </ul>
       </div>
       }
     </aside>

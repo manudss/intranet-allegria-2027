@@ -219,8 +219,9 @@
   .page-title {
     font-size: 0.7rem;
     line-height: 1.15;
-    white-space: normal;
-    overflow-wrap: break-word;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .header-right {
@@ -237,5 +238,13 @@
 
   .allegria-content {
     padding: 1rem;
+  }
+}
+
+/* Très petit écran : le titre de la page est déjà affiché dans le contenu (h1),
+   on ne le casse pas lettre par lettre dans l'en-tête fixe. */
+@media (max-width: 400px) {
+  .allegria-header .page-title {
+    display: none;
   }
 }

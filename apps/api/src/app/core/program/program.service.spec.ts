@@ -5,6 +5,7 @@ import {
   ProgramChangeLog,
   ProgramChangeLogAction,
   ProgramSequence,
+  ProgramSequenceGroup,
   ProgramSequenceStatus,
   ProgramSequenceTrack,
 } from '../entities';
@@ -49,17 +50,27 @@ function createFakeDataSource() {
       row(3, '10:00', 2, 45),
     ] as ProgramSequence[],
     logs: [] as ProgramChangeLog[],
+    sequenceGroups: [] as ProgramSequenceGroup[],
     nextId: 100,
   };
 
   const manager = {
     find: async (entity: unknown, options: { where?: Record<string, unknown> } = {}) => {
-      const list = (entity === ProgramSequence ? state.sequences : state.logs) as unknown as Record<
-        string,
-        unknown
-      >[];
+      const source =
+        entity === ProgramSequence
+          ? state.sequences
+          : entity === ProgramSequenceGroup
+            ? state.sequenceGroups
+            : state.logs;
+      const list = source as unknown as Record<string, unknown>[];
       const where = options.where ?? {};
-      return list.filter((item) => Object.entries(where).every(([k, v]) => item[k] === v));
+      return list.filter((item) =>
+        Object.entries(where).every(([k, v]) =>
+          v && typeof v === 'object' && (v as { _type?: string })._type === 'in'
+            ? (v as unknown as { _value: unknown[] })._value.includes(item[k])
+            : item[k] === v,
+        ),
+      );
     },
     findOne: async (_entity: unknown, options: { where: { id: number } }) =>
       state.sequences.find((s) => s.id === options.where.id) ?? null,
@@ -100,6 +111,18 @@ describe('ProgramService', () => {
     const { service } = createFakeDataSource();
     const day = await service.getDay(DATE);
     expect(day.sequences.map((s) => s.id)).toEqual([1, 2, 3]);
+  });
+
+  it('getDay inclut les groupes de rassemblement liés à chaque séquence', async () => {
+    const { service, state } = createFakeDataSource();
+    state.sequenceGroups.push(
+      { sequenceId: 2, groupId: 9 } as ProgramSequenceGroup,
+      { sequenceId: 2, groupId: 7 } as ProgramSequenceGroup,
+    );
+    const day = await service.getDay(DATE);
+    expect(day.sequences.find((s) => s.id === 2)?.groupIds).toEqual(expect.arrayContaining([7, 9]));
+    expect(day.sequences.find((s) => s.id === 2)?.groupIds).toHaveLength(2);
+    expect(day.sequences.find((s) => s.id === 1)?.groupIds).toEqual([]);
   });
 
   it('getDay refuse une date invalide', async () => {

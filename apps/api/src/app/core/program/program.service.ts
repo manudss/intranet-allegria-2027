@@ -39,6 +39,7 @@ import {
   InsertSequenceDto,
   ProgramChangeLogView,
   ProgramRequestUser,
+  ProgramSequenceDayView,
   ProgramSequenceDetailView,
   ProgramSequenceView,
   ResizeSequenceDto,
@@ -172,14 +173,34 @@ export class ProgramService {
   }
 
   /** Toutes les séquences d'un jour (tous lieux, branches incluses). */
-  async getDay(date: string): Promise<{ date: string; sequences: ProgramSequenceView[] }> {
+  async getDay(date: string): Promise<{ date: string; sequences: ProgramSequenceDayView[] }> {
     this.assertDate(date);
     const sequences = await this.dataSource.manager.find(ProgramSequence, {
       where: { eventDate: date },
       relations: { volunteerTeam: true, frozenByUser: true },
       order: { location: 'ASC', startTime: 'ASC', id: 'ASC' },
     });
-    return { date, sequences: sequences.map(toView) };
+    const ids = sequences.map((sequence) => sequence.id);
+    const links = ids.length
+      ? await this.dataSource.manager.find(ProgramSequenceGroup, {
+          where: { sequenceId: In(ids) },
+          order: { groupId: 'ASC' },
+        })
+      : [];
+    const groupIdsBySequence = new Map<number, number[]>();
+    for (const link of links) {
+      groupIdsBySequence.set(link.sequenceId, [
+        ...(groupIdsBySequence.get(link.sequenceId) ?? []),
+        link.groupId,
+      ]);
+    }
+    return {
+      date,
+      sequences: sequences.map((sequence) => ({
+        ...toView(sequence),
+        groupIds: groupIdsBySequence.get(sequence.id) ?? [],
+      })),
+    };
   }
 
   async previewInsert(

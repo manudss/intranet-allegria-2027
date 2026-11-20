@@ -53,7 +53,7 @@ describe('Family HTTP contract with disposable real SQL storage, no mail sent', 
       { get: (key: string) => configValues[key] } as never,
     );
     const module = await Test.createTestingModule({
-      imports: [ThrottlerModule.forRoot([{ name: 'default', ttl: 60000, limit: 120 }])],
+      imports: [ThrottlerModule.forRoot([{ name: 'default', ttl: 600000, limit: 5 }])],
       controllers: [
         RolesController,
         UsersController,
@@ -110,6 +110,26 @@ describe('Family HTTP contract with disposable real SQL storage, no mail sent', 
   afterEach(async () => {
     await app.close();
     await pg.close();
+  });
+  it('keeps the family policy explicit with the legacy global5/10min default', async () => {
+    for (let i = 0; i < 7; i++) {
+      const r = await fetch(url + '/api/public/family-space/rules');
+      expect(r.status).toBe(200);
+      expect(r.headers.get('x-ratelimit-limit')).toBe('120');
+      expect(Number(r.headers.get('x-ratelimit-reset'))).toBeLessThanOrEqual(60);
+    }
+  });
+  it('retains strict per-route access-code abuse protection', async () => {
+    for (let i = 0; i < 6; i++) {
+      const r = await fetch(url + '/api/public/family-space/access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Origin: url },
+        body: JSON.stringify({ email: 'limit@example.test' }),
+      });
+      if (i < 5) expect(r.headers.get('x-ratelimit-limit')).toBe('5');
+      expect(r.status).toBe(i < 5 ? 503 : 429);
+      if (i === 5) expect(Number(r.headers.get('retry-after'))).toBeGreaterThan(0);
+    }
   });
   async function login(email = 'fiction@example.test') {
     const challenge = randomUUID();

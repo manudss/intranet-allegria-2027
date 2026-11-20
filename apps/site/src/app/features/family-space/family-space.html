@@ -18,12 +18,18 @@
   </header>
   @if(error()){
   <div class="error" role="alert">
-    {{error()}} @if(canRetrySave()){<button type="button" (click)="save()" [disabled]="busy()">
+    {{error()}} @if(canRetrySave()){<button
+      type="button"
+      (click)="save()"
+      [disabled]="busy() || retryBlocked()"
+    >
       Réessayer la sauvegarde</button
     >}
   </div>
   } @if(status()){
-  <p class="save-state" role="status" aria-live="polite">{{status()}}</p>
+  <p class="save-state" [class.unsaved]="canRetrySave()" role="status" aria-live="polite">
+    {{status()}}
+  </p>
   } @if(!space()){
   <article class="access card">
     @if(rules().previewDemo){
@@ -234,22 +240,12 @@
         </select>
       </div>
     </div>
-    <label for="diocese-search">Rechercher un diocèse</label
-    ><input
-      id="diocese-search"
-      type="search"
-      [value]="dioceseSearch()"
-      (input)="dioceseSearch.set($any($event.target).value)"
-      placeholder="Nom du diocèse…"
-    /><label for="y-diocese">Diocèse ou juridiction</label
-    ><select id="y-diocese" [formField]="editForm.dioceseId" (change)="changed()">
-      <option value="">Choisir dans la liste</option>
-      <option value="UNKNOWN">Je ne sais pas</option>
-      <option value="OTHER">Autre pays / autre juridiction</option>
-      @for(d of dioceses();track d.id){
-      <option [value]="d.id">{{d.name}}</option>
-      }</select
-    >@if(editModel().dioceseId==='OTHER'){<label for="y-other">Pays et diocèse / juridiction</label
+    <app-diocese-select
+      [value]="editModel().dioceseId"
+      [disabled]="readOnly()"
+      (selected)="chooseDiocese($event)"
+    />
+    @if(editModel().dioceseId==='OTHER'){<label for="y-other">Pays et diocèse / juridiction</label
     ><input id="y-other" [formField]="editForm.otherDiocese" (input)="changed()" />}
     <div class="field-grid">
       <div>
@@ -534,7 +530,8 @@
   @if(youth()!.state==='DRAFT'||youth()!.state==='CORRECTION'){
   <div class="page-actions">
     @if(page()>0){<button class="secondary" type="button" (click)="go(page()-1)">Précédent</button
-    >}<button type="button" (click)="save()" [disabled]="busy()">Enregistrer cette page</button
+    >}<button type="button" (click)="save()" [disabled]="busy() || retryBlocked()">
+      Enregistrer cette page</button
     >@if(page()<6){<button type="button" (click)="go(page()+1)" [disabled]="busy()">
       Enregistrer et continuer</button
     >}

@@ -1,3 +1,5 @@
+import { familyRetryDelay, familyRateLimitMessage } from './family-rate-limit';
+import { DioceseSelect } from './diocese-select';
 import { focusFamilyHeading } from './family-focus';
 import { FamilyAttestation, AttestationInput } from './family-attestation';
 import { FamilyDocuments } from './family-documents';
@@ -27,7 +29,14 @@ import {
 import type { FamilyContact, FamilyRules, FamilySpace, YouthDossier } from '@mej-allegria/shared';
 @Component({
   selector: 'app-family-space',
-  imports: [FormField, RouterLink, FamilyHealthPage, FamilyDocuments, FamilyAttestation],
+  imports: [
+    FormField,
+    RouterLink,
+    FamilyHealthPage,
+    FamilyDocuments,
+    FamilyAttestation,
+    DioceseSelect,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './family-space.html',
   styleUrl: './family-space.scss',
@@ -44,6 +53,8 @@ export class FamilySpacePage implements OnInit, OnDestroy {
       : this.space()!.contact,
   );
   protected readonly canRetrySave = signal(false);
+  protected readonly retryBlocked = signal(false);
+  private retryTimer: ReturnType<typeof setTimeout> | undefined;
   protected dioceseLabel(id: string) {
     return (
       DIOCESES.find((d) => d.id === id)?.name ||
@@ -135,20 +146,11 @@ export class FamilySpacePage implements OnInit, OnDestroy {
     finalAccepted: false,
   });
   protected readonly signatureForm = form(this.signatureModel);
-  protected readonly dioceseSearch = signal('');
-  protected readonly dioceses = computed(() => {
-    const q = this.dioceseSearch()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase();
-    return DIOCESES.filter((d) =>
-      d.name
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .includes(q),
-    );
-  });
+  protected chooseDiocese(dioceseId: string) {
+    if (this.readOnly()) return;
+    this.editModel.update((m) => ({ ...m, dioceseId }));
+    this.changed();
+  }
   protected readonly missing = computed(() => {
     const y = this.youth(),
       s = this.space();
@@ -215,13 +217,36 @@ export class FamilySpacePage implements OnInit, OnDestroy {
   }
   ngOnDestroy() {
     clearTimeout(this.timer);
+    clearTimeout(this.retryTimer);
     if (typeof window !== 'undefined')
       window.removeEventListener('beforeunload', this.beforeUnload);
   }
   private fail(e: unknown) {
+    const delay = familyRetryDelay(e);
+    if (delay) {
+      clearTimeout(this.timer);
+      clearTimeout(this.retryTimer);
+      this.retryBlocked.set(true);
+      this.error.set(familyRateLimitMessage(delay));
+      this.status.set(
+        this.dirty
+          ? 'Non enregistré : saisie conservée dans cette page.'
+          : 'Opération non terminée.',
+      );
+      this.canRetrySave.set(this.dirty);
+      this.retryTimer = setTimeout(() => {
+        this.retryBlocked.set(false);
+        this.error.set(
+          this.dirty
+            ? 'Le délai est écoulé. Réessayez la sauvegarde avant de quitter cette page.'
+            : 'Le délai est écoulé. Vous pouvez réessayer.',
+        );
+      }, delay);
+      return;
+    }
     this.error.set(
       e instanceof HttpErrorResponse
-        ? typeof e.error?.message === 'string'
+        ? e.status < 500 && typeof e.error?.message === 'string'
           ? e.error.message
           : 'Impossible de sauvegarder. Votre saisie reste visible. Réessayez avant de quitter.'
         : 'Une erreur est survenue. Réessayez.',
@@ -340,9 +365,10 @@ export class FamilySpacePage implements OnInit, OnDestroy {
     this.dirty = true;
     this.status.set('Modifications en attente de sauvegarde…');
     clearTimeout(this.timer);
-    this.timer = setTimeout(() => {
-      void this.save();
-    }, 900);
+    if (!this.retryBlocked())
+      this.timer = setTimeout(() => {
+        void this.save();
+      }, 900);
   }
   protected contactChanged() {
     this.changed();
@@ -364,9 +390,9 @@ export class FamilySpacePage implements OnInit, OnDestroy {
     return !this.dirty;
   }
   protected save() {
-    if (this.readOnly()) return Promise.resolve();
+    if (this.readOnly() || this.retryBlocked()) return Promise.resolve();
     this.chain = this.chain.then(async () => {
-      if (!this.dirty || !this.youth()) return;
+      if (!this.dirty || !this.youth() || this.retryBlocked()) return;
       const s = this.space()!,
         y = this.youth()!,
         m = this.editModel(),
@@ -420,6 +446,7 @@ export class FamilySpacePage implements OnInit, OnDestroy {
           this.timer = setTimeout(() => void this.save(), 100);
           return;
         }
+        this.canRetrySave.set(false);
         this.status.set('Enregistré dans votre espace. Vous pouvez revenir plus tard.');
       } catch (e) {
         this.fail(e);

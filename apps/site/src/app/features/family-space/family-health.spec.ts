@@ -13,12 +13,56 @@ class HealthHarness extends FamilyHealthPage {
   persist() {
     return this.save();
   }
+  readError() {
+    return this.error();
+  }
+  readBlocked() {
+    return this.retryBlocked();
+  }
   choices() {
     return this.data().presence;
   }
 }
 describe('Health audit concurrency regression', () => {
-  afterEach(() => TestBed.resetTestingModule());
+  afterEach(() => {
+    vi.useRealTimers();
+    TestBed.resetTestingModule();
+  });
+  it('keeps sanitary answers local on429 and cannot retry during the server delay', async () => {
+    vi.useFakeTimers();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    const c = TestBed.runInInjectionContext(() => new HealthHarness()),
+      http = TestBed.inject(HttpTestingController);
+    c.choose('YES');
+    const first = c.persist();
+    await Promise.resolve();
+    http
+      .expectOne((r) => r.url.endsWith('/health'))
+      .flush(
+        { message: 'ThrottlerException' },
+        { status: 429, statusText: 'Too Many Requests', headers: { 'Retry-After': '30' } },
+      );
+    await first;
+    c.choose('NO');
+    await c.persist();
+    expect(await c.flush()).toBe(false);
+    expect(c.choices()?.['foodAllergy']).toBe('NO');
+    expect(c.readError()).toContain('30 secondes');
+    expect(c.readBlocked()).toBe(true);
+    await vi.advanceTimersByTimeAsync(30000);
+    http.expectNone((r) => r.url.endsWith('/health'));
+    expect(c.readBlocked()).toBe(false);
+    const last = c.persist();
+    await Promise.resolve();
+    const req = http.expectOne((r) => r.url.endsWith('/health'));
+    expect(req.request.body.health.presence.foodAllergy).toBe('NO');
+    req.flush({ ...EMPTY_HEALTH, revision: 1, presence: { foodAllergy: 'NO' } });
+    await last;
+    http.verify();
+    c.ngOnDestroy();
+  });
   it('preserves a newer explicit yes/no answer when an older save returns', async () => {
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],

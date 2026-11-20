@@ -20,12 +20,72 @@ class FamilyHarness extends FamilySpacePage {
   flushEdits() {
     return this.flush();
   }
+  readError() {
+    return this.error();
+  }
+  readBlocked() {
+    return this.retryBlocked();
+  }
   readStatus() {
     return this.status();
   }
 }
 describe('Family autosave concurrency', () => {
-  afterEach(() => TestBed.resetTestingModule());
+  afterEach(() => {
+    vi.useRealTimers();
+    TestBed.resetTestingModule();
+  });
+  it('preserves local edits on429, pauses all autosave and queued retries until Retry-After, then saves the latest value once', async () => {
+    vi.useFakeTimers();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+    const c = TestBed.runInInjectionContext(() => new FamilyHarness()),
+      http = TestBed.inject(HttpTestingController);
+    const s: FamilySpace = {
+      id: 'f',
+      email: 'fiction@example.test',
+      contact: { ...EMPTY_CONTACT },
+      youths: [newYouth('y')],
+      revision: 0,
+      updatedAt: '',
+    };
+    c.setUp(s);
+    c.edit('Camille non enregistré');
+    const first = c.persist();
+    const queued = c.persist();
+    await Promise.resolve();
+    http
+      .expectOne('/api/public/family-space/youths/y')
+      .flush(
+        { message: 'ThrottlerException: Too Many Requests' },
+        { status: 429, statusText: 'Too Many Requests', headers: { 'Retry-After': '60' } },
+      );
+    await first;
+    await queued;
+    expect(c.readBlocked()).toBe(true);
+    expect(c.readError()).toContain('60 secondes');
+    expect(c.readError()).not.toContain('ThrottlerException');
+    c.edit('Camille dernière saisie');
+    await c.persist();
+    expect(await c.flushEdits()).toBe(false);
+    await vi.advanceTimersByTimeAsync(59000);
+    http.expectNone('/api/public/family-space/youths/y');
+    expect(c.readBlocked()).toBe(true);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(c.readBlocked()).toBe(false);
+    http.expectNone('/api/public/family-space/youths/y');
+    const saved = c.persist();
+    await Promise.resolve();
+    const req = http.expectOne('/api/public/family-space/youths/y');
+    expect(req.request.body.patch.identity.firstName).toBe('Camille dernière saisie');
+    req.flush({ ...s, revision: 1 });
+    await saved;
+    expect(c.readStatus()).toContain('Enregistré');
+    http.verify();
+    c.ngOnDestroy();
+    vi.useRealTimers();
+  });
   it('never marks a newer edit as saved by an earlier response, and flush persists the latest value', async () => {
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
@@ -134,7 +194,10 @@ describe('Family audit regression cases', () => {
       providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
     }),
   );
-  afterEach(() => TestBed.resetTestingModule());
+  afterEach(() => {
+    vi.useRealTimers();
+    TestBed.resetTestingModule();
+  });
   const build = () => TestBed.runInInjectionContext(() => new FamilyReviewHarness());
   it('reviews frozen submitted contacts, never current contacts from another youth', async () => {
     const c = build(),

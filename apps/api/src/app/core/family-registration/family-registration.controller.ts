@@ -39,6 +39,8 @@ function revision(p: Record<string, unknown>) {
 /** Family sessions are separate from staff bearer tokens. Every owner lookup is server-side. */
 @Public()
 @UseGuards(ThrottlerGuard)
+// Explicit policy: the legacy public module also registers global throttler options (5/10min).
+@Throttle({ default: { limit: 120, ttl: 60000 } })
 @UseInterceptors(PrivateResponseInterceptor)
 @Controller('public/family-space')
 export class FamilyRegistrationController {

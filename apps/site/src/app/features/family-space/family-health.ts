@@ -1,3 +1,4 @@
+import { familyRetryDelay, familyRateLimitMessage } from './family-rate-limit';
 import { focusFamilyHeading } from './family-focus';
 import {
   ChangeDetectionStrategy,
@@ -135,15 +136,17 @@ import type { StructuredHealth } from '@mej-allegria/shared';
       </fieldset>
       <div class="actions">
         @if (page() > 0) {
-          <button type="button" (click)="go(page() - 1)" [disabled]="busy()">Précédent</button>
+          <button type="button" (click)="go(page() - 1)" [disabled]="busy() || retryBlocked()">
+            Précédent
+          </button>
         }
         @if (!readOnly()) {
-          <button type="button" (click)="save()" [disabled]="busy()">
+          <button type="button" (click)="save()" [disabled]="busy() || retryBlocked()">
             Enregistrer cette page santé
           </button>
         }
         @if (page() < 6) {
-          <button type="button" (click)="go(page() + 1)" [disabled]="busy()">
+          <button type="button" (click)="go(page() + 1)" [disabled]="busy() || retryBlocked()">
             Enregistrer et continuer
           </button>
         }
@@ -294,6 +297,8 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
     accepted: false,
   });
   protected healthForm = form(this.model);
+  protected readonly retryBlocked = signal(false);
+  private retryTimer: ReturnType<typeof setTimeout> | undefined;
   private dirty = false;
   private generation = 0;
   private chain = Promise.resolve();
@@ -329,13 +334,27 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
   }
   ngOnDestroy() {
     clearTimeout(this.timer);
+    clearTimeout(this.retryTimer);
   }
   hasUnsaved() {
     return this.dirty || this.busy();
   }
   private fail(e: unknown) {
+    const delay = familyRetryDelay(e);
+    if (delay) {
+      clearTimeout(this.timer);
+      clearTimeout(this.retryTimer);
+      this.retryBlocked.set(true);
+      this.error.set(familyRateLimitMessage(delay));
+      this.status.set('Non enregistré : saisie conservée dans cette page.');
+      this.retryTimer = setTimeout(() => {
+        this.retryBlocked.set(false);
+        this.error.set('Le délai est écoulé. Réessayez la sauvegarde avant de quitter cette page.');
+      }, delay);
+      return;
+    }
     this.error.set(
-      e instanceof HttpErrorResponse && typeof e.error?.message === 'string'
+      e instanceof HttpErrorResponse && e.status < 500 && typeof e.error?.message === 'string'
         ? e.error.message
         : 'Sauvegarde santé impossible. Gardez cette page ouverte et réessayez.',
     );
@@ -345,7 +364,7 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
     this.model.update((m) => ({ ...m, accepted: false }));
     this.generation++;
     clearTimeout(this.timer);
-    this.timer = setTimeout(() => void this.save(), 1000);
+    if (!this.retryBlocked()) this.timer = setTimeout(() => void this.save(), 1000);
     this.dirty = true;
     this.status.set('Modification en attente. Enregistrez avant de quitter la page santé.');
   }
@@ -359,9 +378,9 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
     this.changed();
   }
   protected save() {
-    if (this.readOnly()) return Promise.resolve();
+    if (this.readOnly() || this.retryBlocked()) return Promise.resolve();
     this.chain = this.chain.then(async () => {
-      if (!this.dirty) return;
+      if (!this.dirty || this.retryBlocked()) return;
       this.busy.set(true);
       this.error.set('');
       const generation = this.generation;

@@ -74,8 +74,11 @@ clés, un même compteResend partage les quotas. Comptegratuit contrôlé le20no
 3000messages/mois,100/jour. Aucun dépassement payant à activer. Un sous-domaine séparé peut isoler
 la réputation ; une simple adresse différente ne l'isole pas totalement.
 
-La preview42 fictive bloque toujours le chemin d'envoi, même si une clé est présente.
-Ne pas injecter de clé réelle dans cette preview partagée. Le premier test réel nécessite
+La preview42 bloque l'envoi par défaut. Exception de test explicitement demandée le20novembre :
+`FAMILY_PREVIEW_MAIL_ENABLED=owner-only-test` et `FAMILY_PREVIEW_MAIL_TO` égal à l'adresse Gmail
+exacte de l'organisateur autorisent les seuls codes destinés à cette adresse, sur le service/branche/hôte
+PR42 exacts. Toute autre adresse est refusée avant création du challenge et avant appel fournisseur.
+Le transport revérifie aussi le destinataire. Aucun changement de santé, de paiement ou de production. Le premier test réel nécessite
 l'approbation de l'expéditeur, du destinataire et du texte. Un accusé API n'est pas une preuve de
 livraison en boîte de réception. Les tests automatiques utilisent des réponses réseau simulées,
 jamais des identifiants ou destinataires réels. Les échecs suppriment le challenge, sans exposer

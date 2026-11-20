@@ -1,4 +1,5 @@
-import { ServiceUnavailableException } from '@nestjs/common';
+import { familyPreviewEnabled, familyPreviewRecipientAllowed } from './family-preview';
+import { ForbiddenException, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createTransport } from 'nodemailer';
 
@@ -27,6 +28,8 @@ export async function sendFamilyAccessCode(
   code: string,
   challengeId: string,
 ) {
+  if (familyPreviewEnabled(config) && !familyPreviewRecipientAllowed(config, email))
+    throw new ForbiddenException('Destinataire de test non autorisé');
   const settings = familyMailSettings(config);
   const subject = 'Votre accès aux inscriptions Alegria';
   const text = `Votre code à usage unique : ${code}\nIl expire dans dix minutes. Ne le partagez pas. Si vous n'avez rien demandé, ignorez ce message.`;

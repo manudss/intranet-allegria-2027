@@ -11,3 +11,18 @@ export function familyPreviewEnabled(config: Pick<ConfigService, 'get'>): boolea
     )
   );
 }
+
+/** Temporary owner-only registration test. Never enables general preview sending. */
+export function familyPreviewMailEnabled(config: Pick<ConfigService, 'get'>): boolean {
+  return (
+    familyPreviewEnabled(config) &&
+    config.get('FAMILY_PREVIEW_MAIL_ENABLED') === 'owner-only-test' &&
+    config.get('FAMILY_PREVIEW_MAIL_TO') === 'emmanueldesaintsteban@gmail.com'
+  );
+}
+export function familyPreviewRecipientAllowed(
+  config: Pick<ConfigService, 'get'>,
+  email: string,
+): boolean {
+  return familyPreviewMailEnabled(config) && email === config.get('FAMILY_PREVIEW_MAIL_TO');
+}

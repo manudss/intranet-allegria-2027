@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { familyPreviewEnabled } from './family-preview';
+import {
+  familyPreviewEnabled,
+  familyPreviewMailEnabled,
+  familyPreviewRecipientAllowed,
+} from './family-preview';
 const valid = {
   FAMILY_PREVIEW_DEMO_ENABLED: 'pr42-fictional-only',
   RENDER_SERVICE_NAME: 'al-pr42-api',
@@ -29,5 +33,26 @@ describe('Temporary PR42 demo gates', () => {
         false,
       );
     expect(familyPreviewEnabled(config({ ...valid, RENDER_GIT_BRANCH: 'main' }))).toBe(false);
+  });
+});
+
+describe('Owner-only preview mail opt-in', () => {
+  const opt = {
+    ...valid,
+    FAMILY_PREVIEW_MAIL_ENABLED: 'owner-only-test',
+    FAMILY_PREVIEW_MAIL_TO: 'emmanueldesaintsteban@gmail.com',
+  };
+  it('is closed unless the exact preview, opt-in and recipient all match', () => {
+    expect(familyPreviewMailEnabled(config(valid))).toBe(false);
+    expect(familyPreviewMailEnabled(config(opt))).toBe(true);
+    expect(familyPreviewRecipientAllowed(config(opt), 'emmanueldesaintsteban@gmail.com')).toBe(
+      true,
+    );
+    expect(familyPreviewRecipientAllowed(config(opt), 'other@example.test')).toBe(false);
+    expect(familyPreviewRecipientAllowed(config(opt), 'emmanueldesaintsteban+test@gmail.com')).toBe(
+      false,
+    );
+    for (const key of Object.keys(opt))
+      expect(familyPreviewMailEnabled(config({ ...opt, [key]: 'wrong' }))).toBe(false);
   });
 });

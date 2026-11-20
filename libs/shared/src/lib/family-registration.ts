@@ -75,6 +75,7 @@ export interface FamilySpace {
 }
 export interface FamilyRules {
   previewDemo?: boolean;
+  previewMailEnabled?: boolean;
   previewHealthSamples?: Record<string, StructuredHealth>;
   ageReferenceDate: string;
   minAge: number | null;

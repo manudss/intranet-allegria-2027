@@ -5,7 +5,8 @@
     <p>
       Ne saisissez aucune information personnelle ou médicale réelle. Les brouillons administratifs
       sont enregistrés dans la base isolée de cette preview. Les exemples santé sont uniquement
-      consultables, sans collecte. Aucun e-mail ni paiement réel.
+      consultables, sans collecte. Aucun paiement réel. @if(rules().previewMailEnabled){Les codes de
+      connexion sont envoyés uniquement à l’adresse de test autorisée.} @else{Aucun e-mail réel.}
     </p>
   </aside>
   }
@@ -37,7 +38,11 @@
     <button type="button" (click)="previewDemo()" [disabled]="busy()">
       Ouvrir la famille de démonstration
     </button>
-    <p>L’accès e-mail ci-dessous est désactivé dans cette preview.</p>
+    <p>
+      @if(rules().previewMailEnabled){L’accès e-mail ci-dessous est réservé à l’adresse de test
+      autorisée. Créez uniquement des dossiers fictifs.} @else{L’accès e-mail ci-dessous est
+      désactivé dans cette preview.}
+    </p>
     }
     <p class="eyebrow">Une seule saisie, plusieurs dossiers</p>
     <h1 tabindex="-1">Commençons votre espace famille</h1>

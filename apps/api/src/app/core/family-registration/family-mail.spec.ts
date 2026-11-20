@@ -87,3 +87,21 @@ describe('Family mail transport, no network sends in tests', () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 });
+
+it('refuses other preview recipients before any network call', async () => {
+  const fetcher = vi.fn();
+  vi.stubGlobal('fetch', fetcher);
+  const cfg = new ConfigService({
+    ...settings,
+    FAMILY_PREVIEW_DEMO_ENABLED: 'pr42-fictional-only',
+    RENDER_SERVICE_NAME: 'al-pr42-api',
+    RENDER_GIT_BRANCH: 'feat/family-registration',
+    RENDER_EXTERNAL_HOSTNAME: 'al-pr42-api.onrender.com',
+    FAMILY_PREVIEW_MAIL_ENABLED: 'owner-only-test',
+    FAMILY_PREVIEW_MAIL_TO: 'emmanueldesaintsteban@gmail.com',
+  });
+  await expect(
+    sendFamilyAccessCode(cfg, 'thirdparty@example.test', '12345678', 'fiction'),
+  ).rejects.toThrow('non autorisé');
+  expect(fetcher).not.toHaveBeenCalled();
+});

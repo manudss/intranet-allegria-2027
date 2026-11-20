@@ -1,4 +1,9 @@
-import { familyPreviewEnabled, PREVIEW_FAMILY_EMAIL } from './family-preview';
+import {
+  familyPreviewEnabled,
+  familyPreviewMailEnabled,
+  familyPreviewRecipientAllowed,
+  PREVIEW_FAMILY_EMAIL,
+} from './family-preview';
 import {
   BadRequestException,
   ConflictException,
@@ -70,6 +75,7 @@ export class FamilyRegistrationService {
         ? familyPreviewEnabled(this.config) && rows[0].rules.registrationOpen === true
         : rows[0]?.rules?.registrationOpen === true,
       previewDemo: familyPreviewEnabled(this.config) && rows[0]?.rules?.previewDemoSeed === true,
+      previewMailEnabled: familyPreviewMailEnabled(this.config),
       previewHealthSamples:
         familyPreviewEnabled(this.config) && rows[0]?.rules?.previewDemoSeed === true
           ? rows[0].rules.previewHealthSamples
@@ -102,12 +108,12 @@ export class FamilyRegistrationService {
     return { token, familyId: family.id };
   }
   async challenge(raw: unknown) {
-    if (familyPreviewEnabled(this.config))
+    const email = emailValue(raw);
+    if (familyPreviewEnabled(this.config) && !familyPreviewRecipientAllowed(this.config, email))
       throw new ForbiddenException(
-        'Preview fictive : utilisez uniquement l’entrée de démonstration. Aucun e-mail n’est envoyé.',
+        'Preview fictive : l’accès par e-mail est réservé à l’adresse de test autorisée.',
       );
-    const email = emailValue(raw),
-      id = randomUUID(),
+    const id = randomUUID(),
       code = String(randomInt(10000000, 100000000));
     familyMailSettings(this.config);
     const recent = await this.db.query(

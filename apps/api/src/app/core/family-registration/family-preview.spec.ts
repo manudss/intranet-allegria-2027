@@ -56,3 +56,17 @@ describe('Owner-only preview mail opt-in', () => {
       expect(familyPreviewMailEnabled(config({ ...opt, [key]: 'wrong' }))).toBe(false);
   });
 });
+
+it('allows the exact isolated image service with a separate explicit opt-in, never a wrong Git branch', () => {
+  const image = {
+    ...valid,
+    RENDER_GIT_BRANCH: '',
+    FAMILY_PREVIEW_IMAGE_ENABLED: 'pr42-prebuilt-only',
+  };
+  expect(familyPreviewEnabled(config(image))).toBe(true);
+  expect(familyPreviewEnabled(config({ ...image, RENDER_GIT_BRANCH: 'main' }))).toBe(false);
+  expect(familyPreviewEnabled(config({ ...image, RENDER_SERVICE_NAME: 'production' }))).toBe(false);
+  expect(familyPreviewEnabled(config({ ...image, FAMILY_PREVIEW_IMAGE_ENABLED: 'wrong' }))).toBe(
+    false,
+  );
+});

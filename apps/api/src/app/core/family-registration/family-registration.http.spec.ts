@@ -12,7 +12,7 @@ import { Test } from '@nestjs/testing';
 import { ThrottlerModule } from '@nestjs/throttler';
 import type { INestApplication } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, randomBytes } from 'node:crypto';
 import { FamilyRegistration1790600000000 } from '../../../database/migrations/1790600000000-FamilyRegistration';
 import {
   FamilyRegistrationController,
@@ -21,9 +21,9 @@ import {
   CateringNeedsController,
 } from './family-registration.controller';
 import { FamilyRegistrationService, digest } from './family-registration.service';
-import { RegistrationHealthService } from './registration-health.service';
+import { RegistrationHealthService, seal } from './registration-health.service';
 import { RegistrationDocumentsService } from './registration-documents.service';
-import { EMPTY_CONTACT } from '@mej-allegria/shared';
+import { EMPTY_CONTACT, EMPTY_HEALTH } from '@mej-allegria/shared';
 describe('Family HTTP contract with disposable real SQL storage, no mail sent', () => {
   let app: INestApplication, pg: PGlite, url: string, service: FamilyRegistrationService;
   let configValues: Record<string, string>;
@@ -334,6 +334,64 @@ describe('Family HTTP contract with disposable real SQL storage, no mail sent', 
       (await fetch(url + '/api/family-health', { headers: { Authorization: 'Bearer HEALTH' } }))
         .status,
     ).toBe(403);
+  });
+  it('shows the complete transmitted dossier to HEALTH only, never correction drafts or administrative decisions', async () => {
+    const key = randomBytes(32);
+    Object.assign(configValues, {
+      FAMILY_HEALTH_APPROVAL_REFERENCE: 'FICTION ONLY',
+      FAMILY_HEALTH_ENCRYPTION_KEY: key.toString('base64'),
+      FAMILY_HEALTH_DECLARATION_VERSION: 'fiction',
+      FAMILY_HEALTH_DECLARATION_TEXT: 'Fiction only',
+    });
+    const a = await login();
+    const f = await service.add(a.space.id, 0);
+    const y = f.youths[0];
+    y.state = 'CORRECTION';
+    y.logistics.notes = 'Unsubmitted private draft';
+    y.administrativeAtSubmission = {
+      identity: { ...y.identity, firstName: 'Transmitted' },
+      logistics: { ...y.logistics, notes: 'Transmitted travel note' },
+      signatures: [],
+      simulation: 'NOT_TESTED',
+      paperHealth: 'TO_ORGANISE',
+      submittedAt: '2026-11-20T12:00:00Z',
+      participantId: 123,
+    };
+    await pg.query('UPDATE registration_families SET dossier=$1 WHERE id=$2', [f, f.id]);
+    const h = {
+      ...EMPTY_HEALTH,
+      answers: { foodAllergy: 'Transmitted medical instruction' },
+      signedPayload: JSON.stringify({
+        identity: y.administrativeAtSubmission.identity,
+        contact: f.contact,
+      }),
+    };
+    await pg.query(
+      'INSERT INTO registration_health_submissions(family_id,"youthId",envelope) VALUES($1,$2,$3)',
+      [f.id, y.id, seal(h, key, f.id + ':' + y.id)],
+    );
+    const endpoint = url + '/api/family-health/' + f.id + '/youths/' + y.id;
+    for (const role of ['ADMIN', 'CATERING', 'VIEWER'])
+      expect((await fetch(endpoint, { headers: { Authorization: 'Bearer ' + role } })).status).toBe(
+        403,
+      );
+    const r = await fetch(endpoint, { headers: { Authorization: 'Bearer HEALTH' } });
+    expect(r.status).toBe(200);
+    const body = await r.json();
+    expect(body.administrative.logistics.notes).toBe('Transmitted travel note');
+    expect(body.health.answers.foodAllergy).toBe('Transmitted medical instruction');
+    expect(JSON.stringify(body)).not.toContain('Unsubmitted private draft');
+    expect(
+      (
+        await fetch(url + '/api/family-registrations', {
+          headers: { Authorization: 'Bearer HEALTH' },
+        })
+      ).status,
+    ).toBe(403);
+    const admin = await fetch(url + '/api/family-registrations', {
+      headers: { Authorization: 'Bearer ADMIN' },
+    });
+    expect(JSON.stringify(await admin.json())).not.toContain('Transmitted medical instruction');
   });
   it('denies staff privilege escalation and other-user password changes before service invocation', async () => {
     for (const [route, method, body] of [

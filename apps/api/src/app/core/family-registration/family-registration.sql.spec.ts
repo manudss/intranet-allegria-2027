@@ -7,7 +7,13 @@ import { RegistrationHealthService } from './registration-health.service';
 import { RegistrationDocumentsService } from './registration-documents.service';
 import { randomBytes } from 'node:crypto';
 import { FamilyRegistrationService, digest, strings } from './family-registration.service';
-import { EMPTY_CONTACT, DEFAULT_FAMILY_RULES, DIOCESES } from '@mej-allegria/shared';
+import {
+  EMPTY_CONTACT,
+  EMPTY_IDENTITY,
+  EMPTY_LOGISTICS,
+  DEFAULT_FAMILY_RULES,
+  DIOCESES,
+} from '@mej-allegria/shared';
 describe('Family registration SQL, fictitious database only', () => {
   let pg: PGlite,
     service: FamilyRegistrationService,
@@ -128,6 +134,37 @@ describe('Family registration SQL, fictitious database only', () => {
     s = await service.add(a.familyId, 3);
     expect(s.youths[1].signatures).toEqual([]);
     expect(s.contact.name).toBe('Foyer fictif');
+  });
+  it('round-trips every administrative field to SQL and staff API without adding health data', async () => {
+    const a = await access('coverage-fiction@example.test');
+    let s = await service.add(a.familyId, 0);
+    const contact = Object.fromEntries(
+      Object.keys(EMPTY_CONTACT).map((k) => [k, 'FICTIF contact ' + k]),
+    );
+    const identity = Object.fromEntries(
+      Object.keys(EMPTY_IDENTITY).map((k) => [k, 'FICTIF identity ' + k]),
+    );
+    const logistics = Object.fromEntries(
+      Object.keys(EMPTY_LOGISTICS).map((k) => [k, 'FICTIF logistics ' + k]),
+    );
+    s = await service.saveContact(a.familyId, s.revision, contact);
+    s = await service.saveYouth(a.familyId, s.youths[0].id, s.revision, {
+      identity,
+      logistics,
+      currentPage: 6,
+      simulation: 'FAILURE',
+    });
+    const loaded = await service.get(a.familyId);
+    expect(loaded.contact).toEqual(contact);
+    expect(loaded.youths[0].identity).toEqual(identity);
+    expect(loaded.youths[0].logistics).toEqual(logistics);
+    expect(loaded.youths[0]).toMatchObject({ currentPage: 6, simulation: 'FAILURE' });
+    const staff = (await service.list()).find((f) => f.id === a.familyId);
+    expect(staff?.contact).toEqual(contact);
+    expect(staff?.youths[0].identity).toEqual(identity);
+    expect(staff?.youths[0].logistics).toEqual(logistics);
+    expect(staff?.youths[0]).not.toHaveProperty('health');
+    expect((await pg.query('SELECT * FROM registration_health')).rows).toEqual([]);
   });
   it('blocks final submission while organizational rules are not validated', async () => {
     const a = await access('a@example.fr');
@@ -306,6 +343,9 @@ describe('Family registration SQL, fictitious database only', () => {
     });
     s = await service.submit(a.familyId, id, s.revision, true);
     const participant = s.youths[0].participantId;
+    expect(s.youths[0].administrativeAtSubmission?.identity.firstName).toBe('Camille');
+    expect(s.youths[0].administrativeAtSubmission?.logistics.presence).toBe('FULL');
+    expect(s.youths[0].administrativeAtSubmission?.participantId).toBe(participant);
     await expect(service.submit(a.familyId, id, s.revision, true)).rejects.toThrow('lecture seule');
     s = await service.add(a.familyId, s.revision);
     s = await service.saveContact(a.familyId, s.revision, { ...s.contact, name: 'Parent actuel' });
@@ -398,6 +438,26 @@ describe('Family registration SQL, fictitious database only', () => {
     });
     const read = await health.staffRead(a.familyId, id, 'health@example.test');
     expect(read.health.answers.foodAllergy).toBe('Ancienne consigne fictive');
+    expect(read.administrative).toBeNull(); // no historical snapshot, never expose correction draft
+    const submitted = {
+      identity: { ...s.youths[0].identity, firstName: 'Identité transmise' },
+      logistics: { ...s.youths[0].logistics, notes: 'Notes transmises' },
+      signatures: [],
+      simulation: 'NOT_TESTED',
+      paperHealth: 'TO_ORGANISE',
+      submittedAt: '2026-11-20T12:00:00Z',
+      participantId: 123,
+    };
+    const current = await service.get(a.familyId);
+    current.youths[0].administrativeAtSubmission = submitted as never;
+    current.youths[0].logistics.notes = 'Brouillon logistique secret';
+    await pg.query('UPDATE registration_families SET dossier=$1 WHERE id=$2', [
+      current,
+      a.familyId,
+    ]);
+    const complete = await health.staffRead(a.familyId, id, 'health@example.test');
+    expect(complete.administrative?.logistics.notes).toBe('Notes transmises');
+    expect(JSON.stringify(complete)).not.toContain('Brouillon logistique secret');
     expect(JSON.stringify(read)).not.toContain('Nouveau brouillon secret');
     expect(
       (
@@ -405,6 +465,6 @@ describe('Family registration SQL, fictitious database only', () => {
           `SELECT count(*)::int AS n FROM registration_audit WHERE action='HEALTH_READ' AND actor='health@example.test'`,
         )
       ).rows[0],
-    ).toMatchObject({ n: 1 });
+    ).toMatchObject({ n: 2 });
   });
 });

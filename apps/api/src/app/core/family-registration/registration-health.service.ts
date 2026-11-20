@@ -252,6 +252,7 @@ export class RegistrationHealthService {
               {
                 familyId: r.id,
                 youthId: y.id,
+                participantId: y.participantId,
                 name: y.identity.firstName + ' ' + y.identity.lastName,
                 state: y.state,
                 attested: r.signatureValid,
@@ -278,6 +279,24 @@ export class RegistrationHealthService {
       [family, youth, actor],
     );
     return {
+      administrative:
+        y.administrativeAtSubmission ||
+        (y.state !== 'CORRECTION'
+          ? {
+              identity: snapshot?.identity || y.identity,
+              logistics: y.logistics,
+              signatures: y.signatures,
+              simulation: y.simulation,
+              paperHealth: y.paperHealth,
+              submittedAt: y.submittedAt,
+              participantId: y.participantId,
+            }
+          : null),
+      administrativeNotice: y.administrativeAtSubmission
+        ? 'Version administrative transmise par la famille.'
+        : y.state === 'CORRECTION'
+          ? 'Ancien dossier : aucun instantané administratif complet disponible. La correction non renvoyée reste privée.'
+          : 'Dossier transmis antérieur à la création des instantanés administratifs complets.',
       identity: snapshot?.identity || y.identity,
       contact: snapshot?.contact || y.contactAtSubmission || f.contact,
       health: data,

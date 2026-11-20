@@ -414,6 +414,15 @@ export class FamilyRegistrationService {
         y.contactAtSubmission = structuredClone(s.contact);
         y.state = 'SUBMITTED';
         y.submittedAt = new Date().toISOString();
+        y.administrativeAtSubmission = structuredClone({
+          identity: y.identity,
+          logistics: y.logistics,
+          signatures: y.signatures,
+          simulation: y.simulation,
+          paperHealth: y.paperHealth,
+          submittedAt: y.submittedAt,
+          participantId: y.participantId,
+        });
       },
       youthId,
     );

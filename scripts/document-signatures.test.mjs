@@ -21,7 +21,12 @@ if (!existsSync('tools/document-signatures/target/classpath.txt') && process.env
   assert.equal(
     result.status,
     0,
-    'CI requires Java 11+ and Maven for offline signature tests: ' + result.stderr,
+    'CI requires Java 11+ and Maven for offline signature tests. ' +
+      (result.error?.message || '') +
+      '\n' +
+      result.stdout +
+      '\n' +
+      result.stderr,
   );
 }
 const built = existsSync('tools/document-signatures/target/classpath.txt');

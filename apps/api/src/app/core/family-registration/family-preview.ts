@@ -5,7 +5,9 @@ export function familyPreviewEnabled(config: Pick<ConfigService, 'get'>): boolea
   return (
     config.get('FAMILY_PREVIEW_DEMO_ENABLED') === 'pr42-fictional-only' &&
     config.get('RENDER_SERVICE_NAME') === 'al-pr42-api' &&
-    config.get('RENDER_GIT_BRANCH') === 'feat/family-registration' &&
+    (config.get('RENDER_GIT_BRANCH') === 'feat/family-registration' ||
+      (!config.get('RENDER_GIT_BRANCH') &&
+        config.get('FAMILY_PREVIEW_IMAGE_ENABLED') === 'pr42-prebuilt-only')) &&
     /^al-pr42-api(?:-[a-z0-9]+)?\.onrender\.com$/.test(
       String(config.get('RENDER_EXTERNAL_HOSTNAME') || ''),
     )

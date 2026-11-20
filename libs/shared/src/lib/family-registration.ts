@@ -50,6 +50,15 @@ export interface FamilySignature {
   withdrawnAt?: string;
   snapshot?: string;
 }
+export interface YouthAdministrativeSnapshot {
+  identity: YouthIdentity;
+  logistics: YouthLogistics;
+  signatures: FamilySignature[];
+  simulation: SimulationState;
+  paperHealth: 'TO_ORGANISE' | 'RECEIVED';
+  submittedAt: string | null;
+  participantId: number | null;
+}
 export interface YouthDossier {
   id: string;
   identity: YouthIdentity;
@@ -64,6 +73,7 @@ export interface YouthDossier {
   submittedAt: string | null;
   participantId: number | null;
   contactAtSubmission?: FamilyContact;
+  administrativeAtSubmission?: YouthAdministrativeSnapshot;
 }
 export interface FamilySpace {
   id: string;

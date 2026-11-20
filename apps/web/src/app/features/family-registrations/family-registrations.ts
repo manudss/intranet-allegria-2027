@@ -1,3 +1,5 @@
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { FamilyAdministrativeDetail } from './administrative-detail';
 import { FamilyRulesEditor } from './family-rules-editor';
 import { StaffFamilyDocuments } from './staff-documents';
 import { DIOCESES } from '@mej-allegria/shared';
@@ -10,7 +12,14 @@ import { AuthService } from '../../core/auth.service';
 import type { FamilySpace } from '../../models/models';
 @Component({
   selector: 'app-family-registrations',
-  imports: [...SHARED_IMPORTS, FormField, StaffFamilyDocuments, FamilyRulesEditor],
+  imports: [
+    ...SHARED_IMPORTS,
+    FormField,
+    StaffFamilyDocuments,
+    FamilyRulesEditor,
+    FamilyAdministrativeDetail,
+    RouterLink,
+  ],
   template: `
     <app-page-layout
       title="Inscriptions des familles"
@@ -38,38 +47,47 @@ import type { FamilySpace } from '../../models/models';
             <h2>{{ row.youth.identity.firstName }} {{ row.youth.identity.lastName }}</h2>
             <p>
               <span tuiBadge>{{ stateLabels[row.youth.state] || row.youth.state }}</span> ·
-              {{ dioceseName(row.youth.identity.dioceseId) }}
+              {{ dioceseName(row.youth.identity.dioceseId, row.youth.identity.otherDiocese) }}
             </p>
             <p>{{ row.family.contact.name }} · {{ row.family.email }}</p>
             <p>
-              {{ row.youth.signatures.length }} attestation(s) · Simulation :
+              {{ activeAttestations(row.youth) }} attestation(s) active(s) · Simulation :
               {{ simulationLabels[row.youth.simulation] || row.youth.simulation }}
             </p>
             @if (row.youth.correction) {
               <p>Retour : {{ row.youth.correction }}</p>
             }
-            <details (toggle)="openDossier.set($any($event.target).open ? row.youth.id : null)">
+            <details
+              [open]="openDossier() === row.youth.id"
+              (toggle)="openDossier.set($any($event.target).open ? row.youth.id : null)"
+            >
               <summary>Voir le dossier administratif</summary>
-              <dl>
-                <dt>Naissance</dt>
-                <dd>{{ row.youth.identity.dateOfBirth }}</dd>
-                <dt>Responsable</dt>
-                <dd>
-                  {{ (row.youth.contactAtSubmission || row.family.contact).name }} ·
-                  {{ (row.youth.contactAtSubmission || row.family.contact).phone }}
-                </dd>
-                <dt>Contact d'urgence</dt>
-                <dd>
-                  {{ (row.youth.contactAtSubmission || row.family.contact).emergencyName }} ·
-                  {{ (row.youth.contactAtSubmission || row.family.contact).emergencyPhone }}
-                </dd>
-                <dt>Participation</dt>
-                <dd>{{ row.youth.logistics.presence }}</dd>
-                <dt>Transport et hébergement</dt>
-                <dd>
-                  {{ row.youth.logistics.transport }} · {{ row.youth.logistics.accommodation }}
-                </dd>
-              </dl>
+              <app-family-administrative-detail
+                [youth]="row.youth"
+                [contact]="row.youth.contactAtSubmission || row.family.contact"
+                [email]="row.family.email"
+                [contactNotice]="
+                  row.youth.contactAtSubmission
+                    ? 'Contacts figés lors du dernier envoi. Le contact courant du foyer peut avoir changé.'
+                    : 'Contacts actuels du foyer, aucun instantané disponible.'
+                "
+              />
+              @if (row.youth.participantId) {
+                <a
+                  [routerLink]="['/participants']"
+                  [queryParams]="{ participant: row.youth.participantId }"
+                  >Ouvrir la fiche Participant</a
+                >
+              }
+              @if (auth.hasRole('HEALTH') && row.youth.participantId) {
+                <p>
+                  <a
+                    [routerLink]="['/dossiers-sanitaires']"
+                    [queryParams]="{ participant: row.youth.participantId }"
+                    >Ouvrir le dossier sanitaire transmis</a
+                  >
+                </p>
+              }
               @if (openDossier() === row.youth.id) {
                 <app-staff-family-documents [family]="row.family.id" [youth]="row.youth.id" />
               }
@@ -136,6 +154,14 @@ import type { FamilySpace } from '../../models/models';
   `,
   styles: [
     `
+      button[appearance='secondary'] {
+        color: #8f1838;
+      }
+      a {
+        color: #8f1838;
+        text-decoration: underline;
+        text-underline-offset: 0.15em;
+      }
       .grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
@@ -174,6 +200,10 @@ import type { FamilySpace } from '../../models/models';
   ],
 })
 export class FamilyRegistrationsPage implements OnInit {
+  private route = inject(ActivatedRoute);
+  protected activeAttestations(y: FamilySpace['youths'][number]) {
+    return y.signatures.filter((a) => !a.withdrawnAt).length;
+  }
   protected openDossier = signal<string | null>(null);
   protected stateLabels: Record<string, string> = {
     DRAFT: 'À compléter',
@@ -190,7 +220,9 @@ export class FamilyRegistrationsPage implements OnInit {
     FAILURE: 'Échec simulé',
     CANCELLED: 'Annulation simulée',
   };
-  protected dioceseName(id: string) {
+  protected dioceseName(id: string, other = '') {
+    if (id === 'UNKNOWN') return 'Je ne sais pas encore';
+    if (id === 'OTHER') return 'Autre' + (other ? ': ' + other : '');
     return DIOCESES.find((d) => d.id === id)?.name || id;
   }
   private api = inject(FamilyRegistrationsApiService);
@@ -205,6 +237,11 @@ export class FamilyRegistrationsPage implements OnInit {
   protected filtered = computed(() =>
     this.rows()
       .flatMap((family) => family.youths.map((youth) => ({ family, youth })))
+      .filter(
+        (r) =>
+          !this.route.snapshot.queryParamMap.get('participant') ||
+          String(r.youth.participantId) === this.route.snapshot.queryParamMap.get('participant'),
+      )
       .filter((r) =>
         JSON.stringify([r.youth.identity, r.family.email, r.family.contact.name, r.youth.state])
           .toLowerCase()
@@ -217,6 +254,13 @@ export class FamilyRegistrationsPage implements OnInit {
   protected async load() {
     try {
       this.rows.set(await firstValueFrom(this.api.list()));
+      const participant = this.route.snapshot.queryParamMap.get('participant');
+      if (participant)
+        this.openDossier.set(
+          this.rows()
+            .flatMap((f) => f.youths)
+            .find((y) => String(y.participantId) === participant)?.id || null,
+        );
       this.error.set('');
     } catch {
       this.error.set('Chargement impossible. Aucun dossier affiché ne doit être considéré à jour.');

@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { HEALTH_FORM_PAGES } from '@mej-allegria/shared';
+import { HEALTH_FORM_PAGES, HEALTH_MODEL_ITEMS } from '@mej-allegria/shared';
 import type { YouthIdentity, FamilyContact, StructuredHealth } from '@mej-allegria/shared';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 interface HealthRow {
@@ -33,13 +33,19 @@ interface HealthRow {
         {{ detail()!.contact.emergencyName }} · {{ detail()!.contact.emergencyPhone }}
       </p>
       <button tuiButton (click)="download()">Télécharger la fiche complète</button>
-      @for (p of pages; track p.title) {
+      @for (p of pages; track p.title; let pageIndex = $index) {
         <section>
           <h3>{{ p.title }}</h3>
           <dl>
             @for (f of p.fields; track f[0]) {
               <dt>{{ f[1] }}</dt>
               <dd>{{ detail()!.health.answers[f[0]] || 'Non renseigné' }}</dd>
+            }
+            @for (item of modelItems; track item.id) {
+              @if (item.page === pageIndex) {
+                <dt>Choix explicite : {{ item.label }}</dt>
+                <dd>{{ presenceLabel(detail()!.health.presence?.[item.id]) }}</dd>
+              }
             }
           </dl>
         </section>
@@ -86,6 +92,10 @@ interface HealthRow {
   ],
 })
 export class FamilyHealthStaffPage implements OnInit {
+  protected modelItems = HEALTH_MODEL_ITEMS;
+  protected presenceLabel(value?: string) {
+    return value === 'YES' ? 'Oui' : value === 'NO' ? 'Non' : 'Non renseigné';
+  }
   private http = inject(HttpClient);
   protected pages = HEALTH_FORM_PAGES;
   protected rows = signal<HealthRow[]>([]);

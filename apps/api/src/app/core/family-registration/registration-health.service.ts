@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 import {
   HEALTH_FIELDS,
+  HEALTH_MODEL_ITEMS,
   FOOD_ALLERGENS,
   EMPTY_HEALTH,
   cateringSummary,
@@ -76,9 +77,18 @@ export class RegistrationHealthService {
       family = await this.families.get(familyId);
     this.families.editable(this.families.youth(family, youthId));
     const p = plainObject(raw),
-      answers = plainObject(p.answers);
+      answers = plainObject(p.answers),
+      presence = plainObject(p.presence ?? {});
     if (
-      Object.keys(p).some((k) => !['answers', 'foodAllergens', 'page'].includes(k)) ||
+      Object.entries(presence).some(
+        ([key, value]) =>
+          !HEALTH_MODEL_ITEMS.some((item) => item.id === key) ||
+          !['YES', 'NO'].includes(String(value)),
+      )
+    )
+      throw new BadRequestException('Choix du modèle sanitaire invalide');
+    if (
+      Object.keys(p).some((k) => !['answers', 'presence', 'foodAllergens', 'page'].includes(k)) ||
       Object.keys(answers).some(
         (k) =>
           !HEALTH_FIELDS.includes(k as never) ||
@@ -106,6 +116,7 @@ export class RegistrationHealthService {
         throw new BadRequestException('Version sanitaire modifiée dans une autre fenêtre.');
       const data: StructuredHealth = {
         answers: answers as Record<string, string>,
+        presence: presence as StructuredHealth['presence'],
         foodAllergens: [...new Set(p.foodAllergens as string[])] as string[],
         page: Number(p.page),
         revision: revision + 1,
@@ -159,6 +170,7 @@ export class RegistrationHealthService {
         identity: y.identity,
         contact: family.contact,
         answers: h.answers,
+        presence: h.presence || {},
         foodAllergens: h.foodAllergens,
         declarationVersion: this.config.get('FAMILY_HEALTH_DECLARATION_VERSION'),
         declaration: this.config.get('FAMILY_HEALTH_DECLARATION_TEXT'),

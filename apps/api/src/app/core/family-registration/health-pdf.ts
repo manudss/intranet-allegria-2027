@@ -2,7 +2,7 @@ import { registrationFont } from './pdf-font';
 import { PDFDocument, rgb } from 'pdf-lib';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { HEALTH_FORM_PAGES } from '@mej-allegria/shared';
+import { HEALTH_FORM_PAGES, HEALTH_MODEL_ITEMS, FOOD_ALLERGEN_LABELS } from '@mej-allegria/shared';
 import type { StructuredHealth, FamilySpace, YouthDossier } from '@mej-allegria/shared';
 import { registrationPdf } from './registration-pdf';
 /** Uses the supplied four-page model as background, with full non-truncated answers in numbered annexes. */
@@ -38,7 +38,7 @@ export async function healthPdf(
   function text(page: number, x: number, y: number, value: string, max = 68) {
     pdf
       .getPage(page)
-      .drawText(safe(value).length > max ? safe(value).slice(0, max - 3) + '...' : safe(value), {
+      .drawText(safe(value).length > max ? 'Voir annexe : réponse complète' : safe(value), {
         x,
         y,
         size: 8,
@@ -91,10 +91,6 @@ export async function healthPdf(
   );
   text(0, 40, 258, h.answers.history || 'À compléter', 95);
   text(0, 40, 142, 'Traitements, ordonnance et PAI : réponses intégrales en annexe.', 100);
-  const allergyKeys = ['foodAllergy', 'animalAllergy', 'pollenAllergy', 'drugAllergy', 'asthma'];
-  allergyKeys.forEach((key, index) =>
-    text(1, 280, 639 - index * 18, h.answers[key] || 'À compléter, voir annexe', 66),
-  );
   text(1, 455, 482, 'Voir justificatif', 22);
   text(
     1,
@@ -103,43 +99,59 @@ export async function healthPdf(
     'Vaccinations déclarées : voir annexe et justificatif ; vérification réservée au référent santé.',
     110,
   );
-  const adaptationRows = [
-    ['communication', 737],
-    ['communication', 709],
-    ['sleep', 682],
-    ['mobility', 654],
-    ['learning', 627],
-    ['learning', 599],
-    ['mobility', 572],
-    ['sensory', 535],
-    ['sleep', 517],
-    ['other', 489],
-    ['learning', 451],
-    ['mental', 434],
-    ['mental', 407],
-    ['sleep', 379],
-    ['learning', 351],
-    ['learning', 324],
-    ['other', 296],
-  ] as const;
-  for (const [key, y] of adaptationRows)
-    text(
-      2,
-      292,
-      y,
-      `Voir annexe : ${HEALTH_FORM_PAGES[5].fields.find((f) => f[0] === key)?.[1]?.split(':')[0] || key}`,
-      55,
-    );
-  text(2, 255, 215, 'Voir annexe : aisance aquatique', 55);
-  text(2, 255, 195, 'Voir annexe : équipements', 55);
-  text(2, 255, 165, 'Voir annexe : vie quotidienne', 55);
-  text(2, 255, 138, 'Voir annexe : vie quotidienne', 55);
+  // Circle only an explicit model answer. Free text and missing values never become yes/no.
+  for (const item of HEALTH_MODEL_ITEMS) {
+    const presence = h.presence?.[item.id],
+      answer = h.answers[item.answerKey] || '',
+      modelPage = pdf.getPage(item.pdfPage);
+    if (presence) {
+      if (item.id === 'treatment') {
+        text(0, presence === 'YES' ? 66.8 : 36, 186, 'X', 1);
+      } else {
+        modelPage.drawEllipse({
+          x: item.x + (presence === 'YES' ? 6.5 : 27.5),
+          y: item.y,
+          xScale: presence === 'YES' ? 9 : 11,
+          yScale: 7,
+          borderWidth: 1,
+          borderColor: rgb(0.08, 0.2, 0.35),
+        });
+      }
+    }
+    if (item.id !== 'treatment') {
+      const x =
+          item.pdfPage === 1
+            ? 280
+            : item.pdfPage === 2 && item.x > 230
+              ? 292
+              : item.pdfPage === 3 && item.x < 150
+                ? 185
+                : 255,
+        prefix = !presence ? 'Non renseigné. ' : '',
+        content = prefix + answer,
+        available = 558 - x;
+      text(
+        item.pdfPage,
+        x,
+        item.y - (['sensory', 'attention', 'swimming', 'menstruation'].includes(item.id) ? 12 : 3),
+        font.widthOfTextAtSize(safe(content), 8) <= available
+          ? content
+          : prefix + 'Précisions : voir annexe.',
+        110,
+      );
+    }
+  }
   text(3, 165, 395, h.signature?.name || 'NON SIGNÉ', 50);
-  text(3, 145, 320, h.signature?.at?.slice(0, 10) || '', 20);
+  text(
+    3,
+    145,
+    320,
+    h.signature
+      ? new Date(h.signature.at).toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris' })
+      : '',
+    20,
+  );
   text(3, 190, 292, h.signature ? 'Attestation : voir preuve en annexe' : 'Document non signé', 50);
-  for (const y of [755, 728, 700, 673, 645])
-    text(3, 250, y, 'Voir annexe : équipements / vie quotidienne.', 55);
-  for (const y of [554, 527, 500, 472, 445]) text(3, 185, y, 'Voir annexe : peurs et phobies.', 70);
   for (let n = 0; n < 4; n++) {
     text(
       n,
@@ -161,10 +173,21 @@ export async function healthPdf(
   for (const p of HEALTH_FORM_PAGES) {
     lines.push(p.title);
     for (const [key, label] of p.fields)
-      lines.push(label + ' : ' + (h.answers[key] || 'À compléter'));
+      lines.push(label + ' : ' + (h.answers[key] || 'Non renseigné'));
+    for (const item of HEALTH_MODEL_ITEMS.filter(
+      (item) => item.page === HEALTH_FORM_PAGES.indexOf(p),
+    ))
+      lines.push(
+        'Choix explicite du modèle, ' +
+          item.label +
+          ' : ' +
+          ({ YES: 'Oui', NO: 'Non', '': 'Non renseigné' }[h.presence?.[item.id] || ''] ||
+            'Non renseigné'),
+      );
   }
   lines.push(
-    'Besoins alimentaires structurés : ' + h.foodAllergens.join(', '),
+    'Besoins alimentaires structurés : ' +
+      h.foodAllergens.map((a) => FOOD_ALLERGEN_LABELS[a] || a).join(', '),
     'Déclaration validée applicable :',
     declaration,
     h.signature ? 'Attestation simple, non avancée et non qualifiée' : 'NON SIGNÉ',
@@ -172,8 +195,10 @@ export async function healthPdf(
   if (h.signature)
     lines.push(
       'Signataire : ' + h.signature.name,
-      'Qualité : ' + h.signature.capacity,
-      'Date : ' + h.signature.at,
+      'Qualité : ' + (h.signature.capacity === 'LEGAL' ? 'Représentant légal' : 'Adulte concerné'),
+      'Date : ' +
+        new Date(h.signature.at).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' }) +
+        ' (heure de Paris)',
       'Empreinte du contenu figé : ' + h.signature.digest,
     );
   await pdf.attach(

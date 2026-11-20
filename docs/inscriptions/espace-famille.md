@@ -54,3 +54,9 @@ La configuration publique `SITE_API_URL` (ou le `WEB_API_URL` déjà utilisé en
 ## Dépendances
 
 L'audit de production local signale 52 avis déjà présents sur la base main (5 critiques, 19 élevés, 27 modérés, 1 faible). Aucun nouvel avis n'est introduit par les dépendances ajoutées de PDF, police et transport e-mail dans cette comparaison. Ce constat ne dispense pas d'un traitement séparé du socle existant ; aucun `npm audit fix` global n'est appliqué dans cette PR.
+
+### Couverture du modèle sanitaire fourni
+
+Les 36 lignes Oui/Non du modèle (traitement, allergies, adaptations, équipements et phobies) ont désormais des choix explicites facultatifs. Ils sont chiffrés et figés dans le contenu attesté. Seuls ces choix entourent Oui ou Non sur le document. Une absence reste « Non renseigné », même si un texte libre existe ; aucun diagnostic n'est déduit. Les précisions courtes sont reportées dans les cases, les longues en annexe intégrale. Les quatre lignes comportant des sous-cases imprimées conservent ces sous-cases visibles, sans chevauchement du report.
+
+Le tableau vaccinal détaillé et les sous-cases de type visuel/auditif, diagnostiqué/présumé, aisance aquatique et gestion des règles ne sont pas cochés à partir d'un texte libre. Les précisions et dates sont conservées dans l'annexe ; le justificatif et sa vérification suivent le circuit santé qualifié. Photo, vérification vaccinale par le professionnel et observations du séjour ne sont pas inventées. Le PDF n'est donc pas présenté comme chaque case du modèle remplie automatiquement. L'exemplaire famille donne les libellés français et la date en heure de Paris ; la preuve brute et ses données restent jointes. Il porte une attestation simple et son empreinte, pas une signature graphique ou qualifiée.

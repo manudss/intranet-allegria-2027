@@ -13,6 +13,7 @@ import { firstValueFrom } from 'rxjs';
 import {
   EMPTY_HEALTH,
   HEALTH_FORM_PAGES,
+  HEALTH_MODEL_ITEMS,
   FOOD_ALLERGENS,
   FOOD_ALLERGEN_LABELS,
 } from '@mej-allegria/shared';
@@ -41,6 +42,28 @@ import type { StructuredHealth } from '@mej-allegria/shared';
             [formField]="$any(healthForm.answers)[field[0]]"
             (input)="changed()"
           ></textarea>
+        }
+        @if (modelItemsForPage().length) {
+          <details>
+            <summary>Reporter les choix Oui / Non du modèle fourni (facultatif)</summary>
+            <p>
+              Recopiez seulement vos réponses explicites. Laissez « Non renseigné » si vous ne
+              souhaitez pas répondre ici. Aucun diagnostic n'est déduit des textes. Vous pouvez
+              demander un échange confidentiel.
+            </p>
+            @for (item of modelItemsForPage(); track item.id) {
+              <label [for]="'model-' + item.id">{{ item.label }}</label>
+              <select
+                [id]="'model-' + item.id"
+                [value]="data().presence?.[item.id] || ''"
+                (change)="presence(item.id, $any($event.target).value)"
+              >
+                <option value="">Non renseigné</option>
+                <option value="YES">Oui, déclaré explicitement</option>
+                <option value="NO">Non, déclaré explicitement</option>
+              </select>
+            }
+          </details>
         }
         @if (page() === 3) {
           <h3>Besoins alimentaires pour la préparation des repas</h3>
@@ -215,6 +238,18 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   protected declaration = signal({ text: '', version: '' });
   protected pages = HEALTH_FORM_PAGES;
+  protected modelItemsForPage() {
+    return HEALTH_MODEL_ITEMS.filter((item) => item.page === this.page());
+  }
+  protected presence(key: string, value: string) {
+    this.data.update((d) => {
+      const presence = { ...d.presence };
+      if (value) presence[key] = value as 'YES' | 'NO';
+      else delete presence[key];
+      return { ...d, presence };
+    });
+    this.changed();
+  }
   protected allergens = FOOD_ALLERGENS;
   protected allergenLabels = FOOD_ALLERGEN_LABELS;
   protected data = signal<StructuredHealth>(structuredClone(EMPTY_HEALTH));
@@ -294,6 +329,7 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
             revision: d.revision,
             health: {
               answers: { ...this.model().answers },
+              presence: { ...d.presence },
               foodAllergens: [...d.foodAllergens],
               page: this.page(),
             },

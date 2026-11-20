@@ -150,9 +150,19 @@ describe('Family registration SQL, fictitious database only', () => {
     const id = s.youths[0].id;
     const h = await health.save(a.familyId, id, 0, {
       answers: { foodAllergy: 'Test fictif' },
+      presence: { foodAllergy: 'YES', animalAllergy: 'NO' },
       foodAllergens: ['MILK'],
       page: 3,
     });
+    expect(h.presence).toEqual({ foodAllergy: 'YES', animalAllergy: 'NO' });
+    await expect(
+      health.save(a.familyId, id, h.revision, {
+        answers: {},
+        presence: { foodAllergy: 'MAYBE' },
+        foodAllergens: [],
+        page: 0,
+      }),
+    ).rejects.toThrow('Choix du modèle');
     await expect(
       health.sign(a.familyId, id, h.revision, {
         name: 'Parent fictif',
@@ -168,7 +178,11 @@ describe('Family registration SQL, fictitious database only', () => {
       version: 'test-v1',
     });
     expect(signed.signature?.digest).toHaveLength(64);
-    expect(JSON.parse(signed.signedPayload!).answers.foodAllergy).toBe('Test fictif');
+    expect(signed.signedPayload).toBeTruthy();
+    const frozen = JSON.parse(signed.signedPayload || '{}');
+    expect(frozen.answers.foodAllergy).toBe('Test fictif');
+    expect(frozen.presence.animalAllergy).toBe('NO');
+    expect(frozen.presence.drugAllergy).toBeUndefined();
     await expect(
       health.save(a.familyId, id, h.revision, { answers: {}, foodAllergens: [], page: 0 }),
     ).rejects.toThrow('autre fenêtre');

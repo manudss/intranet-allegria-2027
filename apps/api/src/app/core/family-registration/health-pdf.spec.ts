@@ -45,6 +45,13 @@ describe('Health source model and complete annex', () => {
         ]),
       ),
       foodAllergens: ['MILK'],
+      presence: {
+        treatment: 'NO',
+        foodAllergy: 'YES',
+        animalAllergy: 'NO',
+        glasses: 'YES',
+        vertigo: 'NO',
+      } as Record<string, 'YES' | 'NO'>,
     };
     const bytes = await healthPdf(
       f,
@@ -60,6 +67,7 @@ describe('Health source model and complete annex', () => {
         identity: y.identity,
         contact: f.contact,
         answers: h.answers,
+        presence: h.presence,
         foodAllergens: h.foodAllergens,
         declaration: 'Attestation FICTIVE de test, aucun dossier réel.',
       });

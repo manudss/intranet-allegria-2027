@@ -29,7 +29,10 @@
     "seed:api:large": "tsx apps/api/src/database/seeds/seed.ts --profile=large",
     "mobile:config": "node scripts/write-web-config.mjs mobile",
     "build:mobile": "npm run mobile:config && nx build mobile --configuration production",
-    "serve:mobile": "npm run mobile:config && nx serve mobile"
+    "serve:mobile": "npm run mobile:config && nx serve mobile",
+    "signatures:build": "mvn -q -f tools/document-signatures/pom.xml compile dependency:build-classpath -Dmdep.outputFile=target/classpath.txt",
+    "signatures": "node scripts/document-signatures.mjs",
+    "signatures:test": "node --test scripts/document-signatures.test.mjs"
   },
   "private": true,
   "devDependencies": {

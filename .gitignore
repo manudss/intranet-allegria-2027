@@ -63,3 +63,5 @@ vitest.config.*.timestamp*
 *token*.txt
 
 /apps/site/public/app-config.json
+
+/tools/document-signatures/target/

@@ -60,3 +60,26 @@ L'audit de production local signale 52 avis déjà présents sur la base main (5
 Les 36 lignes Oui/Non du modèle (traitement, allergies, adaptations, équipements et phobies) ont désormais des choix explicites facultatifs. Ils sont chiffrés et figés dans le contenu attesté. Seuls ces choix entourent Oui ou Non sur le document. Une absence reste « Non renseigné », même si un texte libre existe ; aucun diagnostic n'est déduit. Les précisions courtes sont reportées dans les cases, les longues en annexe intégrale. Les quatre lignes comportant des sous-cases imprimées conservent ces sous-cases visibles, sans chevauchement du report.
 
 Le tableau vaccinal détaillé et les sous-cases de type visuel/auditif, diagnostiqué/présumé, aisance aquatique et gestion des règles ne sont pas cochés à partir d'un texte libre. Les précisions et dates sont conservées dans l'annexe ; le justificatif et sa vérification suivent le circuit santé qualifié. Photo, vérification vaccinale par le professionnel et observations du séjour ne sont pas inventées. Le PDF n'est donc pas présenté comme chaque case du modèle remplie automatiquement. L'exemplaire famille donne les libellés français et la date en heure de Paris ; la preuve brute et ses données restent jointes. Il porte une attestation simple et son empreinte, pas une signature graphique ou qualifiée.
+
+## Transport Resend, configuration distincte
+
+Le fournisseur est explicite : `FAMILY_MAIL_PROVIDER=resend` utilise HTTPS avec une clé dédiée
+`FAMILY_RESEND_API_KEY` et `FAMILY_MAIL_FROM`. Une clé générique `RESEND_API_KEY` n'est jamais
+récupérée par défaut. Le fournisseur `smtp` reste compatible avec la configuration existante,
+mais RenderFree bloque les ports SMTP25/465/587. Aucun repli silencieux entre transports.
+
+La clé Alegria doit être limitée à l'envoi et au domaine autorisé, conservée dans le coffre puis
+injectée seulement dans le service Alegria voulu. Ne pas reprendre une clé Lyam. Même avec deux
+clés, un même compteResend partage les quotas. Comptegratuit contrôlé le20novembre2026 :
+3000messages/mois,100/jour. Aucun dépassement payant à activer. Un sous-domaine séparé peut isoler
+la réputation ; une simple adresse différente ne l'isole pas totalement.
+
+La preview42 fictive bloque toujours le chemin d'envoi, même si une clé est présente.
+Ne pas injecter de clé réelle dans cette preview partagée. Le premier test réel nécessite
+l'approbation de l'expéditeur, du destinataire et du texte. Un accusé API n'est pas une preuve de
+livraison en boîte de réception. Les tests automatiques utilisent des réponses réseau simulées,
+jamais des identifiants ou destinataires réels. Les échecs suppriment le challenge, sans exposer
+la réponseResend. Aucun contenu santé ne doit être ajouté aux mails d'accès.
+
+Sources : https://resend.com/pricing ; https://resend.com/docs/api-reference/emails/send-email ;
+https://resend.com/docs/dashboard/api-keys/introduction ; https://render.com/docs/free .

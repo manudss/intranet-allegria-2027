@@ -1,0 +1,57 @@
+name: PR42 Lyam free preview
+
+# Explicit label only, internal PR42 only. Never runs on main or on a push.
+on:
+  pull_request:
+    types: [labeled]
+permissions:
+  contents: read
+  packages: write
+concurrency:
+  group: pr42-lyam-preview
+  cancel-in-progress: false
+jobs:
+  preview:
+    if: github.event.label.name == 'deploy-preview-lyam' && github.event.pull_request.number == 42 && github.event.pull_request.head.ref == 'feat/family-registration' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.15.0
+          cache: npm
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build isolated API and admin preview image, no latest tag
+        id: image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.preview
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/${{ github.repository }}:preview-pr42-${{ github.event.pull_request.head.sha }}
+          cache-from: type=gha,scope=pr42-preview
+          cache-to: type=gha,mode=max,scope=pr42-preview
+      - name: Read the existing PR42 Neon database, no rotation or reset
+        id: creds
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+        run: node scripts/neon-existing-pr42.mjs
+      - name: Create or deploy only the free image preview in the Lyam account
+        env:
+          PREVIEW_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          RENDER_LYAM_PREVIEW_API_KEY: ${{ secrets.RENDER_LYAM_PREVIEW_API_KEY }}
+          PREVIEW_DB_URL: ${{ steps.creds.outputs.db_url_pooled }}
+          PREVIEW_DB_URL_DIRECT: ${{ steps.creds.outputs.db_url }}
+          PREVIEW_IMAGE: ghcr.io/${{ github.repository }}@${{ steps.image.outputs.digest }}
+        run: node scripts/render-pr42-lyam.mjs

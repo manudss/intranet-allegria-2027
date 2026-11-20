@@ -2,7 +2,12 @@ import { registrationFont } from './pdf-font';
 import { PDFDocument, rgb } from 'pdf-lib';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { HEALTH_FORM_PAGES, HEALTH_MODEL_ITEMS, FOOD_ALLERGEN_LABELS } from '@mej-allegria/shared';
+import {
+  HEALTH_FORM_PAGES,
+  HEALTH_MODEL_ITEMS,
+  HEALTH_EXTRA_FIELDS,
+  FOOD_ALLERGEN_LABELS,
+} from '@mej-allegria/shared';
 import type { StructuredHealth, FamilySpace, YouthDossier } from '@mej-allegria/shared';
 import { registrationPdf } from './registration-pdf';
 /** Uses the supplied four-page model as background, with full non-truncated answers in numbered annexes. */
@@ -102,7 +107,7 @@ export async function healthPdf(
   // Circle only an explicit model answer. Free text and missing values never become yes/no.
   for (const item of HEALTH_MODEL_ITEMS) {
     const presence = h.presence?.[item.id],
-      answer = h.answers[item.answerKey] || '',
+      answer = h.answers['detail_' + item.id] || h.answers[item.answerKey] || '',
       modelPage = pdf.getPage(item.pdfPage);
     if (presence) {
       if (item.id === 'treatment') {
@@ -184,6 +189,11 @@ export async function healthPdf(
           ({ YES: 'Oui', NO: 'Non', '': 'Non renseigné' }[h.presence?.[item.id] || ''] ||
             'Non renseigné'),
       );
+  }
+  const extra = HEALTH_EXTRA_FIELDS.filter(([key]) => !!h.answers[key]);
+  if (extra.length) {
+    lines.push('COMPLÉMENTS DE LA FICHE WEB');
+    for (const [key, label] of extra) lines.push(label + ' : ' + h.answers[key]);
   }
   lines.push(
     'Besoins alimentaires structurés : ' +

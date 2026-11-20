@@ -6,7 +6,7 @@ import { FOOD_ALLERGEN_LABELS } from '@mej-allegria/shared';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { HEALTH_FORM_PAGES, HEALTH_MODEL_ITEMS } from '@mej-allegria/shared';
+import { HEALTH_FORM_PAGES, HEALTH_MODEL_ITEMS, HEALTH_EXTRA_FIELDS } from '@mej-allegria/shared';
 import type { YouthIdentity, FamilyContact, StructuredHealth } from '@mej-allegria/shared';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 interface HealthRow {
@@ -88,6 +88,18 @@ interface HealthRow {
         }
       </ul>
       <button tuiButton (click)="download()">Télécharger la fiche complète</button>
+      <section>
+        <h3>Compléments de la fiche web</h3>
+        <dl>
+          @for (field of extraFields; track field[0]) {
+            @if (detail()!.health.answers[field[0]]) {
+              <dt>{{ field[1] }}</dt>
+              <dd>{{ detail()!.health.answers[field[0]] }}</dd>
+            }
+          }
+        </dl>
+        <p>Les compléments sont des déclarations de la famille. Un champ vide ne vaut pas Non.</p>
+      </section>
       @for (p of pages; track p.title; let pageIndex = $index) {
         <section>
           <h3>{{ p.title }}</h3>
@@ -168,6 +180,7 @@ export class FamilyHealthStaffPage implements OnInit {
   private route = inject(ActivatedRoute);
   protected allergenLabels: Record<string, string> = FOOD_ALLERGEN_LABELS;
   protected modelItems = HEALTH_MODEL_ITEMS;
+  protected extraFields = HEALTH_EXTRA_FIELDS;
   protected presenceLabel(value?: string) {
     return value === 'YES' ? 'Oui' : value === 'NO' ? 'Non' : 'Non renseigné';
   }

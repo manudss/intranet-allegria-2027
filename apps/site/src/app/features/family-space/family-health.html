@@ -1,0 +1,371 @@
+<section class="health" aria-labelledby="health-title">
+  <p class="private">ESPACE SANTÉ RESTREINT</p>
+  <h2 id="health-title" tabindex="-1">Fiche sanitaire de liaison</h2>
+  @if (previewSample()) {
+  <p class="notice">EXEMPLE FICTIF EN LECTURE SEULE. Aucune donnée de santé réelle.</p>
+  }
+  <div class="guide">
+    <strong>Comment la remplir ?</strong>
+    <p>
+      Retrouvez les rubriques de la fiche habituelle. Ouvrez celles qui vous concernent. Les
+      précisions apparaissent après Oui. Vous pouvez laisser une information non renseignée : elle
+      n'est jamais interprétée comme Non.
+    </p>
+    <p>
+      Aucune nouvelle obligation n'est ajoutée ici. Les informations et pièces nécessaires au séjour
+      restent à qualifier avec l'organisateur.
+    </p>
+  </div>
+  <nav class="sheet-index" aria-label="Rubriques de la fiche sanitaire">
+    @for (section of sections; track section.id; let n = $index) {
+    <button type="button" (click)="openSection(section.id)">
+      <span>{{n+1}}</span> {{section.title}}
+    </button>
+    }
+  </nav>
+  <p class="save-state" role="status" aria-live="polite">{{status()}}</p>
+  @if(error()){
+  <p class="error" role="alert">{{error()}}</p>
+  } @for(section of sections; track section.id; let n = $index){
+  <details
+    class="sheet-section"
+    [id]="'health-section-'+section.id"
+    [open]="expanded().has(section.id)"
+    (toggle)="toggled(section.id, $event)"
+  >
+    <summary>
+      <h3>{{n+1}}. {{section.title}}</h3>
+      <span>Ouvrir / replier</span>
+    </summary>
+    <div class="section-body">
+      <fieldset [disabled]="readOnly() || !loaded()">
+        <legend class="sr-only">{{section.title}}</legend>
+        @switch(section.id){ @case('identity'){
+        <p>
+          Les informations du dossier sont reprises ci-dessous, sans ressaisie. Leur modification se
+          fait dans Identité et dans Contacts famille.
+        </p>
+        <dl class="identity-grid">
+          <div>
+            <dt>Nom et prénom</dt>
+            <dd>{{identity()?.lastName}} {{identity()?.firstName}}</dd>
+          </div>
+          <div>
+            <dt>Date de naissance</dt>
+            <dd>{{identity()?.dateOfBirth || 'Non renseignée'}}</dd>
+          </div>
+          <div>
+            <dt>Genre déclaré</dt>
+            <dd>{{genderLabel()}}</dd>
+          </div>
+          <div>
+            <dt>Situation juridique</dt>
+            <dd>{{capacityLabel()}}</dd>
+          </div>
+          <div>
+            <dt>Adresse</dt>
+            <dd>{{contact()?.address}} {{contact()?.postalCode}} {{contact()?.city}}</dd>
+          </div>
+        </dl>
+        <div class="field-grid">
+          <ng-container
+            [ngTemplateOutlet]="field"
+            [ngTemplateOutletContext]="{key:'birthPlace',label:'Lieu de naissance'}"
+          /><ng-container
+            [ngTemplateOutlet]="field"
+            [ngTemplateOutletContext]="{key:'addressType',label:'Domicile parental, famille élargie ou autre'}"
+          />
+        </div>
+        <p>
+          La photo reste dans le circuit documentaire prévu. Aucun nouveau dépôt de photo n'est
+          ajouté ici.
+        </p>
+        @for(group of contactGroups; track group.id){
+        <h4>{{group.title}}</h4>
+        <dl class="contact-row current">
+          <div>
+            <dt>Nom</dt>
+            <dd>{{group.id==='guardian' ? contact()?.name : contact()?.emergencyName}}</dd>
+          </div>
+          <div>
+            <dt>Qualité</dt>
+            <dd>
+              {{group.id==='guardian' ? 'Contact du dossier familial' : 'Contact d’urgence du
+              dossier'}}
+            </dd>
+          </div>
+          <div>
+            <dt>Téléphone</dt>
+            <dd>{{group.id==='guardian' ? contact()?.phone : contact()?.emergencyPhone}}</dd>
+          </div>
+        </dl>
+        @for(slot of visibleContactSlots(group.id); track slot){
+        <div class="contact-row">
+          @for(column of contactColumns; track column[0]){<ng-container
+            [ngTemplateOutlet]="field"
+            [ngTemplateOutletContext]="{key:slot+'_'+column[0],label:column[1]}"
+          />}
+        </div>
+        } @if(visibleContactSlots(group.id).length<2){<button
+          class="secondary"
+          type="button"
+          (click)="addContact(group.id)"
+        >
+          Ajouter {{group.id==='guardian' ? 'un représentant légal' : 'une personne à contacter'}}</button
+        >} }
+        <ng-container
+          [ngTemplateOutlet]="field"
+          [ngTemplateOutletContext]="{key:'doctor',label:'Médecin traitant : coordonnées utiles'}"
+        />
+        } @case('history'){
+        <h4>Événements de santé importants</h4>
+        <p>Hospitalisation, opération, maladie chronique, blessure ou douleur utile à connaître.</p>
+        <details [open]="!!answer('history') || !!answer('historyDate')">
+          <summary>Ajouter ou consulter un événement de santé</summary>
+          <ng-container
+            [ngTemplateOutlet]="field"
+            [ngTemplateOutletContext]="{key:'history',label:'Événement ou information et dates',multi:true}"
+          /><ng-container
+            [ngTemplateOutlet]="field"
+            [ngTemplateOutletContext]="{key:'historyDate',label:'Date ou période, si utile'}"
+          />
+        </details>
+        <h4>Traitement médical</h4>
+        <ng-container
+          [ngTemplateOutlet]="choice"
+          [ngTemplateOutletContext]="{item:treatmentItem}"
+        />
+        @if(choiceValue('treatment')==='YES'){
+        <div class="field-grid">
+          <ng-container
+            [ngTemplateOutlet]="field"
+            [ngTemplateOutletContext]="{key:'treatmentName',label:'Nom du traitement'}"
+          /><ng-container
+            [ngTemplateOutlet]="field"
+            [ngTemplateOutletContext]="{key:'treatmentType',label:'Quotidien, d’appoint ou de crise'}"
+          />
+        </div>
+        <ng-container
+          [ngTemplateOutlet]="field"
+          [ngTemplateOutletContext]="{key:'treatment',label:'Consignes prescrites et modalités utiles',multi:true}"
+        />
+        <p class="notice">
+          La fiche source prévoit une ordonnance récente et les médicaments dans leur boîte
+          d'origine nominative. Organisez leur remise avec l'équipe santé.
+        </p>
+        <ng-container
+          [ngTemplateOutlet]="field"
+          [ngTemplateOutletContext]="{key:'prescription',label:'Ordonnance : remise à organiser'}"
+        />
+        }
+        <details [open]="!!answer('pai')">
+          <summary>PAI ou échange confidentiel à organiser</summary>
+          <ng-container
+            [ngTemplateOutlet]="field"
+            [ngTemplateOutletContext]="{key:'pai',label:'Document ou échange à préparer avec l’équipe',multi:true}"
+          />
+        </details>
+        } @case('vaccines'){
+        <p>
+          La fiche source prévoit une copie des pages de vaccination ou une attestation. Les
+          obligations applicables au séjour restent à qualifier avec l'organisateur. Aucun document
+          n'est certifié automatiquement.
+        </p>
+        <details [open]="hasVaccineRows()">
+          <summary>Voir ou compléter le tableau de la fiche</summary>
+          <div class="vaccine-head">
+            <strong>Vaccination</strong><strong>Nom du vaccin</strong
+            ><strong>Date / injections</strong>
+          </div>
+          @for(vaccine of vaccines; track vaccine; let v = $index){
+          <div class="vaccine-row">
+            <strong>{{vaccine}}</strong
+            ><ng-container
+              [ngTemplateOutlet]="field"
+              [ngTemplateOutletContext]="{key:'vaccine_'+v+'_name',label:vaccine+' : nom du vaccin'}"
+            /><ng-container
+              [ngTemplateOutlet]="field"
+              [ngTemplateOutletContext]="{key:'vaccine_'+v+'_date',label:vaccine+' : date ou injections'}"
+            />
+          </div>
+          }
+        </details>
+        <ng-container
+          [ngTemplateOutlet]="field"
+          [ngTemplateOutletContext]="{key:'vaccineDocument',label:'Justificatif : remise au référent santé à organiser'}"
+        />
+        <p>
+          La validation de conformité, le nom, la fonction et la date de contrôle sont réservés à la
+          personne habilitée. Aucun nouveau transfert de pièce médicale n'est ajouté ici.
+        </p>
+        } @case('adaptations'){
+        <p>Expliquez l'aide utile à l'accueil, sans devoir décrire un diagnostic.</p>
+        } @case('daily'){
+        <p>
+          Des repères concrets pour accompagner la personne pendant le séjour. Pour l'aisance
+          aquatique, précisez les tests obtenus et les besoins d'accompagnement.
+        </p>
+        } @case('fears'){
+        <p>Indiquez les situations à anticiper et ce qui aide la personne.</p>
+        <ng-container
+          [ngTemplateOutlet]="field"
+          [ngTemplateOutletContext]="{key:'followUp',label:'Suivi particulier utile à l’accueil',multi:true}"
+        /><ng-container
+          [ngTemplateOutlet]="field"
+          [ngTemplateOutletContext]="{key:'other',label:'Autre peur ou autre information utile',multi:true}"
+        />} @case('review'){
+        <p>
+          Relisez la fiche complète avant d'attester. Les parties de vérification et les
+          observations pendant le séjour restent réservées à l'équipe.
+        </p>
+        @if(!previewSample()){<a [href]="base()+'/pdf'" target="_blank" rel="noopener"
+          >Ouvrir la fiche complète et ses annexes</a
+        >}
+        <p class="notice">
+          L'attestation simple existante reste inchangée. Le nouveau parcours de signature par
+          image, tracé et code distinct n'est pas intégré.
+        </p>
+        <article class="declaration">
+          <h4>Déclaration applicable</h4>
+          <p>Version {{declaration().version}}</p>
+          <p class="preserve">{{declaration().text}}</p>
+        </article>
+        <label for="health-signer">Nom du signataire</label
+        ><input id="health-signer" [formField]="healthForm.signer" />
+        <label for="health-capacity">Qualité</label
+        ><select id="health-capacity" [formField]="healthForm.capacity">
+          <option value="LEGAL">Représentant légal</option>
+          <option value="SELF_ADULT">Adulte concerné</option>
+        </select>
+        <label class="check"
+          ><input type="checkbox" [formField]="healthForm.accepted" />J'ai relu la fiche complète et
+          la déclaration applicable. Je souhaite attester cette version.</label
+        >
+        <button
+          type="button"
+          (click)="sign()"
+          [disabled]="busy() || retryBlocked() || !model().accepted"
+        >
+          Attester la fiche sanitaire
+        </button>
+        @if(data().signature){
+        <p>
+          Attestée par {{data().signature!.name}} le {{data().signature!.at}}. Une modification
+          demande une nouvelle attestation.
+        </p>
+        @if(!previewSample()){<a [href]="base()+'/pdf'">Télécharger la fiche et sa preuve</a>}} } }
+        @if(items(section.id).length){
+        <div class="need-head">
+          <strong>Situation</strong><strong>Présence et conduite à tenir</strong>
+        </div>
+        @for(item of items(section.id); track item.id){
+        <div class="need-row">
+          <strong>{{item.label}}</strong>
+          <div>
+            <ng-container [ngTemplateOutlet]="choice" [ngTemplateOutletContext]="{item:item}" />
+            @if(choiceValue(item.id)==='YES'){<ng-container
+              [ngTemplateOutlet]="field"
+              [ngTemplateOutletContext]="{key:'detail_'+item.id,label:'Précisions : '+item.label,multi:true}"
+            />} @else if(answer('detail_'+item.id)){
+            <details>
+              <summary>Consulter le détail conservé</summary>
+              <p>Ce texte n'est pas effacé par le changement de choix.</p>
+              <ng-container
+                [ngTemplateOutlet]="field"
+                [ngTemplateOutletContext]="{key:'detail_'+item.id,label:'Précisions conservées : '+item.label,multi:true}"
+              />
+            </details>
+            }
+          </div>
+        </div>
+        } } @if(section.id==='allergies'){
+        <details [open]="!!answer('diet')">
+          <summary>Régime alimentaire ou autre précision</summary>
+          <ng-container
+            [ngTemplateOutlet]="field"
+            [ngTemplateOutletContext]="{key:'diet',label:'Besoins de repas, distincts des allergies',multi:true}"
+          />
+        </details>
+        <details [open]="data().foodAllergens.length>0">
+          <summary>Catégories alimentaires pour la préparation des repas</summary>
+          <p>
+            Ces choix servent seulement à une synthèse non nominative. Les consignes individuelles
+            restent dans le circuit santé. Aucune catégorie vide ne signifie absence d'allergie.
+          </p>
+          <div class="allergens">
+            @for(a of allergens; track a){<label class="check"
+              ><input
+                type="checkbox"
+                [checked]="data().foodAllergens.includes(a)"
+                (change)="allergen(a,$any($event.target).checked)"
+              />{{allergenLabels[a]}}</label
+            >}
+          </div>
+        </details>
+        } @for(old of legacyFields(section.id); track old[0]){
+        <details open class="legacy">
+          <summary>Information déjà présente : {{old[1]}}</summary>
+          <p>
+            Réponse conservée depuis l'ancienne présentation. Aucun choix Oui / Non n'en est déduit.
+          </p>
+          <ng-container
+            [ngTemplateOutlet]="field"
+            [ngTemplateOutletContext]="{key:old[0],label:old[1],multi:true}"
+          />
+        </details>
+        }
+      </fieldset>
+    </div>
+  </details>
+  }
+  <div class="actions">
+    @if(!readOnly()){<button
+      type="button"
+      (click)="save()"
+      [disabled]="busy() || retryBlocked() || !loaded()"
+    >
+      Enregistrer la fiche santé</button
+    >}<button type="button" class="secondary" (click)="openSection('review')">
+      Relire et attester
+    </button>
+  </div>
+  <p class="help">
+    Ces informations ne figurent pas dans les notifications ni dans la vue administrative. Demandez
+    un échange confidentiel à l'équipe santé si nécessaire.
+  </p>
+  <details class="source">
+    <summary>Consulter les quatre pages de la fiche originale</summary>
+    <p>Le modèle fourni reste intact. Ses mentions sont à valider pour le séjour.</p>
+    <a href="assets/health-form-source-2026.pdf" target="_blank" rel="noopener"
+      >Ouvrir la fiche originale vierge (PDF)</a
+    >
+  </details>
+</section>
+<ng-template #field let-key="key" let-label="label" let-multi="multi"
+  ><label class="sheet-field" [for]="'health-'+key"
+    ><span>{{label}}</span>@if(multi){<textarea
+      [id]="'health-'+key"
+      rows="2"
+      maxlength="3000"
+      [value]="answer(key)"
+      (input)="setAnswer(key,$any($event.target).value)"
+    ></textarea
+    >}@else{<input
+      [id]="'health-'+key"
+      maxlength="3000"
+      [value]="answer(key)"
+      (input)="setAnswer(key,$any($event.target).value)"
+    />}</label
+  ></ng-template
+>
+<ng-template #choice let-item="item"
+  ><div class="choice" role="group" [attr.aria-label]="item.label">
+    @for(option of choiceOptions; track option.value){<button
+      type="button"
+      [attr.aria-pressed]="choiceValue(item.id)===option.value"
+      (click)="presence(item.id,option.value)"
+    >
+      {{option.label}}</button
+    >}
+  </div></ng-template
+>

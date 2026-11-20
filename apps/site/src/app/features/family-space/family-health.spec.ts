@@ -8,6 +8,7 @@ class HealthHarness extends FamilyHealthPage {
     return '/api/public/family-space/youths/test/health';
   }
   choose(value: string) {
+    this.loaded.set(true);
     this.presence('foodAllergy', value);
   }
   persist() {

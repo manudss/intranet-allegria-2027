@@ -231,6 +231,62 @@ describe('Family registration SQL, fictitious database only', () => {
     expect(() => strings({ allergies: 'x' }, EMPTY_CONTACT)).toThrow();
     expect(() => strings(JSON.parse('{"__proto__":"x"}'), EMPTY_CONTACT)).toThrow();
   });
+  it('round-trips additive web sheet details with legacy text and signs every field without inferring presence', async () => {
+    const a = await access('sheet-fiction@example.test');
+    const f = await service.add(a.familyId, 0),
+      id = f.youths[0].id;
+    const answers = {
+      foodAllergy: 'Ancien texte FICTIF',
+      detail_foodAllergy: 'Détail FICTIF',
+      communication: 'Ancien texte groupé FICTIF',
+      vaccine_0_name: 'Vaccin FICTIF',
+      vaccine_0_date: 'Date FICTIVE',
+      guardianExtra1_name: 'Contact FICTIF',
+    };
+    const saved = await health.save(a.familyId, id, 0, {
+      answers,
+      presence: { foodAllergy: 'YES' },
+      foodAllergens: [],
+      page: 3,
+    });
+    expect((await health.get(a.familyId, id)).answers).toEqual(answers);
+    expect((await health.get(a.familyId, id)).presence?.animalAllergy).toBeUndefined();
+    const signed = await health.sign(a.familyId, id, saved.revision, {
+      name: 'Parent FICTIF',
+      capacity: 'LEGAL',
+      accepted: true,
+      version: 'test-v1',
+    });
+    expect(JSON.parse(signed.signedPayload!).answers).toEqual(answers);
+    const same = await health.save(a.familyId, id, signed.revision, {
+      answers,
+      presence: { foodAllergy: 'YES' },
+      foodAllergens: [],
+      page: 0,
+    });
+    expect(same.signature?.digest).toBe(signed.signature?.digest);
+    const changed = await health.save(a.familyId, id, same.revision, {
+      answers: { ...answers, vaccine_0_date: 'Date FICTIVE corrigée' },
+      presence: {},
+      foodAllergens: [],
+      page: 0,
+    });
+    expect(changed.signature).toBeNull();
+    expect(changed.answers.detail_foodAllergy).toBe('Détail FICTIF');
+    expect(changed.presence?.foodAllergy).toBeUndefined();
+    await expect(
+      health.save(a.familyId, id, changed.revision, {
+        answers: { rogueHealthField: 'invalide' },
+        presence: {},
+        foodAllergens: [],
+        page: 0,
+      }),
+    ).rejects.toThrow('Champ sanitaire');
+    const rows = await pg.query('SELECT envelope FROM registration_health WHERE family_id=$1', [
+      a.familyId,
+    ]);
+    expect(JSON.stringify(rows.rows)).not.toContain('Contact FICTIF');
+  });
   it('freezes health content atomically, rejects a stale page and keeps signed history after changes', async () => {
     const a = await access('health-fiction@example.test');
     let s = await service.add(a.familyId, 0);

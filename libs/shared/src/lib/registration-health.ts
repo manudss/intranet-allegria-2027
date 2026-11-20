@@ -366,6 +366,80 @@ export const HEALTH_MODEL_ITEMS = [
   },
   { id: 'vertigo', label: 'Vertige', page: 5, answerKey: 'fears', pdfPage: 3, y: 470.4, x: 129.1 },
 ] as const;
+/** Presentation only. Stable identifiers keep old free-text answers and explicit choices intact. */
+export const HEALTH_SHEET_SECTIONS = [
+  { id: 'identity', title: 'Identité et contacts', legacyPage: 0 },
+  { id: 'history', title: 'Santé et traitements', legacyPage: 1 },
+  { id: 'allergies', title: 'Allergies et alimentation', legacyPage: 3 },
+  { id: 'vaccines', title: 'Vaccinations', legacyPage: 4 },
+  { id: 'adaptations', title: 'Besoins et adaptations', legacyPage: 5 },
+  { id: 'daily', title: 'Au quotidien', legacyPage: 5 },
+  { id: 'fears', title: 'Peurs et autres informations', legacyPage: 5 },
+  { id: 'review', title: 'Relecture et attestation', legacyPage: 6 },
+] as const;
+export const HEALTH_VACCINES = [
+  'DTP',
+  'Coqueluche',
+  'Haemophilus influenzae',
+  'Hépatite B',
+  'Méningocoque C',
+  'Pneumocoque',
+  'ROR',
+  'Tuberculose',
+  'Autre vaccination',
+] as const;
+export const HEALTH_CONTACT_SLOTS = [
+  'guardianExtra1',
+  'guardianExtra2',
+  'emergencyExtra1',
+  'emergencyExtra2',
+] as const;
+export const HEALTH_CONTACT_COLUMNS = [
+  ['name', 'Nom et prénom'],
+  ['relation', 'Lien avec la personne'],
+  ['phone', 'Téléphone 1'],
+  ['phone2', 'Téléphone 2'],
+] as const;
+export const HEALTH_EXTRA_FIELDS: readonly (readonly [string, string])[] = [
+  ...HEALTH_MODEL_ITEMS.map((i) => ['detail_' + i.id, 'Précisions : ' + i.label] as const),
+  ...HEALTH_VACCINES.flatMap(
+    (v, n) =>
+      [
+        [`vaccine_${n}_name`, v + ' : nom du vaccin'],
+        [`vaccine_${n}_date`, v + ' : date du rappel ou injections'],
+      ] as const,
+  ),
+  ...HEALTH_CONTACT_SLOTS.flatMap((slot, n) =>
+    HEALTH_CONTACT_COLUMNS.map(
+      ([key, label]) =>
+        [
+          slot + '_' + key,
+          (n < 2 ? 'Autre représentant légal ' + (n + 1) : 'Autre contact ' + (n - 1)) +
+            ' : ' +
+            label,
+        ] as const,
+    ),
+  ),
+  ['historyDate', 'Événement de santé : date ou période'],
+  ['treatmentName', 'Nom du traitement'],
+  ['treatmentType', 'Traitement quotidien, d’appoint ou de crise'],
+];
+export function healthSheetItems(section: string) {
+  if (section === 'allergies') return HEALTH_MODEL_ITEMS.filter((i) => i.page === 3);
+  const start = HEALTH_MODEL_ITEMS.findIndex(
+    (i) =>
+      i.id ===
+      (section === 'adaptations'
+        ? 'communicate'
+        : section === 'daily'
+          ? 'swimming'
+          : 'fearAnimals'),
+  );
+  const count =
+    section === 'adaptations' ? 17 : section === 'daily' ? 9 : section === 'fears' ? 4 : 0;
+  return count ? HEALTH_MODEL_ITEMS.slice(start, start + count) : [];
+}
+
 export type HealthPresence = 'YES' | 'NO';
 export const FOOD_ALLERGENS = [
   'GLUTEN',
@@ -392,7 +466,10 @@ export interface StructuredHealth {
   signedPayload?: string;
   signature: null | { name: string; capacity: string; at: string; digest: string };
 }
-export const HEALTH_FIELDS = HEALTH_FORM_PAGES.flatMap((p) => p.fields.map((f) => f[0]));
+export const HEALTH_FIELDS: readonly string[] = [
+  ...HEALTH_FORM_PAGES.flatMap((p) => p.fields.map((f) => f[0])),
+  ...HEALTH_EXTRA_FIELDS.map((f) => f[0]),
+];
 export const EMPTY_HEALTH: StructuredHealth = {
   answers: {},
   foodAllergens: [],

@@ -1,5 +1,5 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { familyRetryDelay, familyRateLimitMessage } from './family-rate-limit';
-import { focusFamilyHeading } from './family-focus';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -15,266 +15,139 @@ import { form, FormField } from '@angular/forms/signals';
 import { firstValueFrom } from 'rxjs';
 import {
   EMPTY_HEALTH,
+  HEALTH_FIELDS,
+  HEALTH_SHEET_SECTIONS,
+  HEALTH_VACCINES,
+  HEALTH_CONTACT_COLUMNS,
+  HEALTH_CONTACT_SLOTS,
+  healthSheetItems,
   HEALTH_FORM_PAGES,
   HEALTH_MODEL_ITEMS,
   FOOD_ALLERGENS,
   FOOD_ALLERGEN_LABELS,
 } from '@mej-allegria/shared';
-import type { StructuredHealth } from '@mej-allegria/shared';
+import type { StructuredHealth, YouthIdentity, FamilyContact } from '@mej-allegria/shared';
 @Component({
   selector: 'app-family-health',
-  imports: [FormField],
+  imports: [FormField, NgTemplateOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <section class="health">
-      @if (previewSample()) {
-        <p>
-          EXEMPLE SANITAIRE FICTIF EN LECTURE SEULE : aucune donnée de santé réelle ne peut être
-          enregistrée ici.
-        </p>
-      }
-      <p class="private">ESPACE SANTÉ RESTREINT</p>
-      <h2 tabindex="-1">{{ pages[page()].title }}</h2>
-      <p>
-        Étape sanitaire {{ page() + 1 }} sur 7. Indiquez seulement ce qui est utile à l'accueil.
-        Aucune réponse « non » n'est présélectionnée.
-      </p>
-      <p role="status">{{ status() }}</p>
-      @if (error()) {
-        <p class="error" role="alert">{{ error() }}</p>
-      }
-      <fieldset [disabled]="readOnly()">
-        <legend>Réponses sanitaires du jeune</legend>
-        @if (page() < 6) {
-          @for (field of pages[page()].fields; track field[0]) {
-            <label [for]="'health-' + field[0]">{{ field[1] }}</label
-            ><textarea
-              [id]="'health-' + field[0]"
-              [formField]="$any(healthForm.answers)[field[0]]"
-              (input)="changed()"
-            ></textarea>
-          }
-          @if (modelItemsForPage().length) {
-            <details>
-              <summary>Reporter les choix Oui / Non du modèle fourni (facultatif)</summary>
-              <p>
-                Recopiez seulement vos réponses explicites. Laissez « Non renseigné » si vous ne
-                souhaitez pas répondre ici. Aucun diagnostic n'est déduit des textes. Vous pouvez
-                demander un échange confidentiel.
-              </p>
-              @for (item of modelItemsForPage(); track item.id) {
-                <label [for]="'model-' + item.id">{{ item.label }}</label>
-                <select
-                  [id]="'model-' + item.id"
-                  [value]="data().presence?.[item.id] || ''"
-                  (change)="presence(item.id, $any($event.target).value)"
-                >
-                  <option value="">Non renseigné</option>
-                  <option value="YES">Oui, déclaré explicitement</option>
-                  <option value="NO">Non, déclaré explicitement</option>
-                </select>
-              }
-            </details>
-          }
-          @if (page() === 3) {
-            <h3>Besoins alimentaires pour la préparation des repas</h3>
-            <p>
-              Ces catégories servent seulement à une synthèse non nominative. Les consignes
-              individuelles restent dans le circuit santé autorisé.
-            </p>
-            <div class="allergens">
-              @for (a of allergens; track a) {
-                <label
-                  ><input
-                    type="checkbox"
-                    [checked]="data().foodAllergens.includes(a)"
-                    (change)="allergen(a, $any($event.target).checked)"
-                  />{{ allergenLabels[a] }}</label
-                >
-              }
-            </div>
-          }
-        } @else {
-          <h3>Relire la fiche complète</h3>
-          <p>
-            Le document reprend le modèle sanitaire fourni et une annexe lisible avec toutes les
-            réponses, sans les tronquer. Les rubriques internes de vérification et d'observations ne
-            sont pas remplies à votre place.
-          </p>
-          @if (!previewSample()) {
-            <a [href]="base() + '/pdf'" target="_blank" rel="noopener"
-              >Ouvrir la fiche complète avant signature</a
-            >
-          }
-          <article class="declaration">
-            <h3>Déclaration applicable</h3>
-            <p>Version {{ declaration().version }}</p>
-            <pre style="white-space:pre-wrap;font:inherit">{{ declaration().text }}</pre>
-          </article>
-          <label for="health-signer">Nom du signataire</label
-          ><input id="health-signer" [formField]="healthForm.signer" /><label for="health-capacity"
-            >Qualité</label
-          ><select id="health-capacity" [formField]="healthForm.capacity">
-            <option value="LEGAL">Représentant légal</option>
-            <option value="SELF_ADULT">Adulte concerné</option></select
-          ><label class="check"
-            ><input type="checkbox" [formField]="healthForm.accepted" />J'ai relu la fiche complète
-            et la déclaration applicable. Je souhaite attester cette version.</label
-          ><button type="button" (click)="sign()" [disabled]="busy() || !model().accepted">
-            Attester la fiche sanitaire
-          </button>
-          @if (data().signature) {
-            <p>
-              Attestée par {{ data().signature!.name }} le {{ data().signature!.at }}. Une
-              modification demande une nouvelle attestation.
-            </p>
-            @if (!previewSample()) {
-              <a [href]="base() + '/pdf'">Télécharger la fiche et sa preuve</a>
-            }
-          }
-        }
-      </fieldset>
-      <div class="actions">
-        @if (page() > 0) {
-          <button type="button" (click)="go(page() - 1)" [disabled]="busy() || retryBlocked()">
-            Étape santé précédente
-          </button>
-        }
-        @if (!readOnly()) {
-          <button type="button" (click)="save()" [disabled]="busy() || retryBlocked()">
-            Enregistrer cette page santé
-          </button>
-        }
-        @if (page() < 6) {
-          <button type="button" (click)="go(page() + 1)" [disabled]="busy() || retryBlocked()">
-            Enregistrer et poursuivre la fiche santé
-          </button>
-        }
-      </div>
-      <p class="help">
-        Ces informations ne figurent pas dans les notifications ni dans la vue administrative. En
-        cas de question, demandez un échange confidentiel avec l'équipe santé.
-      </p>
-    </section>
-  `,
-  styles: [
-    `
-      :host {
-        display: block;
-      }
-      fieldset {
-        border: 0;
-        padding: 0;
-        min-width: 0;
-      }
-      h2 {
-        scroll-margin-top: 7rem;
-      }
-      .health {
-        padding: 1rem;
-        border: 1px solid #dcc8b7;
-        border-radius: 10px;
-      }
-      .private {
-        font-size: 0.8rem;
-        color: #9d351b;
-        letter-spacing: 0.1em;
-        font-weight: 800;
-      }
-      label {
-        display: block;
-        margin: 1rem 0 0.4rem;
-        font-weight: 600;
-      }
-      input,
-      select,
-      textarea {
-        font: inherit;
-        box-sizing: border-box;
-        width: 100%;
-        border: 1px solid #bba696;
-        border-radius: 7px;
-        padding: 0.8rem;
-        min-height: 48px;
-      }
-      textarea {
-        min-height: 100px;
-      }
-      button {
-        font: inherit;
-        font-weight: 700;
-        background: #c23616;
-        color: white;
-        border: 0;
-        border-radius: 7px;
-        padding: 0.9rem;
-        margin: 0.4rem 0.4rem 0.4rem 0;
-        min-height: 48px;
-        cursor: pointer;
-      }
-      button:disabled {
-        opacity: 0.5;
-      }
-      .actions {
-        margin-top: 1rem;
-      }
-      .allergens {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-      }
-      .allergens label,
-      .check {
-        display: flex;
-        gap: 0.6rem;
-        align-items: center;
-      }
-      .allergens input,
-      .check input {
-        width: 22px;
-        min-height: 22px;
-      }
-      .help {
-        font-size: 0.9rem;
-        color: #6b5a50;
-      }
-      .error {
-        color: #a21d15;
-      }
-      a {
-        color: #a42a11;
-      }
-      select:focus-visible,
-      summary:focus-visible,
-      input:focus-visible,
-      textarea:focus-visible,
-      button:focus-visible,
-      a:focus-visible {
-        outline: 3px solid #335b88;
-        outline-offset: 3px;
-      }
-      @media (max-width: 500px) {
-        .allergens {
-          grid-template-columns: 1fr;
-        }
-        .actions button {
-          width: 100%;
-        }
-      }
-    `,
-  ],
+  templateUrl: './family-health.html',
+  styleUrl: './family-health.scss',
 })
 export class FamilyHealthPage implements OnInit, OnDestroy {
+  readonly identity = input<YouthIdentity>();
+  readonly contact = input<FamilyContact>();
   readonly youthId = input.required<string>();
   readonly readOnly = input(false);
   readonly previewSample = input<StructuredHealth>();
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef, { optional: true });
   private http = inject(HttpClient);
   protected declaration = signal({ text: '', version: '' });
-  protected pages = HEALTH_FORM_PAGES;
-  protected modelItemsForPage() {
-    return HEALTH_MODEL_ITEMS.filter((item) => item.page === this.page());
+  protected sections = HEALTH_SHEET_SECTIONS;
+  protected vaccines = HEALTH_VACCINES;
+  protected contactColumns = HEALTH_CONTACT_COLUMNS;
+  protected contactGroups = [
+    { id: 'guardian', title: 'Représentants légaux et contacts du dossier' },
+    { id: 'emergency', title: 'Autres personnes à contacter' },
+  ];
+  protected expanded = signal(new Set(['allergies']));
+  protected loaded = signal(false);
+  protected choiceOptions = [
+    { value: '', label: 'Non renseigné' },
+    { value: 'NO', label: 'Non' },
+    { value: 'YES', label: 'Oui' },
+  ];
+  protected treatmentItem = HEALTH_MODEL_ITEMS[0];
+  protected items = healthSheetItems;
+  private addedContacts = signal<Record<string, number>>({});
+  protected answer(key: string) {
+    return (this.model().answers as Record<string, string>)[key] || '';
+  }
+  protected setAnswer(key: string, value: string) {
+    if (this.readOnly() || !this.loaded()) return;
+    this.model.update((m) => ({ ...m, answers: { ...m.answers, [key]: value } }));
+    this.changed();
+  }
+  protected choiceValue(key: string) {
+    return this.data().presence?.[key] || '';
+  }
+  protected hasVaccineRows() {
+    return Object.entries(this.model().answers).some(([k, v]) => k.startsWith('vaccine_') && !!v);
+  }
+  protected genderLabel() {
+    return (
+      (
+        {
+          FEMALE: 'Féminin',
+          MALE: 'Masculin',
+          OTHER: 'Autre',
+          UNDISCLOSED: 'Non précisé',
+        } as Record<string, string>
+      )[this.identity()?.sex || ''] || 'Non renseigné'
+    );
+  }
+  protected capacityLabel() {
+    return (
+      (
+        {
+          SELF_ADULT: 'Adulte concerné',
+          LEGAL: 'Représentant légal',
+          GUARDIAN: 'Tutelle',
+        } as Record<string, string>
+      )[this.identity()?.legalCapacity || ''] ||
+      this.identity()?.legalCapacity ||
+      'Non renseignée'
+    );
+  }
+  protected visibleContactSlots(group: string) {
+    const slots = HEALTH_CONTACT_SLOTS.filter((s) => s.startsWith(group));
+    const last = slots.reduce(
+      (n, s, i) => (HEALTH_CONTACT_COLUMNS.some(([k]) => !!this.answer(s + '_' + k)) ? i + 1 : n),
+      0,
+    );
+    return slots.slice(0, Math.max(last, this.addedContacts()[group] || 0));
+  }
+  protected addContact(group: string) {
+    if (this.readOnly()) return;
+    const count = this.visibleContactSlots(group).length;
+    this.addedContacts.update((v) => ({ ...v, [group]: Math.min(count + 1, 2) }));
+  }
+  protected legacyFields(section: string) {
+    const keys: Record<string, string[]> = {
+      identity: ['guardian2', 'emergency2'],
+      history: ['treatment', 'prescription'],
+      allergies: ['foodAllergy', 'animalAllergy', 'pollenAllergy', 'drugAllergy', 'asthma'],
+      vaccines: ['vaccinations'],
+      adaptations: ['communication', 'sleep', 'mobility', 'sensory', 'learning', 'mental'],
+      daily: ['swimming', 'equipment', 'dailyLife'],
+      fears: ['fears'],
+    };
+    return HEALTH_FORM_PAGES.flatMap<readonly [string, string]>((p) => [...p.fields]).filter(
+      (f) =>
+        (keys[section] || []).includes(f[0]) &&
+        !!this.answer(f[0]) &&
+        !(section === 'history' && this.choiceValue('treatment') === 'YES'),
+    );
+  }
+  protected toggled(id: string, event: Event) {
+    const open = (event.target as HTMLDetailsElement).open;
+    if (this.expanded().has(id) === open) return;
+    this.expanded.update((s) => {
+      const next = new Set(s);
+      open ? next.add(id) : next.delete(id);
+      return next;
+    });
+  }
+  protected openSection(id: string) {
+    this.expanded.update((s) => new Set([...s, id]));
+    setTimeout(() => {
+      const e = this.host?.nativeElement.querySelector<HTMLElement>('#health-section-' + id);
+      e?.scrollIntoView?.({ block: 'start' });
+      e?.querySelector('summary')?.focus();
+    }, 0);
   }
   protected presence(key: string, value: string) {
+    if (this.readOnly() || !this.loaded()) return;
     this.data.update((d) => {
       const presence = { ...d.presence };
       if (value) presence[key] = value as 'YES' | 'NO';
@@ -291,7 +164,7 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
   protected status = signal('');
   protected error = signal('');
   protected model = signal({
-    answers: Object.fromEntries(HEALTH_FORM_PAGES.flatMap((p) => p.fields.map((f) => [f[0], '']))),
+    answers: Object.fromEntries(HEALTH_FIELDS.map((key) => [key, ''])),
     signer: '',
     capacity: 'LEGAL',
     accepted: false,
@@ -311,6 +184,7 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
     if (sample) {
       this.data.set(structuredClone(sample));
       this.page.set(sample.page);
+      this.loaded.set(true);
       this.model.update((m) => ({ ...m, answers: { ...m.answers, ...sample.answers } }));
       this.declaration.set({
         version: 'EXEMPLE-FICTIF',
@@ -327,6 +201,7 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
       const d = await firstValueFrom(this.http.get<StructuredHealth>(this.base()));
       this.data.set(d);
       this.page.set(d.page);
+      this.loaded.set(true);
       this.model.update((m) => ({ ...m, answers: { ...m.answers, ...d.answers } }));
     } catch (e) {
       this.fail(e);
@@ -427,18 +302,10 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
     if (this.dirty) await this.save();
     return !this.dirty;
   }
-  protected async go(page: number) {
-    if (!(await this.flush())) return;
-    this.page.set(page);
-    setTimeout(() => {
-      const heading = this.host?.nativeElement.querySelector<HTMLElement>('h2');
-      focusFamilyHeading(heading);
-    }, 0);
-    if (!this.readOnly()) this.changed();
-  }
   protected async sign() {
-    if (this.readOnly()) return;
-    if (!(await this.flush())) return;
+    if (this.readOnly() || !this.loaded() || this.retryBlocked()) return;
+    const accepted = this.model().accepted;
+    if (!accepted || !(await this.flush())) return;
     try {
       this.busy.set(true);
       this.data.set(

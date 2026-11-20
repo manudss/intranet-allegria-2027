@@ -364,6 +364,8 @@
     }
     <app-family-health
       [youthId]="youth()!.id"
+      [identity]="youth()!.identity"
+      [contact]="space()!.contact"
       [readOnly]="readOnly() || (rules().healthMode==='PAPER' && !!rules().previewHealthSamples?.[youth()!.id])"
       [previewSample]="rules().healthMode==='PAPER' ? rules().previewHealthSamples?.[youth()!.id] : undefined"
     />}@else{
@@ -390,7 +392,10 @@
       La famille et l'équipe santé organiseront la remise confidentielle selon le circuit validé.
     </p>
     }} @case(4){
-    <app-family-documents [youthId]="youth()!.id" [readOnly]="readOnly()" />
+    <app-family-documents
+      [youthId]="youth()!.id"
+      [readOnly]="readOnly()"
+    />
     <legend>Documents et autorisations</legend>
     <p>
       Chaque document est propre à ce jeune. Vérifiez son identité, le texte entier, la version et

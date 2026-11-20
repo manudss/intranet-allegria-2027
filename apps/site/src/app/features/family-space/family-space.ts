@@ -1,3 +1,4 @@
+import { focusFamilyHeading } from './family-focus';
 import { FamilyAttestation, AttestationInput } from './family-attestation';
 import { FamilyDocuments } from './family-documents';
 import { FamilyHealthPage } from './family-health';
@@ -84,8 +85,7 @@ export class FamilySpacePage implements OnInit, OnDestroy {
   private focusTitle() {
     setTimeout(() => {
       const heading = this.host?.nativeElement.querySelector<HTMLElement>('h1');
-      heading?.focus({ preventScroll: true });
-      heading?.scrollIntoView({ behavior: 'instant', block: 'start' });
+      focusFamilyHeading(heading);
     }, 0);
   }
   protected readonly space = signal<FamilySpace | null>(null);

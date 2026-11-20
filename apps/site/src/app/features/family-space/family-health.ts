@@ -1,3 +1,4 @@
+import { focusFamilyHeading } from './family-focus';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -412,8 +413,7 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
     this.page.set(page);
     setTimeout(() => {
       const heading = this.host?.nativeElement.querySelector<HTMLElement>('h2');
-      heading?.focus({ preventScroll: true });
-      heading?.scrollIntoView({ behavior: 'instant', block: 'start' });
+      focusFamilyHeading(heading);
     }, 0);
     if (!this.readOnly()) this.changed();
   }

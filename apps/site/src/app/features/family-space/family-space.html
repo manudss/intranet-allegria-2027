@@ -540,13 +540,26 @@
     </p>
     } } }
   </fieldset>
-  @if(youth()!.state==='DRAFT'||youth()!.state==='CORRECTION'){
+  @if(youth()!.state==='DRAFT'||youth()!.state==='CORRECTION'){ @if(page()===3 &&
+  rules().healthMode!=='PAPER'){
+  <p class="help">
+    Navigation du dossier : les boutons ci-dessous quittent la fiche santé. Les réponses santé sont
+    sauvegardées avant de changer de page.
+  </p>
+  }
   <div class="page-actions">
-    @if(page()>0){<button class="secondary" type="button" (click)="go(page()-1)">Précédent</button
-    >}<button type="button" (click)="save()" [disabled]="busy() || retryBlocked()">
+    @if(page()>0){<button class="secondary" type="button" (click)="go(page()-1)">
+      {{page()===3 && rules().healthMode!=='PAPER' ? 'Enregistrer et revenir à la participation' :
+      'Précédent'}}</button
+    >}@if(page()!==3 || rules().healthMode==='PAPER'){<button
+      type="button"
+      (click)="save()"
+      [disabled]="busy() || retryBlocked()"
+    >
       Enregistrer cette page</button
-    >@if(page()<6){<button type="button" (click)="go(page()+1)" [disabled]="busy()">
-      Enregistrer et continuer</button
+    >}@if(page()<6){<button type="button" (click)="go(page()+1)" [disabled]="busy()">
+      {{page()===3 && rules().healthMode!=='PAPER' ? 'Enregistrer et passer aux documents' :
+      'Enregistrer et continuer'}}</button
     >}
   </div>
   } }

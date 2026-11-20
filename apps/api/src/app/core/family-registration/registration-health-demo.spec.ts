@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ConfigService } from '@nestjs/config';
-import { RegistrationHealthService } from './registration-health.service';
+import { RegistrationHealthService, seal } from './registration-health.service';
 import { familyPreviewHealthEnabled } from './family-preview';
 import { EMPTY_HEALTH } from '@mej-allegria/shared';
 const env = {
@@ -67,4 +67,45 @@ describe('isolated fictional health demo', () => {
     );
     expect(await h.staffList()).toMatchObject([{ familyId: 'f', youthId: 'sent', attested: true }]);
   });
+});
+
+it('signs the saved fictional health record with the exact demo declaration, rejects other versions', async () => {
+  const key = Buffer.alloc(32, 1),
+    youth = { id: 'y', identity: { firstName: 'FICTIF', dateOfBirth: '2012-05-01' } };
+  const family = {
+    email: 'famille-demo@example.test',
+    contact: { name: 'Parent FICTIF' },
+    youths: [youth],
+  };
+  const query = async (sql: string) =>
+    sql.includes('SELECT dossier')
+      ? [{ dossier: family }]
+      : sql.includes('SELECT envelope')
+        ? [
+            {
+              revision: 1,
+              envelope: seal({ ...structuredClone(EMPTY_HEALTH), revision: 1 }, key, 'f:y'),
+            },
+          ]
+        : [];
+  const db = { transaction: async (fn: (m: unknown) => unknown) => fn({ query }) };
+  const families = { youth: () => youth, editable: () => undefined };
+  const h = new RegistrationHealthService(db as never, new ConfigService(env), families as never);
+  const signed = await h.sign('f', 'y', 1, {
+    version: 'demo-fiction-1',
+    accepted: true,
+    name: 'Parent FICTIF',
+    capacity: 'LEGAL',
+  });
+  expect(signed.signature?.name).toBe('Parent FICTIF');
+  expect(JSON.parse(signed.signedPayload!).declarationVersion).toBe('demo-fiction-1');
+  expect(JSON.parse(signed.signedPayload!).declaration).toContain('fictives');
+  await expect(
+    h.sign('f', 'y', 1, {
+      version: 'wrong',
+      accepted: true,
+      name: 'Parent FICTIF',
+      capacity: 'LEGAL',
+    }),
+  ).rejects.toThrow('Relisez');
 });

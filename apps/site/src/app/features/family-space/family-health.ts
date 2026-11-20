@@ -137,7 +137,7 @@ import type { StructuredHealth } from '@mej-allegria/shared';
       <div class="actions">
         @if (page() > 0) {
           <button type="button" (click)="go(page() - 1)" [disabled]="busy() || retryBlocked()">
-            Précédent
+            Étape santé précédente
           </button>
         }
         @if (!readOnly()) {
@@ -147,7 +147,7 @@ import type { StructuredHealth } from '@mej-allegria/shared';
         }
         @if (page() < 6) {
           <button type="button" (click)="go(page() + 1)" [disabled]="busy() || retryBlocked()">
-            Enregistrer et continuer
+            Enregistrer et poursuivre la fiche santé
           </button>
         }
       </div>

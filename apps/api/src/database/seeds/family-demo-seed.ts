@@ -77,6 +77,16 @@ export function buildFamilyDemo() {
       },
     ];
   }
+  for (const y of cases) {
+    y.administrativeAtSubmission = structuredClone({
+      identity: y.identity,
+      logistics: y.logistics,
+      signatures: y.signatures,
+      simulation: y.simulation,
+      paperHealth: y.paperHealth,
+      submittedAt: y.submittedAt,
+    });
+  }
   return {
     family: {
       id: exampleFamily,

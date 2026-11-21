@@ -1,7 +1,7 @@
 name: Prod deploy (Render)
 
-# Deploiement de production, 100% pilote depuis GitHub Actions (zero minute de
-# pipeline Render : image pre-build pour l'API, copie CDN pour les fronts).
+# Deploiement production : image API pre-build et fronts copies sur CDN.
+# Usage Render faible mais non nul, dans les quotas gratuits.
 #
 # Declenchement :
 #   - automatiquement apres un run vert de "Prod image (GHCR)" sur main ;
@@ -9,8 +9,8 @@ name: Prod deploy (Render)
 #
 # Ordre : migrations de base (job separe, SECRET dedie) -> API (image GHCR) ->
 # fronts (branche `deploy`) -> checks de sante.
-# Les services pas encore bascules sont simplement sautes par les scripts
-# (voir docs/deploiement.md) : ce workflow reste vert et sans effet sur eux.
+# Fronts : auto-deploy de deploy sur le second compte, puis controle de revision.
+# API, base et cle Render du premier compte restent inchangees.
 on:
   workflow_run:
     workflows: ['Prod image (GHCR)']
@@ -72,12 +72,12 @@ jobs:
     timeout-minutes: 30
     env:
       NODE_VERSION: '24.15.0'
-      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
       WEB_API_URL: https://alegria.dss.name
       MOBILE_API_URL: https://alegria.dss.name
     steps:
       - uses: actions/checkout@v5
         with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0   # le script pousse la branche `deploy`
       - uses: actions/setup-node@v4
         with:
@@ -98,9 +98,12 @@ jobs:
         run: |
           node scripts/publish-static-dist.mjs | tee /tmp/pub.log
           grep -q '^PUBLISH_RESULT pushed=true' /tmp/pub.log && echo 'pushed=true' >> "$GITHUB_OUTPUT" || echo 'pushed=false' >> "$GITHUB_OUTPUT"
-      - name: Declencher les deploys Render des static sites
-        if: steps.pub.outputs.pushed == 'true'
-        run: node scripts/render-static-deploy.mjs
+      # Les trois sites du second compte suivent deploy automatiquement.
+      # Ne plus appeler les anciens services du premier compte (quota epuise).
+      - name: Attendre les trois CDN et verifier la revision publiee
+        env:
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: node scripts/check-static-production.mjs
 
   health:
     name: Checks de sante
@@ -111,6 +114,10 @@ jobs:
       - name: API (alegria.dss.name)
         run: curl -fsS -o /dev/null -w 'API health %{http_code}\n' https://alegria.dss.name/health
       - name: Front admin
-        run: curl -fsS -o /dev/null -w 'front admin %{http_code}\n' https://intranet-allegria-2027-1.onrender.com/
+        run: curl -fsS -o /dev/null -w 'front admin %{http_code}\n' https://alegria-live-web.onrender.com/
       - name: Site public
-        run: curl -fsS -o /dev/null -w 'site public %{http_code}\n' https://allegria-2027.onrender.com/
+        run: curl -fsS -o /dev/null -w 'site public %{http_code}\n' https://alegria-live-site.onrender.com/
+      - name: Mobile Jour J
+        run: curl -fsS -o /dev/null -w 'mobile %{http_code}\n' https://alegria-live-mobile.onrender.com/
+      - name: Espace famille (API, meme origine)
+        run: curl -fsS -o /dev/null -w 'family %{http_code}\n' https://alegria.dss.name/familles/espace-famille

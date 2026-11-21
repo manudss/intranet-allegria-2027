@@ -99,18 +99,18 @@ const DUPLICATE_RULES: { value: DuplicateRule; label: string }[] = [
   styles: [`
     .page { padding: 24px; max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
     .head h1 { margin: 0; font-size: 22px; }
-    .panel { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 10px; }
+    .panel { background: var(--appearance-surface); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 10px; }
     .panel h2 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--tui-text-secondary); }
     .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
-    .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid #eceef2; }
-    .tbl td { padding: 8px; border-bottom: 1px solid #f4f5f7; }
+    .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--appearance-border); }
+    .tbl td { padding: 8px; border-bottom: 1px solid var(--appearance-border); }
     code { font-family: ui-monospace, monospace; font-size: 12px; }
-    input, select { border: 1px solid #d7dbe3; border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
+    input, select { border: 1px solid var(--appearance-border); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
     .grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: center; }
     .grid5 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 8px; align-items: center; }
     @media(max-width: 900px) { .grid4, .grid5 { grid-template-columns: 1fr 1fr; } }
     .chk { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; margin-right: 10px; }
-    .ok-msg { color: #1a9e4b; font-size: 13px; margin: 0; }
+    .ok-msg { color: var(--appearance-success); font-size: 13px; margin: 0; }
   `],
 })
 export class ScanConfigPage implements OnInit {

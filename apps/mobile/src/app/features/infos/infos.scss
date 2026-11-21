@@ -9,14 +9,14 @@
   padding: 2rem 0;
 }
 .notice {
-  background: #fff;
+  background: var(--appearance-surface);
   border: 1px solid var(--tui-border-normal);
   border-radius: 0.75rem;
   padding: 1rem;
   color: var(--allegria-muted);
 }
 .card {
-  background: #fff;
+  background: var(--appearance-surface);
   border-radius: 1rem;
   padding: 1rem 1.25rem;
 }

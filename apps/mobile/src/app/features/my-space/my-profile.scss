@@ -1,5 +1,5 @@
 .hero {
-  background: var(--allegria-primary);
+  background: var(--appearance-solid);
   color: var(--allegria-on-primary);
   padding: 1.25rem 1.25rem 1.75rem;
   border-radius: 0 0 1.5rem 1.5rem;
@@ -44,7 +44,7 @@
   color: var(--allegria-muted);
 }
 .card {
-  background: #fff;
+  background: var(--appearance-surface);
   border-radius: 1rem;
   padding: 0.9rem 1rem;
   display: grid;
@@ -78,7 +78,7 @@
 }
 .badge {
   flex: none;
-  background: var(--allegria-secondary);
+  background: #8a5200;
   color: #fff;
   border-radius: 999px;
   font-size: 0.7rem;
@@ -100,7 +100,7 @@
 }
 .btn {
   border: 1.5px solid var(--allegria-primary);
-  background: #fff;
+  background: var(--appearance-surface);
   color: var(--allegria-primary);
   font: inherit;
   font-weight: 700;
@@ -111,7 +111,7 @@
   margin-top: 0.4rem;
 }
 .btn.primary {
-  background: var(--allegria-primary);
+  background: var(--appearance-solid);
   color: var(--allegria-on-primary);
 }
 .btn[disabled] {

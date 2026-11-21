@@ -1,3 +1,4 @@
+@use '../../../libs/appearance/palette';
 /* Design tokens et styles globaux — Alegria 2027 */
 
 :root {
@@ -59,17 +60,6 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #201a18;
-    --color-bg-alt: #2b2320;
-    --color-surface: #2f2723;
-    --color-border: #47372f;
-    --color-text: #fdf6ee;
-    --color-text-muted: #d8c6ba;
-    --color-primary-light: #ff7a4d;
-  }
-}
 
 * {
   box-sizing: border-box;
@@ -448,3 +438,20 @@ textarea.form-control {
   overflow: hidden;
 }
 
+
+:root[data-theme] {
+ --color-bg:var(--appearance-bg); --color-bg-alt:var(--appearance-raised);
+ --color-surface:var(--appearance-surface); --color-border:var(--appearance-border);
+ --color-text:var(--appearance-text); --color-text-muted:var(--appearance-muted);
+ --color-primary:var(--appearance-action); --color-secondary:var(--appearance-warning);
+ --color-accent:var(--appearance-info); --color-success:var(--appearance-success);
+ --color-error:var(--appearance-error); --color-warning:var(--appearance-warning);
+ --color-info:var(--appearance-info);
+}
+/* Solid brand surfaces retain white text; links use the brighter action token. */
+.btn-primary,.skip-link {background:var(--appearance-solid);color:var(--appearance-on-solid);}
+.form-alert--success {background:var(--appearance-success-bg);}
+.form-alert--error {background:var(--appearance-error-bg);}
+:focus-visible {outline:3px solid var(--appearance-focus);outline-offset:3px;}
+input,textarea,select {color-scheme:inherit;}
+input:-webkit-autofill {-webkit-text-fill-color:var(--appearance-text);caret-color:var(--appearance-text);}

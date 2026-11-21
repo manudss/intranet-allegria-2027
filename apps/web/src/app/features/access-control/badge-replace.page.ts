@@ -62,20 +62,20 @@ import {
   styles: [`
     .page { padding: 24px; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
     .head h1 { margin: 0; font-size: 22px; }
-    .panel { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 10px; }
+    .panel { background: var(--appearance-surface); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 10px; }
     .panel h2 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--tui-text-secondary); }
-    input { border: 1px solid #d7dbe3; border-radius: 8px; padding: 10px 12px; font-size: 15px; width: 100%; box-sizing: border-box; }
-    .row { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 4px; background: none; border: none; border-bottom: 1px solid #f3f4f6; cursor: pointer; text-align: left; }
+    input { border: 1px solid var(--appearance-border); border-radius: 8px; padding: 10px 12px; font-size: 15px; width: 100%; box-sizing: border-box; }
+    .row { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 4px; background: none; border: none; border-bottom: 1px solid var(--appearance-border); cursor: pointer; text-align: left; }
     .row small { display: block; color: var(--tui-text-secondary); }
     .card { border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
-    .card.old { background: #fdeaea; border-left: 4px solid #d8453a; }
-    .card.new { background: #e3f6ea; border-left: 4px solid #1a9e4b; }
+    .card.old { background: var(--appearance-surface); border-left: 4px solid var(--appearance-error); }
+    .card.new { background: var(--appearance-raised); border-left: 4px solid var(--appearance-success); }
     .lbl { font-size: 11px; color: var(--tui-text-secondary); }
     code { font-family: ui-monospace, monospace; font-size: 13px; }
     .hint { font-size: 13px; color: var(--tui-text-secondary); margin: 0; }
-    .err { color: #d8453a; margin: 0; font-size: 14px; }
-    .done { background: #e3f6ea; }
-    .done p { margin: 0; font-weight: 600; color: #1a9e4b; }
+    .err { color: var(--appearance-error); margin: 0; font-size: 14px; }
+    .done { background: var(--appearance-raised); }
+    .done p { margin: 0; font-weight: 600; color: var(--appearance-success); }
     .actions { display: flex; gap: 8px; }
   `],
 })

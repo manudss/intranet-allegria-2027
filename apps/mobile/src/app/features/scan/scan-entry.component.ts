@@ -57,18 +57,18 @@ const SCAN_ROLES = ['SCANNER', 'BADGE_MANAGER', 'ADMIN'];
     .entry { max-width: 480px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
     h1 { font-size: 22px; margin: 0; }
     .sub { color: var(--tui-text-secondary, #6b7280); font-size: 14px; }
-    .card { background: #fff; border-radius: 16px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
-    .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; margin: 0 0 10px; }
+    .card { background: var(--appearance-surface); border-radius: 16px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--appearance-muted); margin: 0 0 10px; }
     .points { display: flex; flex-direction: column; gap: 8px; }
-    .point { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 14px; border: 2px solid transparent; border-radius: 12px; background: #f4f5f7; font-size: 15px; cursor: pointer; }
-    .point.sel { border-color: #526ed3; background: #eef1fb; }
-    .type { font-size: 12px; color: #6b7280; text-align: right; }
+    .point { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 14px; border: 2px solid transparent; border-radius: 12px; background: var(--appearance-surface); font-size: 15px; cursor: pointer; }
+    .point.sel { border-color: var(--appearance-info); background: var(--appearance-surface); }
+    .type { font-size: 12px; color: var(--appearance-muted); text-align: right; }
     .cta { height: 56px; border: none; border-radius: 14px; background: #526ed3; color: #fff; font-size: 17px; font-weight: 700; cursor: pointer; }
     .cta:disabled { opacity: .5; }
     .cta.assign { background: #1a9e4b; }
-    .error { color: #d8453a; font-size: 14px; }
-    .hint { font-size: 12px; color: #6b7280; text-align: center; }
-    .denied p { color: #6b7280; }
+    .error { color: var(--appearance-error); font-size: 14px; }
+    .hint { font-size: 12px; color: var(--appearance-muted); text-align: center; }
+    .denied p { color: var(--appearance-muted); }
   `],
 })
 export class ScanEntryComponent implements OnInit {

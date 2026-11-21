@@ -58,7 +58,7 @@ interface Piece {
       section {
         margin: 1.5rem 0;
         padding: 1rem;
-        border: 1px solid #dcc8b7;
+        border: 1px solid var(--appearance-border);
         border-radius: 10px;
       }
       input {
@@ -68,7 +68,7 @@ interface Piece {
         min-height: 48px;
       }
       a {
-        color: #a42a11;
+        color: var(--appearance-action);
       }
     `,
   ],

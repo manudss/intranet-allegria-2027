@@ -1,3 +1,5 @@
+import { FamilySignaturePanel, SignatureDraft } from './family-signature';
+import { FamilyPdfPreview } from './family-pdf-preview';
 import { NgTemplateOutlet } from '@angular/common';
 import { familyRetryDelay, familyRateLimitMessage } from './family-rate-limit';
 import {
@@ -9,9 +11,10 @@ import {
   inject,
   input,
   signal,
+  computed,
 } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { form, FormField } from '@angular/forms/signals';
+import { form } from '@angular/forms/signals';
 import { firstValueFrom } from 'rxjs';
 import {
   EMPTY_HEALTH,
@@ -29,7 +32,7 @@ import {
 import type { StructuredHealth, YouthIdentity, FamilyContact } from '@mej-allegria/shared';
 @Component({
   selector: 'app-family-health',
-  imports: [FormField, NgTemplateOutlet],
+  imports: [NgTemplateOutlet, FamilySignaturePanel, FamilyPdfPreview],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './family-health.html',
   styleUrl: './family-health.scss',
@@ -42,6 +45,44 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
   readonly previewSample = input<StructuredHealth>();
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef, { optional: true });
   private http = inject(HttpClient);
+  protected previewMode = signal(false);
+  protected pdfReady = signal(false);
+  protected plannedSignature = signal<SignatureDraft | undefined>(undefined);
+  protected previewRequest = computed(() =>
+    this.loaded() && !this.previewSample()
+      ? {
+          url: this.base() + '/preview',
+          body: {
+            health: {
+              answers: this.model().answers,
+              presence: this.data().presence || {},
+              foodAllergens: this.data().foodAllergens,
+              page: this.page(),
+            },
+            ...(this.plannedSignature() ? { signature: this.plannedSignature() } : {}),
+          },
+        }
+      : null,
+  );
+  protected signatureKey = computed(() =>
+    JSON.stringify([
+      this.identity(),
+      this.contact(),
+      this.model().answers,
+      this.data().presence || {},
+      this.data().foodAllergens,
+    ]),
+  );
+  protected prepareSignature = async () => {
+    if (this.readOnly() || !this.loaded() || this.retryBlocked()) return null;
+    if (!this.data().revision) this.dirty = true;
+    if (!(await this.flush())) return null;
+    return { revision: this.data().revision, version: this.declaration().version };
+  };
+  protected signatureCompleted(value: unknown) {
+    this.data.set(value as StructuredHealth);
+    this.status.set('Fiche signée avec confirmation par code. Téléchargez votre exemplaire.');
+  }
   protected declaration = signal({ text: '', version: '' });
   protected sections = HEALTH_SHEET_SECTIONS;
   protected vaccines = HEALTH_VACCINES;
@@ -302,29 +343,5 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
     await this.chain;
     if (this.dirty) await this.save();
     return !this.dirty;
-  }
-  protected async sign() {
-    if (this.readOnly() || !this.loaded() || this.retryBlocked()) return;
-    const accepted = this.model().accepted;
-    if (!accepted || !(await this.flush())) return;
-    try {
-      this.busy.set(true);
-      this.data.set(
-        await firstValueFrom(
-          this.http.post<StructuredHealth>(this.base() + '/sign', {
-            revision: this.data().revision,
-            name: this.model().signer,
-            capacity: this.model().capacity,
-            accepted: this.model().accepted,
-            version: this.declaration().version,
-          }),
-        ),
-      );
-      this.status.set('Fiche attestée. Téléchargez votre exemplaire.');
-    } catch (e) {
-      this.fail(e);
-    } finally {
-      this.busy.set(false);
-    }
   }
 }

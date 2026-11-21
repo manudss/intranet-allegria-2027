@@ -372,3 +372,57 @@ select,
 textarea {
   font-weight: 400;
 }
+
+.health-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.95fr);
+  gap: 1.2rem;
+  align-items: start;
+}
+.health-workspace.sample-only {
+  display: block;
+}
+.health-editor,
+.health-document {
+  min-width: 0;
+}
+.health-document {
+  position: sticky;
+  top: 10rem;
+  max-height: calc(100vh - 11rem);
+  overflow: auto;
+}
+.mobile-preview-switch {
+  display: none;
+}
+@media (max-width: 1050px) {
+  .health-workspace {
+    display: block;
+  }
+  .health-document {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+  .mobile-preview-switch {
+    display: flex;
+    position: sticky;
+    top: 4.4rem;
+    z-index: 3;
+    background: #fffdfb;
+    padding: 0.4rem 0;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin: 1rem 0;
+  }
+  .mobile-preview-switch button {
+    flex: 1;
+  }
+  .mobile-preview-switch [aria-pressed='true'] {
+    background: #7c4e3b;
+    color: white;
+  }
+  .mobile-hidden {
+    display: none;
+  }
+}

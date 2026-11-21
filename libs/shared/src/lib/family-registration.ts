@@ -40,7 +40,20 @@ export interface FamilyDocumentTemplate {
   required: boolean;
   enabled: boolean;
 }
+export interface SignatureAppearance {
+  method: 'NAME' | 'DRAW' | 'UPLOAD';
+  image?: string;
+}
+export interface SignatureVerification {
+  method: 'EMAIL_CODE';
+  challengeId: string;
+  verifiedAt: string;
+  context: string;
+}
 export interface FamilySignature {
+  document?: { pdfBase64: string; digest: string };
+  appearance?: SignatureAppearance;
+  verification?: SignatureVerification;
   templateId: string;
   version: string;
   digest: string;

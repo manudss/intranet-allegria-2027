@@ -69,7 +69,7 @@ describe('isolated fictional health demo', () => {
   });
 });
 
-it('signs the saved fictional health record with the exact demo declaration, rejects other versions', async () => {
+it('refuses to attest a fictional health record without the distinct signature code', async () => {
   const key = Buffer.alloc(32, 1),
     youth = { id: 'y', identity: { firstName: 'FICTIF', dateOfBirth: '2012-05-01' } };
   const family = {
@@ -88,18 +88,18 @@ it('signs the saved fictional health record with the exact demo declaration, rej
             },
           ]
         : [];
-  const db = { transaction: async (fn: (m: unknown) => unknown) => fn({ query }) };
-  const families = { youth: () => youth, editable: () => undefined };
+  const db = { query, transaction: async (fn: (m: unknown) => unknown) => fn({ query }) };
+  const families = { get: async () => family, youth: () => youth, editable: () => undefined };
   const h = new RegistrationHealthService(db as never, new ConfigService(env), families as never);
-  const signed = await h.sign('f', 'y', 1, {
-    version: 'demo-fiction-1',
-    accepted: true,
-    name: 'Parent FICTIF',
-    capacity: 'LEGAL',
-  });
-  expect(signed.signature?.name).toBe('Parent FICTIF');
-  expect(JSON.parse(signed.signedPayload!).declarationVersion).toBe('demo-fiction-1');
-  expect(JSON.parse(signed.signedPayload!).declaration).toContain('fictives');
+  await expect(
+    h.sign('f', 'y', 1, {
+      version: 'demo-fiction-1',
+      accepted: true,
+      name: 'Parent FICTIF',
+      capacity: 'LEGAL',
+      appearance: { method: 'NAME' },
+    }),
+  ).rejects.toThrow('Code de signature');
   await expect(
     h.sign('f', 'y', 1, {
       version: 'wrong',

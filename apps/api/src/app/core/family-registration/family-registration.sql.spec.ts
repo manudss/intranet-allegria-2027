@@ -19,6 +19,7 @@ describe('Family registration SQL, fictitious database only', () => {
     service: FamilyRegistrationService,
     health: RegistrationHealthService,
     documents: RegistrationDocumentsService;
+  let healthConfig: Record<string, string>;
   beforeEach(async () => {
     pg = new PGlite();
     const query = async (sql: string, params: unknown[] = []) => (await pg.query(sql, params)).rows;
@@ -61,6 +62,7 @@ describe('Family registration SQL, fictitious database only', () => {
       FAMILY_HEALTH_DECLARATION_VERSION: 'test-v1',
       FAMILY_HEALTH_DECLARATION_TEXT: 'Déclaration fictive de test',
     };
+    healthConfig = config;
     health = new RegistrationHealthService(
       db as never,
       { get: (k: string) => config[k] } as never,
@@ -78,6 +80,35 @@ describe('Family registration SQL, fictitious database only', () => {
       [id, email, digest(id + '12345678')],
     );
     return service.verify(id, '12345678');
+  }
+  async function signHealth(
+    familyId: string,
+    youthId: string,
+    revision: number,
+    raw: Record<string, unknown>,
+  ) {
+    Object.assign(healthConfig, {
+      FAMILY_MAIL_PROVIDER: 'resend',
+      FAMILY_MAIL_FROM: 'Fiction <fiction@example.test>',
+      FAMILY_RESEND_API_KEY: 'test-only',
+    });
+    let code = '';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url, request) => {
+        code = JSON.parse(request.body).text.match(/\d{8}/)[0];
+        return { ok: true, json: async () => ({ id: 'fictional-mail' }) };
+      }),
+    );
+    const p = { ...raw, appearance: { method: 'NAME' } },
+      challenge = (await health.requestCode(familyId, youthId, revision, p)) as {
+        challengeId: string;
+      };
+    return health.sign(familyId, youthId, revision, {
+      ...p,
+      challengeId: challenge.challengeId,
+      code,
+    });
   }
   it('consumes a one-time challenge, stores only token digests and persists a family session', async () => {
     const result = await access('fictitious@example.fr');
@@ -252,7 +283,7 @@ describe('Family registration SQL, fictitious database only', () => {
     expect((await health.get(a.familyId, id)).answers).toEqual(answers);
     expect((await health.get(a.familyId, id)).presence?.animalAllergy).toBeUndefined();
     expect((await health.get(a.familyId, id)).presence?.fearOther).toBe('NO');
-    const signed = await health.sign(a.familyId, id, saved.revision, {
+    const signed = await signHealth(a.familyId, id, saved.revision, {
       name: 'Parent FICTIF',
       capacity: 'LEGAL',
       accepted: true,
@@ -315,7 +346,7 @@ describe('Family registration SQL, fictitious database only', () => {
         version: 'old',
       }),
     ).rejects.toThrow();
-    const signed = await health.sign(a.familyId, id, h.revision, {
+    const signed = await signHealth(a.familyId, id, h.revision, {
       name: 'Parent fictif',
       capacity: 'LEGAL',
       accepted: true,
@@ -467,7 +498,7 @@ describe('Family registration SQL, fictitious database only', () => {
       foodAllergens: ['MILK'],
       page: 6,
     });
-    const signed = await health.sign(a.familyId, id, saved.revision, {
+    const signed = await signHealth(a.familyId, id, saved.revision, {
       name: 'Parent fictif',
       capacity: 'LEGAL',
       accepted: true,

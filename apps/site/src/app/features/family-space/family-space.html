@@ -392,10 +392,7 @@
       La famille et l'équipe santé organiseront la remise confidentielle selon le circuit validé.
     </p>
     }} @case(4){
-    <app-family-documents
-      [youthId]="youth()!.id"
-      [readOnly]="readOnly()"
-    />
+    <app-family-documents [youthId]="youth()!.id" [readOnly]="readOnly()" />
     <legend>Documents et autorisations</legend>
     <p>
       Chaque document est propre à ce jeune. Vérifiez son identité, le texte entier, la version et
@@ -411,12 +408,14 @@
         >Télécharger ce document sans attestation (PDF)</a
       >
       @if(!readOnly()){
-      <app-family-attestation
-        [documentId]="t.id"
+      <app-family-signature
+        [endpoint]="'/api/public/family-space/youths/'+youth()!.id+'/signatures'"
+        [prepare]="signaturePrepare(t.id,t.version)"
+        [documentKey]="signatureKey(t)"
+        [preview]="signaturePreview(t.id)"
         [signer]="space()!.contact.name"
         [capacity]="youth()!.identity.legalCapacity"
-        [busy]="busy()"
-        (accepted)="sign(t.id,t.version,$event)"
+        (completed)="signatureCompleted($event)"
       />
       }
     </article>

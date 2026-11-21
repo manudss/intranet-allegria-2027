@@ -1,3 +1,10 @@
+import { healthPdf, healthPdfSourceDigest } from './health-pdf';
+import {
+  signatureAppearance,
+  signatureContext,
+  requestSignatureCode,
+  verifySignatureCode,
+} from './signature-code';
 import {
   familyPreviewEnabled,
   familyPreviewHealthEnabled,
@@ -31,6 +38,42 @@ export function unseal(envelope: string, key: Buffer, context: string): Structur
   cipher.setAAD(Buffer.from(context));
   cipher.setAuthTag(tag);
   return JSON.parse(Buffer.concat([cipher.update(content), cipher.final()]).toString('utf8'));
+}
+export function validatedHealth(raw: unknown) {
+  const p = plainObject(raw),
+    answers = plainObject(p.answers),
+    presence = plainObject(p.presence ?? {});
+  if (
+    Object.entries(presence).some(
+      ([key, value]) =>
+        ![...HEALTH_MODEL_ITEMS, ...HEALTH_WEB_ITEMS].some((item) => item.id === key) ||
+        !['YES', 'NO'].includes(String(value)),
+    )
+  )
+    throw new BadRequestException('Choix du modèle sanitaire invalide');
+  if (
+    Object.keys(p).some((k) => !['answers', 'presence', 'foodAllergens', 'page'].includes(k)) ||
+    Object.keys(answers).some(
+      (k) =>
+        !HEALTH_FIELDS.includes(k as never) ||
+        typeof answers[k] !== 'string' ||
+        String(answers[k]).length > 3000,
+    ) ||
+    !Array.isArray(p.foodAllergens) ||
+    p.foodAllergens.some((a) => !FOOD_ALLERGENS.includes(a)) ||
+    !Number.isInteger(p.page) ||
+    Number(p.page) < 0 ||
+    Number(p.page) > 6
+  )
+    throw new BadRequestException('Champ sanitaire invalide');
+  return {
+    answers: answers as Record<string, string>,
+    presence: presence as StructuredHealth['presence'],
+    foodAllergens: [...new Set(p.foodAllergens as string[])],
+    page: Number(p.page),
+    revision: 0,
+    signature: null,
+  } satisfies StructuredHealth;
 }
 @Injectable()
 export class RegistrationHealthService {
@@ -88,39 +131,45 @@ export class RegistrationHealthService {
     if (!row.signatureValid) {
       data.signature = null;
       delete data.signedPayload;
+      delete data.documentDigest;
     }
+    delete data.signedPdf;
     return data;
+  }
+  async pdf(familyId: string, youthId: string) {
+    const family = await this.families.get(familyId),
+      youth = this.families.youth(family, youthId);
+    const current = await this.get(familyId, youthId);
+    const [row] = await this.db.query(
+      'SELECT envelope,"signatureValid" FROM registration_health WHERE family_id=$1 AND "youthId"=$2',
+      [familyId, youthId],
+    );
+    const data = row?.signatureValid
+      ? unseal(row.envelope, this.key(), familyId + ':' + youthId)
+      : current;
+    return healthPdf(family, youth, data, String(this.declaration().text));
+  }
+  async preview(familyId: string, youthId: string, raw: unknown, planned?: unknown) {
+    this.key();
+    const family = await this.families.get(familyId),
+      youth = this.families.youth(family, youthId),
+      h = validatedHealth(raw);
+    const p = planned ? plainObject(planned) : null;
+    const mark = p
+      ? {
+          name: typeof p.name === 'string' ? p.name.trim().slice(0, 180) : '',
+          appearance: await signatureAppearance(p.appearance),
+        }
+      : undefined;
+    return healthPdf(family, youth, h, String(this.declaration().text), mark);
   }
   async save(familyId: string, youthId: string, revision: number, raw: unknown) {
     const key = this.key(),
       family = await this.families.get(familyId);
     this.families.editable(this.families.youth(family, youthId));
-    const p = plainObject(raw),
-      answers = plainObject(p.answers),
-      presence = plainObject(p.presence ?? {});
-    if (
-      Object.entries(presence).some(
-        ([key, value]) =>
-          ![...HEALTH_MODEL_ITEMS, ...HEALTH_WEB_ITEMS].some((item) => item.id === key) ||
-          !['YES', 'NO'].includes(String(value)),
-      )
-    )
-      throw new BadRequestException('Choix du modèle sanitaire invalide');
-    if (
-      Object.keys(p).some((k) => !['answers', 'presence', 'foodAllergens', 'page'].includes(k)) ||
-      Object.keys(answers).some(
-        (k) =>
-          !HEALTH_FIELDS.includes(k as never) ||
-          typeof answers[k] !== 'string' ||
-          String(answers[k]).length > 3000,
-      ) ||
-      !Array.isArray(p.foodAllergens) ||
-      p.foodAllergens.some((a) => !FOOD_ALLERGENS.includes(a)) ||
-      !Number.isInteger(p.page) ||
-      Number(p.page) < 0 ||
-      Number(p.page) > 6
-    )
-      throw new BadRequestException('Champ sanitaire invalide');
+    const clean = validatedHealth(raw),
+      answers = clean.answers,
+      presence = clean.presence;
     return this.db.transaction(async (m) => {
       const [fresh] = await m.query(
         'SELECT dossier FROM registration_families WHERE id=$1 FOR UPDATE',
@@ -136,8 +185,8 @@ export class RegistrationHealthService {
       const data: StructuredHealth = {
         answers: answers as Record<string, string>,
         presence: presence as StructuredHealth['presence'],
-        foodAllergens: [...new Set(p.foodAllergens as string[])] as string[],
-        page: Number(p.page),
+        foodAllergens: [...new Set(clean.foodAllergens)] as string[],
+        page: clean.page,
         revision: revision + 1,
         signature: null,
       };
@@ -153,6 +202,8 @@ export class RegistrationHealthService {
       if (previous && row.signatureValid && content(previous) === content(data)) {
         data.signature = previous.signature;
         data.signedPayload = previous.signedPayload;
+        data.signedPdf = previous.signedPdf;
+        data.documentDigest = previous.documentDigest;
       }
       await m.query(
         'INSERT INTO registration_health(family_id,"youthId",envelope,revision,"signatureValid") VALUES($1,$2,$3,$4,$5) ON CONFLICT(family_id,"youthId") DO UPDATE SET envelope=excluded.envelope,revision=excluded.revision,"signatureValid"=excluded."signatureValid","updatedAt"=now()',
@@ -168,10 +219,17 @@ export class RegistrationHealthService {
         'INSERT INTO registration_audit(family_id,"youthId",action,actor) VALUES($1,$2,\'HEALTH_SAVED\',$3)',
         [familyId, youthId, family.email],
       );
+      delete data.signedPdf;
       return data;
     });
   }
-  async sign(familyId: string, youthId: string, revision: number, raw: unknown) {
+  async signatureAction(
+    familyId: string,
+    youthId: string,
+    revision: number,
+    raw: unknown,
+    requestCode = false,
+  ) {
     const p = plainObject(raw),
       key = this.key();
     if (
@@ -183,12 +241,61 @@ export class RegistrationHealthService {
       !['LEGAL', 'SELF_ADULT'].includes(String(p.capacity))
     )
       throw new BadRequestException('Relisez la fiche et identifiez le signataire.');
+    const familyBefore = await this.families.get(familyId),
+      youthBefore = this.families.youth(familyBefore, youthId),
+      before = await this.get(familyId, youthId),
+      appearance = await signatureAppearance(p.appearance);
+    this.families.editable(youthBefore);
+    if (before.revision !== revision || !revision)
+      throw new BadRequestException('Sauvegardez la fiche avant de signer.');
+    if (
+      p.capacity === 'SELF_ADULT' &&
+      (ageOn(youthBefore.identity.dateOfBirth, new Date().toISOString().slice(0, 10)) ?? -1) < 18
+    )
+      throw new BadRequestException('Un représentant légal est nécessaire pour un mineur.');
+    const proposal = {
+        name: String(p.name).trim(),
+        capacity: String(p.capacity),
+        appearance,
+        version: p.version,
+        accepted: true,
+      },
+      context = signatureContext(
+        'HEALTH',
+        familyId,
+        youthId,
+        revision,
+        familyBefore.revision,
+        {
+          identity: youthBefore.identity,
+          contact: familyBefore.contact,
+          answers: before.answers,
+          presence: before.presence || {},
+          foodAllergens: before.foodAllergens,
+          declaration: this.declaration(),
+          sourcePdfDigest: await healthPdfSourceDigest(),
+        },
+        proposal,
+      );
+    if (requestCode)
+      return requestSignatureCode(this.db, this.config, familyId, familyBefore.email, context);
+    const verification = await verifySignatureCode(
+      this.db,
+      familyBefore.email,
+      context,
+      p.challengeId,
+      p.code,
+    );
     return this.db.transaction(async (m) => {
       const [row] = await m.query(
         'SELECT dossier FROM registration_families WHERE id=$1 FOR UPDATE',
         [familyId],
       );
       if (!row) throw new BadRequestException('Dossier introuvable');
+      if (row.dossier.revision !== familyBefore.revision)
+        throw new BadRequestException(
+          'Le dossier a changé. Relisez le document et demandez un nouveau code.',
+        );
       const family = row.dossier,
         y = this.families.youth(family, youthId);
       this.families.editable(y);
@@ -218,7 +325,14 @@ export class RegistrationHealthService {
         capacity: String(p.capacity),
         at: new Date().toISOString(),
         digest: digest(h.signedPayload),
+        appearance,
+        verification,
       };
+      delete h.signedPdf;
+      delete h.documentDigest;
+      const bytes = await healthPdf(family, y, h, String(this.declaration().text));
+      h.signedPdf = Buffer.from(bytes).toString('base64');
+      h.documentDigest = digest(Buffer.from(bytes));
       h.revision++;
       const envelope = seal(h, key, familyId + ':' + youthId);
       await m.query(
@@ -233,8 +347,15 @@ export class RegistrationHealthService {
         `INSERT INTO registration_audit(family_id,"youthId",action,actor) VALUES($1,$2,'HEALTH_ATTESTED',$3)`,
         [familyId, youthId, family.email],
       );
+      delete h.signedPdf;
       return h;
     });
+  }
+  async sign(familyId: string, youthId: string, revision: number, raw: unknown) {
+    return (await this.signatureAction(familyId, youthId, revision, raw)) as StructuredHealth;
+  }
+  async requestCode(familyId: string, youthId: string, revision: number, raw: unknown) {
+    return this.signatureAction(familyId, youthId, revision, raw, true);
   }
   private async demoSample(familyId: string, youthId: string) {
     if (!familyPreviewHealthEnabled(this.config)) return null;

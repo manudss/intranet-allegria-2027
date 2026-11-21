@@ -1,3 +1,10 @@
+import { authorizationPdf } from './signature-pdf';
+import {
+  signatureAppearance,
+  signatureContext,
+  requestSignatureCode,
+  verifySignatureCode,
+} from './signature-code';
 import { familyPreviewHealthEnabled } from './family-preview';
 import {
   familyPreviewEnabled,
@@ -314,7 +321,13 @@ export class FamilyRegistrationService {
       youthId,
     );
   }
-  async sign(id: string, youthId: string, revision: number, raw: unknown) {
+  async signatureAction(
+    id: string,
+    youthId: string,
+    revision: number,
+    raw: unknown,
+    requestCode = false,
+  ) {
     const p = plainObject(raw),
       rules = await this.rules(),
       template = rules.templates.find((t) => t.id === p.templateId && t.enabled);
@@ -329,6 +342,40 @@ export class FamilyRegistrationService {
       !['LEGAL', 'SELF_ADULT'].includes(String(p.capacity))
     )
       throw new BadRequestException('Relisez le document et identifiez le signataire.');
+    const family = await this.get(id),
+      youth = this.youth(family, youthId),
+      appearance = await signatureAppearance(p.appearance);
+    this.editable(youth);
+    if (family.revision !== revision)
+      throw new BadRequestException('Le dossier a changé. Relisez le document.');
+    if (
+      p.capacity === 'SELF_ADULT' &&
+      (ageOn(youth.identity.dateOfBirth, new Date().toISOString().slice(0, 10)) ?? -1) < 18
+    )
+      throw new BadRequestException('Un représentant légal est nécessaire pour un mineur.');
+    const context = signatureContext(
+      'TEMPLATE:' + template.id,
+      id,
+      youthId,
+      revision,
+      family.revision,
+      { template, identity: youth.identity, logistics: youth.logistics, contact: family.contact },
+      {
+        signerName: String(p.signerName).trim(),
+        capacity: String(p.capacity),
+        appearance,
+        version: p.version,
+        accepted: true,
+      },
+    );
+    if (requestCode) return requestSignatureCode(this.db, this.config, id, family.email, context);
+    const verification = await verifySignatureCode(
+      this.db,
+      family.email,
+      context,
+      p.challengeId,
+      p.code,
+    );
     return this.mutate(
       id,
       revision,
@@ -360,10 +407,21 @@ export class FamilyRegistrationService {
           signerName: String(p.signerName).trim(),
           capacity: String(p.capacity),
           signedAt: new Date().toISOString(),
+          appearance,
+          verification,
         });
+        const signed = y.signatures[y.signatures.length - 1];
+        const bytes = Buffer.from(await authorizationPdf(content, signed));
+        signed.document = { pdfBase64: bytes.toString('base64'), digest: digest(bytes) };
       },
       youthId,
     );
+  }
+  async sign(id: string, youthId: string, revision: number, raw: unknown) {
+    return (await this.signatureAction(id, youthId, revision, raw)) as FamilySpace;
+  }
+  async requestSignatureCode(id: string, youthId: string, revision: number, raw: unknown) {
+    return this.signatureAction(id, youthId, revision, raw, true);
   }
   async submit(id: string, youthId: string, revision: number, accepted: unknown) {
     const rules = await this.rules();

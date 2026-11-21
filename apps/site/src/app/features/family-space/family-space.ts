@@ -1,7 +1,8 @@
+import { FamilySignaturePanel } from './family-signature';
 import { familyRetryDelay, familyRateLimitMessage } from './family-rate-limit';
 import { DioceseSelect } from './diocese-select';
 import { focusFamilyHeading } from './family-focus';
-import { FamilyAttestation, AttestationInput } from './family-attestation';
+
 import { FamilyDocuments } from './family-documents';
 import { FamilyHealthPage } from './family-health';
 import {
@@ -34,7 +35,7 @@ import type { FamilyContact, FamilyRules, FamilySpace, YouthDossier } from '@mej
     RouterLink,
     FamilyHealthPage,
     FamilyDocuments,
-    FamilyAttestation,
+    FamilySignaturePanel,
     DioceseSelect,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -490,26 +491,46 @@ export class FamilySpacePage implements OnInit, OnDestroy {
       this.status.set(this.simulationLabels[simulation]);
     });
   }
-  protected async sign(templateId: string, version: string, m: AttestationInput) {
-    if (this.readOnly() || !(await this.flush())) return;
-    await this.run(async () => {
-      const s = this.space()!,
-        y = this.youth()!;
-      this.space.set(
-        await firstValueFrom(
-          this.http.post<FamilySpace>('/api/public/family-space/youths/' + y.id + '/signatures', {
-            revision: s.revision,
-            templateId,
-            version,
-            signerName: m.name,
-            capacity: m.capacity,
-            accepted: m.accepted,
-          }),
-        ),
-      );
-      this.signatureModel.update((m) => ({ ...m, accepted: false, finalAccepted: false }));
-      this.status.set('Attestation enregistrée pour ce jeune et cette version du document.');
-    });
+  protected signaturePrepare(templateId: string, version: string) {
+    // Cache this function by template below in the template via a stable memoized map.
+    const key = templateId + ':' + version;
+    if (!this.signaturePreparers.has(key))
+      this.signaturePreparers.set(key, async () => {
+        if (this.readOnly() || !(await this.flush())) return null;
+        return { revision: this.space()!.revision, templateId, version };
+      });
+    return this.signaturePreparers.get(key)!;
+  }
+  private signaturePreparers = new Map<string, () => Promise<Record<string, unknown> | null>>();
+  protected signatureKey(template: unknown) {
+    return JSON.stringify([
+      template,
+      this.youth()?.identity,
+      this.youth()?.logistics,
+      this.space()?.contact,
+    ]);
+  }
+  private signaturePreviews = new Map<string, { url: string; body: Record<string, unknown> }>();
+  protected signaturePreview(templateId: string) {
+    const key = this.youth()!.id + ':' + templateId;
+    if (!this.signaturePreviews.has(key))
+      this.signaturePreviews.set(key, {
+        url:
+          '/api/public/family-space/youths/' +
+          this.youth()!.id +
+          '/templates/' +
+          templateId +
+          '/preview',
+        body: {},
+      });
+    return this.signaturePreviews.get(key)!;
+  }
+  protected signatureCompleted(value: unknown) {
+    this.space.set(value as FamilySpace);
+    this.signatureModel.update((m) => ({ ...m, accepted: false, finalAccepted: false }));
+    this.status.set(
+      'Signature confirmée pour ce jeune et cette version. Le PDF figé est conservé.',
+    );
   }
   protected async submit() {
     if (!(await this.flush())) return;

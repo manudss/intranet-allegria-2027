@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { APP_GUARD } from '@nestjs/core';
 import { GlobalAuthGuard } from '../auth/global-auth.guard';
 import { AuthTokenGuard } from '../auth/auth-token.guard';
@@ -108,6 +108,7 @@ describe('Family HTTP contract with disposable real SQL storage, no mail sent', 
     url = await app.getUrl();
   });
   afterEach(async () => {
+    vi.unstubAllGlobals();
     await app.close();
     await pg.close();
   });
@@ -392,6 +393,94 @@ describe('Family HTTP contract with disposable real SQL storage, no mail sent', 
       headers: { Authorization: 'Bearer ADMIN' },
     });
     expect(JSON.stringify(await admin.json())).not.toContain('Transmitted medical instruction');
+  });
+  it('keeps live PDF previews owner-only and side-effect free, then requires the distinct signature code over HTTP', async () => {
+    Object.assign(configValues, {
+      FAMILY_HEALTH_APPROVAL_REFERENCE: 'FICTION ONLY',
+      FAMILY_HEALTH_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
+      FAMILY_HEALTH_DECLARATION_VERSION: 'test',
+      FAMILY_HEALTH_DECLARATION_TEXT: 'Déclaration FICTIVE',
+      FAMILY_MAIL_PROVIDER: 'resend',
+      FAMILY_MAIL_FROM: 'Fiction <fiction@example.test>',
+      FAMILY_RESEND_API_KEY: 'fake-test-only',
+    });
+    const a = await login(),
+      f = await service.add(a.space.id, 0),
+      id = f.youths[0].id,
+      path = url + '/api/public/family-space/youths/' + id + '/health';
+    const body = {
+        health: {
+          answers: { foodAllergy: 'Consigne FICTIVE jamais enregistrée par aperçu' },
+          presence: { foodAllergy: 'YES' },
+          foodAllergens: [],
+          page: 0,
+        },
+      },
+      send = (suffix: string, b: unknown, cookie = a.cookie, origin = url) =>
+        fetch(path + suffix, {
+          method: 'POST',
+          headers: { Cookie: cookie, Origin: origin, 'Content-Type': 'application/json' },
+          body: JSON.stringify(b),
+        });
+    expect((await send('/preview', body, '')).status).toBe(401);
+    expect((await send('/preview', body, a.cookie, 'https://other.example.test')).status).toBe(403);
+    const b = await login('other@example.test');
+    expect((await send('/preview', body, b.cookie)).status).toBe(404);
+    const preview = await send('/preview', body);
+    expect(preview.status).toBe(201);
+    expect(preview.headers.get('cache-control')).toContain('no-store');
+    expect(preview.headers.get('content-type')).toContain('application/pdf');
+    expect(
+      Buffer.from(await preview.arrayBuffer())
+        .subarray(0, 4)
+        .toString(),
+    ).toBe('%PDF');
+    expect((await pg.query('SELECT * FROM registration_health')).rows).toHaveLength(0);
+    const saved = await fetch(path, {
+      method: 'PATCH',
+      headers: { Cookie: a.cookie, Origin: url, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ revision: 0, ...body }),
+    });
+    expect(saved.status).toBe(200);
+    const proposal = {
+      revision: 1,
+      name: 'Parent FICTIF',
+      capacity: 'LEGAL',
+      accepted: true,
+      version: 'test',
+      appearance: { method: 'NAME' },
+    };
+    expect((await send('/sign', proposal)).status).toBe(401);
+    const original = globalThis.fetch;
+    let code = '';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input, init) => {
+        if (String(input) === 'https://api.resend.com/emails') {
+          code = JSON.parse(String(init?.body)).text.match(/\d{8}/)[0];
+          return new Response(JSON.stringify({ id: 'fictional-test' }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        return original(input, init);
+      }),
+    );
+    const challenge = await send('/sign/code', proposal);
+    expect(challenge.status).toBe(201);
+    const c = await challenge.json();
+    expect(c.code).toBeUndefined();
+    expect((await send('/sign', { ...proposal, challengeId: c.challengeId, code })).status).toBe(
+      201,
+    );
+    const pdf = await fetch(path + '/pdf', { headers: { Cookie: a.cookie } });
+    expect(pdf.status).toBe(200);
+    const bytes = Buffer.from(await pdf.arrayBuffer());
+    const again = await fetch(path + '/pdf', { headers: { Cookie: a.cookie } });
+    expect(Buffer.from(await again.arrayBuffer())).toEqual(bytes);
+    expect(
+      (await send('/sign', { ...proposal, challengeId: c.challengeId, code })).status,
+    ).not.toBe(201);
   });
   it('denies staff privilege escalation and other-user password changes before service invocation', async () => {
     for (const [route, method, body] of [

@@ -27,12 +27,20 @@ export async function sendFamilyAccessCode(
   email: string,
   code: string,
   challengeId: string,
+  purpose: 'ACCESS' | 'SIGNATURE' = 'ACCESS',
 ) {
   if (familyPreviewEnabled(config) && !familyPreviewRecipientAllowed(config, email))
     throw new ForbiddenException('Destinataire de test non autorisé');
   const settings = familyMailSettings(config);
-  const subject = 'Votre accès aux inscriptions Alegria';
-  const text = `Votre code à usage unique : ${code}\nIl expire dans dix minutes. Ne le partagez pas. Si vous n'avez rien demandé, ignorez ce message.`;
+  const subject =
+    purpose === 'SIGNATURE'
+      ? 'Confirmer votre signature Alegria'
+      : 'Votre accès aux inscriptions Alegria';
+  const text =
+    (purpose === 'SIGNATURE'
+      ? 'Code réservé à la signature du document que vous venez de relire, distinct de la connexion. Ne le communiquez à personne.\n'
+      : '') +
+    `Votre code à usage unique : ${code}\nIl expire dans dix minutes. Ne le partagez pas. Si vous n'avez rien demandé, ignorez ce message.`;
   if (settings.provider === 'resend') {
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -42,7 +50,7 @@ export async function sendFamilyAccessCode(
         Authorization: `Bearer ${settings.key}`,
         'Content-Type': 'application/json',
         'User-Agent': 'Alegria/1.0',
-        'Idempotency-Key': `alegria-family-access-${challengeId}`,
+        'Idempotency-Key': `alegria-family-${purpose.toLowerCase()}-${challengeId}`,
       },
       body: JSON.stringify({ from: settings.from, to: [email], subject, text }),
     });

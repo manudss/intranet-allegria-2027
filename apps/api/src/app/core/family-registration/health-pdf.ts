@@ -1,3 +1,6 @@
+import { createHash } from 'node:crypto';
+import { drawAppearance } from './signature-pdf';
+import type { SignatureAppearance } from '@mej-allegria/shared';
 import { registrationFont } from './pdf-font';
 import { PDFDocument, rgb } from 'pdf-lib';
 import { readFile } from 'node:fs/promises';
@@ -11,19 +14,7 @@ import {
 } from '@mej-allegria/shared';
 import type { StructuredHealth, FamilySpace, YouthDossier } from '@mej-allegria/shared';
 import { registrationPdf } from './registration-pdf';
-/** Uses the supplied four-page model as background, with full non-truncated answers in numbered annexes. */
-export async function healthPdf(
-  family: FamilySpace,
-  youth: YouthDossier,
-  h: StructuredHealth,
-  declaration: string,
-) {
-  if (h.signature && h.signedPayload) {
-    const saved = JSON.parse(h.signedPayload);
-    family = { ...family, contact: saved.contact };
-    youth = { ...youth, identity: saved.identity };
-    declaration = saved.declaration;
-  }
+async function healthPdfSource() {
   const paths = [
     join(__dirname, 'assets/registration/health-form-source-2026.pdf'),
     join(process.cwd(), 'apps/api/src/assets/registration/health-form-source-2026.pdf'),
@@ -39,6 +30,29 @@ export async function healthPdf(
     }
   }
   if (!source) throw new Error('Health source model unavailable');
+  return source;
+}
+export async function healthPdfSourceDigest() {
+  return createHash('sha256')
+    .update(await healthPdfSource())
+    .digest('hex');
+}
+/** Uses the supplied four-page model as background, with full non-truncated answers in numbered annexes. */
+export async function healthPdf(
+  family: FamilySpace,
+  youth: YouthDossier,
+  h: StructuredHealth,
+  declaration: string,
+  planned?: { name: string; appearance: SignatureAppearance },
+) {
+  if (h.signature && h.signedPdf) return Buffer.from(h.signedPdf, 'base64');
+  if (h.signature && h.signedPayload) {
+    const saved = JSON.parse(h.signedPayload);
+    family = { ...family, contact: saved.contact };
+    youth = { ...youth, identity: saved.identity };
+    declaration = saved.declaration;
+  }
+  const source = await healthPdfSource();
   const pdf = await PDFDocument.load(source),
     { font, safe } = await registrationFont(pdf);
   function text(page: number, x: number, y: number, value: string, max = 68) {
@@ -147,7 +161,7 @@ export async function healthPdf(
       );
     }
   }
-  text(3, 165, 395, h.signature?.name || 'NON SIGNÉ', 50);
+  text(3, 165, 395, h.signature?.name || planned?.name || 'NON SIGNÉ', 50);
   text(
     3,
     145,
@@ -157,7 +171,28 @@ export async function healthPdf(
       : '',
     20,
   );
-  text(3, 190, 292, h.signature ? 'Attestation : voir preuve en annexe' : 'Document non signé', 50);
+  const appearance = h.signature?.appearance || planned?.appearance;
+  if (appearance)
+    await drawAppearance(
+      pdf,
+      3,
+      h.signature?.name || planned?.name || '',
+      appearance,
+      190,
+      267,
+      180,
+      42,
+    );
+  else
+    text(
+      3,
+      190,
+      292,
+      h.signature ? 'Attestation : voir preuve en annexe' : 'Document non signé',
+      50,
+    );
+  if (planned && !h.signature)
+    text(3, 36, 35, 'APERÇU NON SIGNÉ : confirmation par code encore nécessaire', 100);
   for (let n = 0; n < 4; n++) {
     text(
       n,
@@ -211,6 +246,15 @@ export async function healthPdf(
         new Date(h.signature.at).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' }) +
         ' (heure de Paris)',
       'Empreinte du contenu figé : ' + h.signature.digest,
+      ...(h.signature.verification
+        ? [
+            'Confirmation par code e-mail distinct de la connexion : ' +
+              h.signature.verification.verifiedAt,
+            'Identifiant de confirmation : ' + h.signature.verification.challengeId,
+            'Empreinte de la demande liée au document : ' + h.signature.verification.context,
+            'Ce contrôle ne prouve pas à lui seul l’identité ni la qualité du signataire.',
+          ]
+        : ['Ancienne attestation sans code distinct.']),
     );
   await pdf.attach(
     Buffer.from(

@@ -8,9 +8,7 @@
   "targets": {
     "build": {
       "executor": "@angular/build:application",
-      "outputs": [
-        "{options.outputPath}"
-      ],
+      "outputs": ["{options.outputPath}"],
       "defaultConfiguration": "production",
       "options": {
         "outputPath": "dist/apps/site",
@@ -21,11 +19,14 @@
           {
             "glob": "**/*",
             "input": "apps/site/public"
+          },
+          {
+            "glob": "pdf.worker.min.mjs",
+            "input": "node_modules/pdfjs-dist/build",
+            "output": "assets/pdfjs"
           }
         ],
-        "styles": [
-          "apps/site/src/styles.scss"
-        ],
+        "styles": ["apps/site/src/styles.scss"],
         "server": "apps/site/src/main.server.ts",
         "ssr": {
           "entry": "apps/site/src/server.ts"
@@ -79,9 +80,7 @@
         "{workspaceRoot}/eslint.config.mjs",
         "{workspaceRoot}/tools/eslint-rules/**/*",
         {
-          "externalDependencies": [
-            "eslint"
-          ]
+          "externalDependencies": ["eslint"]
         }
       ]
     },
@@ -102,9 +101,7 @@
     },
     "family-portal": {
       "executor": "@angular/build:application",
-      "outputs": [
-        "{options.outputPath}"
-      ],
+      "outputs": ["{options.outputPath}"],
       "options": {
         "outputPath": "dist/apps/family-portal",
         "browser": "apps/site/src/main.ts",
@@ -114,11 +111,14 @@
           {
             "glob": "**/*",
             "input": "apps/site/public"
+          },
+          {
+            "glob": "pdf.worker.min.mjs",
+            "input": "node_modules/pdfjs-dist/build",
+            "output": "assets/pdfjs"
           }
         ],
-        "styles": [
-          "apps/site/src/styles.scss"
-        ],
+        "styles": ["apps/site/src/styles.scss"],
         "server": "apps/site/src/main.server.ts",
         "ssr": {
           "entry": "apps/site/src/server.ts"

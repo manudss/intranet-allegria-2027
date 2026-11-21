@@ -1,3 +1,4 @@
+import type { SignatureAppearance, SignatureVerification } from './family-registration';
 export const HEALTH_FORM_PAGES = [
   {
     title: 'Identité et personnes à joindre',
@@ -470,7 +471,17 @@ export interface StructuredHealth {
   page: number;
   revision: number;
   signedPayload?: string;
-  signature: null | { name: string; capacity: string; at: string; digest: string };
+  /** PDF bytes are stored encrypted server-side and stripped from JSON responses. */
+  signedPdf?: string;
+  documentDigest?: string;
+  signature: null | {
+    name: string;
+    capacity: string;
+    at: string;
+    digest: string;
+    appearance?: SignatureAppearance;
+    verification?: SignatureVerification;
+  };
 }
 export const HEALTH_FIELDS: readonly string[] = [
   ...HEALTH_FORM_PAGES.flatMap((p) => p.fields.map((f) => f[0])),

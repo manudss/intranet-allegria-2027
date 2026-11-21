@@ -1,3 +1,5 @@
+import { authorizationPdf } from './signature-pdf';
+import { signatureAppearance } from './signature-code';
 import { UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { RegistrationDocumentsService } from './registration-documents.service';
@@ -148,6 +150,14 @@ export class FamilyRegistrationController {
     const p = plainObject(raw);
     return this.service.sign(await this.owner(r, true), id, revision(p), p);
   }
+  @Post('youths/:id/signatures/code') async signatureCode(
+    @Req() r: Request,
+    @Param('id') id: string,
+    @Body() raw: unknown,
+  ) {
+    const p = plainObject(raw);
+    return this.service.requestSignatureCode(await this.owner(r, true), id, revision(p), p);
+  }
   @Get('youths/:id/documents') async documentList(@Req() r: Request, @Param('id') id: string) {
     return this.documents.list(await this.owner(r), id);
   }
@@ -199,21 +209,62 @@ export class FamilyRegistrationController {
     const p = plainObject(raw);
     return this.health.sign(await this.owner(r, true), id, revision(p), p);
   }
+  @Post('youths/:id/health/sign/code') async healthSignatureCode(
+    @Req() r: Request,
+    @Param('id') id: string,
+    @Body() raw: unknown,
+  ) {
+    const p = plainObject(raw);
+    return this.health.requestCode(await this.owner(r, true), id, revision(p), p);
+  }
+  @Post('youths/:id/health/preview') async healthPreview(
+    @Req() r: Request,
+    @Param('id') id: string,
+    @Body() raw: unknown,
+    @Res() res: Response,
+  ) {
+    const p = plainObject(raw),
+      familyId = await this.owner(r, true);
+    const bytes = await this.health.preview(familyId, id, p.health, p.signature);
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.send(Buffer.from(bytes));
+  }
+  @Post('youths/:id/templates/:templateId/preview') async authorizationPreview(
+    @Req() r: Request,
+    @Param('id') id: string,
+    @Param('templateId') templateId: string,
+    @Body() raw: unknown,
+    @Res() res: Response,
+  ) {
+    const family = await this.service.get(await this.owner(r, true)),
+      youth = this.service.youth(family, id),
+      p = plainObject(raw);
+    const template = (await this.service.rules()).templates.find(
+      (t) => t.id === templateId && t.enabled,
+    );
+    if (!template) throw new BadRequestException('Modèle indisponible');
+    const planned = p.appearance
+      ? {
+          name: String(p.name || '').slice(0, 180),
+          appearance: await signatureAppearance(p.appearance),
+        }
+      : undefined;
+    const bytes = await authorizationPdf(
+      JSON.stringify({ template, identity: youth.identity }),
+      undefined,
+      planned,
+    );
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.send(Buffer.from(bytes));
+  }
   @Get('youths/:id/health/pdf') async healthPdf(
     @Req() r: Request,
     @Param('id') id: string,
     @Res() res: Response,
   ) {
-    const familyId = await this.owner(r),
-      family = await this.service.get(familyId),
-      y = this.service.youth(family, id),
-      h = await this.health.get(familyId, id);
-    const bytes = await healthPdf(
-      family,
-      y,
-      h,
-      String(process.env.FAMILY_HEALTH_DECLARATION_TEXT || 'Déclaration non configurée'),
-    );
+    const bytes = await this.health.pdf(await this.owner(r), id);
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="fiche-sanitaire.pdf"');
@@ -256,25 +307,7 @@ export class FamilyRegistrationController {
     const youth = this.service.youth(family, id);
     const signature = youth.signatures[Number(index)];
     if (!signature?.snapshot) throw new BadRequestException('Document indisponible');
-    const snap = JSON.parse(signature.snapshot);
-    const bytes = await registrationPdf([
-      snap.template.title,
-      'Version ' + signature.version,
-      'Jeune : ' + snap.identity.firstName + ' ' + snap.identity.lastName,
-      ...String(snap.template.text).split('\n'),
-      'Attestation simple (non qualifiée)',
-      'Signataire : ' + signature.signerName,
-      'Qualité : ' +
-        ({ LEGAL: 'Représentant légal', SELF_ADULT: 'Adulte concerné' }[signature.capacity] ||
-          signature.capacity),
-      'Date : ' +
-        new Date(signature.signedAt).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' }) +
-        ' (Europe/Paris)',
-      'Empreinte SHA-256 du contenu figé : ' + signature.digest,
-      signature.withdrawnAt
-        ? 'Remplacée / retirée le ' + signature.withdrawnAt
-        : 'Attestation enregistrée',
-    ]);
+    const bytes = await authorizationPdf(signature.snapshot, signature);
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="autorisation.pdf"');

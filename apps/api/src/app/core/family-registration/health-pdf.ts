@@ -1,43 +1,43 @@
 import { createHash } from 'node:crypto';
 import { drawAppearance } from './signature-pdf';
-import type { SignatureAppearance } from '@mej-allegria/shared';
+import type {
+  SignatureAppearance,
+  StructuredHealth,
+  FamilySpace,
+  YouthDossier,
+} from '@mej-allegria/shared';
 import { registrationFont } from './pdf-font';
 import { PDFDocument, rgb } from 'pdf-lib';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
-  HEALTH_FORM_PAGES,
   HEALTH_MODEL_ITEMS,
-  HEALTH_EXTRA_FIELDS,
   HEALTH_WEB_ITEMS,
+  HEALTH_FORM_PAGES,
+  HEALTH_EXTRA_FIELDS,
   FOOD_ALLERGEN_LABELS,
 } from '@mej-allegria/shared';
-import type { StructuredHealth, FamilySpace, YouthDossier } from '@mej-allegria/shared';
 import { registrationPdf } from './registration-pdf';
 async function healthPdfSource() {
-  const paths = [
+  for (const path of [
     join(__dirname, 'assets/registration/health-form-source-2026.pdf'),
     join(process.cwd(), 'apps/api/src/assets/registration/health-form-source-2026.pdf'),
     join(process.cwd(), 'src/assets/registration/health-form-source-2026.pdf'),
-  ];
-  let source: Buffer | undefined;
-  for (const path of paths) {
+  ]) {
     try {
-      source = await readFile(path);
-      break;
+      return await readFile(path);
     } catch {
       /* Next supported deployment location. */
     }
   }
-  if (!source) throw new Error('Health source model unavailable');
-  return source;
+  throw new Error('Health source model unavailable');
 }
 export async function healthPdfSourceDigest() {
   return createHash('sha256')
     .update(await healthPdfSource())
     .digest('hex');
 }
-/** Uses the supplied four-page model as background, with full non-truncated answers in numbered annexes. */
+/** Filled sanitary sheet. Only signature evidence follows the sheet, never a full data export. */
 export async function healthPdf(
   family: FamilySpace,
   youth: YouthDossier,
@@ -45,6 +45,7 @@ export async function healthPdf(
   declaration: string,
   planned?: { name: string; appearance: SignatureAppearance },
 ) {
+  // An already confirmed document must remain byte-for-byte immutable.
   if (h.signature && h.signedPdf) return Buffer.from(h.signedPdf, 'base64');
   if (h.signature && h.signedPayload) {
     const saved = JSON.parse(h.signedPayload);
@@ -52,25 +53,61 @@ export async function healthPdf(
     youth = { ...youth, identity: saved.identity };
     declaration = saved.declaration;
   }
-  const source = await healthPdfSource();
-  const pdf = await PDFDocument.load(source),
-    { font, safe } = await registrationFont(pdf);
-  function text(page: number, x: number, y: number, value: string, max = 68) {
-    pdf
-      .getPage(page)
-      .drawText(safe(value).length > max ? 'Voir annexe : réponse complète' : safe(value), {
-        x,
-        y,
-        size: 8,
-        font,
-        color: rgb(0.08, 0.2, 0.35),
-      });
+  const pdf = await PDFDocument.load(await healthPdfSource());
+  const { font, safe } = await registrationFont(pdf);
+  const ink = rgb(0.08, 0.2, 0.35);
+  const continuations: string[][] = [[], [], [], []];
+  const used = new Set<string>();
+  const a = h.answers;
+  function answer(key: string) {
+    used.add(key);
+    return a[key] || '';
+  }
+  function wrap(value: string, width: number, size: number) {
+    const result: string[] = [];
+    for (const paragraph of safe(value).split(/\r?\n/)) {
+      let line = '';
+      for (const ch of paragraph) {
+        if (line && font.widthOfTextAtSize(line + ch, size) > width) {
+          result.push(line);
+          line = '';
+        }
+        line += ch;
+      }
+      result.push(line);
+    }
+    return result;
+  }
+  function draw(page: number, x: number, y: number, value: string, size = 8) {
+    pdf.getPage(page).drawText(safe(value), { x, y, size, font, color: ink });
+  }
+  function field(
+    page: number,
+    label: string,
+    value: string,
+    x: number,
+    y: number,
+    width: number,
+    rows = 1,
+    size = 8,
+  ) {
+    if (!value) return;
+    const lines = wrap(value, width, size);
+    if (lines.length > rows) {
+      continuations[page].push(label + ' : ' + value);
+      draw(page, x, y, 'Voir suite de cette rubrique', Math.min(size, 7));
+      return;
+    }
+    lines.forEach((line, n) => draw(page, x, y - n * (size + 2), line, size));
+  }
+  function extra(page: number, label: string, value: string) {
+    if (value) continuations[page].push(label + ' : ' + value);
   }
   const i = youth.identity,
     c = family.contact;
-  text(0, 95, 698, i.lastName);
-  text(0, 110, 670, i.firstName);
-  text(
+  field(0, 'Nom', i.lastName, 95, 698, 350);
+  field(0, 'Prénom', i.firstName, 110, 670, 335);
+  draw(
     0,
     95,
     640,
@@ -81,95 +118,124 @@ export async function healthPdf(
       >
     )[i.sex] || i.sex,
   );
-  text(0, 175, 613, i.dateOfBirth + ' ' + (h.answers.birthPlace || ''));
-  text(0, 120, 585, c.address + ' ' + c.postalCode + ' ' + c.city);
-  text(0, 40, 472, c.name, 28);
-  text(
+  field(0, 'Naissance', i.dateOfBirth + ' ' + answer('birthPlace'), 175, 613, 270);
+  field(0, 'Adresse', c.address + ' ' + c.postalCode + ' ' + c.city, 120, 585, 430);
+  extra(0, 'Domicile', answer('addressType'));
+  field(0, 'Responsable', c.name, 40, 472, 145, 2);
+  field(
     0,
-    200,
-    472,
+    'Qualité',
     i.legalCapacity === 'SELF_ADULT' ? 'Adulte concerné' : 'Représentant légal',
-    25,
+    195,
+    472,
+    130,
+    2,
+    7,
   );
-  text(0, 340, 472, c.phone, 20);
-  text(0, 40, 445, h.answers.guardian2 ? 'Voir annexe : autre responsable' : 'Non renseigné', 28);
-  text(0, 40, 388, c.emergencyName, 25);
-  text(0, 340, 388, c.emergencyPhone, 20);
-  text(
-    0,
-    40,
-    340,
-    h.answers.doctor ? 'Médecin : voir réponse intégrale en annexe' : 'Médecin : non renseigné',
-    90,
-  );
-  text(
-    0,
-    40,
-    280,
-    'État de santé et dates : voir les réponses intégrales en annexe, pages 5 et suivantes.',
-    100,
-  );
-  text(0, 40, 258, h.answers.history || 'À compléter', 95);
-  text(0, 40, 142, 'Traitements, ordonnance et PAI : réponses intégrales en annexe.', 100);
-  text(1, 455, 482, 'Voir justificatif', 22);
-  text(
-    1,
-    95,
-    250,
-    'Vaccinations déclarées : voir annexe et justificatif ; vérification réservée au référent santé.',
-    110,
-  );
-  // Circle only an explicit model answer. Free text and missing values never become yes/no.
+  field(0, 'Téléphone du responsable', c.phone, 337, 472, 100);
+  field(0, 'Autre représentant légal', answer('guardian2'), 40, 445, 500, 2);
+  field(0, 'Contact d’urgence', c.emergencyName, 40, 388, 145, 2);
+  field(0, 'Téléphone d’urgence', c.emergencyPhone, 337, 388, 100);
+  extra(0, 'Autre contact', answer('emergency2'));
+  field(0, 'Médecin traitant', answer('doctor'), 40, 350, 510, 2);
+  field(0, 'Problèmes importants', answer('history'), 40, 285, 405, 6);
+  field(0, 'Date ou période', answer('historyDate'), 455, 285, 100, 6);
+  field(0, 'Traitements', answer('treatment'), 40, 145, 510, 5);
+  extra(0, 'Nom du traitement', answer('treatmentName'));
+  extra(0, 'Type de traitement', answer('treatmentType'));
+  extra(0, 'Ordonnance', answer('prescription'));
+  extra(0, 'PAI', answer('pai'));
+  // Additional contact rows have no room in the supplied two-row table.
+  for (const [key, label] of HEALTH_EXTRA_FIELDS.filter(([key]) =>
+    /^(guardianExtra|emergencyExtra)/.test(key),
+  ))
+    extra(0, label, answer(key));
+
   for (const item of HEALTH_MODEL_ITEMS) {
-    const presence = h.presence?.[item.id],
-      answer = h.answers['detail_' + item.id] || h.answers[item.answerKey] || '',
-      modelPage = pdf.getPage(item.pdfPage);
+    const presence = h.presence?.[item.id];
     if (presence) {
-      if (item.id === 'treatment') {
-        text(0, presence === 'YES' ? 66.8 : 36, 186, 'X', 1);
-      } else {
-        modelPage.drawEllipse({
-          x: item.x + (presence === 'YES' ? 6.5 : 27.5),
-          y: item.y,
-          xScale: presence === 'YES' ? 9 : 11,
-          yScale: 7,
-          borderWidth: 1,
-          borderColor: rgb(0.08, 0.2, 0.35),
-        });
-      }
+      if (item.id === 'treatment') draw(0, presence === 'YES' ? 66.8 : 36, 186, 'X');
+      else
+        pdf
+          .getPage(item.pdfPage)
+          .drawEllipse({
+            x: item.x + (presence === 'YES' ? 6.5 : 27.5),
+            y: item.y,
+            xScale: presence === 'YES' ? 9 : 11,
+            yScale: 7,
+            borderWidth: 1,
+            borderColor: ink,
+          });
     }
-    if (item.id !== 'treatment') {
-      const x =
-          item.pdfPage === 1
-            ? 280
-            : item.pdfPage === 2 && item.x > 230
-              ? 292
-              : item.pdfPage === 3 && item.x < 150
-                ? 185
-                : 255,
-        prefix = !presence ? 'Non renseigné. ' : '',
-        content = prefix + answer,
-        available = 558 - x;
-      text(
-        item.pdfPage,
-        x,
-        item.y - (['sensory', 'attention', 'swimming', 'menstruation'].includes(item.id) ? 12 : 3),
-        font.widthOfTextAtSize(safe(content), 8) <= available
-          ? content
-          : prefix + 'Précisions : voir annexe.',
-        110,
-      );
+    const detail = answer('detail_' + item.id);
+    // Legacy grouped free text is placed once, not duplicated beside every related diagnosis.
+    const legacy = !used.has(item.answerKey) ? answer(item.answerKey) : '';
+    const value = [detail, legacy && legacy !== detail ? legacy : ''].filter(Boolean).join(' ; ');
+    if (item.id === 'treatment') {
+      extra(0, item.label, detail);
+      continue;
     }
+    const x =
+      item.pdfPage === 1
+        ? 280
+        : item.pdfPage === 2 && item.x > 230
+          ? 292
+          : item.pdfPage === 3 && item.x < 150
+            ? 185
+            : 255;
+    const subrow = ['sensory', 'attention', 'swimming', 'menstruation'].includes(item.id);
+    field(
+      item.pdfPage,
+      item.label,
+      (!presence ? 'Non renseigné. ' : '') + value,
+      x,
+      item.y - (subrow ? 12 : 3),
+      558 - x,
+      subrow || item.pdfPage === 1 ? 1 : 2,
+      7,
+    );
   }
-  text(3, 165, 395, h.signature?.name || planned?.name || 'NON SIGNÉ', 50);
-  text(
+  // Web-only fields and older grouped answers remain part of the sanitary sheet itself.
+  extra(1, 'Besoins de repas', answer('diet'));
+  if (h.foodAllergens.length)
+    extra(
+      1,
+      'Allergènes déclarés',
+      h.foodAllergens.map((v) => FOOD_ALLERGEN_LABELS[v] || v).join(', '),
+    );
+  field(1, 'Vaccinations déclarées', answer('vaccinations'), 95, 250, 460, 2, 7);
+  extra(1, 'Justificatif vaccinal', answer('vaccineDocument'));
+  for (const [key, label] of HEALTH_EXTRA_FIELDS.filter(([key]) => key.startsWith('vaccine_')))
+    extra(1, label, answer(key));
+  field(3, 'Suivi particulier', answer('followUp'), 40, 601, 510, 2);
+  for (const item of HEALTH_WEB_ITEMS) {
+    const presence = h.presence?.[item.id];
+    const detail = answer('detail_' + item.id);
+    if (presence || detail)
+      extra(
+        3,
+        item.label,
+        [presence === 'YES' ? 'Oui' : presence === 'NO' ? 'Non' : 'Non renseigné', detail]
+          .filter(Boolean)
+          .join(' ; '),
+      );
+  }
+  // Preserve supported fields not handled by a model cell, never a second full export.
+  const labels = new Map<string, string>([
+    ...HEALTH_FORM_PAGES.flatMap((p) => [...p.fields]),
+    ...HEALTH_EXTRA_FIELDS,
+  ]);
+  for (const [key, value] of Object.entries(a))
+    if (value && !used.has(key)) extra(3, labels.get(key) || key, value);
+
+  field(3, 'Signataire', h.signature?.name || planned?.name || 'NON SIGNÉ', 165, 395, 380);
+  draw(
     3,
     137,
     320,
     h.signature
       ? new Date(h.signature.at).toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris' })
       : '',
-    20,
   );
   const appearance = h.signature?.appearance || planned?.appearance;
   if (appearance)
@@ -184,62 +250,41 @@ export async function healthPdf(
       42,
     );
   else
-    text(
+    draw(
       3,
       190,
       292,
-      h.signature ? 'Attestation : voir preuve en annexe' : 'Document non signé',
-      50,
+      h.signature ? 'Attestation : voir preuve de signature' : 'Document non signé',
     );
   if (planned && !h.signature)
-    text(3, 36, 35, 'APERÇU NON SIGNÉ : confirmation par code encore nécessaire', 100);
-  for (let n = 0; n < 4; n++) {
-    text(
-      n,
-      36,
-      20,
-      `Fiche de ${i.firstName} ${i.lastName} | Modèle fourni 2026, mentions à valider | Annexe indissociable`,
-      110,
+    draw(3, 36, 35, 'APERÇU NON SIGNÉ : confirmation par code encore nécessaire');
+  // Insert only the overflow for a rubric directly after its source page, before signature evidence.
+  for (let sourcePage = 3; sourcePage >= 0; sourcePage--) {
+    if (!continuations[sourcePage].length) continue;
+    const continuation = await PDFDocument.load(
+      await registrationPdf([
+        'FICHE SANITAIRE : SUITE DES RUBRIQUES',
+        'Rassemblement Alegria · ' + i.firstName + ' ' + i.lastName,
+        'Suite de la page du modèle ' +
+          (sourcePage + 1) +
+          '. Informations non répétées dans les cases.',
+        ...continuations[sourcePage],
+      ]),
     );
+    const copies = await pdf.copyPages(continuation, continuation.getPageIndices());
+    copies.forEach((p, n) => pdf.insertPage(sourcePage + 1 + n, p));
   }
-  const lines = [
-    'FICHE SANITAIRE : RÉPONSES INTÉGRALES ET PREUVE',
-    'Modèle fourni : CAMP MEJ 2026, quatre pages conservées en tête.',
-    'Cette annexe complète les cases trop courtes ; elle fait partie du document.',
-    'Jeune : ' + i.firstName + ' ' + i.lastName,
-    'Naissance : ' + i.dateOfBirth,
-    'Responsable : ' + c.name,
-    'Contacts : ' + c.phone + ' ; urgence : ' + c.emergencyName + ' ' + c.emergencyPhone,
-  ];
-  for (const p of HEALTH_FORM_PAGES) {
-    lines.push(p.title);
-    for (const [key, label] of p.fields)
-      lines.push(label + ' : ' + (h.answers[key] || 'Non renseigné'));
-    for (const item of [...HEALTH_MODEL_ITEMS, ...HEALTH_WEB_ITEMS].filter(
-      (item) => item.page === HEALTH_FORM_PAGES.indexOf(p),
-    ))
-      lines.push(
-        'Choix explicite du modèle, ' +
-          item.label +
-          ' : ' +
-          ({ YES: 'Oui', NO: 'Non', '': 'Non renseigné' }[h.presence?.[item.id] || ''] ||
-            'Non renseigné'),
-      );
-  }
-  const extra = HEALTH_EXTRA_FIELDS.filter(([key]) => !!h.answers[key]);
-  if (extra.length) {
-    lines.push('COMPLÉMENTS DE LA FICHE WEB');
-    for (const [key, label] of extra) lines.push(label + ' : ' + h.answers[key]);
-  }
-  lines.push(
-    'Besoins alimentaires structurés : ' +
-      h.foodAllergens.map((a) => FOOD_ALLERGEN_LABELS[a] || a).join(', '),
-    'Déclaration validée applicable :',
+  const proof = [
+    'PREUVE DE SIGNATURE',
+    'Rassemblement Alegria · Fiche sanitaire de ' + i.firstName + ' ' + i.lastName,
+    'Déclaration applicable :',
     declaration,
-    h.signature ? 'Attestation simple, non avancée et non qualifiée' : 'NON SIGNÉ',
-  );
+    h.signature
+      ? 'Attestation simple, non avancée et non qualifiée'
+      : 'NON SIGNÉ : aucune confirmation enregistrée',
+  ];
   if (h.signature)
-    lines.push(
+    proof.push(
       'Signataire : ' + h.signature.name,
       'Qualité : ' + (h.signature.capacity === 'LEGAL' ? 'Représentant légal' : 'Adulte concerné'),
       'Date : ' +
@@ -256,15 +301,22 @@ export async function healthPdf(
           ]
         : ['Ancienne attestation sans code distinct.']),
     );
-  await pdf.attach(
-    Buffer.from(
-      JSON.stringify({ identity: i, contact: c, health: h, declaration }, null, 2),
-      'utf8',
-    ),
-    'fiche-integrale-utf8.json',
-    { mimeType: 'application/json', description: 'Données intégrales et preuve de cette fiche' },
-  );
-  const annex = await PDFDocument.load(await registrationPdf(lines));
-  for (const p of await pdf.copyPages(annex, annex.getPageIndices())) pdf.addPage(p);
+  const evidence = await PDFDocument.load(await registrationPdf(proof));
+  for (const p of await pdf.copyPages(evidence, evidence.getPageIndices())) pdf.addPage(p);
+  for (const [n, page] of pdf.getPages().entries())
+    page.drawText(
+      safe(
+        'Rassemblement Alegria | ' +
+          i.firstName +
+          ' ' +
+          i.lastName +
+          ' | ' +
+          (n + 1) +
+          '/' +
+          pdf.getPageCount(),
+      ),
+      { x: 36, y: 20, size: 7, font, color: ink },
+    );
+  // No JSON, UTF-8 file or other embedded export of the family's answers.
   return pdf.save();
 }

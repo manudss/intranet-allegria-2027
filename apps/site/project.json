@@ -8,7 +8,9 @@
   "targets": {
     "build": {
       "executor": "@angular/build:application",
-      "outputs": ["{options.outputPath}"],
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "defaultConfiguration": "production",
       "options": {
         "outputPath": "dist/apps/site",
@@ -19,9 +21,16 @@
           {
             "glob": "**/*",
             "input": "apps/site/public"
+          },
+          {
+            "glob": "appearance-init.js",
+            "input": "libs/appearance/assets",
+            "output": "/"
           }
         ],
-        "styles": ["apps/site/src/styles.scss"],
+        "styles": [
+          "apps/site/src/styles.scss"
+        ],
         "server": "apps/site/src/main.server.ts",
         "ssr": {
           "entry": "apps/site/src/server.ts"
@@ -75,7 +84,9 @@
         "{workspaceRoot}/eslint.config.mjs",
         "{workspaceRoot}/tools/eslint-rules/**/*",
         {
-          "externalDependencies": ["eslint"]
+          "externalDependencies": [
+            "eslint"
+          ]
         }
       ]
     },

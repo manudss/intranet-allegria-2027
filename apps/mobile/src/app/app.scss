@@ -1,3 +1,5 @@
 :host {
   display: block;
 }
+
+.appearance-bar { display:flex;justify-content:flex-end;padding:8px 16px;background:var(--allegria-bg);border-bottom:1px solid var(--allegria-border); }

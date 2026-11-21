@@ -1,3 +1,4 @@
+import { AppearanceControl } from '@mej-allegria/appearance';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -31,7 +32,7 @@ const NAV_LINKS: NavLink[] = [
 @Component({
   selector: 'app-header',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, AppearanceControl],
   templateUrl: './header.html',
   styleUrl: './header.scss',
 })

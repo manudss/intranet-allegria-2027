@@ -8,7 +8,9 @@
   "targets": {
     "build": {
       "executor": "@angular/build:application",
-      "outputs": ["{options.outputPath}"],
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "defaultConfiguration": "production",
       "options": {
         "outputPath": "dist/apps/mobile",
@@ -25,6 +27,11 @@
             "glob": "**/*",
             "input": "node_modules/@taiga-ui/icons/src",
             "output": "assets/taiga-ui/icons"
+          },
+          {
+            "glob": "appearance-init.js",
+            "input": "libs/appearance/assets",
+            "output": "/"
           }
         ],
         "styles": [
@@ -82,7 +89,9 @@
         "{workspaceRoot}/eslint.config.mjs",
         "{workspaceRoot}/tools/eslint-rules/**/*",
         {
-          "externalDependencies": ["eslint"]
+          "externalDependencies": [
+            "eslint"
+          ]
         }
       ]
     },

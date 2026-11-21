@@ -1,0 +1,1 @@
+import{$ as n,L as a,aa as t,ta as i}from"./chunk-5VFD62OG.js";var s=class o{static \u0275fac=function(e){return new(e||o)};static \u0275cmp=a({type:o,selectors:[["app-provisional-badge"]],decls:2,vars:0,consts:[[1,"badge-provisional"]],template:function(e,p){e&1&&(n(0,"span",0),i(1,"\u{1F553} Information provisoire"),t())},encapsulation:2})};export{s as a};

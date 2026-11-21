@@ -44,10 +44,10 @@ export interface AttestationInput {
         box-sizing: border-box;
         min-height: 48px;
         padding: 0.8rem;
-        border: 1px solid #887467;
+        border: 1px solid var(--appearance-border);
         border-radius: 7px;
-        background: white;
-        color: #302721;
+        background: var(--appearance-surface);
+        color: var(--appearance-text);
       }
       .check {
         display: flex;
@@ -64,9 +64,9 @@ export interface AttestationInput {
         font-weight: 700;
         min-height: 48px;
         padding: 0.8rem 1rem;
-        border: 1px solid #c23616;
+        border: 1px solid var(--appearance-border);
         border-radius: 7px;
-        background: #c23616;
+        background: var(--appearance-solid);
         color: white;
         margin-top: 1rem;
       }
@@ -77,13 +77,13 @@ export interface AttestationInput {
       input:focus-visible,
       select:focus-visible,
       button:focus-visible {
-        outline: 3px solid #254c8c;
+        outline: 3px solid var(--appearance-focus);
         outline-offset: 3px;
       }
       p {
         font-size: 0.9rem;
         line-height: 1.6;
-        color: #6b5a50;
+        color: var(--appearance-muted);
       }
     `,
   ],

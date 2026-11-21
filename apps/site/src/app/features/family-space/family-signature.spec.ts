@@ -63,6 +63,7 @@ describe('Signature UI, per-document consent and distinct email code', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     expect(done).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('courriers indésirables');
     http.expectNone('/signature');
     const input = fixture.nativeElement.querySelector(
       'input[autocomplete=one-time-code]',

@@ -23,12 +23,17 @@ export class AppearanceService {
     if (!this.browser) return;
     const win = this.doc.defaultView;
     if (!win) return;
-    try { this.mode.set(validAppearance(win.localStorage.getItem(APPEARANCE_KEY))); } catch { /* Private/storage-disabled browsing still works. */ }
+    try {
+      this.mode.set(validAppearance(win.localStorage.getItem(APPEARANCE_KEY)));
+    } catch {
+      /* Private/storage-disabled browsing still works. */
+    }
     this.media = win.matchMedia?.('(prefers-color-scheme: dark)');
     const update = () => this.apply();
     const storage = (event: StorageEvent) => {
       if (event.key === APPEARANCE_KEY || event.key === null) {
-        this.mode.set(validAppearance(event.newValue)); this.apply();
+        this.mode.set(validAppearance(event.newValue));
+        this.apply();
       }
     };
     this.media?.addEventListener('change', update);
@@ -43,7 +48,11 @@ export class AppearanceService {
   choose(value: Appearance): void {
     this.mode.set(validAppearance(value));
     if (this.browser) {
-      try { this.doc.defaultView?.localStorage.setItem(APPEARANCE_KEY, this.mode()); } catch { /* Keep in-memory choice. */ }
+      try {
+        this.doc.defaultView?.localStorage.setItem(APPEARANCE_KEY, this.mode());
+      } catch {
+        /* Keep in-memory choice. */
+      }
     }
     this.apply();
   }
@@ -54,6 +63,8 @@ export class AppearanceService {
     if (!this.browser) return;
     this.doc.documentElement.dataset['theme'] = dark ? 'dark' : 'light';
     this.doc.documentElement.style.colorScheme = dark ? 'dark' : 'only light';
-    this.doc.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#201a18' : '#fffdf9');
+    this.doc
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', dark ? '#201a18' : '#fffdf9');
   }
 }

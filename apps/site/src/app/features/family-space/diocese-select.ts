@@ -103,18 +103,18 @@ export const DIOCESE_CHOICES = [
       width: 100%;
       min-height: 48px;
       text-align: left;
-      background: #fff;
-      border: 1px solid #806f64;
+      background: var(--appearance-surface);
+      border: 1px solid var(--appearance-border);
       border-radius: 0.4rem;
       padding: 0.75rem;
       white-space: normal;
     }
     .picker {
       position: relative;
-      border: 2px solid #806f64;
+      border: 2px solid var(--appearance-border);
       border-radius: 0.4rem;
       padding: 0.75rem;
-      background: #fff;
+      background: var(--appearance-surface);
       margin-top: 0.35rem;
       min-width: 0;
     }
@@ -123,7 +123,7 @@ export const DIOCESE_CHOICES = [
       box-sizing: border-box;
       width: 100%;
       min-height: 48px;
-      border: 1px solid #806f64;
+      border: 1px solid var(--appearance-border);
       border-radius: 0.3rem;
       padding: 0.6rem;
     }
@@ -133,7 +133,7 @@ export const DIOCESE_CHOICES = [
     .count {
       font-size: 0.9rem;
       margin: 0.5rem 0;
-      color: #55483e;
+      color: var(--appearance-border);
     }
     ul {
       list-style: none;
@@ -142,7 +142,7 @@ export const DIOCESE_CHOICES = [
       max-height: 15rem;
       overflow: auto;
       overscroll-behavior: contain;
-      border: 1px solid #d3c6bb;
+      border: 1px solid var(--appearance-border);
       border-radius: 0.3rem;
     }
     li {
@@ -150,26 +150,26 @@ export const DIOCESE_CHOICES = [
       min-height: 44px;
       box-sizing: border-box;
       cursor: pointer;
-      border-bottom: 1px solid #ece3db;
+      border-bottom: 1px solid var(--appearance-border);
     }
     li.active {
-      background: #f2e7d9;
-      outline: 2px solid #254c8c;
+      background: var(--appearance-selected);
+      outline: 2px solid var(--appearance-border);
       outline-offset: -2px;
     }
     li[aria-selected='true'] {
       font-weight: 700;
     }
     .close-picker {
-      background: #fff;
-      border: 1px solid #806f64;
+      background: var(--appearance-surface);
+      border: 1px solid var(--appearance-border);
       border-radius: 0.3rem;
       padding: 0.6rem 0.9rem;
       min-height: 44px;
     }
     button:focus-visible,
     input:focus-visible {
-      outline: 3px solid #254c8c;
+      outline: 3px solid var(--appearance-border);
       outline-offset: 2px;
     }
     button:disabled {

@@ -1,7 +1,7 @@
 :host {
   display: block;
   min-width: 0;
-  color: #392c26;
+  color: var(--appearance-text);
 }
 .steps {
   display: flex;
@@ -11,18 +11,18 @@
 }
 .steps span {
   padding: 0.6rem;
-  background: #f2e9e1;
+  background: var(--appearance-raised);
   border-radius: 6px;
   font-size: 0.85rem;
 }
 .steps .current {
-  background: #7c4e3b;
+  background: var(--appearance-solid);
   color: white;
 }
 .notice {
   padding: 1rem;
-  border-left: 3px solid #b44425;
-  background: #fff3e7;
+  border-left: 3px solid var(--appearance-border);
+  background: var(--appearance-raised);
   line-height: 1.5;
   font-size: 0.9rem;
 }
@@ -59,10 +59,10 @@ select {
   width: 100%;
   min-height: 48px;
   padding: 0.7rem;
-  border: 1px solid #887467;
+  border: 1px solid var(--appearance-border);
   border-radius: 6px;
-  background: white;
-  color: #392c26;
+  background: var(--appearance-surface);
+  color: var(--appearance-text);
   box-sizing: border-box;
   margin-top: 0.4rem;
 }
@@ -81,9 +81,9 @@ select {
 button {
   font: inherit;
   font-weight: 700;
-  background: #c23616;
+  background: var(--appearance-solid);
   color: white;
-  border: 1px solid #c23616;
+  border: 1px solid var(--appearance-border);
   border-radius: 6px;
   padding: 0.8rem;
   min-height: 48px;
@@ -98,9 +98,9 @@ button:disabled {
 }
 .secondary,
 .methods button {
-  background: white;
-  color: #51362b;
-  border-color: #887467;
+  background: var(--appearance-surface);
+  color: var(--appearance-action);
+  border-color: var(--appearance-border);
 }
 .methods {
   display: flex;
@@ -108,7 +108,7 @@ button:disabled {
   margin: 1rem 0;
 }
 .methods [aria-pressed='true'] {
-  background: #7c4e3b;
+  background: var(--appearance-solid);
   color: white;
 }
 .sample {
@@ -116,8 +116,8 @@ button:disabled {
   font-style: italic;
   font-size: 1.7rem;
   padding: 1.4rem;
-  border: 1px dashed #887467;
-  background: white;
+  border: 1px dashed var(--appearance-border);
+  background: var(--appearance-surface);
   overflow-wrap: anywhere;
 }
 canvas {
@@ -128,8 +128,8 @@ canvas {
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
-  border: 1px solid #887467;
-  background: white;
+  border: 1px solid var(--appearance-border);
+  background: var(--appearance-surface);
   box-sizing: border-box;
 }
 .mark {
@@ -147,12 +147,12 @@ h3 {
   font-size: 1.2rem;
 }
 .error {
-  color: #9e2117;
+  color: var(--appearance-error);
 }
 input:focus-visible,
 button:focus-visible,
 select:focus-visible {
-  outline: 3px solid #254c8c;
+  outline: 3px solid var(--appearance-focus);
   outline-offset: 3px;
 }
 app-family-pdf-preview {
@@ -166,4 +166,19 @@ app-family-pdf-preview {
   app-family-pdf-preview {
     position: static;
   }
+}
+
+/* Signature ink and transparent signature images are shown on their paper surface. */
+canvas,
+.sample,
+.mark {
+  background: #fff;
+  color: #202936;
+  color-scheme: light;
+}
+.mark {
+  padding: 8px;
+  box-sizing: border-box;
+  border: 1px solid var(--appearance-border);
+  border-radius: 6px;
 }

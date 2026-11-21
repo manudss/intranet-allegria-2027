@@ -1,3 +1,4 @@
+import { FamilyRegistrationModule } from './family-registration/family-registration.module';
 import { Module } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module';
 import { AssignmentsModule } from './assignments/assignments.module';
@@ -26,6 +27,7 @@ import { AccessControlModule } from './access-control/access-control.module';
 @Module({
   imports: [
     AuthModule,
+    FamilyRegistrationModule,
     GroupsModule,
     ParticipantsModule,
     TeamsModule,

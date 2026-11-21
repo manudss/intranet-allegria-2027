@@ -1,3 +1,4 @@
+import { configureFamilyPortal } from './app/config/family-portal-hosting';
 import { Logger, RequestMethod } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
@@ -48,6 +49,7 @@ async function bootstrap() {
       swaggerOptions: { persistAuthorization: true },
     });
 
+    configureFamilyPortal(app);
     const webStaticDir = resolveWebStaticDir(configService.get<string>('WEB_STATIC_DIR'));
     if (webStaticDir) {
       configureWebHosting(app, webStaticDir);

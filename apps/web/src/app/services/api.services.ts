@@ -891,3 +891,13 @@ export class ProgramApiService {
     return this.http.get<ProgramChangeLogEntry[]>(`${this.base}/change-log`, { params });
   }
 }
+
+@Injectable({providedIn:'root'})
+export class FamilyRegistrationsApiService {
+ private http=inject(HttpClient);
+ list(){return this.http.get<import('../models/models').FamilySpace[]>('/api/family-registrations');}
+ rules(){return this.http.get<import('../models/models').FamilyRules>('/api/family-registrations/rules');}
+ configure(rules:import('../models/models').FamilyRules){return this.http.patch<import('../models/models').FamilyRules>('/api/family-registrations/rules',rules);}
+ review(family:string,youth:string,revision:number,state:string,reason:string){return this.http.post<import('../models/models').FamilySpace>('/api/family-registrations/'+family+'/youths/'+youth+'/review',{revision,state,reason});}
+ catering(){return this.http.get<import('../models/models').CateringNeeds>('/api/catering-needs');}
+}

@@ -109,3 +109,9 @@ export const eventQuote: QuoteContent = {
   text: 'Croire en ce monde tel qu’il est, avec ses joies et ses difficultés, parce que nous croyons que Dieu y est à l’œuvre, ici et maintenant.',
   attribution: 'Esprit des rassemblements Alegria du MEJ',
 };
+
+export const youthJourneySteps = [
+ { title: "Créer ou retrouver mon espace", description: "Une adresse e-mail vérifiée pour tous les dossiers de votre famille." },
+ { title: "Compléter les dossiers par pages", description: "Les informations sont enregistrées, vous pouvez revenir avant l’envoi final." },
+ { title: "Relire et envoyer", description: "Documents, autorisations et suivi séparés pour chaque jeune. Paiement uniquement simulé." },
+];

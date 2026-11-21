@@ -131,6 +131,19 @@ describe('Signature UI, per-document consent and distinct email code', () => {
     expect(button('Envoyer mon code de signature').disabled).toBe(true);
     http.expectNone('/signature/code');
   });
+  it('discards an in-flight code response when its document changes', async () => {
+    await prepare();
+    const request = http.expectOne('/signature/code');
+    fixture.componentRef.setInput('documentKey', 'changed-document');
+    fixture.detectChanges();
+    request.flush({ challengeId: 'obsolete', recipient: 'f***@example.test' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain('Code valable encore');
+    expect(fixture.nativeElement.querySelector('[role=alert]').textContent).toContain(
+      'document a changé',
+    );
+  });
   it('never advances to the code screen if the provider fails', async () => {
     await prepare();
     http

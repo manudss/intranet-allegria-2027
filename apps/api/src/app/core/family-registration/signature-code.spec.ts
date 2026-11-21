@@ -253,6 +253,21 @@ describe('Distinct signature verification, isolated SQL and fake mail transport 
     ])
       expect(signatureContext(...(args as Parameters<typeof signatureContext>))).not.toBe(c);
   });
+  it('refuses the shared preview account before creating any challenge or contacting a provider', async () => {
+    const preview = new ConfigService({
+      FAMILY_PREVIEW_DEMO_ENABLED: 'pr42-fictional-only',
+      RENDER_SERVICE_NAME: 'al-pr42-api',
+      RENDER_GIT_BRANCH: 'feat/family-registration',
+      RENDER_EXTERNAL_HOSTNAME: 'al-pr42-api.onrender.com',
+      FAMILY_PREVIEW_MAIL_ENABLED: 'owner-only-test',
+      FAMILY_PREVIEW_MAIL_TO: 'emmanueldesaintsteban@gmail.com',
+    });
+    await expect(
+      requestSignatureCode(db, preview, familyId, 'famille-demo@example.test', 'context'),
+    ).rejects.toThrow('compte fictif partagé');
+    expect(sent).toHaveLength(0);
+    expect(await db.query('SELECT * FROM registration_challenges')).toHaveLength(0);
+  });
   it('validates signature images, never accepts SVG, URLs or malformed payloads', async () => {
     for (const image of [
       'https://example.test/image.png',

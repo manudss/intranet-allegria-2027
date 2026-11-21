@@ -1,5 +1,7 @@
+import { familyPreviewEnabled, familyPreviewRecipientAllowed } from './family-preview';
 import {
   BadRequestException,
+  ForbiddenException,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -72,6 +74,10 @@ export async function requestSignatureCode(
   email: string,
   context: string,
 ) {
+  if (familyPreviewEnabled(config) && !familyPreviewRecipientAllowed(config, email))
+    throw new ForbiddenException(
+      "Le compte fictif partagé n'envoie pas d'e-mail. Utilisez votre accès e-mail de test autorisé.",
+    );
   familyMailSettings(config);
   const id = randomUUID(),
     code = String(randomInt(10000000, 100000000));

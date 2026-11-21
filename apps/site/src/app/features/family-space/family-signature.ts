@@ -9,6 +9,7 @@ import {
   input,
   output,
   signal,
+  untracked,
 } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -41,6 +42,7 @@ export class FamilySignaturePanel implements OnDestroy {
   );
   readonly documentKey = input.required<string>();
   readonly completed = output<unknown>();
+  readonly busyChanged = output<boolean>();
   readonly appearanceChanged = output<SignatureDraft | undefined>();
   private http = inject(HttpClient);
   protected name = signal('');
@@ -77,7 +79,9 @@ export class FamilySignaturePanel implements OnDestroy {
   private prepared?: Record<string, unknown>;
   private timer = setInterval(() => this.now.set(Date.now()), 1000);
   private initialised = false;
+  private generation = 0;
   constructor() {
+    effect(() => this.busyChanged.emit(this.busy()));
     effect(() => {
       const signer = this.signer(),
         capacity = this.capacity();
@@ -110,6 +114,9 @@ export class FamilySignaturePanel implements OnDestroy {
     this.invalidate();
   }
   protected invalidate() {
+    this.generation++;
+    const step = untracked(() => this.step());
+    if (step === 'code' || step === 'done') this.step.set('signature');
     this.challenge.set(null);
     this.code.set('');
     this.accepted.set(false);
@@ -208,8 +215,13 @@ export class FamilySignaturePanel implements OnDestroy {
       return;
     this.busy.set(true);
     this.error.set('');
+    const generation = this.generation;
     try {
       const data = await this.prepare()();
+      if (generation !== this.generation) {
+        this.error.set('Le document a changé. Relisez-le avant de demander un code.');
+        return;
+      }
       if (!data) {
         this.error.set('Enregistrez les modifications avant de signer.');
         return;
@@ -223,14 +235,19 @@ export class FamilySignaturePanel implements OnDestroy {
         capacity: this.role(),
         accepted: true,
       };
-      this.challenge.set(
-        await firstValueFrom(
-          this.http.post<{ challengeId: string; recipient: string }>(
-            this.endpoint() + '/code',
-            this.prepared,
-          ),
+      const challenge = await firstValueFrom(
+        this.http.post<{ challengeId: string; recipient: string }>(
+          this.endpoint() + '/code',
+          this.prepared,
         ),
       );
+      if (generation !== this.generation) {
+        this.error.set(
+          'Le document a changé. Le code envoyé ne peut pas confirmer cette nouvelle version.',
+        );
+        return;
+      }
+      this.challenge.set(challenge);
       this.expiresAt.set(Date.now() + 600000);
       this.now.set(Date.now());
       this.code.set('');
@@ -285,6 +302,7 @@ export class FamilySignaturePanel implements OnDestroy {
   }
   ngOnDestroy() {
     clearInterval(this.timer);
+    this.busyChanged.emit(false);
     this.appearanceChanged.emit(undefined);
   }
 }

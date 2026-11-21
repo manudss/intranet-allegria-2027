@@ -49,7 +49,7 @@
           <span>Ouvrir / replier</span>
         </summary>
         <div class="section-body">
-          <fieldset [disabled]="readOnly() || !loaded()">
+          <fieldset [disabled]="readOnly() || !loaded() || signingBusy()">
             <legend class="sr-only">{{section.title}}</legend>
             @switch(section.id){ @case('identity'){
             <p>
@@ -251,6 +251,7 @@
               [previewReady]="pdfReady()"
               (appearanceChanged)="plannedSignature.set($event)"
               (completed)="signatureCompleted($event)"
+              (busyChanged)="signingBusy.set($event)"
             />
             } @if(data().signature){
             <p>

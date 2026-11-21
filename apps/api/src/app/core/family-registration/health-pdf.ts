@@ -164,7 +164,7 @@ export async function healthPdf(
   text(3, 165, 395, h.signature?.name || planned?.name || 'NON SIGNÉ', 50);
   text(
     3,
-    145,
+    137,
     320,
     h.signature
       ? new Date(h.signature.at).toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris' })

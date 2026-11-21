@@ -47,6 +47,7 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   protected previewMode = signal(false);
   protected pdfReady = signal(false);
+  protected signingBusy = signal(false);
   protected plannedSignature = signal<SignatureDraft | undefined>(undefined);
   protected previewRequest = computed(() =>
     this.loaded() && !this.previewSample()
@@ -254,7 +255,7 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
     clearTimeout(this.retryTimer);
   }
   hasUnsaved() {
-    return this.dirty || this.busy();
+    return this.dirty || this.busy() || this.signingBusy();
   }
   private fail(e: unknown) {
     const delay = familyRetryDelay(e);

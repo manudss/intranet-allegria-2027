@@ -154,4 +154,81 @@ describe('Signature UI, per-document consent and distinct email code', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Code valable encore');
     expect(fixture.nativeElement.querySelector('[role=alert]')).toBeTruthy();
   });
+  it('explains the shared demo restriction before any attempted email and never calls the endpoint', async () => {
+    fixture.componentRef.setInput('sharedDemo', true);
+    await prepare();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain("elle n'envoie aucun code e-mail");
+    expect(button('Envoyer mon code de signature').disabled).toBe(true);
+    http.expectNone('/signature/code');
+  });
+  function pad(captureThrows = false) {
+    button('Passer à ma signature').click();
+    fixture.detectChanges();
+    button('Tracer').click();
+    fixture.detectChanges();
+    const c = fixture.nativeElement.querySelector('canvas') as HTMLCanvasElement;
+    const context = {
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      stroke: vi.fn(),
+      clearRect: vi.fn(),
+    };
+    vi.spyOn(c, 'getContext').mockReturnValue(context as never);
+    vi.spyOn(c, 'getBoundingClientRect').mockReturnValue({
+      left: 10,
+      top: 20,
+      width: 300,
+      height: 180,
+    } as DOMRect);
+    c.setPointerCapture = vi.fn(() => {
+      if (captureThrows) throw new Error('Capture unavailable');
+    });
+    c.hasPointerCapture = vi.fn(() => !captureThrows);
+    c.releasePointerCapture = vi.fn();
+    vi.spyOn(c, 'toDataURL').mockReturnValue('data:image/png;base64,FICTION');
+    const pointer = (type: string, id = 1, x = 30, y = 40) => {
+      const event = new MouseEvent(type, {
+        clientX: x,
+        clientY: y,
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(event, 'pointerId', { value: id });
+      c.dispatchEvent(event);
+      fixture.detectChanges();
+    };
+    return { c, context, pointer };
+  }
+  it('renders the first touch immediately and stores a tap without requiring a move', () => {
+    const { c, context, pointer } = pad();
+    pointer('pointerdown');
+    expect(context.stroke).toHaveBeenCalledOnce();
+    pointer('pointerup');
+    expect(c.toDataURL).toHaveBeenCalledWith('image/png');
+    expect(fixture.nativeElement.querySelector('img.mark')).toBeTruthy();
+  });
+  it('keeps drawing when capture is unsupported and finishes safely on leaving the pad', () => {
+    const { c, context, pointer } = pad(true);
+    expect(() => pointer('pointerdown')).not.toThrow();
+    pointer('pointermove', 1, 100, 70);
+    pointer('pointerleave');
+    expect(context.stroke).toHaveBeenCalledTimes(2);
+    expect(c.toDataURL).toHaveBeenCalledOnce();
+  });
+  it('ignores a second finger and finalises only the active pointer, including cancellation', () => {
+    const { c, context, pointer } = pad();
+    pointer('pointerdown');
+    pointer('pointerdown', 2);
+    pointer('pointermove', 2);
+    pointer('pointerup', 2);
+    expect(c.toDataURL).not.toHaveBeenCalled();
+    pointer('pointermove', 1, 100, 70);
+    pointer('pointercancel', 1);
+    pointer('lostpointercapture', 1);
+    expect(context.stroke).toHaveBeenCalledTimes(2);
+    expect(c.toDataURL).toHaveBeenCalledOnce();
+    expect(c.releasePointerCapture).toHaveBeenCalledWith(1);
+  });
 });

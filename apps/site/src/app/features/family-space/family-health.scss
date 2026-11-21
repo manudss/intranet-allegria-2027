@@ -392,7 +392,8 @@ textarea {
   max-height: calc(100vh - 11rem);
   overflow: auto;
 }
-.mobile-preview-switch {
+.mobile-preview-switch,
+.mobile-preview-action {
   display: none;
 }
 @media (max-width: 1050px) {
@@ -406,14 +407,18 @@ textarea {
   }
   .mobile-preview-switch {
     display: flex;
-    position: sticky;
-    top: 4.4rem;
-    z-index: 3;
+    position: static;
     background: #fffdfb;
     padding: 0.4rem 0;
     gap: 0.5rem;
     flex-wrap: wrap;
     margin: 1rem 0;
+  }
+  .mobile-preview-action {
+    display: block;
+  }
+  .health-document {
+    scroll-margin-top: 6rem;
   }
   .mobile-preview-switch button {
     flex: 1;

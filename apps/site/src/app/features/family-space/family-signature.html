@@ -26,7 +26,14 @@
       </p>
       <p>La signature ne porte que sur cette version et sur ce document.</p>
       <button type="button" (click)="start()">Passer à ma signature</button>
-      } @else if(step()==='signature'){
+      } @else if(step()==='signature'){ @if(sharedDemo()){
+      <p class="notice" role="status">
+        Cette famille de démonstration est partagée : elle n'envoie aucun code e-mail et ne permet
+        pas de confirmer une signature. Vous pouvez essayer le tracé, le nom et l'import ici. Pour
+        tester le code, revenez aux inscriptions, déconnectez-vous puis utilisez l'accès e-mail avec
+        l'adresse de test autorisée, dans un dossier fictif personnel.
+      </p>
+      }
       <fieldset [disabled]="busy()">
         <legend>Votre signature</legend>
         <label
@@ -66,12 +73,14 @@
         <canvas
           #ink
           width="600"
-          height="180"
+          height="360"
           aria-label="Zone de tracé de la signature"
           (pointerdown)="stroke($event,true)"
           (pointermove)="stroke($event)"
-          (pointerup)="end()"
-          (pointercancel)="end()"
+          (pointerup)="end($event)"
+          (pointercancel)="end($event)"
+          (lostpointercapture)="end($event)"
+          (pointerleave)="end($event)"
         ></canvas>
         <button type="button" class="secondary" (click)="clear()">Effacer le tracé</button>
         } @if(method()==='UPLOAD'){
@@ -101,7 +110,7 @@
         <button
           type="button"
           (click)="requestCode()"
-          [disabled]="!pdfReady() || !accepted() || !name().trim() || method()!=='NAME'&&!image()"
+          [disabled]="sharedDemo() || !pdfReady() || !accepted() || !name().trim() || method()!=='NAME'&&!image()"
         >
           {{busy()?'Envoi en cours…':'Envoyer mon code de signature'}}
         </button>

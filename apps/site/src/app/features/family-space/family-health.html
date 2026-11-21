@@ -18,15 +18,15 @@
   </div>
   @if(!previewSample()){
   <div class="mobile-preview-switch" role="group" aria-label="Fiche ou aperçu">
-    <button type="button" [attr.aria-pressed]="!previewMode()" (click)="previewMode.set(false)">
+    <button type="button" [attr.aria-pressed]="!previewMode()" (click)="choosePreview(false)">
       Remplir la fiche</button
-    ><button type="button" [attr.aria-pressed]="previewMode()" (click)="previewMode.set(true)">
+    ><button type="button" [attr.aria-pressed]="previewMode()" (click)="choosePreview(true)">
       Voir l'aperçu PDF
     </button>
   </div>
   }
   <div class="health-workspace" [class.sample-only]="!!previewSample()">
-    <div class="health-editor" [class.mobile-hidden]="previewMode()">
+    <div tabindex="-1" class="health-editor" [class.mobile-hidden]="previewMode()">
       <nav class="sheet-index" aria-label="Rubriques de la fiche sanitaire">
         @for (section of sections; track section.id; let n = $index) {
         <button type="button" (click)="openSection(section.id)">
@@ -242,6 +242,7 @@
             </article>
             @if(!readOnly()){
             <app-family-signature
+              [sharedDemo]="sharedDemo()"
               [endpoint]="base()+'/sign'"
               [prepare]="prepareSignature"
               [documentKey]="signatureKey()"
@@ -338,6 +339,11 @@
           Relire et attester
         </button>
       </div>
+      @if(!previewSample()){
+      <button type="button" class="mobile-preview-action" (click)="choosePreview(true)">
+        Voir l'aperçu PDF avant de signer
+      </button>
+      }
       <p class="help">
         Ces informations ne figurent pas dans les notifications ni dans la vue administrative.
         Demandez un échange confidentiel à l'équipe santé si nécessaire.
@@ -351,7 +357,10 @@
       </details>
     </div>
     @if(!previewSample()){
-    <aside class="health-document" [class.mobile-hidden]="!previewMode()">
+    <aside tabindex="-1" class="health-document" [class.mobile-hidden]="!previewMode()">
+      <button type="button" class="mobile-preview-action" (click)="choosePreview(false)">
+        Revenir à la fiche et à la signature
+      </button>
       <app-family-pdf-preview [request]="previewRequest()" (readyChange)="pdfReady.set($event)" />
     </aside>
     }

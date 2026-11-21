@@ -363,6 +363,7 @@
     </p>
     }
     <app-family-health
+      [sharedDemo]="!!rules().previewDemo && space()!.email==='famille-demo@example.test'"
       [youthId]="youth()!.id"
       [identity]="youth()!.identity"
       [contact]="space()!.contact"
@@ -409,6 +410,7 @@
       >
       @if(!readOnly()){
       <app-family-signature
+        [sharedDemo]="!!rules().previewDemo && space()!.email==='famille-demo@example.test'"
         [endpoint]="'/api/public/family-space/youths/'+youth()!.id+'/signatures'"
         [prepare]="signaturePrepare(t.id,t.version)"
         [documentKey]="signatureKey(t)"

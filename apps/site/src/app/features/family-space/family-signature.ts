@@ -36,6 +36,7 @@ export class FamilySignaturePanel implements OnDestroy {
   readonly capacity = input('LEGAL');
   readonly showPreview = input(true);
   readonly previewReady = input(false);
+  readonly sharedDemo = input(false);
   protected ownPreviewReady = signal(false);
   protected pdfReady = computed(() =>
     this.showPreview() ? this.ownPreviewReady() : this.previewReady(),
@@ -75,6 +76,7 @@ export class FamilySignaturePanel implements OnDestroy {
   });
   @ViewChild('ink') canvas?: ElementRef<HTMLCanvasElement>;
   private drawing = false;
+  private activePointer: number | undefined;
   private inked = false;
   private prepared?: Record<string, unknown>;
   private timer = setInterval(() => this.now.set(Date.now()), 1000);
@@ -134,31 +136,54 @@ export class FamilySignaturePanel implements OnDestroy {
   }
   protected stroke(event: PointerEvent, start = false) {
     const c = this.canvas?.nativeElement;
-    if (!c || this.busy()) return;
+    if (!c || this.busy() || (start && event.button > 0)) return;
+    if (start ? this.drawing : !this.drawing || event.pointerId !== this.activePointer) return;
     const r = c.getBoundingClientRect(),
       ctx = c.getContext('2d');
-    if (!ctx) return;
+    if (!ctx || !r.width || !r.height) return;
+    if (event.cancelable) event.preventDefault();
     const x = ((event.clientX - r.left) * c.width) / r.width,
       y = ((event.clientY - r.top) * c.height) / r.height;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#202936';
     if (start) {
       this.drawing = true;
-      c.setPointerCapture(event.pointerId);
+      this.activePointer = event.pointerId;
       ctx.beginPath();
       ctx.moveTo(x, y);
-    } else if (this.drawing) {
-      ctx.lineWidth = 3;
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = '#202936';
+      // A tap or the first contact must be visible, even before the first move.
+      ctx.lineTo(x + 0.01, y);
+      ctx.stroke();
+      this.inked = true;
+      // Some embedded/mobile browsers can reject capture. Drawing still works in the pad.
+      try {
+        c.setPointerCapture(event.pointerId);
+      } catch {
+        /* use pointerleave below */
+      }
+    } else {
       ctx.lineTo(x, y);
       ctx.stroke();
       this.inked = true;
     }
   }
-  protected end() {
-    if (!this.drawing) return;
+  protected end(event?: PointerEvent) {
+    if (!this.drawing || (event && event.pointerId !== this.activePointer)) return;
+    const c = this.canvas?.nativeElement,
+      pointer = this.activePointer;
     this.drawing = false;
-    if (this.inked) {
-      this.image.set(this.canvas!.nativeElement.toDataURL('image/png'));
+    this.activePointer = undefined;
+    if (c && pointer !== undefined) {
+      try {
+        if (c.hasPointerCapture(pointer)) c.releasePointerCapture(pointer);
+      } catch {
+        /* already released */
+      }
+    }
+    if (c && this.inked) {
+      this.image.set(c.toDataURL('image/png'));
       this.invalidate();
     }
   }
@@ -206,6 +231,7 @@ export class FamilySignaturePanel implements OnDestroy {
   }
   protected async requestCode() {
     if (
+      this.sharedDemo() ||
       !this.pdfReady() ||
       this.busy() ||
       !this.accepted() ||

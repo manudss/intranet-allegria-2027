@@ -42,10 +42,25 @@ export class FamilyHealthPage implements OnInit, OnDestroy {
   readonly contact = input<FamilyContact>();
   readonly youthId = input.required<string>();
   readonly readOnly = input(false);
+  readonly sharedDemo = input(false);
   readonly previewSample = input<StructuredHealth>();
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef, { optional: true });
   private http = inject(HttpClient);
   protected previewMode = signal(false);
+  private editorScroll = 0;
+  protected choosePreview(preview: boolean) {
+    if (preview === this.previewMode()) return;
+    if (preview) this.editorScroll = window.scrollY;
+    this.previewMode.set(preview);
+    setTimeout(() => {
+      const target = this.host?.nativeElement.querySelector<HTMLElement>(
+        preview ? '.health-document' : '.health-editor',
+      );
+      if (preview) target?.scrollIntoView?.({ block: 'start' });
+      else window.scrollTo({ top: this.editorScroll });
+      target?.focus({ preventScroll: true });
+    }, 0);
+  }
   protected pdfReady = signal(false);
   protected signingBusy = signal(false);
   protected plannedSignature = signal<SignatureDraft | undefined>(undefined);

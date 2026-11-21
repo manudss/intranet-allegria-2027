@@ -6,7 +6,7 @@
   max-width: 1280px;
   margin: auto;
   padding: 24px;
-  background: white;
+  background: var(--appearance-surface);
   min-height: 80vh;
 }
 h1 {
@@ -29,7 +29,7 @@ a {
   border: 1px solid var(--appearance-border);
   border-radius: 8px;
   padding: 11px 16px;
-  background: white;
+  background: var(--appearance-surface);
   color: var(--appearance-text);
   text-decoration: none;
   box-sizing: border-box;
@@ -78,7 +78,7 @@ select {
   border: 1px solid var(--appearance-border);
   border-radius: 8px;
   padding: 10px;
-  background: white;
+  background: var(--appearance-surface);
   color: inherit;
 }
 .point {

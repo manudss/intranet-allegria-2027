@@ -524,8 +524,8 @@ $header-height: 2.5rem;
   &.cat-1 { background: var(--appearance-raised); border-inline-start-color: var(--appearance-action); }
   &.cat-2 { background: var(--appearance-warning-bg); border-inline-start-color: var(--appearance-warning); }
   &.cat-3 { background: var(--appearance-success-bg); border-inline-start-color: var(--appearance-success); }
-  &.cat-4 { background: var(--panel); border-inline-start-color: var(--appearance-info); }
-  &.cat-5 { background: var(--appearance-warning-bg); border-inline-start-color: var(--appearance-warning); }
+  &.cat-4 { background: var(--appearance-purple-bg); border-inline-start-color: var(--appearance-purple); }
+  &.cat-5 { background: var(--appearance-orange-bg); border-inline-start-color: var(--appearance-orange); }
   &.is-new { background: var(--appearance-success-bg); }
 
   header {

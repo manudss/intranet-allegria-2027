@@ -40,6 +40,7 @@
 .page h1,a,[tuiButton][appearance='secondary'],[tuiButton][appearance='flat'] {color:var(--appearance-action);}
 a:hover {color:var(--appearance-action);}
 :focus-visible {outline:3px solid var(--appearance-focus);outline-offset:3px;}
+button {color:inherit;}
 input,textarea,select{color-scheme:inherit;}
 input::placeholder,textarea::placeholder{color:var(--appearance-muted);opacity:1;}
 @media print { :root[data-theme] {

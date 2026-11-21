@@ -67,8 +67,14 @@ function fixture() {
 const declaration = 'Déclaration FICTIVE de test, aucun dossier réel.';
 describe('Alegria sanitary PDF, sheet and signature evidence only', () => {
   it('brands both copies of the model with the existing Alegria logo and removes the old heading', async () => {
-    const api = await readFile('apps/api/src/assets/registration/health-form-source-2026.pdf');
-    expect(api).toEqual(await readFile('apps/site/public/assets/health-form-source-2026.pdf'));
+    const api = await readFile(
+      new URL('../../../assets/registration/health-form-source-2026.pdf', import.meta.url),
+    );
+    expect(api).toEqual(
+      await readFile(
+        new URL('../../../../../site/public/assets/health-form-source-2026.pdf', import.meta.url),
+      ),
+    );
     const text = (await pages(api)).join(' ');
     expect(text).toContain('RASSEMBLEMENT ALEGRIA');
     expect(text).not.toContain('CAMP MEJ 2026');

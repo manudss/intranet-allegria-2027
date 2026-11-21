@@ -1,2 +1,2 @@
 
-.appearance-bar { display:flex;justify-content:flex-end;padding:8px 16px;background:var(--allegria-bg);border-bottom:1px solid var(--allegria-border); }
+.appearance-bar { position: relative; z-index: 40; display:flex;justify-content:flex-end;padding:8px 16px;background:var(--allegria-bg);border-bottom:1px solid var(--allegria-border); }

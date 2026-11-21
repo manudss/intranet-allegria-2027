@@ -29,19 +29,19 @@
 }
 
 .alert-banner--warning {
-  background: #fdf1e8;
+  background: var(--appearance-warning-bg);
   border-color: var(--color-warning);
   color: var(--color-text);
 }
 
 .alert-banner--success {
-  background: #eaf6ef;
+  background: var(--appearance-success-bg);
   border-color: var(--color-success);
   color: var(--color-text);
 }
 
 .alert-banner--error {
-  background: #fbeaea;
+  background: var(--appearance-error-bg);
   border-color: var(--color-error);
   color: var(--color-text);
 }

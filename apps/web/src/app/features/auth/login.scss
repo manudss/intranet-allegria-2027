@@ -1,13 +1,14 @@
 .login {
-  min-height: 100vh;
+  min-height: calc(100dvh - 61px);
   display: grid;
   place-items: center;
-  background: var(--allegria-bg-alt);
+  background: var(--appearance-bg);
   padding: 1rem;
 }
 .card {
   width: min(100%, 26rem);
-  background: #fff;
+  background: var(--appearance-surface);
+  border: 1px solid var(--appearance-border);
   padding: 2rem;
   border-radius: 1rem;
   box-shadow: 0 1rem 3rem #0002;

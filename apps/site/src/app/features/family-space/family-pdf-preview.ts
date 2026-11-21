@@ -74,11 +74,11 @@ export interface PdfPreviewRequest {
         min-width: 0;
       }
       section {
-        border: 1px solid #d8c8bc;
+        border: 1px solid var(--appearance-border);
         border-radius: 8px;
-        background: #f7f2ed;
+        background: var(--appearance-raised);
         padding: 1rem;
-        color: #392c26;
+        color: var(--appearance-text);
       }
       header {
         display: flex;
@@ -107,10 +107,10 @@ export interface PdfPreviewRequest {
         font: inherit;
         padding: 0.5rem;
         min-height: 44px;
-        border: 1px solid #887467;
+        border: 1px solid var(--appearance-border);
         border-radius: 5px;
-        background: white;
-        color: #392c26;
+        background: var(--appearance-surface);
+        color: var(--appearance-text);
         box-sizing: border-box;
       }
       button {
@@ -129,7 +129,9 @@ export interface PdfPreviewRequest {
         gap: 0.3rem;
       }
       .paper {
-        background: white;
+        background: #fff;
+        color: #202936;
+        color-scheme: light;
         min-height: 260px;
         overflow: auto;
       }
@@ -146,16 +148,16 @@ export interface PdfPreviewRequest {
         margin-top: 1rem;
         min-height: 44px;
         overflow-wrap: anywhere;
-        color: #873015;
+        color: var(--appearance-action);
       }
       button:focus-visible,
       input:focus-visible,
       a:focus-visible {
-        outline: 3px solid #254c8c;
+        outline: 3px solid var(--appearance-focus);
         outline-offset: 3px;
       }
       [role='alert'] {
-        color: #9e2117;
+        color: var(--appearance-error);
       }
     `,
   ],

@@ -1,5 +1,5 @@
 .hero {
-  background: var(--allegria-primary);
+  background: var(--appearance-solid);
   color: var(--allegria-on-primary);
   padding: 1.25rem 1.25rem 1rem;
   border-radius: 0 0 1.5rem 1.5rem;
@@ -31,9 +31,9 @@
   cursor: pointer;
 }
 .day-chip.active {
-  background: #fff;
+  background: var(--appearance-surface);
   color: var(--allegria-primary);
-  border-color: #fff;
+  border-color: var(--appearance-border);
   font-weight: 700;
 }
 .content {
@@ -47,7 +47,7 @@
   padding: 2rem 0;
 }
 .notice {
-  background: #fff;
+  background: var(--appearance-surface);
   border: 1px solid var(--tui-border-normal);
   border-radius: 0.75rem;
   padding: 1rem;
@@ -82,7 +82,7 @@
   font-size: 0.8rem;
 }
 .card {
-  background: #fff;
+  background: var(--appearance-surface);
   border-radius: 1rem;
   padding: 0.9rem 1rem;
   display: grid;

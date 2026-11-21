@@ -4,9 +4,9 @@
 .viewport {
   height: calc(100vh - 15rem);
   min-height: 24rem;
-  border: 1px solid #e5e5eb;
+  border: 1px solid var(--appearance-border);
   border-radius: 0.75rem;
-  background: #fff;
+  background: var(--appearance-surface);
 }
 .table-head,
 .row {
@@ -22,20 +22,20 @@
   position: sticky;
   top: 0;
   z-index: 2;
-  background: #f4f4f6;
-  color: #666;
+  background: var(--appearance-surface);
+  color: var(--appearance-muted);
 }
 .row {
   width: 100%;
   height: 58px;
   border: 0;
-  border-bottom: 1px solid #eee;
-  background: #fff;
+  border-bottom: 1px solid var(--appearance-border);
+  background: var(--appearance-surface);
   text-align: left;
   cursor: pointer;
 }
 .row:hover {
-  background: #fff4f7;
+  background: var(--appearance-raised);
 }
 .api-error,
 .error {
@@ -63,7 +63,7 @@ tui-drawer footer {
 /*.drawer-form label {
   display: grid;
   gap: 0.35rem;
-  color: #555;
+  color: var(--appearance-muted);
 }*/
 .drawer-form label:has(textarea),
 .drawer-form .wide {
@@ -78,7 +78,7 @@ dl {
 }
 dt {
   font-weight: 600;
-  color: #666;
+  color: var(--appearance-muted);
 }
 dd {
   margin: 0;

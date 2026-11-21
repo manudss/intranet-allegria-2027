@@ -1,10 +1,11 @@
+import { AppearanceService } from '@mej-allegria/appearance';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   ApplicationConfig,
   isDevMode,
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
-  signal,
+  inject,
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
@@ -24,11 +25,8 @@ export const appConfig: ApplicationConfig = {
     ),
     provideTaiga(),
     {
-      // Thème clair uniquement : par défaut Taiga UI suit prefers-color-scheme
-      // et basculait en palette sombre (texte blanc) sur les écrans clairs de
-      // l'app — champs illisibles sur téléphone en thème sombre.
       provide: TUI_DARK_MODE,
-      useFactory: () => Object.assign(signal(false), { reset: () => undefined }),
+      useFactory: () => inject(AppearanceService).dark,
     },
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),

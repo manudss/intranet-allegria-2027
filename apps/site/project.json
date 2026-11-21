@@ -21,6 +21,11 @@
             "input": "apps/site/public"
           },
           {
+            "glob": "appearance-init.js",
+            "input": "libs/appearance/assets",
+            "output": "/"
+          },
+          {
             "glob": "pdf.worker.min.mjs",
             "input": "node_modules/pdfjs-dist/build",
             "output": "assets/pdfjs"
@@ -116,6 +121,11 @@
             "glob": "pdf.worker.min.mjs",
             "input": "node_modules/pdfjs-dist/build",
             "output": "assets/pdfjs"
+          },
+          {
+            "glob": "**/*",
+            "input": "libs/appearance/assets",
+            "output": "."
           }
         ],
         "styles": ["apps/site/src/styles.scss"],

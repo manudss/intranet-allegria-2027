@@ -1,7 +1,8 @@
+@use '../../../libs/appearance/palette';
+@use '../../../libs/appearance/taiga';
 :root {
-  /* Thème clair uniquement : empêche Chrome/Android d'assombrir la page
-   * (le texte des champs passait blanc sur fond blanc en mode sombre forcé). */
-  color-scheme: only light;
+  /* AppearanceService resolves the screen palette before display. */
+  color-scheme: light dark;
 
   --allegria-primary: #d52f57;
   --allegria-secondary: #f5a623;
@@ -164,3 +165,5 @@ input:-webkit-autofill:focus {
   -webkit-text-fill-color: var(--allegria-text);
   caret-color: var(--allegria-text);
 }
+
+@include taiga.theme;

@@ -15,7 +15,7 @@ import {
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist';
+import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from 'pdfjs-dist';
 export interface PdfPreviewRequest {
   url: string;
   body: unknown;
@@ -177,6 +177,7 @@ export class FamilyPdfPreview implements AfterViewInit, OnDestroy {
   private ready = signal(false);
   private refresh = signal(0);
   private doc?: PDFDocumentProxy;
+  private loadingTask?: PDFDocumentLoadingTask;
   private task?: RenderTask;
   private generation = 0;
   private renderChain = Promise.resolve();
@@ -193,15 +194,29 @@ export class FamilyPdfPreview implements AfterViewInit, OnDestroy {
       // Do not offer a download from the previous version while new answers are pending.
       untracked(() => this.revoke());
       let subscription: { unsubscribe(): void } | undefined;
+      const deadline = setTimeout(() => {
+        if (generation !== this.generation) return;
+        this.generation++;
+        subscription?.unsubscribe();
+        this.task?.cancel();
+        void this.loadingTask?.destroy().catch(() => undefined);
+        this.loadingTask = undefined;
+        this.loading.set(false);
+        this.status.set('Aperçu non à jour');
+        this.error.set(
+          'Le PDF met trop de temps à se préparer. Réessayez l’aperçu avant de signer. Vos réponses sont conservées.',
+        );
+      }, 60000);
       const timer = setTimeout(() => {
         subscription = this.http
           .post(request.url, request.body, { responseType: 'blob' })
           .subscribe({
             next: (blob) => {
-              void this.load(blob, generation);
+              void this.load(blob, generation).finally(() => clearTimeout(deadline));
             },
             error: () => {
               if (generation === this.generation) {
+                clearTimeout(deadline);
                 this.loading.set(false);
                 this.error.set(
                   'Aperçu indisponible. Vos réponses restent dans la fiche. Réessayez avant de signer.',
@@ -212,6 +227,7 @@ export class FamilyPdfPreview implements AfterViewInit, OnDestroy {
           });
       }, 650);
       onCleanup(() => {
+        clearTimeout(deadline);
         clearTimeout(timer);
         subscription?.unsubscribe();
       });
@@ -227,18 +243,29 @@ export class FamilyPdfPreview implements AfterViewInit, OnDestroy {
         'assets/pdfjs/pdf.worker.min.mjs',
         document.baseURI,
       ).href;
-      const doc = await pdfjs.getDocument({
-        data: new Uint8Array(await blob.arrayBuffer()),
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      if (generation !== this.generation) return;
+      const loadingTask = pdfjs.getDocument({
+        data: bytes,
         isEvalSupported: false,
         useSystemFonts: true,
-      }).promise;
+      });
+      this.loadingTask = loadingTask;
+      const doc = await loadingTask.promise;
+      if (this.loadingTask === loadingTask) this.loadingTask = undefined;
       if (generation !== this.generation) {
         await doc.destroy();
         return;
       }
       this.task?.cancel();
       await this.renderChain.catch(() => undefined);
-      await this.doc?.destroy();
+      const previous = this.doc;
+      this.doc = undefined;
+      await previous?.destroy();
+      if (generation !== this.generation) {
+        await doc.destroy();
+        return;
+      }
       this.doc = doc;
       this.count.set(doc.numPages);
       this.page.set(Math.min(this.page(), doc.numPages));
@@ -293,6 +320,7 @@ export class FamilyPdfPreview implements AfterViewInit, OnDestroy {
   ngOnDestroy() {
     this.generation++;
     this.task?.cancel();
+    void this.loadingTask?.destroy().catch(() => undefined);
     void this.doc?.destroy();
     this.revoke();
   }

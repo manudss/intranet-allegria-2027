@@ -79,21 +79,21 @@ const STATUS_LABELS: Record<AccessBadgeStatus, string> = {
     .head { display: flex; align-items: baseline; gap: 12px; }
     .head h1 { margin: 0; font-size: 22px; }
     .total { color: var(--tui-text-secondary); font-size: 14px; }
-    .panel { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 10px; }
+    .panel { background: var(--appearance-surface); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 10px; }
     .panel h2 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--tui-text-secondary); }
     .hint { font-size: 13px; color: var(--tui-text-secondary); margin: 0; }
-    textarea, input, select { border: 1px solid #d7dbe3; border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
+    textarea, input, select { border: 1px solid var(--appearance-border); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
     textarea { font-family: ui-monospace, monospace; }
     .row, .filters { display: flex; gap: 8px; }
     .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
-    .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid #eceef2; }
-    .tbl td { padding: 8px; border-bottom: 1px solid #f4f5f7; }
+    .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--appearance-border); }
+    .tbl td { padding: 8px; border-bottom: 1px solid var(--appearance-border); }
     code { font-family: ui-monospace, monospace; font-size: 12px; }
     .chip { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-    .chip[data-s='AVAILABLE'] { background: #e3f6ea; color: #1a9e4b; }
-    .chip[data-s='ASSIGNED'] { background: #e8ecf7; color: #526ed3; }
-    .chip[data-s='LOST'], .chip[data-s='REVOKED'] { background: #fdeaea; color: #d8453a; }
-    .ok-msg { color: #1a9e4b; font-size: 13px; margin: 0; }
+    .chip[data-s='AVAILABLE'] { background: var(--appearance-raised); color: var(--appearance-success); }
+    .chip[data-s='ASSIGNED'] { background: var(--appearance-raised); color: var(--appearance-info); }
+    .chip[data-s='LOST'], .chip[data-s='REVOKED'] { background: var(--appearance-surface); color: var(--appearance-error); }
+    .ok-msg { color: var(--appearance-success); font-size: 13px; margin: 0; }
   `],
 })
 export class BadgesStockPage implements OnInit {

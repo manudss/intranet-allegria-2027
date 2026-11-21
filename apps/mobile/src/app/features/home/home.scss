@@ -1,5 +1,5 @@
 .hero {
-  background: var(--allegria-primary);
+  background: var(--appearance-solid);
   color: var(--allegria-on-primary);
   padding: 1.25rem 1.25rem 1.75rem;
   border-radius: 0 0 1.5rem 1.5rem;
@@ -42,7 +42,7 @@
   padding: 2rem 0;
 }
 .notice {
-  background: #fff;
+  background: var(--appearance-surface);
   border: 1px solid var(--tui-border-normal);
   border-radius: 0.75rem;
   padding: 1rem;
@@ -59,7 +59,7 @@
   list-style: none;
   margin: 0;
   padding: 0.5rem 1rem;
-  background: #fff;
+  background: var(--appearance-surface);
   border-radius: 1rem;
   display: grid;
   gap: 0.75rem;
@@ -85,7 +85,7 @@
   display: flex;
   align-items: center;
   gap: 0.9rem;
-  background: #fff;
+  background: var(--appearance-surface);
   border-radius: 1rem;
   padding: 1rem;
   color: inherit;
@@ -111,9 +111,9 @@
 
 .changes {
   display: block;
-  background: #f5a62326;
-  border: 1px solid #f5a62366;
-  color: #8a5b00;
+  background: var(--appearance-warning-bg);
+  border: 1px solid var(--appearance-warning);
+  color: var(--appearance-warning);
   border-radius: 0.75rem;
   padding: 0.6rem 0.9rem;
   font-size: 0.9rem;

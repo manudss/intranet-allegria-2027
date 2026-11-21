@@ -1,5 +1,5 @@
 .hero {
-  background: var(--allegria-primary);
+  background: var(--appearance-solid);
   color: var(--allegria-on-primary);
   padding: 1.25rem 1.25rem 1.75rem;
   border-radius: 0 0 1.5rem 1.5rem;
@@ -28,7 +28,7 @@
   padding: 2rem 0;
 }
 .notice {
-  background: #fff;
+  background: var(--appearance-surface);
   border: 1px solid var(--tui-border-normal);
   border-radius: 0.75rem;
   padding: 1rem;
@@ -51,7 +51,7 @@
 }
 .mission,
 .team {
-  background: #fff;
+  background: var(--appearance-surface);
   border-radius: 1rem;
   padding: 0.9rem 1rem;
   display: grid;
@@ -65,7 +65,7 @@
 }
 .badge {
   flex: none;
-  background: var(--allegria-secondary);
+  background: #8a5200;
   color: #fff;
   border-radius: 999px;
   font-size: 0.7rem;
@@ -101,7 +101,7 @@
   font-weight: 600;
 }
 .card {
-  background: #fff;
+  background: var(--appearance-surface);
   border-radius: 1rem;
   padding: 0.9rem 1rem;
   display: grid;
@@ -132,7 +132,7 @@
 .day-chip {
   flex: 1;
   border: 1px solid var(--tui-border-normal);
-  background: #fff;
+  background: var(--appearance-surface);
   border-radius: 0.75rem;
   padding: 0.5rem 0;
   font: inherit;
@@ -142,7 +142,7 @@
   cursor: pointer;
 }
 .day-chip.active {
-  background: var(--allegria-primary);
+  background: var(--appearance-solid);
   border-color: var(--allegria-primary);
   color: var(--allegria-on-primary);
 }
@@ -160,7 +160,7 @@
   gap: 0.75rem;
 }
 .link-card {
-  background: #fff;
+  background: var(--appearance-surface);
   border: 1px solid var(--tui-border-normal);
   border-radius: 1rem;
   padding: 0.9rem 1rem;

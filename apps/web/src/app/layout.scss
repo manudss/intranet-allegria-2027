@@ -20,7 +20,7 @@
   min-height: 3.5rem;
   padding: 0.5rem 1rem;
   border-bottom: 0;
-  background: var(--allegria-primary);
+  background: var(--appearance-solid);
   color: #ffffff;
   box-shadow: 0 0.25rem 1rem rgba(34, 34, 34, 0.12);
 }
@@ -59,7 +59,7 @@
 }
 
 .header-right button[tuiButton] {
-  color: var(--allegria-on-secondary);
+  color: var(--appearance-text);
 }
 
 .header-right button[tuiButton][appearance='secondary'] {
@@ -67,7 +67,7 @@
 }
 
 .header-right button[tuiButton][appearance='primary'] {
-  background: #ffffff;
+  background: var(--appearance-surface);
   color: var(--allegria-primary);
 }
 
@@ -99,7 +99,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   border-right: 0;
-  background: var(--allegria-secondary);
+  background: var(--appearance-surface);
   color: var(--allegria-primary);
   box-shadow: 0.25rem 0 1rem rgba(34, 34, 34, 0.1);
   overscroll-behavior: contain;
@@ -112,7 +112,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  background: var(--allegria-secondary);
+  background: var(--appearance-surface);
 }
 
 .allegria-sidebar header {
@@ -134,17 +134,17 @@
 }
 
 .allegria-sidebar [tuiAsideItem] {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--appearance-text);
 }
 
 .allegria-sidebar [tuiAsideItem]:hover {
   background: rgba(255, 255, 255, 0.12);
-  color: var(--allegria-on-secondary);
+  color: var(--appearance-text);
 }
 
 .allegria-sidebar a[tuiAsideItem].active {
   background: rgba(255, 255, 255, 0.2);
-  color: var(--allegria-on-secondary);
+  color: var(--appearance-text);
   font-weight: 700;
 }
 
@@ -247,4 +247,15 @@
   .allegria-header .page-title {
     display: none;
   }
+}
+
+:host-context([data-theme='dark']) {
+ .allegria-header,.allegria-sidebar,.allegria-sidebar header,.allegria-sidebar footer {
+  background:var(--appearance-surface);color:var(--appearance-text);
+ }
+ .allegria-header{border-bottom:1px solid var(--appearance-border);}
+ .allegria-sidebar{border-right:1px solid var(--appearance-border);}
+ .allegria-sidebar [tuiAsideItem],.page-title,.header-title,.mobile-menu-btn{color:var(--appearance-text);}
+ .allegria-sidebar a[tuiAsideItem].active{background:var(--appearance-selected);color:var(--appearance-action);}
+ .header-right button[tuiButton][appearance='primary']{background:var(--appearance-solid);color:#fff;}
 }

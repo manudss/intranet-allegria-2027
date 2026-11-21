@@ -1,4 +1,5 @@
 :host {
+  --panel: var(--appearance-surface);
   display: block;
 }
 
@@ -20,8 +21,8 @@
   }
 
   &.warning {
-    background: #ffedd5;
-    color: #7c2d12;
+    background: var(--appearance-warning-bg);
+    color: var(--appearance-warning);
   }
 
   &.negative {
@@ -73,7 +74,7 @@
   }
 
   &.on {
-    background: var(--allegria-primary, #d52f57);
+    background: var(--appearance-solid);
     color: #fff;
   }
 }
@@ -131,9 +132,9 @@
   color: var(--tui-text-secondary);
 
   &.stale {
-    background: #fff8ec;
-    border-color: #ffe1a8;
-    color: #8a5a00;
+    background: var(--panel);
+    border-color: var(--appearance-border);
+    color: var(--appearance-warning);
   }
 
   button {
@@ -193,7 +194,7 @@
   }
 
   &.danger {
-    color: #b3261e;
+    color: var(--appearance-error);
   }
 }
 
@@ -216,11 +217,11 @@
 }
 
 // Couleurs explicites : le calendrier doit rester lisible même si le navigateur force un thème sombre.
-$ink: #1f2937;
-$ink-soft: #4b5563;
-$line: #d1d5db;
-$changed: #b45309;
-$new: #047857;
+$ink: var(--appearance-text);
+$ink-soft: var(--appearance-muted);
+$line: var(--appearance-border);
+$changed: var(--appearance-warning);
+$new: var(--appearance-success);
 
 .calendar-legend {
   display: flex;
@@ -244,11 +245,11 @@ $new: #047857;
   border-radius: 0.2rem;
   border: 2px solid transparent;
 
-  &-changed { background: #fef3c7; border-color: $changed; }
-  &-new { background: #d1fae5; border-color: $new; border-style: dashed; }
-  &-blocked { background: #fee2e2; border-color: #b91c1c; }
-  &-ghost { background: transparent; border: 2px dashed #9ca3af; }
-  &-frozen { background: #f3f4f6; border-color: #d97706; border-inline-start-width: 5px; }
+  &-changed { background: var(--appearance-warning-bg); border-color: $changed; }
+  &-new { background: var(--appearance-success-bg); border-color: $new; border-style: dashed; }
+  &-blocked { background: var(--appearance-error-bg); border-color: var(--appearance-error); }
+  &-ghost { background: transparent; border: 2px dashed var(--appearance-border); }
+  &-frozen { background: var(--panel); border-color: var(--appearance-warning); border-inline-start-width: 5px; }
 }
 
 // Barre de validation collée en haut : visible sans devoir défiler jusqu'au panneau latéral.
@@ -265,12 +266,12 @@ $new: #047857;
   padding: 0.625rem 0.875rem;
   border-radius: 0.75rem;
   border: 2px solid $changed;
-  background: #fffbeb;
+  background: var(--panel);
   color: $ink;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 
-  &.positive { border-color: $new; background: #ecfdf5; }
-  &.negative { border-color: #b91c1c; background: #fef2f2; }
+  &.positive { border-color: $new; background: var(--panel); }
+  &.negative { border-color: var(--appearance-error); background: var(--panel); }
 
   .pending-text {
     display: flex;
@@ -296,9 +297,8 @@ $new: #047857;
   overflow: auto;
   border: 1px solid $line;
   border-radius: 0.75rem;
-  background: #ffffff;
+  background: var(--panel);
   color: $ink;
-  color-scheme: light;
 }
 
 $header-height: 2.5rem;
@@ -313,14 +313,14 @@ $header-height: 2.5rem;
   position: sticky;
   inset-inline-start: 0;
   z-index: 6;
-  background: #ffffff;
+  background: var(--panel);
   border-inline-end: 1px solid $line;
 
   .axis-corner {
     position: sticky;
     inset-block-start: 0;
     block-size: $header-height;
-    background: #ffffff;
+    background: var(--panel);
     border-block-end: 1px solid $line;
     z-index: 7;
   }
@@ -361,7 +361,7 @@ $header-height: 2.5rem;
   border-inline-end: 1px solid $line;
 
   &.selected .column-header {
-    background: #fde8ee;
+    background: var(--panel);
     border-block-end-color: var(--allegria-primary, #d52f57);
   }
 }
@@ -380,7 +380,7 @@ $header-height: 2.5rem;
   padding: 0 0.5rem;
   border: 0;
   border-block-end: 3px solid $line;
-  background: #f9fafb;
+  background: var(--panel);
   color: $ink;
   font: inherit;
   font-weight: 700;
@@ -397,14 +397,14 @@ $header-height: 2.5rem;
   inset-inline: 0;
   border-block-start: 1px solid $line;
 
-  &.half { border-block-start: 1px dashed #e5e7eb; }
+  &.half { border-block-start: 1px dashed var(--appearance-border); }
 }
 
 .sequence-ghost {
   position: absolute;
   inset-inline: 0.25rem;
   box-sizing: border-box;
-  border: 2px dashed #9ca3af;
+  border: 2px dashed var(--appearance-border);
   border-radius: 0.5rem;
   background: repeating-linear-gradient(135deg, rgba(156, 163, 175, 0.12) 0 6px, transparent 6px 12px);
   color: $ink-soft;
@@ -426,7 +426,7 @@ $header-height: 2.5rem;
   padding: 0.375rem 1.5rem 0.375rem 0.625rem;
   border-radius: 0.5rem;
   border-inline-start: 0.35rem solid $line;
-  background: #f3f4f6;
+  background: var(--panel);
   color: $ink;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
   cursor: grab;
@@ -447,7 +447,7 @@ $header-height: 2.5rem;
 
   &.frozen {
     cursor: default;
-    border-inline-start-color: #d97706;
+    border-inline-start-color: var(--appearance-warning);
     background-image: repeating-linear-gradient(135deg, rgba(217, 119, 6, 0.08) 0 6px, transparent 6px 12px);
   }
 
@@ -469,7 +469,7 @@ $header-height: 2.5rem;
   &.is-new {
     z-index: 3;
     cursor: default;
-    background: #d1fae5;
+    background: var(--appearance-success-bg);
     border-inline-start-color: $new;
     outline: 3px dashed $new;
     outline-offset: -1px;
@@ -520,13 +520,13 @@ $header-height: 2.5rem;
   }
 
   // Palette de couleurs par catégorie (heuristique, en attendant un vrai champ "type" de séquence).
-  &.cat-0 { background: #e0f2fe; border-inline-start-color: #0284c7; }
-  &.cat-1 { background: #fce7f3; border-inline-start-color: #db2777; }
-  &.cat-2 { background: #fef9c3; border-inline-start-color: #ca8a04; }
-  &.cat-3 { background: #dcfce7; border-inline-start-color: #16a34a; }
-  &.cat-4 { background: #ede9fe; border-inline-start-color: #7c3aed; }
-  &.cat-5 { background: #ffedd5; border-inline-start-color: #ea580c; }
-  &.is-new { background: #d1fae5; }
+  &.cat-0 { background: var(--appearance-info-bg); border-inline-start-color: var(--appearance-info); }
+  &.cat-1 { background: var(--appearance-raised); border-inline-start-color: var(--appearance-action); }
+  &.cat-2 { background: var(--appearance-warning-bg); border-inline-start-color: var(--appearance-warning); }
+  &.cat-3 { background: var(--appearance-success-bg); border-inline-start-color: var(--appearance-success); }
+  &.cat-4 { background: var(--panel); border-inline-start-color: var(--appearance-info); }
+  &.cat-5 { background: var(--appearance-warning-bg); border-inline-start-color: var(--appearance-warning); }
+  &.is-new { background: var(--appearance-success-bg); }
 
   header {
     display: flex;
@@ -707,8 +707,8 @@ $header-height: 2.5rem;
   }
 
   &.warning {
-    background: #ffedd5;
-    color: #7c2d12;
+    background: var(--appearance-warning-bg);
+    color: var(--appearance-warning);
   }
 
   &.negative {
@@ -892,7 +892,7 @@ $header-height: 2.5rem;
 }
 
 .track-card.common {
-  background: #efe9e2;
+  background: var(--appearance-raised);
 }
 
 .track-meta {

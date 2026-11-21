@@ -1,5 +1,5 @@
 .hero {
-  background: var(--allegria-primary);
+  background: var(--appearance-solid);
   color: var(--allegria-on-primary);
   padding: 1.25rem 1.25rem 1rem;
   border-radius: 0 0 1.5rem 1.5rem;
@@ -31,9 +31,9 @@
   cursor: pointer;
 }
 .day-chip.active {
-  background: #fff;
+  background: var(--appearance-surface);
   color: var(--allegria-primary);
-  border-color: #fff;
+  border-color: var(--appearance-border);
   font-weight: 700;
 }
 .content {
@@ -48,15 +48,15 @@
 }
 .changes {
   margin: 0;
-  background: #f5a62326;
-  border: 1px solid #f5a62366;
-  color: #8a5b00;
+  background: var(--appearance-warning-bg);
+  border: 1px solid var(--appearance-warning);
+  color: var(--appearance-warning);
   border-radius: 0.75rem;
   padding: 0.6rem 0.9rem;
   font-size: 0.9rem;
 }
 .notice {
-  background: #fff;
+  background: var(--appearance-surface);
   border: 1px solid var(--tui-border-normal);
   border-radius: 0.75rem;
   padding: 1rem;
@@ -71,7 +71,7 @@
 .filter-chip {
   flex: none;
   border: 1px solid var(--tui-border-normal);
-  background: #fff;
+  background: var(--appearance-surface);
   color: var(--allegria-text);
   border-radius: 999px;
   padding: 0.35rem 0.9rem;
@@ -80,7 +80,7 @@
   cursor: pointer;
 }
 .filter-chip.active {
-  background: var(--allegria-primary);
+  background: var(--appearance-solid);
   border-color: var(--allegria-primary);
   color: #fff;
   font-weight: 600;
@@ -114,7 +114,7 @@
   font-size: 0.8rem;
 }
 .card {
-  background: #fff;
+  background: var(--appearance-surface);
   border-radius: 1rem;
   padding: 0.9rem 1rem;
   display: grid;
@@ -128,7 +128,7 @@
 }
 .badge {
   flex: none;
-  background: var(--allegria-secondary);
+  background: #8a5200;
   color: #fff;
   border-radius: 999px;
   font-size: 0.7rem;

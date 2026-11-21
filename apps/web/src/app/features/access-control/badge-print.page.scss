@@ -144,3 +144,6 @@ app-select-field {
     padding-inline: 0.5rem;
   }
 }
+
+/* The printable badge is deliberately a paper preview in both themes. */
+.print-card {background:#fff;color:#222;color-scheme:light;}

@@ -1,85 +1,86 @@
 # Deploiement production (GitHub Actions -> Render)
 
-Objectif : `main` se deploie tout seul, **sans consommer aucune des 500 minutes
-de pipeline gratuites** du workspace Render, et sans dependre du webhook
-Render<->GitHub (observe comme non fiable : aucun auto-deploy au merge de #13).
+`main` reste deploye automatiquement. Les builds sont faits sur GitHub Actions,
+les trois fronts sont copies sur les CDN Render du second compte. La copie
+consomme peu de minutes, mais pas zero : environ 1 minute observee pour les trois
+premiers deploys le 21 novembre 2026. Rester dans les quotas Hobby gratuits,
+sans carte ni changement de plan.
 
-- **API** : image Docker buildee par GitHub Actions (runners gratuits, repo
-  public), poussee sur GHCR. Render ne fait que tirer l'image.
-- **Fronts** (admin `web`, site public `site`, mobile a venir) : dists buildes
-  par GitHub Actions, publies sur la branche `deploy` du repo. Les static sites
-  Render suivent cette branche avec une **commande de build vide** : simple
-  copie CDN, zero minute.
-- **Migrations Neon** : job GitHub separe, avant tout deploy.
+## Cibles actuelles
 
-## Chaine
+| Surface | URL | Compte Render | Dossier sur deploy |
+| --- | --- | --- | --- |
+| Site public | https://alegria-live-site.onrender.com/ | second compte | site |
+| Intranet | https://alegria-live-web.onrender.com/ | second compte | web |
+| Mobile Jour J | https://alegria-live-mobile.onrender.com/ | second compte | mobile |
+| API | https://alegria.dss.name/ | premier compte | image GHCR |
+| Espace famille | https://alegria.dss.name/familles/espace-famille | premier compte, API | inclus dans l'image |
 
-```
-push sur main
-  -> workflow "Prod image (GHCR)"  : build + push ghcr.io/manudss/intranet-allegria-2027:<sha> et :latest
-  -> workflow "Prod deploy (Render)" (workflow_run sur le precedent, ou manuel)
-       1. migrate        : npm ci && npm run db:migrate  (TypeORM, base Neon prod)
-       2. deploy-api     : scripts/render-prod-deploy.mjs   (POST /deploys, attend "live")
-       3. deploy-static  : build web/site/(mobile) -> branche `deploy` -> scripts/render-static-deploy.mjs
-       4. health         : curl alegria.dss.name/health + fronts
-```
+Les anciens sites statiques du premier compte ne sont plus les cibles du
+workflow. Ils ne sont ni supprimes ni reconfigures par cette maintenance.
+Le service `iam-demo-apps` du second compte reste independant et inchange.
+Aucun deplacement de donnees, de domaine ou de DNS.
 
-Garde-fous : tant qu'un service Render n'a pas ete bascule (une seule fois, a la
-main, ci-dessous), le script correspondant le **saute** et le run reste vert -
-jamais de build Render declenche par erreur.
+## Chaine automatique
 
-## Secrets GitHub (Settings -> Secrets and variables -> Actions)
+1. `Prod image (GHCR)` construit et publie l'image API sur un push sur `main`.
+2. `Prod deploy (Render)` conserve ses jobs existants de migrations Neon et
+   de deploy API. Cette maintenance ne les modifie pas.
+3. Le job statique extrait la revision du run image declencheur (ou celle du
+   lancement manuel), construit web/site/mobile et publie les dist sur `deploy`.
+4. Les trois services statiques suivent `deploy`, auto-deploy au commit.
+   Pas d'appel aux anciens services Render, ni de nouvelle cle API a installer.
+5. `check-static-production.mjs` attend au maximum dix minutes : pour chaque
+   CDN, le marqueur `deployment.json` doit donner la revision source attendue,
+   l'empreinte SHA-256 de l'index doit correspondre, les assets principaux
+   doivent etre accessibles et `app-config.json` doit viser l'API existante.
+   Les erreurs reseau, une ancienne revision et un fallback HTML ne valent
+   pas une livraison reussie. Les lectures sont espacees de quinze secondes.
+6. Le job de sante controle l'API, les trois nouvelles URLs et l'espace famille.
 
-| Secret | Contenu |
-| --- | --- |
-| `RENDER_API_KEY` | deja present (cle API Render du compte) |
-| `ALLEGRIA_PROD_DATABASE_URL` | **nouveau** - URL Neon prod (pooler, `-pooler.` dans l'hote) |
-| `ALLEGRIA_PROD_DATABASE_URL_DIRECT` | optionnel - URL Neon prod directe ; si absent, `DATABASE_URL` est utilisee |
+Le marqueur expose seulement le nom de l'application, le SHA source et
+l'empreinte de l'index. Aucune donnee privee ni aucun secret.
 
-## Configuration unique (dashboard Render)
+## Configuration Render deja en place
 
-### 1. API `intranet-allegria-2027` : git-backed -> image-backed
-1. Attendre que le workflow "Prod image (GHCR)" ait pousse une premiere image.
-2. Le package GHCR `manudss/intranet-allegria-2027` est cree **prive** : le
-   passer en public (GitHub -> Packages -> settings -> Change visibility),
-   sinon configurer un registry credential GHCR dans Render.
-3. Dashboard Render -> service -> **Settings -> Build & Deploy** ->
-   **Source Code** : *Disconnect*. Puis **New -> ou edit -> Docker** :
-   Image URL `ghcr.io/manudss/intranet-allegria-2027:latest`.
-   Les env vars existantes (DATABASE_URL, ...) sont conservees.
-4. `scripts/render-prod-deploy.mjs` detecte le service image-backed et deploie
-   normalement desormais.
+Pour les trois nouveaux services : branche `deploy`, build vide,
+`SKIP_INSTALL_DEPS=true`, dossier publie `site`, `web` ou `mobile`,
+auto-deploy au commit, rewrite SPA `/*` vers `/index.html`.
 
-### 2. Static sites : suivre la branche `deploy`, build vide
-Pour chacun de `intranet-allegria-2027-1` (front admin) et `allegria-2027`
-(site public), puis `allegria-mobile` quand il sera cree :
-- **Settings -> Build & Deploy** : Branch = `deploy`, **Build Command = vide**,
-  Publish Directory = `web` / `site` / `mobile` selon le service.
-- Ajouter l'env var `SKIP_INSTALL_DEPS=true` (evite tout npm install cote Render).
-- Garder la regle de rewrite `/* -> /index.html` (SPA).
-`scripts/render-static-deploy.mjs` ne touche qu'aux services deja dans cet etat.
+Sur le site public, la regle `/api/*` vers
+`https://alegria.dss.name/api/*` doit rester avant le fallback SPA : les
+formulaires publics utilisent des appels relatifs. L'espace famille redirige
+vers l'origine de l'API, pour conserver les cookies sur cette origine.
 
-### 3. Service mobile `allegria-mobile`
-La PR PWA (#18) est dans `main` : le job build deja `apps/mobile` et le publie sur la branche `deploy`. Reste a creer le service : static site sur la branche
-`deploy`, publish dir `mobile`, URL Render par defaut
-(`allegria-mobile.onrender.com`). Les previews de PR l'ont deja (script
-render-pr-previews).
+`CORS_ORIGIN` de l'API inclut les trois nouvelles origines exactes, en plus
+des origines historiques. Ne jamais remplacer l'ensemble des variables
+d'environnement pour changer une seule valeur.
 
-## Rollback
+Les checks attendent l'auto-deploy. Si le webhook Render ne se declenche pas,
+le workflow echoue explicitement au lieu de presenter une ancienne version
+comme actuelle. Inspecter le service concerne et, si necessaire, lancer son
+redeploiement du commit de `deploy` depuis Render, sans lancer un build source.
 
-- **Fronts** : la branche `deploy` garde un commit par push de `main` ; dans le
-  dashboard Render, redeployer un commit precedent du static site, ou
-  `git revert` cote source puis push (la chaine republie).
-- **API** : dashboard Render -> onglet deploys -> redeployer une image
-  precedente (tag `<sha>` immutable conserve sur GHCR).
-- **Migrations** : pas de rollback automatique (comme avant) ; les migrations
-  restent additives.
+## Secrets conserves
 
-## Notes
+- `RENDER_API_KEY` reste la cle du premier compte pour le job API uniquement.
+- `ALLEGRIA_PROD_DATABASE_URL` reste la connexion de production existante.
+- `ALLEGRIA_PROD_DATABASE_URL_DIRECT` reste optionnel pour les migrations.
 
-- Le workflow "Prod deploy" peut aussi etre lance a la main (Actions -> Prod
-  deploy -> Run workflow) sans rebuild d'image : il redeploie `:latest`.
-- `render.yaml` decrit un ancien blueprint de demo sans rapport avec les
-  services reels ; il est inerte et laisse tel quel.
-- En cas de doute sur l'etat d'un service : le script concerne loggue
-  `skipped` avec la raison (`git-backed`, `not-switched`, `missing`).
+Aucune nouvelle cle de second compte n'est necessaire pour les fronts.
+Ne pas remplacer la cle globale par celle du second compte.
+
+## Retour arriere et limites
+
+- Preferer `git revert` sur une branche, puis PR et fusion par le proprietaire :
+  la chaine republie les dist et leurs marqueurs coherents.
+- Un rollback manuel dans Render vers un ancien commit reste possible. Un ancien
+  commit sans `deployment.json` ne satisfait volontairement pas le nouveau check.
+- L'API garde son mecanisme existant de rollback d'image. Les migrations n'ont
+  pas de rollback automatique.
+- `render-static-deploy.mjs` reste disponible comme ancien outil manuel, mais
+  n'est plus appele par le workflow de production.
+- `render.yaml` est un ancien blueprint de demo, inerte et laisse en place.
+- Les tests de cette maintenance sont locaux et CI, sans creation de service
+  preview, sans execution de migration/deploy prod depuis la branche de PR.
+  Le premier controle bout en bout du nouveau workflow attend sa fusion.

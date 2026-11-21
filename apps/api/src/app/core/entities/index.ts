@@ -63,3 +63,5 @@ export { AccessScanEvent } from './access-scan-event.entity';
 export { AccessScannerGrant } from './access-scanner-grant.entity';
 export { AccessAuditLog } from './access-audit-log.entity';
 export { AccessControlMeta } from './access-control-meta.entity';
+
+export * from './registration-family.entity';

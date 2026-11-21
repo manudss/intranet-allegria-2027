@@ -1,0 +1,433 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.health {
+  padding: 1.2rem;
+  border: 1px solid #d8c8bc;
+  border-radius: 8px;
+  background: #fffdfb;
+  color: #392c26;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+h2 {
+  margin: 0.3rem 0 1rem;
+}
+h2,
+.sheet-section {
+  scroll-margin-top: 10rem;
+}
+.private {
+  font-size: 0.8rem;
+  color: #9d351b;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+}
+.guide,
+.notice {
+  padding: 1rem;
+  background: #fff3e7;
+  border-left: 3px solid #b44425;
+}
+.guide p:last-child {
+  margin-bottom: 0;
+}
+.sheet-index {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin: 1.5rem 0;
+}
+.sheet-index button {
+  background: #f5ece6;
+  color: #4d3328;
+  text-align: left;
+  font-weight: 600;
+  margin: 0;
+}
+.sheet-index span {
+  font-size: 0.8rem;
+  padding-right: 0.4rem;
+}
+.sheet-section {
+  border-top: 1px solid #806d5e;
+  margin: 0;
+}
+.sheet-section > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  list-style: none;
+  padding: 1.1rem 0;
+  cursor: pointer;
+}
+.sheet-section > summary:before {
+  content: '▸';
+  font-size: 1.2rem;
+}
+.sheet-section[open] > summary:before {
+  content: '▾';
+}
+.sheet-section > summary h3 {
+  flex: 1;
+  margin: 0;
+  font-size: 1.15rem;
+}
+.sheet-section > summary span {
+  font-size: 0.8rem;
+  color: #776053;
+}
+.section-body {
+  padding: 0 0 1.5rem;
+}
+fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  overflow: hidden;
+}
+h4 {
+  font-size: 1.05rem;
+  margin: 1.3rem 0 0.6rem;
+}
+.identity-grid,
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.identity-grid > div {
+  min-width: 0;
+}
+dt {
+  font-weight: 700;
+}
+dd {
+  margin: 0;
+  white-space: pre-wrap;
+}
+label {
+  display: block;
+  font-weight: 600;
+  margin: 0.8rem 0 0.4rem;
+}
+.sheet-field {
+  margin: 0.4rem 0 0.8rem;
+  min-width: 0;
+}
+.sheet-field > span {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 0.4rem;
+}
+input,
+select,
+textarea {
+  font: inherit;
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid #897467;
+  border-radius: 5px;
+  padding: 0.65rem;
+  min-height: 46px;
+  background: white;
+  color: #392c26;
+}
+textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+button {
+  font: inherit;
+  font-weight: 700;
+  background: #b43b1d;
+  color: white;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 0.65rem 0.85rem;
+  margin: 0.4rem 0.4rem 0.4rem 0;
+  min-height: 46px;
+  cursor: pointer;
+}
+button.secondary {
+  background: white;
+  color: #8b301d;
+  border-color: #a48b7b;
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+fieldset:disabled input,
+fieldset:disabled textarea,
+fieldset:disabled select {
+  color: #594d44;
+  background: #f4efeb;
+  opacity: 1;
+}
+.choice {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.choice button {
+  color: #4d3328;
+  background: white;
+  border-color: #9b8475;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0.3rem 0;
+}
+.choice button[aria-pressed='true'] {
+  background: #80503d;
+  color: white;
+  border-color: #80503d;
+}
+.need-head,
+.need-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 1rem;
+}
+.need-head {
+  background: #f4ede7;
+  padding: 0.7rem;
+}
+.need-row {
+  padding: 1rem 0;
+  border-bottom: 1px solid #e1d8d0;
+  align-items: start;
+}
+.need-row > strong {
+  padding-top: 0.7rem;
+}
+.need-row > div {
+  min-width: 0;
+}
+.vaccine-head,
+.vaccine-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1.3fr);
+  gap: 0.7rem;
+  align-items: center;
+}
+.vaccine-head {
+  background: #f4ede7;
+  padding: 0.7rem;
+}
+.vaccine-row {
+  border-bottom: 1px solid #e1d8d0;
+  padding: 0.6rem 0;
+}
+.contact-row {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr 1fr;
+  gap: 0.6rem;
+  border-bottom: 1px solid #e1d8d0;
+  padding: 0.8rem 0;
+}
+.contact-row.current {
+  grid-template-columns: 1.3fr 1fr 1fr;
+}
+.contact-row > div {
+  min-width: 0;
+}
+.section-body details {
+  border: 1px solid #e2d7ce;
+  padding: 0.7rem;
+  margin: 1rem 0;
+}
+.section-body summary,
+.source > summary {
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 44px;
+  align-content: center;
+}
+.allergens {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.check {
+  display: flex;
+  gap: 0.6rem;
+  align-items: start;
+}
+.check input {
+  width: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  margin-top: 0.2rem;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.help {
+  font-size: 0.9rem;
+  color: #655449;
+}
+.error {
+  color: #9c2716;
+  background: #fff0ed;
+  padding: 1rem;
+}
+.save-state {
+  color: #4f5c43;
+  white-space: pre-wrap;
+}
+.save-state:empty {
+  display: none;
+}
+.preserve {
+  white-space: pre-wrap;
+}
+a {
+  color: #9c321b;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.legacy {
+  background: #faf6f1;
+}
+.source {
+  margin-top: 1rem;
+  border-top: 1px solid #d8c8bc;
+  padding-top: 1rem;
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+a:focus-visible {
+  outline: 3px solid #315d88;
+  outline-offset: 3px;
+}
+@media (max-width: 700px) {
+  .contact-row,
+  .contact-row.current {
+    grid-template-columns: 1fr 1fr;
+  }
+  .sheet-section > summary span {
+    display: none;
+  }
+}
+@media (max-width: 540px) {
+  .health {
+    padding: 0.8rem;
+  }
+  .sheet-index,
+  .identity-grid,
+  .field-grid,
+  .need-row,
+  .vaccine-row,
+  .contact-row,
+  .contact-row.current,
+  .allergens {
+    grid-template-columns: 1fr;
+  }
+  .need-head,
+  .vaccine-head {
+    display: none;
+  }
+  .need-row > strong {
+    padding: 0;
+  }
+  .need-row {
+    gap: 0.4rem;
+  }
+  .vaccine-row {
+    gap: 0.3rem;
+  }
+  .sheet-index button {
+    padding: 0.7rem;
+  }
+  .actions button {
+    width: 100%;
+    margin: 0.2rem 0;
+  }
+  .choice button {
+    flex: 0 1 auto;
+  }
+  .sheet-section > summary h3 {
+    font-size: 1.05rem;
+  }
+}
+
+input,
+select,
+textarea {
+  font-weight: 400;
+}
+
+.health-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.95fr);
+  gap: 1.2rem;
+  align-items: start;
+}
+.health-workspace.sample-only {
+  display: block;
+}
+.health-editor,
+.health-document {
+  min-width: 0;
+}
+.health-document {
+  position: sticky;
+  top: 10rem;
+  max-height: calc(100vh - 11rem);
+  overflow: auto;
+}
+.mobile-preview-switch,
+.mobile-preview-action {
+  display: none;
+}
+@media (max-width: 1050px) {
+  .health-workspace {
+    display: block;
+  }
+  .health-document {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+  .mobile-preview-switch {
+    display: flex;
+    position: static;
+    background: #fffdfb;
+    padding: 0.4rem 0;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin: 1rem 0;
+  }
+  .mobile-preview-action {
+    display: block;
+  }
+  .health-document {
+    scroll-margin-top: 6rem;
+  }
+  .mobile-preview-switch button {
+    flex: 1;
+  }
+  .mobile-preview-switch [aria-pressed='true'] {
+    background: #7c4e3b;
+    color: white;
+  }
+  .mobile-hidden {
+    display: none;
+  }
+}

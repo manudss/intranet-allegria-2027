@@ -193,7 +193,7 @@ async function refresh() {
   const web = await staticSvc(names.web, 'npm ci --include=dev && npm run build:web', 'dist/apps/web/browser',
     [{ key: 'WEB_API_URL', value: apiUrl }, { key: 'NODE_VERSION', value: '24' }]);
   const site = await staticSvc(names.site, 'npm ci --include=dev && npm run build:site', 'dist/apps/site/browser',
-    [{ key: 'NODE_VERSION', value: '24' }]);
+    [{ key: 'SITE_API_URL', value: apiUrl }, { key: 'NODE_VERSION', value: '24' }]);
   const mobile = hasMobile
     ? await staticSvc(names.mobile, 'npm ci --include=dev && npm run build:mobile', 'dist/apps/mobile/browser',
       [{ key: 'MOBILE_API_URL', value: apiUrl }, { key: 'NODE_VERSION', value: '24' }])

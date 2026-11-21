@@ -1,0 +1,148 @@
+<section class="signature-flow">
+  <nav class="steps" aria-label="Parcours de signature">
+    <span [class.current]="step()==='document'">1. Lire le document</span>
+    <span [class.current]="step()==='signature'">2. Apposer la signature</span>
+    <span [class.current]="step()==='code'">3. Confirmer par e-mail</span>
+  </nav>
+  <p class="notice">
+    Démonstration : identités et dossiers fictifs uniquement. Attestation simple, ni avancée ni
+    qualifiée. Un code e-mail ne prouve pas à lui seul l'identité ou la qualité du signataire.
+  </p>
+  <div class="workspace" [class.single]="!showPreview()">
+    <div class="controls">
+      @if(step()==='done'){
+      <h3>Signature confirmée</h3>
+      <p role="status">{{message()}}</p>
+      <p>
+        Le PDF et sa preuve sont conservés pour cette version. Une modification du document
+        demandera une nouvelle signature.
+      </p>
+      <button type="button" (click)="back()">Préparer une nouvelle signature</button>
+      } @else if(step()==='document'){
+      <h3>Avant de signer</h3>
+      <p>
+        Relisez toutes les pages et les annexes dans l'aperçu. Vérifiez le jeune, les réponses et la
+        déclaration applicable.
+      </p>
+      <p>La signature ne porte que sur cette version et sur ce document.</p>
+      <button type="button" (click)="start()">Passer à ma signature</button>
+      } @else if(step()==='signature'){
+      <fieldset [disabled]="busy()">
+        <legend>Votre signature</legend>
+        <label
+          >Nom complet du signataire<input
+            autocomplete="name"
+            maxlength="180"
+            [value]="name()"
+            (input)="editName($any($event.target).value)"
+        /></label>
+        <label
+          >Votre qualité<select [value]="role()" (change)="editRole($any($event.target).value)">
+            <option value="LEGAL">Représentant légal</option>
+            <option value="SELF_ADULT">Adulte concerné</option>
+          </select></label
+        >
+        <div class="methods" role="group" aria-label="Apparence de signature">
+          <button type="button" [attr.aria-pressed]="method()==='NAME'" (click)="choose('NAME')">
+            Saisir mon nom
+          </button>
+          <button type="button" [attr.aria-pressed]="method()==='DRAW'" (click)="choose('DRAW')">
+            Tracer
+          </button>
+          <button
+            type="button"
+            [attr.aria-pressed]="method()==='UPLOAD'"
+            (click)="choose('UPLOAD')"
+          >
+            Importer
+          </button>
+        </div>
+        @if(method()==='NAME'){
+        <div class="sample" aria-label="Apparence du nom signé">{{name()||'Votre nom'}}</div>
+        } @if(method()==='DRAW'){
+        <p>
+          Tracez au doigt ou à la souris. La saisie du nom reste disponible sans geste de tracé.
+        </p>
+        <canvas
+          #ink
+          width="600"
+          height="180"
+          aria-label="Zone de tracé de la signature"
+          (pointerdown)="stroke($event,true)"
+          (pointermove)="stroke($event)"
+          (pointerup)="end()"
+          (pointercancel)="end()"
+        ></canvas>
+        <button type="button" class="secondary" (click)="clear()">Effacer le tracé</button>
+        } @if(method()==='UPLOAD'){
+        <label
+          >Image de signature fictive<input
+            type="file"
+            accept="image/png,image/jpeg"
+            (change)="upload($event)"
+        /></label>
+        <p>
+          PNG ou JPEG, 2 Mo maximum. L'image est redimensionnée puis conservée uniquement avec la
+          preuve de ce document.
+        </p>
+        } @if(image()){<img
+          class="mark"
+          [src]="image()"
+          alt="Apparence de la signature à confirmer"
+        />}
+        <label class="check"
+          ><input
+            type="checkbox"
+            [checked]="accepted()"
+            (change)="accepted.set($any($event.target).checked)"
+          />J'ai relu cette version complète et je souhaite signer ce document avec cette
+          apparence.</label
+        >
+        <button
+          type="button"
+          (click)="requestCode()"
+          [disabled]="!pdfReady() || !accepted() || !name().trim() || method()!=='NAME'&&!image()"
+        >
+          {{busy()?'Envoi en cours…':'Envoyer mon code de signature'}}
+        </button>
+      </fieldset>
+      } @else {
+      <h3>Confirmer cette signature</h3>
+      <p role="status">{{message()}}</p>
+      <p>
+        Adresse du compte : {{challenge()?.recipient}}. Le code est envoyé uniquement à l'adresse de
+        ce compte, jamais à un autre destinataire.
+      </p>
+      <p>
+        Code valable encore {{remaining()}} secondes. Cinq essais maximum. Trois demandes maximum en
+        dix minutes, connexion comprise.
+      </p>
+      <label
+        >Code de signature à 8 chiffres<input
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          maxlength="8"
+          [value]="code()"
+          (input)="code.set($any($event.target).value)"
+          [disabled]="busy()"
+      /></label>
+      <button
+        type="button"
+        (click)="confirm()"
+        [disabled]="busy() || code().length!==8 || !remaining()"
+      >
+        {{busy()?'Vérification…':'Confirmer ma signature'}}
+      </button>
+      <button type="button" class="secondary" (click)="back()" [disabled]="busy()">
+        Revoir ou demander un nouveau code
+      </button>
+      } @if(error()){
+      <p role="alert" class="error">{{error()}}</p>
+      }
+    </div>
+    @if(showPreview()){<app-family-pdf-preview
+      [request]="previewRequest()"
+      (readyChange)="ownPreviewReady.set($event)"
+    />}
+  </div>
+</section>

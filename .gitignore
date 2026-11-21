@@ -61,3 +61,7 @@ vitest.config.*.timestamp*
 *.sql.gz
 *credentials*.json
 *token*.txt
+
+/apps/site/public/app-config.json
+
+/tools/document-signatures/target/

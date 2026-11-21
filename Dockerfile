@@ -23,6 +23,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/dist/apps/api ./dist/apps/api
+COPY --from=build /app/dist/apps/family-portal ./dist/apps/family-portal
 # Render fournit PORT ; l'API ecoute dessus (defaut 3000 en local).
 EXPOSE 3000
 CMD ["node", "dist/apps/api/main.js"]

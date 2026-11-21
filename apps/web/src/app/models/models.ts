@@ -908,3 +908,6 @@ export interface EventBindingPreview {
   conflicts: string[];
   previousSequenceId: number | null;
 }
+
+export type { FamilySpace, FamilyRules, YouthDossier } from '@mej-allegria/shared';
+export interface CateringNeeds { notice:string; items:{allergen:string;range:string}[] }

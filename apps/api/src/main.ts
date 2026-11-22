@@ -6,6 +6,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app/app.module';
 import { parseCorsOrigins } from './app/config/environment';
+import { configureTrustProxy } from './app/config/trust-proxy';
 import { configureWebHosting, resolveWebStaticDir } from './app/config/web-hosting';
 
 async function bootstrap() {
@@ -14,6 +15,7 @@ async function bootstrap() {
 
   try {
     app.enableShutdownHooks();
+    configureTrustProxy(app);
 
     const configService = app.get(ConfigService);
     const globalPrefix = 'api';

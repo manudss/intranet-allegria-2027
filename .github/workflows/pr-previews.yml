@@ -77,32 +77,128 @@ jobs:
         run: node scripts/render-pr-previews.mjs ensure
 
   refresh-comment:
-    name: Route the preview to the second Render account (/preview comment)
+    name: Deploy the previews on demand (/preview comment)
     if: >-
       github.event_name == 'issue_comment' &&
       github.event.issue.pull_request &&
       startsWith(github.event.comment.body, '/preview') &&
+      !startsWith(github.event.comment.body, '/preview2') &&
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
     runs-on: ubuntu-latest
     steps:
-      # Les previews ne se construisent plus sur Render (premier compte, minutes epuisees) :
-      # on lance le workflow d'image du deuxieme compte, depuis la branche par defaut.
+      - name: Check out the default branch (trusted code)
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Safety expiry for the Neon branch (14 days)
+        run: echo "EXPIRES_AT=$(date -u --date '+14 days' +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
+
+      - name: Neon branch for this PR (existing branch is reused)
+        id: neon
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          parent_branch: preview/main
+          branch_name: preview/pr-${{ github.event.issue.number }}
+          expires_at: ${{ env.EXPIRES_AT }}
+
+      - name: Fresh DB credentials for the PR Neon branch
+        id: creds
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          NEON_BRANCH_ID: ${{ steps.neon.outputs.branch_id }}
+          NEON_DB_URL: ${{ steps.neon.outputs.db_url_pooled }}
+          NEON_DB_URL_DIRECT: ${{ steps.neon.outputs.db_url }}
+        run: node scripts/neon-branch-credentials.mjs
+
+      - name: Deploy the previews on the latest PR commit
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_OWNER_ID: ${{ vars.RENDER_OWNER_ID }}
+          RENDER_ENVIRONMENT_ID: ${{ vars.RENDER_ENVIRONMENT_ID }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          NEON_DB_URL: ${{ steps.creds.outputs.db_url_pooled }}
+          NEON_DB_URL_DIRECT: ${{ steps.creds.outputs.db_url }}
+          NEON_BRANCH_NAME: preview/pr-${{ github.event.issue.number }}
+        run: node scripts/render-pr-previews.mjs refresh
+
+  refresh2-comment:
+    name: Preview on the second Render account (/preview2 comment)
+    if: >-
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/preview2') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    steps:
+      # /preview2 only dispatches the image workflow (built on GitHub, served by the second
+      # Render account, zero Render build minutes). No secret is used here; the dispatched
+      # run reads its code from the default branch.
       - name: Dispatch the second-account image preview
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run pr-preview-lyam.yml --repo "$GITHUB_REPOSITORY" --ref "${{ github.event.repository.default_branch }}" -f pr=${{ github.event.issue.number }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: gh workflow run pr-preview-lyam.yml --repo "$GITHUB_REPOSITORY" --ref "$DEFAULT_BRANCH" -f pr="$PR_NUMBER"
 
   refresh-manual:
-    name: Route the preview to the second Render account (manual dispatch)
+    name: Deploy the previews on demand (manual dispatch)
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      # Les previews ne se construisent plus sur Render (premier compte, minutes epuisees) :
-      # on lance le workflow d'image du deuxieme compte, depuis la branche par defaut.
-      - name: Dispatch the second-account image preview
+      - name: Check out the default branch (trusted code)
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Safety expiry for the Neon branch (14 days)
+        run: echo "EXPIRES_AT=$(date -u --date '+14 days' +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
+
+      - name: Neon branch for this PR (existing branch is reused)
+        id: neon
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          parent_branch: preview/main
+          branch_name: preview/pr-${{ inputs.pr }}
+          expires_at: ${{ env.EXPIRES_AT }}
+
+      - name: Fresh DB credentials for the PR Neon branch
+        id: creds
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run pr-preview-lyam.yml --repo "$GITHUB_REPOSITORY" --ref "${{ github.event.repository.default_branch }}" -f pr=${{ inputs.pr }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          NEON_BRANCH_ID: ${{ steps.neon.outputs.branch_id }}
+          NEON_DB_URL: ${{ steps.neon.outputs.db_url_pooled }}
+          NEON_DB_URL_DIRECT: ${{ steps.neon.outputs.db_url }}
+        run: node scripts/neon-branch-credentials.mjs
+
+      - name: Deploy the previews on the latest PR commit
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_OWNER_ID: ${{ vars.RENDER_OWNER_ID }}
+          RENDER_ENVIRONMENT_ID: ${{ vars.RENDER_ENVIRONMENT_ID }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr }}
+          NEON_DB_URL: ${{ steps.creds.outputs.db_url_pooled }}
+          NEON_DB_URL_DIRECT: ${{ steps.creds.outputs.db_url }}
+          NEON_BRANCH_NAME: preview/pr-${{ inputs.pr }}
+        run: node scripts/render-pr-previews.mjs refresh
 
   cleanup:
     name: Delete previews and Neon branch

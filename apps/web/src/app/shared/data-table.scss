@@ -119,3 +119,30 @@ tr[tabindex]:hover td,
 tr[tabindex]:focus-visible td {
   background: var(--tui-background-neutral-1-hover);
 }
+
+/* Bordures douces comme la version d'origine */
+table {
+  --t-table-border: color-mix(in srgb, var(--appearance-border) 28%, transparent);
+  border-collapse: separate;
+  border-spacing: 0;
+}
+[tuiTh],
+[tuiTd] {
+  border-color: var(--t-table-border) !important;
+}
+.table-scroll {
+  border: 1px solid var(--t-table-border, transparent);
+  background: var(--appearance-surface);
+  box-shadow: 0 0.25rem 1rem rgba(34, 34, 34, 0.06);
+}
+@media (max-width: 640px) {
+  [tuiTd],
+  [tuiTh] {
+    padding-inline: 0.5rem;
+  }
+  .person-cell,
+  .icon-cell,
+  .chips-cell {
+    gap: 0.375rem;
+  }
+}

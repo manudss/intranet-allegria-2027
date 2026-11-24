@@ -215,7 +215,9 @@ export class DataTableComponent<T extends { readonly id: number }> implements On
       large: 220,
       xlarge: 300,
     };
-    return sizeMap[column.size ?? 'medium'];
+    const width = sizeMap[column.size ?? 'medium'];
+    // Petit écran : colonnes plus étroites pour garder les infos clés visibles sans trop défiler.
+    return typeof window !== 'undefined' && window.innerWidth < 640 ? Math.round(width * 0.7) : width;
   }
 
   ngOnInit(): void {

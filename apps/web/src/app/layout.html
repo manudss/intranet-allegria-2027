@@ -20,6 +20,7 @@
     </div>
 
     <div class="header-right">
+      <app-appearance-taiga class="header-appearance" />
       <button tuiButton appearance="secondary" type="button">
         <div tuiAvatar="@tui.user"></div>
         <span>{{ auth.currentUser()?.email ?? 'Utilisateur' }}</span>

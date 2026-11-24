@@ -214,3 +214,8 @@ form:has(tui-textfield.field-required)::before {
   font: var(--tui-font-text-s);
   color: var(--tui-text-secondary);
 }
+
+/* Le sélecteur d'apparence vit dans l'en-tête quand le gabarit est affiché : on libère la hauteur. */
+body:has(.allegria-shell) .appearance-bar {
+  display: none;
+}

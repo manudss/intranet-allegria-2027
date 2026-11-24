@@ -277,3 +277,17 @@ test('cleanup deletes the existing services, mobile included, and comments', asy
   const comments = ghCalls(calls, 'POST', /\/issues\/3\/comments/);
   assert.match(comments[0].body.body, /supprimes/);
 });
+
+test('/preview (account 1) and /preview2 (account 2) are strictly distinct commands', () => {
+  const wf = readFileSync(new URL('../.github/workflows/pr-previews.yml', import.meta.url), 'utf8');
+  const cond = (job) => wf.split(`  ${job}:`)[1].split('runs-on:')[0];
+  const one = cond('refresh-comment');
+  const two = cond('refresh2-comment');
+  assert.ok(one.includes("body == '/preview'") && one.includes("'/preview{0}', ' '"));
+  assert.ok(two.includes("body == '/preview2'") && two.includes("'/preview2{0}', ' '"));
+  // /preview2 never matches the /preview condition (no bare prefix match), and the reverse.
+  assert.ok(!/startsWith\(github\.event\.comment\.body, '\/preview2?'\)/.test(wf), 'no bare prefix match');
+  assert.ok(!one.includes('/preview2') && !two.replace(/\/preview2/g, '').includes('/preview'));
+  assert.ok(two.includes('pr-preview-lyam.yml') || wf.split('  refresh2-comment:')[1].split('  refresh-manual:')[0].includes('pr-preview-lyam.yml'));
+  assert.ok(wf.split('  refresh-comment:')[1].split('  refresh2-comment:')[0].includes('render-pr-previews.mjs refresh'));
+});

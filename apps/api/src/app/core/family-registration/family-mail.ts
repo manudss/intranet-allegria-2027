@@ -22,6 +22,21 @@ export function familyMailSettings(config: ConfigService) {
   return { provider, from } as const;
 }
 
+/**
+ * Disposable deployments (PR previews) set MAIL_ALLOWED_RECIPIENTS: only these addresses
+ * (comma separated, case-insensitive) can receive mail. Fail closed: when the variable is set,
+ * every other recipient is refused before any provider call. Unset in production.
+ */
+export function mailRecipientAllowed(config: Pick<ConfigService, 'get'>, email: string): boolean {
+  const raw = config.get<string>('MAIL_ALLOWED_RECIPIENTS');
+  if (raw === undefined || raw === null || raw === '') return true;
+  const allowed = raw
+    .split(',')
+    .map((x) => x.trim().toLowerCase())
+    .filter(Boolean);
+  return allowed.includes(email.trim().toLowerCase());
+}
+
 export async function sendFamilyAccessCode(
   config: ConfigService,
   email: string,
@@ -29,6 +44,8 @@ export async function sendFamilyAccessCode(
   challengeId: string,
   purpose: 'ACCESS' | 'SIGNATURE' = 'ACCESS',
 ) {
+  if (!mailRecipientAllowed(config, email))
+    throw new ForbiddenException('Destinataire de test non autorisé');
   if (familyPreviewEnabled(config) && !familyPreviewRecipientAllowed(config, email))
     throw new ForbiddenException('Destinataire de test non autorisé');
   const settings = familyMailSettings(config);

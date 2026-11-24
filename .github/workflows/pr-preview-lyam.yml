@@ -132,6 +132,7 @@ jobs:
         env:
           PREVIEW_HEAD_REPO: ${{ steps.pr.outputs.repo }}
           RENDER_LYAM_PREVIEW_API_KEY: ${{ secrets.RENDER_LYAM_PREVIEW_API_KEY }}
+          FAMILY_RESEND_API_KEY: ${{ secrets.FAMILY_RESEND_API_KEY }}
           PREVIEW_DB_URL: ${{ steps.creds.outputs.db_url_pooled }}
           PREVIEW_DB_URL_DIRECT: ${{ steps.creds.outputs.db_url }}
           PREVIEW_IMAGE: ghcr.io/${{ github.repository }}@${{ steps.image.outputs.digest }}

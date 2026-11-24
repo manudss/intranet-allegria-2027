@@ -56,6 +56,16 @@ export async function deploy(e, fetcher = fetch) {
     { key: 'DATABASE_URL_DIRECT', value: e.PREVIEW_DB_URL_DIRECT },
     { key: 'DB_SSL', value: 'true' },
   ];
+  // Mail (Resend, sender alegria@dss.name) only when the repo secret exists, and ALWAYS locked to the
+  // owner's own address: the API refuses every other recipient before any provider call.
+  if (e.FAMILY_RESEND_API_KEY) {
+    env.push(
+      { key: 'FAMILY_MAIL_PROVIDER', value: 'resend' },
+      { key: 'FAMILY_MAIL_FROM', value: 'alegria@dss.name' },
+      { key: 'FAMILY_RESEND_API_KEY', value: e.FAMILY_RESEND_API_KEY },
+      { key: 'MAIL_ALLOWED_RECIPIENTS', value: 'emmanueldesaintsteban@gmail.com' },
+    );
+  }
   if (!service) {
     const response = await api('POST', '/services', {
       type: 'web_service',
@@ -110,7 +120,7 @@ export async function deploy(e, fetcher = fetch) {
     `- Appli mobile : ${base}/m/`,
     `- API : ${base}/api (Swagger : ${base}/api/docs)`,
     '',
-    'Plan gratuit : le service s\'endort apres environ 15 minutes sans visite, la premiere page peut prendre une a deux minutes a se reveler. Le site public est servi en mode statique (pas de rendu serveur). Donnees fictives uniquement ; aucun mail n\'est envoye.',
+    'Plan gratuit : le service s\'endort apres environ 15 minutes sans visite, la premiere page peut prendre une a deux minutes a se reveler. Le site public est servi en mode statique (pas de rendu serveur). Donnees fictives uniquement ; les mails (si configures) ne partent que vers l\'adresse du proprietaire.',
   ].join('\n');
   if (e.GITHUB_STEP_SUMMARY) appendFileSync(e.GITHUB_STEP_SUMMARY, `${body}\n`);
   if (e.GITHUB_OUTPUT) appendFileSync(e.GITHUB_OUTPUT, `comment<<EOF_PREVIEW\n${body}\nEOF_PREVIEW\n`);

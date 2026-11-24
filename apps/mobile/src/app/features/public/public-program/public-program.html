@@ -17,7 +17,7 @@
 
 <main class="content">
   @if (loading()) {
-    <div class="center"><tui-loader size="l" /></div>
+    <app-loading-skeleton />
   } @else if (failed() || sequences().length === 0) {
     <div class="notice" role="status">Programme de ce jour pas encore publié.</div>
   } @else {

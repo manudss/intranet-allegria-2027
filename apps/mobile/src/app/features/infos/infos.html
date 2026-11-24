@@ -1,6 +1,6 @@
 <main class="content">
   @if (loading()) {
-    <div class="center"><tui-loader size="l" /></div>
+    <app-loading-skeleton />
   } @else if (failed()) {
     <div class="notice" role="status">Infos indisponibles hors-ligne pour l'instant.</div>
   } @else {

@@ -52,7 +52,7 @@ describe('MyTeamsComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('Régie scène');
     expect(el.textContent).toContain('Référent');
-    expect(el.textContent).toContain('31 oct. 2027');
+    expect(el.textContent).toContain('31/10/2027');
     expect(el.textContent).toContain('Conduite de la grande scène.');
     expect(el.textContent).toContain('Aline Fabre');
     expect(el.textContent).toContain('Sonorisation');

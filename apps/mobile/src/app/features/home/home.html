@@ -18,7 +18,7 @@
   }
 
   @if (loading()) {
-    <div class="center"><tui-loader size="l" /></div>
+    <app-loading-skeleton />
   } @else if (failed()) {
     <div class="notice" role="status">
       Programme indisponible pour le moment. Les données déjà consultées restent

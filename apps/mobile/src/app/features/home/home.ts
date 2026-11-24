@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { TuiLoader } from '@taiga-ui/core';
+import { LoadingSkeletonComponent } from '../../shared/loading-skeleton.component';
 import { catchError, of } from 'rxjs';
 import { AuthService, MY_SPACE_ROLES } from '../../core/auth.service';
 import { ProgramApiService } from '../../services/api.services';
@@ -11,7 +11,7 @@ import { dayLabel, defaultDay } from '../../core/event-dates';
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [RouterLink, TuiLoader],
+  imports: [RouterLink, LoadingSkeletonComponent],
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })

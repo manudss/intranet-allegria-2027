@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { TuiLoader } from '@taiga-ui/core';
+import { LoadingSkeletonComponent } from '../../shared/loading-skeleton.component';
 import { catchError, of } from 'rxjs';
 import {
   ContactsContent,
@@ -10,7 +10,7 @@ import {
 @Component({
   selector: 'app-infos',
   standalone: true,
-  imports: [TuiLoader],
+  imports: [LoadingSkeletonComponent],
   templateUrl: './infos.html',
   styleUrl: './infos.scss',
 })

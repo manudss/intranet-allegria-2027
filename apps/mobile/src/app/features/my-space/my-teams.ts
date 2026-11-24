@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { TuiLoader } from '@taiga-ui/core';
+import { LoadingSkeletonComponent } from '../../shared/loading-skeleton.component';
 import { catchError, forkJoin, of } from 'rxjs';
 import { MySpaceApiService } from '../../services/api.services';
 import { Teammate, TeamMembership } from '../../models/models';
@@ -20,7 +20,7 @@ const formatDate = (iso: string): string =>
 @Component({
   selector: 'app-my-teams',
   standalone: true,
-  imports: [RouterLink, TuiLoader],
+  imports: [RouterLink, LoadingSkeletonComponent],
   templateUrl: './my-teams.html',
   styleUrl: './my-teams.scss',
 })

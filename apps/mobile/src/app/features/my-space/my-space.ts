@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { TuiLoader } from '@taiga-ui/core';
+import { LoadingSkeletonComponent } from '../../shared/loading-skeleton.component';
 import { catchError, of } from 'rxjs';
 import { dayLabel, defaultDay, eventDays } from '../../core/event-dates';
 import { MySpaceApiService } from '../../services/api.services';
@@ -18,7 +18,7 @@ const time = (iso: string): string =>
 @Component({
   selector: 'app-my-space',
   standalone: true,
-  imports: [RouterLink, TuiLoader],
+  imports: [RouterLink, LoadingSkeletonComponent],
   templateUrl: './my-space.html',
   styleUrl: './my-space.scss',
 })

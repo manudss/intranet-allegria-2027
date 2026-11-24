@@ -507,9 +507,11 @@ export class VolunteerMissionsPage implements OnInit {
         next: () => this.loadShifts(mission.id),
         error: (error: HttpErrorResponse) => {
           if (error.status === 409 && error.error?.canForce) {
-            if (confirm("Chevauchement détecté. Forcer l'affectation ?")) {
-              this.assignVolunteer(shift, volunteerId, status, true);
-            }
+            this.confirmDialog
+              .ask({ title: 'Chevauchement détecté', message: "Forcer l'affectation malgré le chevauchement ?", yes: 'Forcer' })
+              .subscribe((ok) => {
+                if (ok) this.assignVolunteer(shift, volunteerId, status, true);
+              });
           }
         },
       });
@@ -531,9 +533,11 @@ export class VolunteerMissionsPage implements OnInit {
         next: () => this.loadShifts(mission.id),
         error: (error: HttpErrorResponse) => {
           if (error.status === 409 && error.error?.canForce) {
-            if (confirm('Chevauchement détecté. Forcer ce changement de statut ?')) {
-              this.changeAssignmentStatus(shift, assignment, status, true);
-            }
+            this.confirmDialog
+              .ask({ title: 'Chevauchement détecté', message: 'Forcer ce changement de statut malgré le chevauchement ?', yes: 'Forcer' })
+              .subscribe((ok) => {
+                if (ok) this.changeAssignmentStatus(shift, assignment, status, true);
+              });
           }
         },
       });

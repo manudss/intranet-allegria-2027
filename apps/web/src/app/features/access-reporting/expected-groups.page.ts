@@ -1,3 +1,4 @@
+import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { LoadingSkeletonComponent } from '../../shared/loading-skeleton.component';
 import { Component, OnInit, OnDestroy, HostListener, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -23,6 +24,7 @@ import { parisInstant, parisLocal } from './paris-datetime';
   styleUrl: './detail-report.page.scss',
 })
 export class ExpectedGroupsPage implements OnInit, OnDestroy {
+  private readonly confirmDialog = inject(ConfirmDialogService);
   private api = inject(ExpectedGroupsApi);
   private configApi = inject(DetailReportApi);
   private requests: Subscription[] = [];
@@ -361,13 +363,32 @@ export class ExpectedGroupsPage implements OnInit, OnDestroy {
   }
   closePassage() {
     if (this.passageSaving()) return;
-    if (this.passageDirty() && !confirm('Abandonner les modifications du rattachement ?')) return;
+    if (this.passageDirty()) {
+      this.confirmDialog
+        .ask({ title: 'Abandonner les modifications ?', message: 'Les modifications du rattachement non enregistrées seront perdues.', yes: 'Abandonner' })
+        .subscribe((ok) => {
+          if (ok) this.doClosePassage();
+        });
+      return;
+    }
+    this.doClosePassage();
+  }
+  private doClosePassage() {
     this.editorOpen.set(false);
     this.passageDirty.set(false);
   }
   editPassage(p: ManagedPassage | null) {
-    if (this.passageDirty() && !confirm('Abandonner les modifications du rattachement ?')) return;
-    this.passageDirty.set(false);
+    if (this.passageDirty()) {
+      this.confirmDialog
+        .ask({ title: 'Abandonner les modifications ?', message: 'Les modifications du rattachement non enregistrées seront perdues.', yes: 'Abandonner' })
+        .subscribe((ok) => {
+          if (ok) {
+            this.passageDirty.set(false);
+            this.editPassage(p);
+          }
+        });
+      return;
+    }
     this.passage = p;
     this.passagePointId = p?.point_id ?? null;
     this.passageLabel = p?.label ?? '';

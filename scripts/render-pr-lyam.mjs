@@ -56,6 +56,18 @@ export async function deploy(e, fetcher = fetch) {
     { key: 'DATABASE_URL_DIRECT', value: e.PREVIEW_DB_URL_DIRECT },
     { key: 'DB_SSL', value: 'true' },
     { key: 'PREVIEW_DEPLOYMENT', value: 'true' },
+    // Phase de creation de l'interface (decision d'Emmanuel du 24 nov. 2026) : le circuit sante numerique est
+    // ouvert sur cette preview jetable pour pouvoir tester, avec des donnees FICTIVES uniquement. Ce n'est
+    // pas une qualification : la cle de chiffrement, la journalisation des lectures et les roles restent
+    // actifs. Ces variables ne sont JAMAIS posees ailleurs (production comprise) ; la fermeture metier
+    // reviendra avec la version de production.
+    { key: 'FAMILY_HEALTH_APPROVAL_REFERENCE', value: 'preview-fictive-test-sans-valeur-de-validation' },
+    { key: 'FAMILY_HEALTH_DECLARATION_VERSION', value: 'preview-fiction-1' },
+    {
+      key: 'FAMILY_HEALTH_DECLARATION_TEXT',
+      value:
+        'DEMONSTRATION : donnees fictives uniquement. Cette attestation de test ne vaut ni collecte qualifiee ni prise en charge reelle.',
+    },
   ];
   // Mail (Resend, sender alegria@dss.name) only when the repo secret exists, and ALWAYS locked to the
   // owner's own address: the API refuses every other recipient before any provider call.

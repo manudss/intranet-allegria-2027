@@ -54,3 +54,19 @@ test('cleanup deletes only the verified free image service', async () => {
   await assert.rejects(cleanup(env(), fakeRender([paid], [])), /mismatch/);
   await assert.rejects(cleanup(env({ PR_NUMBER: '42' }), fakeRender([ok], [])), /refused/);
 });
+
+test('opens the digital health circuit on the preview with fictional-only wording, key never in the shared env list', async () => {
+  const calls = [];
+  const bodies = [];
+  const render = async (url, init) => {
+    if (init.body) bodies.push({ url, init });
+    return fakeRender([demo], calls)(url, init);
+  };
+  await deploy(env(), render);
+  const create = JSON.parse(bodies.find((b) => b.url.endsWith('/services') && b.init.method === 'POST').init.body);
+  const get = (k) => create.envVars.find((v) => v.key === k)?.value;
+  assert.match(get('FAMILY_HEALTH_APPROVAL_REFERENCE'), /fictive/);
+  assert.equal(get('FAMILY_HEALTH_DECLARATION_VERSION'), 'preview-fiction-1');
+  assert.match(get('FAMILY_HEALTH_DECLARATION_TEXT'), /fictives uniquement/);
+  assert.equal(get('FAMILY_HEALTH_ENCRYPTION_KEY').length, 44);
+});

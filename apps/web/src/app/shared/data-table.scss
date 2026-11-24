@@ -35,6 +35,10 @@ tui-reorder {
   min-block-size: 24rem;
   overflow: auto;
   border-radius: 0.75rem;
+  &:focus-visible {
+    outline: 2px solid var(--tui-border-focus, #d52f57);
+    outline-offset: 2px;
+  }
 }
 table {
   inline-size: 100%;

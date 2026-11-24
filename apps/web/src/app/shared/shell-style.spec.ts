@@ -40,3 +40,11 @@ describe('cadre de page', () => {
     expect(read('../../styles.scss')).toMatch(/\.page \{[^}]*border: 0;[^}]*box-shadow: var\(--card-shadow/);
   });
 });
+
+describe('tableau de données, accessibilité clavier', () => {
+  it('zone défilante focusable, nommée, avec focus visible', () => {
+    const html = read('./data-table.html');
+    expect(html).toMatch(/class="table-scroll"[^>]*role="region"[^>]*tabindex="0"[^>]*aria-label="[^"]+"/);
+    expect(read('./data-table.scss')).toMatch(/\.table-scroll[^}]*&:focus-visible/s);
+  });
+});

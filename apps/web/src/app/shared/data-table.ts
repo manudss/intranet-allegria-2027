@@ -10,7 +10,13 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { TuiComparator, TuiReorder, TuiTable, TuiTablePagination } from '@taiga-ui/addon-table';
+import {
+  TuiComparator,
+  TuiReorder,
+  TuiTable,
+  TuiTablePagination,
+  tuiTablePaginationOptionsProvider,
+} from '@taiga-ui/addon-table';
 import { TuiContext, TuiStringHandler } from '@taiga-ui/cdk';
 import {
   TuiButton,
@@ -103,6 +109,11 @@ interface ColumnFilterState {
 @Component({
   selector: 'app-data-table',
   standalone: true,
+  providers: [
+    tuiTablePaginationOptionsProvider({
+      sizeOptionContent: ({ $implicit }) => `${$implicit} lignes par page`,
+    }),
+  ],
   imports: [
     FormsModule,
     NgTemplateOutlet,

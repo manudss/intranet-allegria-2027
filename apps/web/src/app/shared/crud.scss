@@ -42,12 +42,13 @@
   color: var(--tui-status-negative);
 }
 tui-drawer {
-  width: min(36rem, 100vw);
+  width: min(44rem, 100vw);
   padding: 1.25rem;
   overflow: auto;
 }
 tui-drawer header h2 {
-  margin: 0 0 1rem;
+  /* Le bandeau fixe de l'application recouvre le haut du panneau : on décale le titre. */
+  margin: 3.25rem 0 1rem;
 }
 tui-drawer footer {
   display: flex;

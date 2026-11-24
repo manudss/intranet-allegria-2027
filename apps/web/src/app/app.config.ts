@@ -30,7 +30,14 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([apiBaseUrlInterceptor, authInterceptor, httpErrorInterceptor]),
     ),
     { provide: LOCALE_ID, useValue: 'fr' },
-    { provide: TUI_LANGUAGE, useValue: signal(TUI_FRENCH_LANGUAGE) },
+    {
+      provide: TUI_LANGUAGE,
+      useValue: signal({
+        ...TUI_FRENCH_LANGUAGE,
+        // Pagination des tableaux : libellés explicites (nombre de pages, plage affichée, total).
+        paginationTexts: { pages: 'Nombre de pages', linesPerPage: 'Lignes affichées', of: 'sur' },
+      }),
+    },
     provideTaiga(),
     {
       provide: TUI_DARK_MODE,

@@ -93,9 +93,10 @@ body {
 
 .page {
   padding: 1.25rem;
-  border: 1px solid #ececf1;
+  border: 0;
   border-radius: 0.75rem;
   background: #ffffff;
+  box-shadow: var(--card-shadow, 0 0.125rem 0.75rem rgba(34, 34, 34, 0.1));
 }
 
 .page h1 {

@@ -34,3 +34,9 @@ describe('pastilles à couleur automatique', () => {
     expect(read('./data-table.scss')).toMatch(/\[tuiChip\]\[style\*='background-color'\]\s*\{[^}]*color:\s*#241c1c/);
   });
 });
+
+describe('cadre de page', () => {
+  it('est une carte en ombre, sans contour', () => {
+    expect(readFileSync(new URL('../../styles.scss', import.meta.url), 'utf8')).toMatch(/\.page \{[^}]*border: 0;[^}]*box-shadow: var\(--card-shadow/);
+  });
+});

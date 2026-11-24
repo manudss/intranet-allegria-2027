@@ -55,18 +55,18 @@ test('cleanup deletes only the verified free image service', async () => {
   await assert.rejects(cleanup(env({ PR_NUMBER: '42' }), fakeRender([ok], [])), /refused/);
 });
 
-test('opens the digital health circuit on the preview with fictional-only wording, key never in the shared env list', async () => {
-  const calls = [];
+test('opens the PR49 demo mode with fictional-only flags and an owner-only mail lock, key kept', async () => {
   const bodies = [];
   const render = async (url, init) => {
     if (init.body) bodies.push({ url, init });
-    return fakeRender([demo], calls)(url, init);
+    return fakeRender([demo], [])(url, init);
   };
   await deploy(env(), render);
   const create = JSON.parse(bodies.find((b) => b.url.endsWith('/services') && b.init.method === 'POST').init.body);
   const get = (k) => create.envVars.find((v) => v.key === k)?.value;
-  assert.match(get('FAMILY_HEALTH_APPROVAL_REFERENCE'), /fictive/);
-  assert.equal(get('FAMILY_HEALTH_DECLARATION_VERSION'), 'preview-fiction-1');
-  assert.match(get('FAMILY_HEALTH_DECLARATION_TEXT'), /fictives uniquement/);
+  assert.equal(get('FAMILY_PREVIEW_DEMO_ENABLED'), 'pr49-fictional-only');
+  assert.equal(get('FAMILY_PREVIEW_HEALTH_ENABLED'), 'fictional-health-only');
+  assert.equal(get('FAMILY_PREVIEW_MAIL_TO'), 'emmanueldesaintsteban@gmail.com');
   assert.equal(get('FAMILY_HEALTH_ENCRYPTION_KEY').length, 44);
+  assert.equal(get('FAMILY_HEALTH_APPROVAL_REFERENCE'), undefined);
 });

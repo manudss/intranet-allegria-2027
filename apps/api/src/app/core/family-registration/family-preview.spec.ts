@@ -84,3 +84,38 @@ it('accepts only the verified second-account unique name with its exact service 
   expect(familyPreviewEnabled(config({ ...image, RENDER_SERVICE_ID: 'other' }))).toBe(false);
   expect(familyPreviewEnabled(config({ ...image, RENDER_GIT_BRANCH: 'main' }))).toBe(false);
 });
+
+describe('PR49 test-phase gates', () => {
+  const pr49 = {
+    FAMILY_PREVIEW_DEMO_ENABLED: 'pr49-fictional-only',
+    FAMILY_PREVIEW_IMAGE_ENABLED: 'pr49-prebuilt-only',
+    PREVIEW_DEPLOYMENT: 'true',
+    RENDER_SERVICE_NAME: 'al-pr49-api-qkcc',
+    RENDER_EXTERNAL_HOSTNAME: 'al-pr49-api-qkcc.onrender.com',
+  };
+  it('opens only for the exact PR49 image service with every opt-in', () => {
+    expect(familyPreviewEnabled(config(pr49))).toBe(true);
+    for (const key of Object.keys(pr49)) {
+      const missing: Record<string, string> = { ...pr49 };
+      delete missing[key];
+      expect(familyPreviewEnabled(config(missing))).toBe(false);
+      expect(familyPreviewEnabled(config({ ...pr49, [key]: 'production' }))).toBe(false);
+    }
+  });
+  it('refuses a Git-branch service, other PRs, look-alike hosts and production', () => {
+    expect(familyPreviewEnabled(config({ ...pr49, RENDER_GIT_BRANCH: 'main' }))).toBe(false);
+    expect(familyPreviewEnabled(config({ ...pr49, RENDER_SERVICE_NAME: 'al-pr50-api-qkcc' }))).toBe(false);
+    expect(
+      familyPreviewEnabled(config({ ...pr49, RENDER_EXTERNAL_HOSTNAME: 'al-pr49-api-qkcc.onrender.com.evil.test' })),
+    ).toBe(false);
+    expect(familyPreviewEnabled(config({ ...pr49, FAMILY_PREVIEW_DEMO_ENABLED: 'pr42-fictional-only' }))).toBe(false);
+  });
+  it('keeps mail owner-only: the generic opt-in is still required', () => {
+    expect(familyPreviewMailEnabled(config(pr49))).toBe(false);
+    expect(
+      familyPreviewMailEnabled(
+        config({ ...pr49, FAMILY_PREVIEW_MAIL_ENABLED: 'owner-only-test', FAMILY_PREVIEW_MAIL_TO: 'emmanueldesaintsteban@gmail.com' }),
+      ),
+    ).toBe(true);
+  });
+});

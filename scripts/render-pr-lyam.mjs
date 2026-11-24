@@ -56,18 +56,20 @@ export async function deploy(e, fetcher = fetch) {
     { key: 'DATABASE_URL_DIRECT', value: e.PREVIEW_DB_URL_DIRECT },
     { key: 'DB_SSL', value: 'true' },
     { key: 'PREVIEW_DEPLOYMENT', value: 'true' },
-    // Phase de creation de l'interface (decision d'Emmanuel du 24 nov. 2026) : le circuit sante numerique est
-    // ouvert sur cette preview jetable pour pouvoir tester, avec des donnees FICTIVES uniquement. Ce n'est
-    // pas une qualification : la cle de chiffrement, la journalisation des lectures et les roles restent
-    // actifs. Ces variables ne sont JAMAIS posees ailleurs (production comprise) ; la fermeture metier
-    // reviendra avec la version de production.
-    { key: 'FAMILY_HEALTH_APPROVAL_REFERENCE', value: 'preview-fictive-test-sans-valeur-de-validation' },
-    { key: 'FAMILY_HEALTH_DECLARATION_VERSION', value: 'preview-fiction-1' },
-    {
-      key: 'FAMILY_HEALTH_DECLARATION_TEXT',
-      value:
-        'DEMONSTRATION : donnees fictives uniquement. Cette attestation de test ne vaut ni collecte qualifiee ni prise en charge reelle.',
-    },
+    // Phase de creation de l'interface (decision d'Emmanuel du 24 nov. 2026, message WhatsApp de 21h11) :
+    // sur cette preview jetable, le mode demonstration (famille fictive, sante numerique de demonstration,
+    // exemples visibles du personnel) est ouvert pour pouvoir tester, donnees FICTIVES uniquement. Cle de
+    // chiffrement, journal des lectures, roles et mails limites a l'adresse du proprietaire restent actifs.
+    // Le code API refuse ces options hors du service exact de la PR49 ; rien n'est pose en production.
+    ...(e.PR_NUMBER === '49'
+      ? [
+          { key: 'FAMILY_PREVIEW_DEMO_ENABLED', value: 'pr49-fictional-only' },
+          { key: 'FAMILY_PREVIEW_IMAGE_ENABLED', value: 'pr49-prebuilt-only' },
+          { key: 'FAMILY_PREVIEW_HEALTH_ENABLED', value: 'fictional-health-only' },
+          { key: 'FAMILY_PREVIEW_MAIL_ENABLED', value: 'owner-only-test' },
+          { key: 'FAMILY_PREVIEW_MAIL_TO', value: 'emmanueldesaintsteban@gmail.com' },
+        ]
+      : []),
   ];
   // Mail (Resend, sender alegria@dss.name) only when the repo secret exists, and ALWAYS locked to the
   // owner's own address: the API refuses every other recipient before any provider call.
@@ -108,6 +110,10 @@ export async function deploy(e, fetcher = fetch) {
       });
     for (const { key, value } of env)
       await api('PUT', `/services/${service.id}/env-vars/${key}`, { value });
+    // Retire les variables d'attestation posees par un essai precedent (le mode demonstration les remplace).
+    for (const key of ['FAMILY_HEALTH_APPROVAL_REFERENCE', 'FAMILY_HEALTH_DECLARATION_VERSION', 'FAMILY_HEALTH_DECLARATION_TEXT'])
+      if (current.some((x) => (x.envVar ?? x).key === key))
+        await api('DELETE', `/services/${service.id}/env-vars/${key}`);
     // Changing the immutable image requires an explicit deployment, never a source build.
     await api('POST', `/services/${service.id}/deploys`, {
       imageUrl: e.PREVIEW_IMAGE,

@@ -1,0 +1,157 @@
+name: PR Preview (second Render account, image)
+
+# Preview gratuite d'une PR interne : l'API et l'intranet (une seule image) sur le DEUXIEME compte
+# Render (choix d'Emmanuel du 20 nov. 2026). Aucune minute de build Render : l'image est construite
+# ici (GitHub Actions) puis Render ne fait que la tirer. Le site public n'est pas dans cette image.
+#
+# Declenchement :
+# - label `deploy-preview-lyam` sur la PR (evenement pull_request : le workflow de la PR s'execute
+#   AVANT fusion, avec les secrets car la PR est interne) ;
+# - workflow_dispatch (Actions > Run workflow, ou le commentaire `/preview` relaye par pr-previews.yml) :
+#   cette version lit alors la branche par defaut, donc disponible APRES fusion.
+# Isolation : les scripts qui voient la cle Render viennent du dossier `trusted/` ; le code de la PR
+# (dossier `pr/`) ne voit que l'URL de sa propre base Neon. Les PR de fork sont refusees.
+on:
+  pull_request:
+    types: [labeled, closed]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: PR interne a (re)deployer
+        required: true
+        type: number
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: pr-preview-lyam-${{ github.event.pull_request.number || inputs.pr }}
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    name: Build the image and deploy the free preview
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.action == 'labeled' && github.event.label.name == 'deploy-preview-lyam' &&
+       github.event.pull_request.number != 42 &&
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr }}
+    steps:
+      - name: Read the PR from the GitHub API (never from event metadata)
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [ "$PR_NUMBER" != "42" ] || { echo "PR 42 has its own workflow"; exit 1; }
+          gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" > pr.json
+          [ "$(jq -r .state pr.json)" = "open" ] || { echo "PR is not open"; exit 1; }
+          [ "$(jq -r .head.repo.full_name pr.json)" = "${GITHUB_REPOSITORY}" ] || { echo "fork PR refused"; exit 1; }
+          echo "sha=$(jq -r .head.sha pr.json)" >> "$GITHUB_OUTPUT"
+          echo "repo=$(jq -r .head.repo.full_name pr.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Trusted scripts (PR head before merge, default branch otherwise)
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'pull_request' && steps.pr.outputs.sha || github.event.repository.default_branch }}
+          path: trusted
+          persist-credentials: false
+
+      - name: PR code (built and seeded without any Render key)
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.pr.outputs.sha }}
+          path: pr
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.15.0
+          cache: npm
+          cache-dependency-path: pr/package-lock.json
+
+      - name: Neon branch of this PR (existing branch is reused)
+        id: neon
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          parent_branch: preview/main
+          branch_name: preview/pr-${{ env.PR_NUMBER }}
+
+      - name: Fresh credentials for the PR Neon branch
+        id: creds
+        working-directory: trusted
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          NEON_BRANCH_ID: ${{ steps.neon.outputs.branch_id }}
+          NEON_DB_URL: ${{ steps.neon.outputs.db_url_pooled }}
+          NEON_DB_URL_DIRECT: ${{ steps.neon.outputs.db_url }}
+        run: node scripts/neon-branch-credentials.mjs
+
+      - name: Install, migrate and seed the PR database (fictional data)
+        working-directory: pr
+        env:
+          DATABASE_URL: ${{ steps.creds.outputs.db_url_pooled }}
+          DATABASE_URL_DIRECT: ${{ steps.creds.outputs.db_url }}
+          DB_SSL: 'true'
+        run: |
+          npm ci
+          npm run migration:run
+          npx tsx apps/api/src/database/seeds/seed.ts --profile=medium
+
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build the API + intranet image, no latest tag
+        id: image
+        uses: docker/build-push-action@v6
+        with:
+          context: pr
+          file: pr/Dockerfile.preview
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/${{ github.repository }}:preview-pr${{ env.PR_NUMBER }}-${{ steps.pr.outputs.sha }}
+          cache-from: type=gha,scope=pr-preview-lyam
+          cache-to: type=gha,mode=max,scope=pr-preview-lyam
+
+      - name: Create or update only the free image service in the second account
+        id: deploy
+        working-directory: trusted
+        env:
+          PREVIEW_HEAD_REPO: ${{ steps.pr.outputs.repo }}
+          RENDER_LYAM_PREVIEW_API_KEY: ${{ secrets.RENDER_LYAM_PREVIEW_API_KEY }}
+          PREVIEW_DB_URL: ${{ steps.creds.outputs.db_url_pooled }}
+          PREVIEW_DB_URL_DIRECT: ${{ steps.creds.outputs.db_url }}
+          PREVIEW_IMAGE: ghcr.io/${{ github.repository }}@${{ steps.image.outputs.digest }}
+        run: node scripts/render-pr-lyam.mjs
+
+  cleanup:
+    name: Delete the free preview when the PR closes
+    if: github.event.action == 'closed' && github.event.pull_request.number != 42 && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.15.0
+      - name: Delete only the verified al-pr<N>-api free image service
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RENDER_LYAM_PREVIEW_API_KEY: ${{ secrets.RENDER_LYAM_PREVIEW_API_KEY }}
+        run: node scripts/render-pr-lyam-cleanup.mjs

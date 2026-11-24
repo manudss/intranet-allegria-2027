@@ -1,3 +1,4 @@
+import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
@@ -50,6 +51,7 @@ export type FillFilter = 'all' | GroupFillState;
 })
 export class HostingPlacementPage implements OnInit {
   private readonly api = inject(HostingPlacementApiService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
 
   protected readonly board = signal<Board | null>(null);
   protected readonly loading = signal(true);
@@ -345,7 +347,15 @@ export class HostingPlacementPage implements OnInit {
 
   protected deleteGroup(id: number): void {
     const group = this.groups().find((g) => g.id === id);
-    if (!group || !confirm(`Supprimer le groupe « ${group.name} » ? Ses équipes et familles redeviennent non affectées.`)) return;
+    if (!group) return;
+    this.confirmDialog
+      .askDelete(`le groupe « ${group.name} »`, 'Ses équipes et familles redeviennent non affectées.')
+      .subscribe((ok) => {
+        if (ok) this.doDeleteGroup(id);
+      });
+  }
+
+  private doDeleteGroup(id: number): void {
     this.run(this.api.deleteGroup(id), () => {
       this.patchBoard((b) => ({
         ...b,

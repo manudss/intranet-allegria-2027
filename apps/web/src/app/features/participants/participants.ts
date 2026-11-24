@@ -1,3 +1,4 @@
+import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { form, required, submit } from '@angular/forms/signals';
@@ -215,6 +216,7 @@ export class ParticipantsPage implements OnInit {
   protected canSeeAdministrative = computed(() => this.auth.hasAnyRole(['ADMIN', 'COORDINATOR']));
   protected canSeeFamilyHealth = computed(() => this.auth.hasRole('HEALTH'));
   private api = inject(ParticipantsApiService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   private groupsApi = inject(GroupsApiService);
   private healthApi = inject(HealthApiService);
   private auth = inject(AuthService);
@@ -342,11 +344,13 @@ export class ParticipantsPage implements OnInit {
   }
   remove() {
     const x = this.requireSelectedParticipant();
-    if (confirm(`Supprimer ${x.firstName} ${x.lastName} ?`))
+    this.confirmDialog.askDelete(`${x.firstName} ${x.lastName}`).subscribe((ok) => {
+      if (!ok) return;
       this.api.deleteParticipant(x.id).subscribe(() => {
         this.items.update((a) => a.filter((i) => i.id !== x.id));
         this.opened.set(false);
       });
+    });
   }
   private requireSelectedParticipant(): Participant {
     const participant = this.selected();

@@ -1,3 +1,4 @@
+import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { form, required, submit } from '@angular/forms/signals';
@@ -108,6 +109,7 @@ export class VolunteerMissionsPage implements OnInit {
   readonly allSkills = Object.values(VolunteerSkillType);
 
   private readonly missionsApi = inject(VolunteerMissionsApiService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly assignmentsApi = inject(VolunteerShiftAssignmentsApiService);
   private readonly teamsApi = inject(VolunteerTeamsApiService);
   private readonly auth = inject(AuthService);
@@ -356,14 +358,15 @@ export class VolunteerMissionsPage implements OnInit {
 
   removeMission(): void {
     const mission = this.requireMission();
-    if (!confirm(`Supprimer la mission "${mission.title}" ?`)) {
-      return;
-    }
-
-    this.missionsApi.delete(mission.id).subscribe(() => {
-      this.opened.set(false);
-      this.loadMissions();
-    });
+    this.confirmDialog
+      .askDelete(`la mission « ${mission.title} »`, 'Ses créneaux et affectations seront supprimés.')
+      .subscribe((ok) => {
+        if (!ok) return;
+        this.missionsApi.delete(mission.id).subscribe(() => {
+          this.opened.set(false);
+          this.loadMissions();
+        });
+      });
   }
 
   changeMissionStatus(status: VolunteerMissionStatus): void {
@@ -404,15 +407,14 @@ export class VolunteerMissionsPage implements OnInit {
 
   removeShift(shiftId: number): void {
     const mission = this.requireMission();
-    if (!confirm('Supprimer ce shift ?')) {
-      return;
-    }
-
-    this.missionsApi.deleteShift(mission.id, shiftId).subscribe(() => {
-      this.loadShifts(mission.id);
-      if (this.editingShiftId() === shiftId) {
-        this.resetShiftForm();
-      }
+    this.confirmDialog.askDelete('ce créneau').subscribe((ok) => {
+      if (!ok) return;
+      this.missionsApi.deleteShift(mission.id, shiftId).subscribe(() => {
+        this.loadShifts(mission.id);
+        if (this.editingShiftId() === shiftId) {
+          this.resetShiftForm();
+        }
+      });
     });
   }
 

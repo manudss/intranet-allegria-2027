@@ -1,3 +1,4 @@
+import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { form, required, submit } from '@angular/forms/signals';
 import { finalize } from 'rxjs';
@@ -103,6 +104,7 @@ export class VolunteerTeamsPage implements OnInit {
   ];
 
   private readonly api = inject(VolunteerTeamsApiService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly auth = inject(AuthService);
 
   items = signal<VolunteerTeam[]>([]);
@@ -178,12 +180,13 @@ export class VolunteerTeamsPage implements OnInit {
   remove(): void {
     const team = this.requireSelectedTeam();
 
-    if (confirm(`Supprimer ${team.name} ?`)) {
+    this.confirmDialog.askDelete(team.name).subscribe((ok) => {
+      if (!ok) return;
       this.api.delete(team.id).subscribe(() => {
         this.items.update((items) => items.filter((item) => item.id !== team.id));
         this.opened.set(false);
       });
-    }
+    });
   }
 
   private requireSelectedTeam(): VolunteerTeam {

@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { TuiComparator, TuiReorder, TuiTable } from '@taiga-ui/addon-table';
+import { TuiComparator, TuiReorder, TuiTable, TuiTablePagination } from '@taiga-ui/addon-table';
 import { TuiContext, TuiStringHandler } from '@taiga-ui/cdk';
 import {
   TuiButton,
@@ -124,6 +124,7 @@ interface ColumnFilterState {
     TuiSelect,
     TuiSelectLike,
     TuiTable,
+    TuiTablePagination,
     TuiTextfield,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -181,6 +182,8 @@ export class DataTableComponent<T extends { readonly id: number }> implements On
       this.columns().every((column) => this.matchesFilter(column, row, filters[column.key])),
     );
   });
+  readonly pageIndex = signal(0);
+  readonly pageSize = signal(25);
   readonly columnKeys = () => this.enabledColumns().map(({ key }) => key);
   readonly tableColumnKeys = () => [...this.columnKeys(), 'actions'];
   readonly tableActions = computed<readonly DataTableAction<T>[]>(() => [

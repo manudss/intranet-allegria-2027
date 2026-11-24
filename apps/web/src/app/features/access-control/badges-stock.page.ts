@@ -75,7 +75,7 @@ const STATUS_LABELS: Record<AccessBadgeStatus, string> = {
     </main>
   `,
   styles: [`
-    .page { padding: 24px; max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    .page { padding: 24px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; }
     .head { display: flex; align-items: baseline; gap: 12px; }
     .head h1 { margin: 0; font-size: 22px; }
     .total { color: var(--tui-text-secondary); font-size: 14px; }

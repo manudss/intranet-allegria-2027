@@ -33,9 +33,10 @@
         (click)="openHelp()"
       ></button>
       <app-appearance-toggle class="header-appearance" />
-      <button tuiButton appearance="secondary" type="button">
+      <button tuiButton appearance="secondary" type="button" [attr.title]="auth.currentUser()?.email ?? null"
+        [attr.aria-label]="'Compte : ' + (auth.currentUser()?.email ?? 'Utilisateur')">
         <div tuiAvatar="@tui.user"></div>
-        <span>{{ auth.currentUser()?.email ?? 'Utilisateur' }}</span>
+        <span class="user-email">{{ auth.currentUser()?.email ?? 'Utilisateur' }}</span>
       </button>
       <button tuiButton appearance="primary" type="button" (click)="logout()">Déconnexion</button>
     </div>

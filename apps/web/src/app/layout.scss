@@ -68,6 +68,18 @@
   background: rgba(0, 0, 0, 0.2);
 }
 
+.header-right button[tuiButton][appearance='secondary'] {
+  max-width: 20rem;
+}
+
+.header-right .user-email {
+  display: inline-block;
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .header-right button[tuiButton][appearance='primary'] {
   background: #ffffff;
   color: #d52f57;

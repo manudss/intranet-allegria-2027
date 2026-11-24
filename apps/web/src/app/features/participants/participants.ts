@@ -71,8 +71,8 @@ function formatDateFull(dateStr: string | null): string {
   if (isNaN(date.getTime())) return '—';
   return date.toLocaleDateString('fr-FR', {
     year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
   });
 }
 const blank = (): ParticipantPayload => ({

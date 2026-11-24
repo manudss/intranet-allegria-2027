@@ -6,7 +6,7 @@ Parcours privé par code e-mail, dossiers séparés par jeune, contacts communs,
 
 L'installation reste fermée aux envois finaux tant que l'organisation n'a pas configuré les règles, la date de référence des âges et ses modèles. Aucun modèle juridique obligatoire n'est inventé par le code. L'administrateur peut modifier les règles via l'API et la page Inscriptions familles. Un texte modifié doit porter une nouvelle version.
 
-L'accès par e-mail nécessite FAMILY_SMTP_HOST, FAMILY_MAIL_FROM, éventuellement FAMILY_SMTP_PORT (587), FAMILY_SMTP_SECURE, FAMILY_SMTP_USER et FAMILY_SMTP_PASSWORD. Utiliser un transport et une identité d'expéditeur autorisés pour Allegria. Aucun identifiant d'un autre projet ne doit être réutilisé implicitement. Le service refuse de prétendre envoyer un code si la configuration manque. Les tests n'envoient pas de courriels.
+L'accès par e-mail nécessite FAMILY_SMTP_HOST, FAMILY_MAIL_FROM, éventuellement FAMILY_SMTP_PORT (587), FAMILY_SMTP_SECURE, FAMILY_SMTP_USER et FAMILY_SMTP_PASSWORD. Utiliser un transport et une identité d'expéditeur autorisés pour Alegria. Aucun identifiant d'un autre projet ne doit être réutilisé implicitement. Le service refuse de prétendre envoyer un code si la configuration manque. Les tests n'envoient pas de courriels.
 
 Les pièces administratives nécessitent clamdscan et un service ClamAV configuré, joignable et à jour. Le dépôt est bloqué si l'analyse n'aboutit pas. PDF, PNG et JPEG uniquement, 2 Mo maximum. Les téléchargements sont privés, servis en pièce jointe et sans cache. Les pièces médicales ne doivent pas utiliser cette rubrique administrative.
 

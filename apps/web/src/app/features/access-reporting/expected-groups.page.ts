@@ -1,3 +1,4 @@
+import { LoadingSkeletonComponent } from '../../shared/loading-skeleton.component';
 import { Component, OnInit, OnDestroy, HostListener, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -17,7 +18,7 @@ import { parisInstant, parisLocal } from './paris-datetime';
 @Component({
   selector: 'app-expected-groups',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, LoadingSkeletonComponent],
   templateUrl: './expected-groups.page.html',
   styleUrl: './detail-report.page.scss',
 })

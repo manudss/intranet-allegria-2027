@@ -56,8 +56,8 @@ function formatDateTime(datetimeStr: string): string {
   if (isNaN(date.getTime())) return '—';
   return date.toLocaleDateString('fr-FR', {
     year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
   }) + ' ' + date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 }
 

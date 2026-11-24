@@ -1,6 +1,6 @@
 # Core API domains
 
-This folder contains the first functional backend domains for Allegria 2027.
+This folder contains the first functional backend domains for Alegria 2027.
 
 ## Included modules
 

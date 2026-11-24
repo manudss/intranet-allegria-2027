@@ -107,8 +107,8 @@ export class MySpaceComponent {
   shiftDayLong(iso: string): string {
     return new Date(iso).toLocaleDateString('fr-FR', {
       weekday: 'short',
-      day: 'numeric',
-      month: 'short',
+      day: '2-digit',
+      month: '2-digit',
     });
   }
 

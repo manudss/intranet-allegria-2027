@@ -6,7 +6,7 @@ Fait :
 - Phase 0 (prototype mocké frontend) entièrement implémentée et testée :
   - Modèles TypeScript (ProgramSequence, ScheduleSimulation, ScheduleChangeLog, previews) dans models/models.ts.
   - ScheduleEngineService (apps/web/src/app/features/programme/schedule-engine.service.ts) : calcul fin de créneau, recalcul de chaîne, simulation insertion 50/50 avec report/erreur, règle de réduction (avance la suite + marge libre fin), figement bloquant. 11 tests unitaires passants (schedule-engine.service.spec.ts).
-  - planning-mock-data.service.ts : données mockées Allegria (chaîne J2 exemple).
+  - planning-mock-data.service.ts : données mockées Alegria (chaîne J2 exemple).
   - UI du prototype (programme.ts / programme.html / programme.scss) : tui-timeline vertical, KPI, onglets jour/filtres, panneau de simulation, route /programme protégée par roleGuard, entrée menu « Agenda & Ordonnancement » (layout.ts). 4 tests composant passants (programme.spec.ts).
 - Correction d'un bug critique de rendu `tui-timeline` (texte pivoté/superposé, conteneur effondré) signalé par l'utilisateur, comparé à l'exemple officiel Taiga UI. Détails techniques capitalisés ci-dessous car réutilisables pour la Phase 4 (drag-and-drop) et pour toute évolution de la frise.
 - Vérifications passées après le correctif : `nx build web` OK (seulement warnings préexistants bundle/leaflet), `nx test web` 56/56 OK, `nx lint web` 0 erreur (9 warnings `no-non-null-assertion` préexistants dans les specs).
@@ -162,7 +162,7 @@ Phase 0 — Prototype mocké
 
 Modèles TypeScript du prototype (ProgramSequence, ScheduleSimulation, ScheduleChangeLog, etc.) dans models/models.ts.
 ScheduleEngineService mocké (calcul fin, recalcul chaîne, simulation insertion 50/50 avec reports/erreurs, verrou) + tests Vitest/TestBed complets.
-planning-mock-data.service (données Allegria mockées : chaîne J2 de l'exemple).
+planning-mock-data.service (données Alegria mockées : chaîne J2 de l'exemple).
 UI du prototype : tui-timeline vertical (chaîne), KPI, onglets jour/filtres, panneau de simulation sticky, dialogues (journal, nouvelle séquence), toasts — route /programme derrière roleGuard coordination.
 Phase 1 — Moteur + modèle de données backend
 

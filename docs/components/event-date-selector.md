@@ -1,6 +1,6 @@
 # Event date selector
 
-## Dates officielles Allegria 2027
+## Dates officielles Alegria 2027
 
 - Dimanche 31 octobre 2027
 - Lundi 1er novembre 2027
@@ -15,7 +15,7 @@
 
 ## Rôle du composant partagé
 
-`app-event-date-selector` centralise la saisie des dates liees a l'organisation d'Allegria 2027.
+`app-event-date-selector` centralise la saisie des dates liees a l'organisation d'Alegria 2027.
 
 Il doit etre utilise pour :
 

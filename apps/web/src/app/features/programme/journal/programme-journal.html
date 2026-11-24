@@ -30,7 +30,7 @@
   </div>
 
   @if (loading()) {
-  <p class="empty-state">Chargement…</p>
+  <app-loading-skeleton label="Chargement du journal…" />
   } @else if (loadError()) {
   <p class="empty-state">Le journal ne peut pas être chargé. Réessayez plus tard.</p>
   } @else if (!filtered().length) {
@@ -43,7 +43,7 @@
         <span class="entry-action">{{ labels[entry.action] }}</span>
         <span class="entry-meta">
           {{ entry.authorUserName ?? 'Coordination' }} ·
-          {{ entry.createdAt | date: 'dd/MM/yyyy à HH:mm' }} · J{{
+          {{ entry.createdAt | date: 'dd/MM/yyyy HH:mm' }} · J{{
             days.indexOf(entry.eventDate) + 1
           }}
         </span>

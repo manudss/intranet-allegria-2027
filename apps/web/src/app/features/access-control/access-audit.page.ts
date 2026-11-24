@@ -19,13 +19,13 @@ export const ACCESS_AUDIT_ACTIONS = ['BADGE_STOCK_ADDED', 'BADGE_ASSIGNED', 'BAD
           </select>
           <input type="text" [(ngModel)]="userId" (ngModelChange)="filterChanged()" placeholder="ID utilisateur" />
         </div>
-        @if (loading()) { <tui-loader size="l" /> }
+        @if (loading()) { <app-loading-skeleton /> }
         <table class="tbl">
           <thead><tr><th>Date</th><th>Action</th><th>Utilisateur</th><th>Objet</th><th>Identifiant</th><th>Détail</th></tr></thead>
           <tbody>
             @for (e of items(); track e.id) {
               <tr>
-                <td>{{ e.createdAt | date: 'dd/MM HH:mm:ss' }}</td>
+                <td>{{ e.createdAt | date: 'dd/MM/yyyy HH:mm:ss' }}</td>
                 <td><code>{{ e.action }}</code></td>
                 <td>{{ e.userId ?? '—' }}</td>
                 <td>{{ e.entityType }}</td>

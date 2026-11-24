@@ -31,9 +31,9 @@ async function bootstrap() {
     });
 
     const swaggerConfig = new DocumentBuilder()
-      .setTitle('MEJ Allegria 2027 API')
+      .setTitle('MEJ Alegria 2027 API')
       .setDescription(
-        'API REST Intranet Allegria 2027 - participants, equipes, hebergement, sante et RBAC',
+        'API REST Intranet Alegria 2027 - participants, equipes, hebergement, sante et RBAC',
       )
       .setVersion('1.0.0')
       .addBearerAuth(

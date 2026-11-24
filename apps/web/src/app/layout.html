@@ -12,9 +12,9 @@
       >
         <tui-icon [icon]="isMobileMenuOpen() ? '@tui.x' : '@tui.menu'"></tui-icon>
       </button>
-      <img src="assets/logo-allegria.svg" alt="Allegria 2027" class="logo" />
+      <img src="assets/logo-allegria.svg" alt="Alegria 2027" class="logo" />
       <div class="header-titles" >
-        <span class="header-title" tuiFade>Allegria 2027 - Intranet benevoles</span>
+        <span class="header-title" tuiFade>Alegria 2027 - Intranet des bénévoles</span>
         <h1 class="page-title">{{ currentPageTitle() }}</h1>
       </div>
     </div>
@@ -24,7 +24,7 @@
         <div tuiAvatar="@tui.user"></div>
         <span>{{ auth.currentUser()?.email ?? 'Utilisateur' }}</span>
       </button>
-      <button tuiButton appearance="primary" type="button" (click)="logout()">Deconnexion</button>
+      <button tuiButton appearance="primary" type="button" (click)="logout()">Déconnexion</button>
     </div>
   </header>
 
@@ -49,7 +49,7 @@
           <ng-container [ngTemplateOutlet]="homeHint" />
 
           <ng-template #homeHint>
-            <span tuiFade>Allegria 2027</span>
+            <span tuiFade>Alegria 2027</span>
             <div appearance="accent" tuiBadge>Intranet</div>
           </ng-template>
         </button>
@@ -106,8 +106,16 @@
       </footer>
     </aside>
 
-    <main class="allegria-content">
-      <router-outlet></router-outlet>
+    <main class="allegria-content" id="contenu" [attr.aria-busy]="navigating()">
+      @if (navigating()) {
+        <app-loading-skeleton variant="page" label="Ouverture de la page…" />
+      }
+      <div class="route-host" [class.route-host--hidden]="navigating()">
+        @if (shellPurpose(); as purpose) {
+          <p class="page-purpose">{{ purpose }}</p>
+        }
+        <router-outlet></router-outlet>
+      </div>
     </main>
   </div>
 </div>

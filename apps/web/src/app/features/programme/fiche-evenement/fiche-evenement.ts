@@ -228,8 +228,8 @@ export class FicheEvenementPage {
     const [year, month, day] = sequence.eventDate.split('-').map(Number);
     return new Intl.DateTimeFormat('fr-FR', {
       weekday: 'long',
-      day: 'numeric',
-      month: 'long',
+      day: '2-digit',
+      month: '2-digit',
       year: 'numeric',
     }).format(new Date(year, month - 1, day));
   });
@@ -713,8 +713,8 @@ export class FicheEvenementPage {
     if (task.dueDate) {
       const [year, month, day] = task.dueDate.split('-').map(Number);
       const label = new Intl.DateTimeFormat('fr-FR', {
-        day: 'numeric',
-        month: 'long',
+        day: '2-digit',
+        month: '2-digit',
       }).format(new Date(year, month - 1, day));
       return `Le ${label}`;
     }
@@ -822,8 +822,8 @@ export class FicheEvenementPage {
 
   dateTimeLabel(iso: string): string {
     return new Intl.DateTimeFormat('fr-FR', {
-      day: 'numeric',
-      month: 'short',
+      day: '2-digit',
+      month: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
     }).format(new Date(iso));

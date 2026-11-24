@@ -1,4 +1,4 @@
-@if (loading()) { <tui-loader /> } @if (error()) {
+@if (loading()) { <app-loading-skeleton /> } @if (error()) {
 <p class="error" role="alert">{{ error() }}</p>
 }
 <header class="section-heading">

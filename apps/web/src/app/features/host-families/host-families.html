@@ -11,7 +11,7 @@
         />
       </tui-textfield>
       @if (loading()) {
-        <tui-loader />
+        <app-loading-skeleton />
       } @else {
         <app-data-table [rows]="filtered()" [columns]="tableColumns" (rowSelected)="open($event)" />
       }

@@ -259,3 +259,12 @@
  .allegria-sidebar a[tuiAsideItem].active{background:var(--appearance-selected);color:var(--appearance-action);}
  .header-right button[tuiButton][appearance='primary']{background:var(--appearance-solid);color:#fff;}
 }
+
+.route-host--hidden {
+  display: none;
+}
+
+.page-purpose {
+  margin: 0 0 1rem;
+  color: var(--allegria-muted);
+}

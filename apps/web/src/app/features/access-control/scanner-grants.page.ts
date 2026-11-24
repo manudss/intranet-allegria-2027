@@ -27,7 +27,7 @@ import { AccessControlApiService, ScannerGrant, ZoneItem } from './access-contro
       </section>
       <section class="panel">
         <h2>Habilitations</h2>
-        @if (loading()) { <tui-loader size="l" /> }
+        @if (loading()) { <app-loading-skeleton /> }
         <table class="tbl">
           <thead><tr><th>Utilisateur</th><th>Zone</th><th>Début</th><th>Fin</th><th>Statut</th><th></th></tr></thead>
           <tbody>
@@ -35,8 +35,8 @@ import { AccessControlApiService, ScannerGrant, ZoneItem } from './access-contro
               <tr>
                 <td>{{ g.user?.email ?? 'Utilisateur #' + g.userId }}</td>
                 <td>{{ g.zone?.name ?? 'Toutes' }}</td>
-                <td>{{ g.startsAt | date: 'dd/MM HH:mm' }}</td>
-                <td>{{ g.endsAt ? (g.endsAt | date: 'dd/MM HH:mm') : '—' }}</td>
+                <td>{{ g.startsAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+                <td>{{ g.endsAt ? (g.endsAt | date: 'dd/MM/yyyy HH:mm') : '—' }}</td>
                 <td><span class="chip" [attr.data-s]="isActive(g) ? 'active' : 'closed'">{{ isActive(g) ? 'Active' : 'Terminée' }}</span></td>
                 <td>@if (isActive(g)) { <button tuiButton appearance="secondary" size="s" type="button" (click)="revoke(g)">Clore</button> }</td>
               </tr>

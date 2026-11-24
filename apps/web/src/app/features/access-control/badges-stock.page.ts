@@ -51,7 +51,7 @@ const STATUS_LABELS: Record<AccessBadgeStatus, string> = {
           <input type="text" [(ngModel)]="lotFilter" (ngModelChange)="reload()" placeholder="Lot" />
           <input type="text" [(ngModel)]="qFilter" (ngModelChange)="reload()" placeholder="Début de code" />
         </div>
-        @if (loading()) { <tui-loader size="l" /> }
+        @if (loading()) { <app-loading-skeleton /> }
         <table class="tbl">
           <thead><tr><th>Code</th><th>Lot</th><th>Statut</th><th>Créé le</th><th></th></tr></thead>
           <tbody>

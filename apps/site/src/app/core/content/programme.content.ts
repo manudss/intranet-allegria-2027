@@ -9,8 +9,8 @@ import { ProgramDay } from '../models/content.models';
 export const programDays: ProgramDay[] = [
   {
     id: 'jour-1',
-    date: '30 octobre 2027',
-    weekday: 'Samedi',
+    date: '31/10/2027',
+    weekday: 'Dimanche',
     title: 'Arrivée et ouverture du rassemblement',
     intention: 'Se rencontrer, s’installer et entrer ensemble dans la fête.',
     status: 'draft',
@@ -24,8 +24,8 @@ export const programDays: ProgramDay[] = [
   },
   {
     id: 'jour-2',
-    date: '31 octobre 2027',
-    weekday: 'Dimanche',
+    date: '01/11/2027',
+    weekday: 'Lundi',
     title: 'Journée de rencontre et d’ateliers',
     intention: 'Vivre la fraternité à travers des activités partagées.',
     status: 'draft',
@@ -39,8 +39,8 @@ export const programDays: ProgramDay[] = [
   },
   {
     id: 'jour-3',
-    date: '1er novembre 2027',
-    weekday: 'Lundi',
+    date: '02/11/2027',
+    weekday: 'Mardi',
     title: 'Journée spirituelle et festive',
     intention: 'Approfondir, célébrer et se laisser surprendre par la joie.',
     status: 'draft',
@@ -54,8 +54,8 @@ export const programDays: ProgramDay[] = [
   },
   {
     id: 'jour-4',
-    date: '2 novembre 2027',
-    weekday: 'Mardi',
+    date: '03/11/2027',
+    weekday: 'Mercredi',
     title: 'Envoi et retour',
     intention: 'Repartir avec la joie vécue ensemble et l’envie de la partager.',
     status: 'draft',

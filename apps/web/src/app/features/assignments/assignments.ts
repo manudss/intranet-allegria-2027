@@ -630,7 +630,7 @@ export class AssignmentsPage implements OnInit {
       type: 'date',
       value: (x) => {
         const d = new Date(x.arrivalDate);
-        return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+        return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('fr-FR', { year: 'numeric', month: '2-digit', day: '2-digit' });
       },
       filterValue: (x) => x.arrivalDate,
       hidden: true,
@@ -643,7 +643,7 @@ export class AssignmentsPage implements OnInit {
       type: 'date',
       value: (x) => {
         const d = new Date(x.departureDate);
-        return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+        return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('fr-FR', { year: 'numeric', month: '2-digit', day: '2-digit' });
       },
       filterValue: (x) => x.departureDate,
       hidden: true,

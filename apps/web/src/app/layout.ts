@@ -3,7 +3,10 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
 import {
   ActivatedRouteSnapshot,
+  NavigationCancel,
   NavigationEnd,
+  NavigationError,
+  NavigationStart,
   Router,
   RouterLink,
   RouterLinkActive,
@@ -12,6 +15,8 @@ import {
 import { TuiButton, TuiIcon } from '@taiga-ui/core';
 import { filter, map, startWith } from 'rxjs';
 import { AuthService } from './core/auth.service';
+import { LoadingSkeletonComponent } from './shared/loading-skeleton.component';
+import { PAGE_HELP } from './shared/page-help';
 import { TuiNavigation } from '@taiga-ui/layout';
 import { NgTemplateOutlet } from "@angular/common";
 import { TuiAvatar, TuiChevron, TuiFade } from "@taiga-ui/kit";
@@ -42,6 +47,7 @@ type MenuGroup = {
     TuiChevron,
     TuiFade,
     TuiAvatar,
+    LoadingSkeletonComponent,
   ],
   templateUrl: './layout.html',
   styleUrl: './layout.scss',
@@ -60,12 +66,40 @@ export class Layout {
     { initialValue: 'Accueil' },
   );
 
+  /** Vrai entre le début d'une navigation et l'affichage de la page : on montre alors un squelette. */
+  protected readonly navigating = toSignal(
+    this.router.events.pipe(
+      filter(
+        (event) =>
+          event instanceof NavigationStart ||
+          event instanceof NavigationEnd ||
+          event instanceof NavigationCancel ||
+          event instanceof NavigationError,
+      ),
+      map((event) => event instanceof NavigationStart),
+    ),
+    { initialValue: false },
+  );
+
+  /** Phrase « À quoi sert cette page » pour les pages qui n'ont pas leur propre en-tête. */
+  protected readonly shellPurpose = toSignal(
+    this.router.events.pipe(
+      filter((event) => event instanceof NavigationEnd),
+      startWith(null),
+      map(() => {
+        const help = PAGE_HELP[this.getRoutePath()];
+        return help?.shell ? help.purpose : '';
+      }),
+    ),
+    { initialValue: '' },
+  );
+
   protected readonly expanded = signal(true);
   protected readonly isMobileMenuOpen = signal(false);
 
   protected readonly navGroups: MenuGroup[] = [
     {
-      label: 'Vue generale',
+      label: 'Vue générale',
       icon: '@tui.layout-dashboard',
       items: [
         { label: 'Accueil', path: '/accueil', icon: '@tui.house' },
@@ -73,13 +107,13 @@ export class Layout {
       ],
     },
     {
-      label: 'Inscriptions & personnes',
+      label: 'Inscriptions et personnes',
       icon: '@tui.users',
       items: [
         { label: 'Participants', path: '/participants', icon: '@tui.users' },
         {label:'Dossiers sanitaires',path:'/dossiers-sanitaires',icon:'@tui.heart-pulse'},
         { label: 'Inscriptions familles', path: '/inscriptions-familles', icon: '@tui.clipboard-list' },
-        { label: 'Équipes rassemblement', path: '/equipes', icon: '@tui.users-round' },
+        { label: 'Équipes de rassemblement', path: '/equipes', icon: '@tui.users-round' },
         { label: 'Répartition jeunes', path: '/equipes/repartition', icon: '@tui.shuffle' },
         { label: "Familles d'accueil", path: '/familles', icon: '@tui.home' },
         { label: 'Bénévoles', path: '/benevoles', icon: '@tui.user-check' },
@@ -87,7 +121,7 @@ export class Layout {
       ],
     },
     {
-      label: 'Organisation & logistique',
+      label: 'Organisation et logistique',
       icon: '@tui.briefcase-business',
       items: [
         { label: 'Équipes opérationnelles', path: '/equipes-operationnelles', icon: '@tui.users' },
@@ -98,14 +132,14 @@ export class Layout {
       ],
     },
     {
-      label: 'Jour J & pilotage',
+      label: 'Jour J et pilotage',
       icon: '@tui.activity',
       items: [
-        { label: 'Agenda & Ordonnancement', path: '/programme', icon: '@tui.calendar-clock' },
+        { label: 'Agenda et ordonnancement', path: '/programme', icon: '@tui.calendar-clock' },
         { label: 'Suivi des accès', path: '/acces/suivi', icon: '@tui.scan-line' },
         { label: 'Tableau de bord Jour J', path: '/jour-j', icon: '@tui.activity' },
-        { label: 'Incidents & demandes', path: '/incidents', icon: '@tui.triangle-alert' },
-        { label: 'Consignes & documents', path: '/consignes-docs', icon: '@tui.file-text' },
+        { label: 'Incidents et demandes', path: '/incidents', icon: '@tui.triangle-alert' },
+        { label: 'Consignes et documents', path: '/consignes-docs', icon: '@tui.file-text' },
       ],
     },
     {
@@ -114,9 +148,9 @@ export class Layout {
       items: [
         {label:'Badges et impression',path:'/acces/impression',icon:'@tui.printer'},
         { label: 'Stock des badges', path: '/acces/badges', icon: '@tui.credit-card' },
-        { label: 'Attribution & remplacement', path: '/acces/attribution', icon: '@tui.repeat' },
-        { label: 'Habilitations scan', path: '/acces/habilitations', icon: '@tui.shield-check' },
-        { label: 'Configuration', path: '/acces/configuration', icon: '@tui.settings' },
+        { label: 'Attribution et remplacement', path: '/acces/attribution', icon: '@tui.repeat' },
+        { label: 'Autorisations de scan', path: '/acces/habilitations', icon: '@tui.shield-check' },
+        { label: 'Configuration du contrôle', path: '/acces/configuration', icon: '@tui.settings' },
         { label: 'Journal des accès', path: '/acces/journal', icon: '@tui.file-text' },
       ],
     },
@@ -124,9 +158,9 @@ export class Layout {
       label: 'Administration',
       icon: '@tui.settings',
       items: [
-        { label: 'Paramètres & rôles', path: '/parametres-roles', icon: '@tui.settings' },
+        { label: 'Paramètres et rôles', path: '/parametres-roles', icon: '@tui.settings' },
         { label: 'Journal bénévoles', path: '/journal-benevoles', icon: '@tui.file-text' },
-        { label: 'Données & exports', path: '/donnees-exports', icon: '@tui.database' },
+        { label: 'Données et exports', path: '/donnees-exports', icon: '@tui.database' },
       ],
     },
   ];
@@ -139,7 +173,7 @@ export class Layout {
     effect(() => {
       const currentPageTitle = this.currentPageTitle();
 
-      this.titleService.setTitle(`Allegria 2027 - ${currentPageTitle}`);
+      this.titleService.setTitle(`Alegria 2027 - ${currentPageTitle}`);
       this.isMobileMenuOpen.set(false);
     });
   }
@@ -158,6 +192,16 @@ export class Layout {
 
   protected onMenuItemSelect(): void {
     this.closeMobileMenu();
+  }
+
+  private getRoutePath(): string {
+    let route: ActivatedRouteSnapshot | undefined = this.router.routerState.snapshot.root;
+
+    while (route?.firstChild) {
+      route = route.firstChild;
+    }
+
+    return route?.routeConfig?.path ?? '';
   }
 
   private getRouteTitle(): string {

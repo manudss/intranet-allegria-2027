@@ -42,7 +42,7 @@
         </datalist>
       </div>
       @if (loading()) {
-        <tui-loader />
+        <app-loading-skeleton />
       } @else {
         <app-data-table [rows]="filtered()" [columns]="tableColumns" (rowSelected)="open($event)" />
       }
@@ -194,8 +194,8 @@
                     <div>
                       <strong>{{ assignment.shift?.mission?.title || 'Mission' }}</strong>
                       <div>
-                        {{ assignment.shift?.startAt | date: 'short' }} →
-                        {{ assignment.shift?.endAt | date: 'short' }}
+                        {{ assignment.shift?.startAt | date: 'dd/MM/yyyy HH:mm' }} →
+                        {{ assignment.shift?.endAt | date: 'dd/MM/yyyy HH:mm' }}
                       </div>
                       <small>{{ assignment.status }}</small>
                     </div>

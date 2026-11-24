@@ -53,7 +53,7 @@
   </div>
 
   @if (loading()) {
-    <tui-loader />
+    <app-loading-skeleton />
   } @else {
     <app-data-table [rows]="items()" [columns]="columns" />
     <div class="pager">

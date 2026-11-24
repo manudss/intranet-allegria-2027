@@ -12,8 +12,8 @@ export interface TeamWithMates {
 
 const formatDate = (iso: string): string =>
   new Date(`${iso}T12:00:00`).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'short',
+    day: '2-digit',
+    month: '2-digit',
     year: 'numeric',
   });
 

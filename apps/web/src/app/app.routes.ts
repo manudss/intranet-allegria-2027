@@ -12,7 +12,7 @@ export const appRoutes: Route[] = [
   },
   {
     path: 'unauthorized',
-    title: 'Acces refuse',
+    title: 'Accès refusé',
     loadComponent: () => import('./shared/status-pages').then((m) => m.UnauthorizedPage),
   },
   {
@@ -23,7 +23,7 @@ export const appRoutes: Route[] = [
       { path: '', pathMatch: 'full', redirectTo: 'accueil' },
       { path: 'inscriptions-familles', title: 'Inscriptions des familles', canActivate:[roleGuard],data:{roles:['ADMIN','COORDINATOR']},loadComponent:()=>import('./features/family-registrations/family-registrations').then(m=>m.FamilyRegistrationsPage)},
       {path:'dossiers-sanitaires',title:'Dossiers sanitaires',canActivate:[roleGuard],data:{roles:['HEALTH']},loadComponent:()=>import('./features/family-registrations/family-health-staff').then(m=>m.FamilyHealthStaffPage)},
-      { path: 'restauration-besoins',title:'Restauration',canActivate:[roleGuard],data:{roles:['CATERING']},loadComponent:()=>import('./features/family-registrations/catering-needs').then(m=>m.CateringNeedsPage)},
+      { path: 'restauration-besoins',title:'Restauration : besoins',canActivate:[roleGuard],data:{roles:['CATERING']},loadComponent:()=>import('./features/family-registrations/catering-needs').then(m=>m.CateringNeedsPage)},
       {
         path: 'accueil',
         title: 'Accueil',
@@ -42,7 +42,7 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'benevoles/repartition',
-        title: 'Repartition benevoles',
+        title: 'Répartition bénévoles',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN', 'COORDINATOR', 'LOGISTICS', 'VOLUNTEERS'] },
         loadComponent: () =>
@@ -52,7 +52,7 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'benevoles',
-        title: 'Benevoles',
+        title: 'Bénévoles',
         loadComponent: () =>
           import('./features/volunteers/volunteers').then((m) => m.VolunteersPage),
       },
@@ -64,12 +64,12 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'equipes',
-        title: 'Equipes de rassemblement',
+        title: 'Équipes de rassemblement',
         loadComponent: () => import('./features/teams/teams').then((m) => m.TeamsPage),
       },
       {
         path: 'equipes/repartition',
-        title: 'Repartition jeunes en equipes',
+        title: 'Répartition des jeunes',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN', 'COORDINATOR', 'ANIMATOR', 'LOGISTICS', 'VIEWER'] },
         loadComponent: () =>
@@ -125,7 +125,7 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'acces/badges',
-        title: 'Stock badges',
+        title: 'Stock des badges',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
         loadComponent: () =>
@@ -133,7 +133,7 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'acces/attribution',
-        title: 'Attribution badges',
+        title: 'Attribution et remplacement',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
         loadComponent: () =>
@@ -141,7 +141,7 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'acces/habilitations',
-        title: 'Habilitations scan',
+        title: 'Autorisations de scan',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
         loadComponent: () =>
@@ -149,7 +149,7 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'acces/configuration',
-        title: 'Configuration acces',
+        title: 'Configuration du contrôle d\'accès',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
         loadComponent: () =>
@@ -157,7 +157,7 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'acces/journal',
-        title: 'Journal acces',
+        title: 'Journal des accès',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
         loadComponent: () =>
@@ -165,7 +165,7 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'hebergement/carte',
-        title: 'Hebergement - Carte',
+        title: 'Hébergement : carte',
         loadComponent: () =>
           import('./features/assignments/host-families-map-page').then(
             (m) => m.HostFamiliesMapPageComponent,
@@ -173,7 +173,7 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'hebergement/placement',
-        title: 'Hebergement - Placement',
+        title: 'Hébergement : placement',
         loadComponent: () =>
           import('./features/hosting-placement/hosting-placement').then(
             (m) => m.HostingPlacementPage,
@@ -181,7 +181,7 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'hebergement',
-        title: 'Hebergement',
+        title: 'Hébergement',
         loadComponent: () =>
           import('./features/assignments/assignments').then((m) => m.AssignmentsPage),
       },
@@ -196,7 +196,7 @@ export const appRoutes: Route[] = [
           (component: { canDeactivate: () => boolean | Promise<boolean> }) =>
             component.canDeactivate(),
         ],
-        title: 'Agenda & Ordonnancement',
+        title: 'Agenda et ordonnancement',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN', 'COORDINATOR', 'HEALTH', 'ANIMATOR', 'LOGISTICS', 'VIEWER'] },
         loadComponent: () => import('./features/programme/programme').then((m) => m.ProgrammePage),
@@ -241,7 +241,7 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'acces/historique-groupe',
-        title: 'Historique groupe',
+        title: 'Historique d\'un groupe',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
         loadComponent: () =>
@@ -249,7 +249,7 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'acces/historique-personne',
-        title: 'Historique personne',
+        title: 'Historique d\'une personne',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
         loadComponent: () =>
@@ -259,7 +259,7 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'acces/dashboard',
-        title: 'Dashboard des accès',
+        title: 'Tableau de bord des accès',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN', 'BADGE_MANAGER'] },
         loadComponent: () =>
@@ -323,22 +323,22 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'incidents',
-        title: 'Incidents & demandes',
+        title: 'Incidents et demandes',
         loadComponent: () => import('./pages/incidents').then((m) => m.Incidents),
       },
       {
         path: 'consignes-docs',
-        title: 'Consignes & documents',
+        title: 'Consignes et documents',
         loadComponent: () => import('./pages/consignes-docs').then((m) => m.ConsignesDocs),
       },
       {
         path: 'parametres-roles',
-        title: 'Parametres & roles',
+        title: 'Paramètres et rôles',
         loadComponent: () => import('./pages/parametres-roles').then((m) => m.ParametresRoles),
       },
       {
         path: 'donnees-exports',
-        title: 'Donnees & exports',
+        title: 'Données et exports',
         loadComponent: () => import('./pages/donnees-exports').then((m) => m.DonneesExports),
       },
     ],

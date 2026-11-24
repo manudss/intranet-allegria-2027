@@ -1,4 +1,4 @@
-// Dates de l'événement Allegria 2027 (même source que
+// Dates de l'événement Alegria 2027 (même source que
 // apps/web/src/app/shared/event-date-selector/event-date.config.ts).
 export const EVENT_START_DATE = '2027-10-31';
 export const EVENT_END_DATE = '2027-11-03';
@@ -38,8 +38,8 @@ export const dayLabel = (iso: string): string => {
   const index = eventDays().indexOf(iso);
   const formatted = parseDay(iso).toLocaleDateString('fr-FR', {
     weekday: 'short',
-    day: 'numeric',
-    month: 'short',
+    day: '2-digit',
+    month: '2-digit',
   });
   return index >= 0 ? `J${index + 1} · ${formatted}` : formatted;
 };

@@ -63,7 +63,7 @@
     </div>
   </div>
   @if (loading()) {
-  <tui-loader />
+  <app-loading-skeleton />
   } @else {
   <app-data-table [rows]="filtered()" [columns]="tableColumns" (rowSelected)="open($event)" />
   }
@@ -79,7 +79,7 @@
   @if (mode() === 'detail') {
   <dl>
     <dt>Naissance</dt>
-    <dd>{{ selected()?.dateOfBirth | date }}</dd>
+    <dd>{{ selected()?.dateOfBirth | date: 'dd/MM/yyyy' }}</dd>
     <dt>Sexe</dt>
     <dd>{{ selected()?.sex }}</dd>
     <dt>Tranche d'âge MEJ</dt>
@@ -159,7 +159,7 @@
   </form>
   @if (health()) {
   <p>
-    Dernière modification : {{ health()?.lastUpdatedAt | date: 'short' }} par {{
+    Dernière modification : {{ health()?.lastUpdatedAt | date: 'dd/MM/yyyy HH:mm' }} par {{
     health()?.lastUpdatedBy?.email || 'inconnu' }}
   </p>
   } } @else {

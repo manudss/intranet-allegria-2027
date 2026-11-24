@@ -17,9 +17,9 @@ export const eventConfig: EventConfig = {
     status: 'draft',
   },
   dates: {
-    start: '2027-10-30',
-    end: '2027-11-02',
-    label: 'Du samedi 30 octobre au mardi 2 novembre 2027',
+    start: '2027-10-31',
+    end: '2027-11-03',
+    label: 'Du 31/10/2027 au 03/11/2027',
   },
   location: {
     name: 'Centre de Congrès de Saint-Étienne',

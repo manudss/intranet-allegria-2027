@@ -1,3 +1,4 @@
+import { LoadingSkeletonComponent } from '../../shared/loading-skeleton.component';
 import {RouterLink} from '@angular/router';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
@@ -16,7 +17,7 @@ export function reportFilters(from: string, to: string, zoneId: number | null, e
 }
 function localDate(): string { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 @Component({
-  selector: 'app-access-reporting', standalone: true, imports: [RouterLink, CommonModule, FormsModule, TuiButton, A11yModule],
+  selector: 'app-access-reporting', standalone: true, imports: [RouterLink, CommonModule, FormsModule, TuiButton, A11yModule, LoadingSkeletonComponent],
   template: `
     <main class="page">
       <header><h1>Suivi des accès</h1><nav class="actions"><a routerLink="/acces/dashboard">Dashboard</a> <a routerLink="/acces/scannes">Scannés par lieu</a> <a routerLink="/acces/non-scannes">Non scannés · groupes attendus</a><a routerLink="/acces/groupes-exceptions">Exceptions des groupes</a></nav><p>Comptages reçus du terrain et scans à vérifier.</p></header>
@@ -35,10 +36,10 @@ function localDate(): string { const d = new Date(); return `${d.getFullYear()}-
       </details>
       @if (error(); as message) { <div role="alert" class="error">{{ message }} @if (!configured()) {<button tuiButton size="s" type="button" (click)="configure()">Réessayer</button>}</div> }
       @if (notice(); as message) { <p role="status">{{ message }}</p> }
-      @if (loading()) { <p role="status">Chargement des comptages…</p> }
+      @if (loading()) { <app-loading-skeleton variant="cards" label="Chargement des comptages…" /> }
       @if (summary(); as s) {
         <section class="metrics" aria-label="Compteurs">
-          <article><h2>Présence estimée</h2><strong>{{ s.presence?.estimatedPresent ?? '—' }}</strong><p>{{ s.presence ? 'Dernier mouvement accepté par personne' : 'Définissez les types entrée et sortie' }}</p><p>Au {{ s.to | date:'dd/MM HH:mm' }} (borne exclue)</p></article>
+          <article><h2>Présence estimée</h2><strong>{{ s.presence?.estimatedPresent ?? '—' }}</strong><p>{{ s.presence ? 'Dernier mouvement accepté par personne' : 'Définissez les types entrée et sortie' }}</p><p>Au {{ s.to | date:'dd/MM/yyyy HH:mm' }} (borne exclue)</p></article>
           <article><h2>Repas servis</h2><strong>{{ meals() ?? '—' }}</strong><p>{{ appliedMealTypeId === null ? 'Définissez le type de scan repas' : 'Sur la période et la zone sélectionnées' }}</p><p>Scans ambigus exclus</p></article>
           <article><h2>À vérifier</h2><strong class="warning">{{ s.pendingReviews }}</strong><p>Doublons et envois tardifs</p><p>Toutes dates · zone sélectionnée</p></article>
         </section>
@@ -49,7 +50,7 @@ function localDate(): string { const d = new Date(); return `${d.getFullYear()}-
             <div class="review-row table-head" aria-hidden="true"><span>Heure</span><span>Personne</span><span>Point</span><span>Motif</span><span>Traitement</span></div>
             @for (r of reviews().items; track r.id) {
               <div class="review-row">
-                <div><span class="mobile-label">Heure</span>{{ (r.occurredAtLocal ?? r.receivedAt) | date:'dd/MM HH:mm' }}<small>Reçu {{ r.receivedAt | date:'dd/MM HH:mm' }}</small></div>
+                <div><span class="mobile-label">Heure</span>{{ (r.occurredAtLocal ?? r.receivedAt) | date:'dd/MM/yyyy HH:mm' }}<small>Reçu {{ r.receivedAt | date:'dd/MM/yyyy HH:mm' }}</small></div>
                 <div><span class="mobile-label">Personne</span>{{ personName(r) }}</div>
                 <div><span class="mobile-label">Point</span>{{ r.pointName }}</div>
                 <div><span class="mobile-label">Motif</span>{{ reason(r) }}</div>

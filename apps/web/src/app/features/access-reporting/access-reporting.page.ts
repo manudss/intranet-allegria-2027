@@ -1,3 +1,4 @@
+import { LoadingSkeletonComponent } from '../../shared/loading-skeleton.component';
 import {RouterLink} from '@angular/router';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
@@ -16,7 +17,7 @@ export function reportFilters(from: string, to: string, zoneId: number | null, e
 }
 function localDate(): string { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 @Component({
-  selector: 'app-access-reporting', standalone: true, imports: [RouterLink, CommonModule, FormsModule, TuiButton, A11yModule],
+  selector: 'app-access-reporting', standalone: true, imports: [RouterLink, CommonModule, FormsModule, TuiButton, A11yModule, LoadingSkeletonComponent],
   template: `
     <main class="page">
       <header><h1>Suivi des accès</h1><nav class="actions"><a routerLink="/acces/dashboard">Dashboard</a> <a routerLink="/acces/scannes">Scannés par lieu</a> <a routerLink="/acces/non-scannes">Non scannés · groupes attendus</a><a routerLink="/acces/groupes-exceptions">Exceptions des groupes</a></nav><p>Comptages reçus du terrain et scans à vérifier.</p></header>
@@ -35,10 +36,10 @@ function localDate(): string { const d = new Date(); return `${d.getFullYear()}-
       </details>
       @if (error(); as message) { <div role="alert" class="error">{{ message }} @if (!configured()) {<button tuiButton size="s" type="button" (click)="configure()">Réessayer</button>}</div> }
       @if (notice(); as message) { <p role="status">{{ message }}</p> }
-      @if (loading()) { <p role="status">Chargement des comptages…</p> }
+      @if (loading()) { <app-loading-skeleton variant="cards" label="Chargement des comptages…" /> }
       @if (summary(); as s) {
         <section class="metrics" aria-label="Compteurs">
-          <article><h2>Présence estimée</h2><strong>{{ s.presence?.estimatedPresent ?? '—' }}</strong><p>{{ s.presence ? 'Dernier mouvement accepté par personne' : 'Définissez les types entrée et sortie' }}</p><p>Au {{ s.to | date:'dd/MM HH:mm' }} (borne exclue)</p></article>
+          <article><h2>Présence estimée</h2><strong>{{ s.presence?.estimatedPresent ?? '—' }}</strong><p>{{ s.presence ? 'Dernier mouvement accepté par personne' : 'Définissez les types entrée et sortie' }}</p><p>Au {{ s.to | date:'dd/MM/yyyy HH:mm' }} (borne exclue)</p></article>
           <article><h2>Repas servis</h2><strong>{{ meals() ?? '—' }}</strong><p>{{ appliedMealTypeId === null ? 'Définissez le type de scan repas' : 'Sur la période et la zone sélectionnées' }}</p><p>Scans ambigus exclus</p></article>
           <article><h2>À vérifier</h2><strong class="warning">{{ s.pendingReviews }}</strong><p>Doublons et envois tardifs</p><p>Toutes dates · zone sélectionnée</p></article>
         </section>
@@ -49,7 +50,7 @@ function localDate(): string { const d = new Date(); return `${d.getFullYear()}-
             <div class="review-row table-head" aria-hidden="true"><span>Heure</span><span>Personne</span><span>Point</span><span>Motif</span><span>Traitement</span></div>
             @for (r of reviews().items; track r.id) {
               <div class="review-row">
-                <div><span class="mobile-label">Heure</span>{{ (r.occurredAtLocal ?? r.receivedAt) | date:'dd/MM HH:mm' }}<small>Reçu {{ r.receivedAt | date:'dd/MM HH:mm' }}</small></div>
+                <div><span class="mobile-label">Heure</span>{{ (r.occurredAtLocal ?? r.receivedAt) | date:'dd/MM/yyyy HH:mm' }}<small>Reçu {{ r.receivedAt | date:'dd/MM/yyyy HH:mm' }}</small></div>
                 <div><span class="mobile-label">Personne</span>{{ personName(r) }}</div>
                 <div><span class="mobile-label">Point</span>{{ r.pointName }}</div>
                 <div><span class="mobile-label">Motif</span>{{ reason(r) }}</div>
@@ -80,8 +81,8 @@ function localDate(): string { const d = new Date(); return `${d.getFullYear()}-
     select,input,textarea { font:inherit; border:1px solid var(--appearance-border); border-radius:8px; padding:10px; min-height:44px; background:white; color:inherit; box-sizing:border-box; max-width:100%; } button { min-height:44px; }
     select { min-width:180px; } .settings { font-size:13px; } summary { cursor:pointer; min-height:44px; display:flex; align-items:center; font-weight:600; } .settings-grid { margin:10px 0; }
     .metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; } article,.panel,.freshness { background:white; border-radius:14px; padding:18px; box-shadow:0 1px 3px #00000012; } .metrics h2 { font-size:16px; font-weight:500; } .metrics strong { font-size:36px; line-height:1.3; display:block; } .metrics p { font-size:12px; color:var(--appearance-muted); } .warning { color:var(--appearance-error); }
-    .freshness { font-size:14px; } .review-list { margin-top:16px; } .review-row { display:grid; grid-template-columns:1.2fr 1.25fr 1.3fr 2fr auto; gap:12px; align-items:center; padding:12px 0; border-bottom:1px solid var(--appearance-border); font-size:14px; overflow-wrap:anywhere; } .review-row div { min-width:0; } .table-head { font-size:12px; color:var(--appearance-muted); text-transform:uppercase; font-weight:600; } small { display:block; } .mobile-label { display:none; } .pager { display:flex; justify-content:end; flex-wrap:wrap; gap:12px; align-items:center; margin-top:16px; font-size:13px; }
-    .count-list { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); } .count-list article { box-shadow:none; border:1px solid var(--appearance-border); } h3 { font-size:15px; margin:0; } .error { color:var(--appearance-error); background:var(--appearance-surface); padding:12px; border-radius:8px; } .backdrop { position:fixed; inset:0; background:#0006; z-index:1000; display:flex; align-items:center; justify-content:center; padding:16px; } .dialog { background:white; border-radius:16px; padding:24px; max-width:560px; width:100%; max-height:85vh; overflow:auto; } .dialog p { margin:12px 0; } .actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:16px; }
+    .freshness { font-size:14px; } .review-list { margin-top:16px; } .review-row { display:grid; grid-template-columns:1.2fr 1.25fr 1.3fr 2fr auto; gap:12px; align-items:center; padding:12px 0; border-bottom:1px solid var(--line-soft); font-size:14px; overflow-wrap:anywhere; } .review-row div { min-width:0; } .table-head { font-size:12px; color:var(--appearance-muted); text-transform:uppercase; font-weight:600; } small { display:block; } .mobile-label { display:none; } .pager { display:flex; justify-content:end; flex-wrap:wrap; gap:12px; align-items:center; margin-top:16px; font-size:13px; }
+    .count-list { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); } .count-list article { box-shadow:none; border:0; box-shadow:var(--card-shadow); } h3 { font-size:15px; margin:0; } .error { color:var(--appearance-error); background:var(--appearance-surface); padding:12px; border-radius:8px; } .backdrop { position:fixed; inset:0; background:#0006; z-index:1000; display:flex; align-items:center; justify-content:center; padding:16px; } .dialog { background:white; border-radius:16px; padding:24px; max-width:560px; width:100%; max-height:85vh; overflow:auto; } .dialog p { margin:12px 0; } .actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:16px; }
     @media(max-width:800px) { .metrics { grid-template-columns:1fr; } .page { padding:16px; } .table-head { display:none; } .review-row { grid-template-columns:1fr 1fr; } .mobile-label { display:block; color:var(--appearance-muted); font-size:12px; margin-bottom:4px; } .review-row button { grid-column:1/-1; justify-self:start; } .filters label { flex:1; min-width:130px; } select { min-width:0; width:100%; } .settings-grid label { width:100%; } }
   `],
 })

@@ -20,7 +20,8 @@
   min-height: 3.5rem;
   padding: 0.5rem 1rem;
   border-bottom: 0;
-  background: var(--appearance-solid);
+  --tui-theme-color: #d52f57;
+  background: #d52f57;
   color: #ffffff;
   box-shadow: 0 0.25rem 1rem rgba(34, 34, 34, 0.12);
 }
@@ -59,7 +60,7 @@
 }
 
 .header-right button[tuiButton] {
-  color: var(--appearance-text);
+  color: var(--allegria-on-secondary);
 }
 
 .header-right button[tuiButton][appearance='secondary'] {
@@ -67,8 +68,8 @@
 }
 
 .header-right button[tuiButton][appearance='primary'] {
-  background: var(--appearance-surface);
-  color: var(--allegria-primary);
+  background: #ffffff;
+  color: #d52f57;
 }
 
 .mobile-menu-btn {
@@ -99,8 +100,8 @@
   overflow-y: auto;
   overflow-x: hidden;
   border-right: 0;
-  background: var(--appearance-surface);
-  color: var(--allegria-primary);
+  background: #f5a623;
+  color: #2b1a00;
   box-shadow: 0.25rem 0 1rem rgba(34, 34, 34, 0.1);
   overscroll-behavior: contain;
 }
@@ -112,7 +113,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  background: var(--appearance-surface);
+  background: #f5a623;
 }
 
 .allegria-sidebar header {
@@ -133,19 +134,28 @@
   border-top: 1px solid rgba(255, 255, 255, 0.18);
 }
 
+.allegria-sidebar {
+  --tui-background-neutral-1: rgba(255, 255, 255, 0.28);
+  --tui-background-neutral-1-hover: rgba(255, 255, 255, 0.4);
+  --tui-background-neutral-1-pressed: rgba(255, 255, 255, 0.5);
+  --tui-text-primary: #2b1a00;
+  --tui-text-secondary: #4a3000;
+}
+
 .allegria-sidebar [tuiAsideItem] {
-  color: var(--appearance-text);
+  color: #2b1a00;
 }
 
 .allegria-sidebar [tuiAsideItem]:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--appearance-text);
+  background: rgba(255, 255, 255, 0.4);
+  color: #2b1a00;
 }
 
 .allegria-sidebar a[tuiAsideItem].active {
-  background: rgba(255, 255, 255, 0.2);
-  color: var(--appearance-text);
+  background: rgba(255, 255, 255, 0.6);
+  color: #2b1a00;
   font-weight: 700;
+  box-shadow: inset 0.25rem 0 0 #d52f57;
 }
 
 .allegria-sidebar tui-icon {
@@ -250,12 +260,29 @@
 }
 
 :host-context([data-theme='dark']) {
- .allegria-header,.allegria-sidebar,.allegria-sidebar header,.allegria-sidebar footer {
+ .allegria-sidebar,.allegria-sidebar header,.allegria-sidebar footer {
   background:var(--appearance-surface);color:var(--appearance-text);
  }
- .allegria-header{border-bottom:1px solid var(--appearance-border);}
- .allegria-sidebar{border-right:1px solid var(--appearance-border);}
- .allegria-sidebar [tuiAsideItem],.page-title,.header-title,.mobile-menu-btn{color:var(--appearance-text);}
+ /* Le bandeau garde le rouge de la marque en thème sombre, texte et icônes clairs. */
+ .allegria-header {
+  background:#d52f57;color:#ffffff;
+ }
+ .allegria-header .page-title,.allegria-header .header-title,.allegria-header .mobile-menu-btn,.allegria-header .header-appearance{color:#ffffff;}
+ .allegria-sidebar [tuiAsideItem]{color:var(--appearance-text);}
  .allegria-sidebar a[tuiAsideItem].active{background:var(--appearance-selected);color:var(--appearance-action);}
  .header-right button[tuiButton][appearance='primary']{background:var(--appearance-solid);color:#fff;}
+}
+
+.route-host--hidden {
+  display: none;
+}
+
+.page-purpose {
+  margin: 0 0 1rem;
+  color: var(--allegria-muted);
+}
+
+/* Bouton d'apparence discret dans l'en-tête */
+.header-appearance {
+  color: #ffffff;
 }

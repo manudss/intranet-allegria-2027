@@ -10,7 +10,13 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { TuiComparator, TuiReorder, TuiTable } from '@taiga-ui/addon-table';
+import {
+  TuiComparator,
+  TuiReorder,
+  TuiTable,
+  TuiTablePagination,
+  tuiTablePaginationOptionsProvider,
+} from '@taiga-ui/addon-table';
 import { TuiContext, TuiStringHandler } from '@taiga-ui/cdk';
 import {
   TuiButton,
@@ -103,6 +109,11 @@ interface ColumnFilterState {
 @Component({
   selector: 'app-data-table',
   standalone: true,
+  providers: [
+    tuiTablePaginationOptionsProvider({
+      sizeOptionContent: ({ $implicit }) => `${$implicit} lignes par page`,
+    }),
+  ],
   imports: [
     FormsModule,
     NgTemplateOutlet,
@@ -124,6 +135,7 @@ interface ColumnFilterState {
     TuiSelect,
     TuiSelectLike,
     TuiTable,
+    TuiTablePagination,
     TuiTextfield,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -181,6 +193,8 @@ export class DataTableComponent<T extends { readonly id: number }> implements On
       this.columns().every((column) => this.matchesFilter(column, row, filters[column.key])),
     );
   });
+  readonly pageIndex = signal(0);
+  readonly pageSize = signal(25);
   readonly columnKeys = () => this.enabledColumns().map(({ key }) => key);
   readonly tableColumnKeys = () => [...this.columnKeys(), 'actions'];
   readonly tableActions = computed<readonly DataTableAction<T>[]>(() => [
@@ -201,7 +215,9 @@ export class DataTableComponent<T extends { readonly id: number }> implements On
       large: 220,
       xlarge: 300,
     };
-    return sizeMap[column.size ?? 'medium'];
+    const width = sizeMap[column.size ?? 'medium'];
+    // Petit écran : colonnes plus étroites pour garder les infos clés visibles sans trop défiler.
+    return typeof window !== 'undefined' && window.innerWidth < 640 ? Math.round(width * 0.7) : width;
   }
 
   ngOnInit(): void {

@@ -14,7 +14,7 @@
 
 <main class="content">
   @if (loading()) {
-    <div class="center"><tui-loader size="l" /></div>
+    <app-loading-skeleton />
   } @else if (noProfile()) {
     <div class="notice" role="status">
       Aucun profil bénévole n'est rattaché à ce compte.

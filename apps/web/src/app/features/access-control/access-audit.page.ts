@@ -19,13 +19,13 @@ export const ACCESS_AUDIT_ACTIONS = ['BADGE_STOCK_ADDED', 'BADGE_ASSIGNED', 'BAD
           </select>
           <input type="text" [(ngModel)]="userId" (ngModelChange)="filterChanged()" placeholder="ID utilisateur" />
         </div>
-        @if (loading()) { <tui-loader size="l" /> }
+        @if (loading()) { <app-loading-skeleton /> }
         <table class="tbl">
           <thead><tr><th>Date</th><th>Action</th><th>Utilisateur</th><th>Objet</th><th>Identifiant</th><th>Détail</th></tr></thead>
           <tbody>
             @for (e of items(); track e.id) {
               <tr>
-                <td>{{ e.createdAt | date: 'dd/MM HH:mm:ss' }}</td>
+                <td>{{ e.createdAt | date: 'dd/MM/yyyy HH:mm:ss' }}</td>
                 <td><code>{{ e.action }}</code></td>
                 <td>{{ e.userId ?? '—' }}</td>
                 <td>{{ e.entityType }}</td>
@@ -45,14 +45,14 @@ export const ACCESS_AUDIT_ACTIONS = ['BADGE_STOCK_ADDED', 'BADGE_ASSIGNED', 'BAD
     </main>
   `,
   styles: [`
-    .page { padding: 24px; max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    .page { padding: 24px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; }
     .head h1 { margin: 0; font-size: 22px; }
     .panel { background: var(--appearance-surface); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 10px; }
     .filters { display: flex; gap: 8px; }
     input, select { border: 1px solid var(--appearance-border); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
     .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--appearance-border); }
-    .tbl td { padding: 8px; border-bottom: 1px solid var(--appearance-border); vertical-align: top; }
+    .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--line-soft); }
+    .tbl td { padding: 8px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
     code { font-family: ui-monospace, monospace; font-size: 11px; }
     .detail { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: normal; overflow-wrap: anywhere; font-family: ui-monospace, monospace; font-size: 11px; }
     .pager { display: flex; align-items: center; gap: 10px; justify-content: flex-end; font-size: 13px; color: var(--tui-text-secondary); }

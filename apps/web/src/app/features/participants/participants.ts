@@ -1,3 +1,4 @@
+import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { form, required, submit } from '@angular/forms/signals';
@@ -71,8 +72,8 @@ function formatDateFull(dateStr: string | null): string {
   if (isNaN(date.getTime())) return '—';
   return date.toLocaleDateString('fr-FR', {
     year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
   });
 }
 const blank = (): ParticipantPayload => ({
@@ -215,12 +216,15 @@ export class ParticipantsPage implements OnInit {
   protected canSeeAdministrative = computed(() => this.auth.hasAnyRole(['ADMIN', 'COORDINATOR']));
   protected canSeeFamilyHealth = computed(() => this.auth.hasRole('HEALTH'));
   private api = inject(ParticipantsApiService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   private groupsApi = inject(GroupsApiService);
   private healthApi = inject(HealthApiService);
   private auth = inject(AuthService);
   items = signal<Participant[]>([]);
   groups = signal<Group[]>([]);
   groupIds = computed(() => this.groups().map(({ id }) => id));
+  stringifySex = (sex: ParticipantSex) => SEX_LABELS[sex] ?? '';
+  stringifyAge = (age: MejAgeGroup) => MEJ_AGE_LABELS[age] ?? '';
   stringifyGroup = (id: number) => this.groups().find((group) => group.id === id)?.name ?? '';
   query = signal('');
   groupFilter = signal<number | null>(null);
@@ -342,11 +346,13 @@ export class ParticipantsPage implements OnInit {
   }
   remove() {
     const x = this.requireSelectedParticipant();
-    if (confirm(`Supprimer ${x.firstName} ${x.lastName} ?`))
+    this.confirmDialog.askDelete(`${x.firstName} ${x.lastName}`).subscribe((ok) => {
+      if (!ok) return;
       this.api.deleteParticipant(x.id).subscribe(() => {
         this.items.update((a) => a.filter((i) => i.id !== x.id));
         this.opened.set(false);
       });
+    });
   }
   private requireSelectedParticipant(): Participant {
     const participant = this.selected();

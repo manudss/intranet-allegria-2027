@@ -885,6 +885,8 @@ async function run(): Promise<void> {
     // comptes ont le role scanner pour les demos (grants crees plus bas).
     pushRole(userRoles, adminUser, ROLE_CODES.badgeManager);
     pushRole(userRoles, adminUser, ROLE_CODES.scanner);
+    // Phase de creation de l'interface : le compte demo admin peut ouvrir aussi la vue restauration (donnees fictives).
+    pushRole(userRoles, adminUser, ROLE_CODES.catering);
     pushRole(userRoles, healthUser, ROLE_CODES.health);
     pushRole(userRoles, coordinatorUser, ROLE_CODES.coordinator);
 

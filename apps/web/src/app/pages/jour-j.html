@@ -83,7 +83,7 @@
 
   <!-- ── Cartes de synthèse ─────────────────────────────────────────────── -->
   @if (loadingGlobal()) {
-  <tui-loader class="inline-loader" />
+  <app-loading-skeleton />
   } @else if (global(); as g) {
   <div class="summary-cards">
     <div class="summary-card">
@@ -190,7 +190,7 @@
   @if (activeTab() === 'missions') {
   <section class="tab-panel" aria-labelledby="tab-missions">
     @if (loadingTodo()) {
-    <tui-loader />
+    <app-loading-skeleton />
     } @else if (todoList(); as todo) {
     <!-- Missions obligatoires non terminées -->
     @if (todo.mandatoryIncomplete.length > 0) {
@@ -221,7 +221,7 @@
         <div class="item-main">
           <strong>{{ s.missionTitle }}</strong>
           <span class="meta">
-            {{ s.startAt | date: 'dd/MM HH:mm' }}–{{ s.endAt | date: 'HH:mm' }}
+            {{ s.startAt | date: 'dd/MM/yyyy HH:mm' }}–{{ s.endAt | date: 'HH:mm' }}
           </span>
           @if (s.location) { <span class="meta">· {{ s.location }}</span> }
           <span class="meta">Affectés : {{ s.activeCount }}/{{ s.capacity ?? '?' }}</span>
@@ -251,7 +251,7 @@
         <div class="item-main">
           <strong>{{ s.missionTitle }}</strong>
           <span class="meta">
-            {{ s.startAt | date: 'dd/MM HH:mm' }}–{{ s.endAt | date: 'HH:mm' }}
+            {{ s.startAt | date: 'dd/MM/yyyy HH:mm' }}–{{ s.endAt | date: 'HH:mm' }}
           </span>
           @if (s.location) { <span class="meta">· {{ s.location }}</span> }
           <span class="meta">
@@ -305,7 +305,7 @@
   @if (activeTab() === 'teams') {
   <section class="tab-panel" aria-labelledby="tab-teams">
     @if (loadingTeams()) {
-    <tui-loader />
+    <app-loading-skeleton />
     } @else if (teamsSummary().length === 0) {
     <p class="empty-state">Aucune équipe opérationnelle ce jour.</p>
     } @else {
@@ -351,7 +351,7 @@
   @if (activeTab() === 'locations') {
   <section class="tab-panel" aria-labelledby="tab-locations">
     @if (loadingLocations()) {
-    <tui-loader />
+    <app-loading-skeleton />
     } @else if (locations().length === 0) {
     <p class="empty-state">Aucun lieu avec des shifts ce jour.</p>
     } @else {
@@ -413,7 +413,7 @@
     </div>
 
     @if (loadingWho()) {
-    <tui-loader />
+    <app-loading-skeleton />
     } @else if (whoResult(); as result) { @if (result.items.length === 0) {
     <p class="empty-state">Aucun bénévole affecté pour ces critères.</p>
     } @else {
@@ -486,7 +486,7 @@
   @if (activeTab() === 'alerts') {
   <section class="tab-panel" aria-labelledby="tab-alerts">
     @if (loadingGlobal() || loadingTeams() || loadingLocations()) {
-    <tui-loader />
+    <app-loading-skeleton />
     } @else if (alerts().length === 0) {
     <p class="empty-state">✅ Aucune alerte active pour cette date.</p>
     } @else {

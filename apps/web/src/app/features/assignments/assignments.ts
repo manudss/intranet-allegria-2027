@@ -1,3 +1,4 @@
+import { FrLabelPipe } from '../../shared/fr-label.pipe';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -128,7 +129,7 @@ export class HostFamilyCardsComponent {
 
 @Component({
   selector: 'app-host-family-assignments-selector',
-  imports: [
+  imports: [FrLabelPipe,
     ReactiveFormsModule,
     EventDateSelectorComponent,
     TuiButton,
@@ -171,7 +172,7 @@ export class HostFamilyCardsComponent {
             (change)="toggle(participant.id)"
           />
           <span
-            >{{ participant.lastName }} {{ participant.firstName }} · {{ participant.type }}</span
+            >{{ participant.lastName }} {{ participant.firstName }} · {{ participant.type | frLabel }}</span
           ></label
         >
       } @empty {
@@ -305,7 +306,7 @@ export class HostFamilyAssignmentsSelectorComponent {
 
 @Component({
   selector: 'app-host-family-detail-drawer',
-  imports: [TuiButton, TuiChip, TuiDrawer, TuiTabs, HostFamilyAssignmentsSelectorComponent],
+  imports: [FrLabelPipe, TuiButton, TuiChip, TuiDrawer, TuiTabs, HostFamilyAssignmentsSelectorComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `@if (family(); as current) {
     <tui-drawer direction="end" [overlay]="true">
@@ -346,11 +347,11 @@ export class HostFamilyAssignmentsSelectorComponent {
                   >{{ assignment.participant.lastName }}
                   {{ assignment.participant.firstName }}</strong
                 ><small
-                  >{{ assignment.type }} · {{ assignment.groupId || 'sans groupe' }}</small
+                  >{{ assignment.type | frLabel }} · {{ assignment.groupId || 'sans groupe' }}</small
                 ></span
               ><span
                 >{{ assignment.arrivalDate }} → {{ assignment.departureDate }} ·
-                {{ assignment.status }}</span
+                {{ assignment.status | frLabel }}</span
               ><button
                 tuiButton
                 size="s"
@@ -491,7 +492,7 @@ export class AssignmentsPage implements OnInit {
     },
     {
       key: 'email',
-      label: 'Email',
+      label: 'Adresse e-mail',
       type: 'text',
       value: (family) => family.email || '—',
       hidden: true,
@@ -630,7 +631,7 @@ export class AssignmentsPage implements OnInit {
       type: 'date',
       value: (x) => {
         const d = new Date(x.arrivalDate);
-        return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+        return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('fr-FR', { year: 'numeric', month: '2-digit', day: '2-digit' });
       },
       filterValue: (x) => x.arrivalDate,
       hidden: true,
@@ -643,7 +644,7 @@ export class AssignmentsPage implements OnInit {
       type: 'date',
       value: (x) => {
         const d = new Date(x.departureDate);
-        return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+        return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('fr-FR', { year: 'numeric', month: '2-digit', day: '2-digit' });
       },
       filterValue: (x) => x.departureDate,
       hidden: true,

@@ -177,7 +177,7 @@
           Tout ajouter ({{total()}})
         </button>
       </div>
-      @if(loading()){<tui-loader />}
+      @if(loading()){<app-loading-skeleton />}
       <div
         class="rows"
         cdkDropList
@@ -348,7 +348,7 @@
         Préparer l'impression
       </button>
     </div>
-    @if(loading()){<tui-loader />}
+    @if(loading()){<app-loading-skeleton />}
     <div class="table-scroll">
       <table>
         <thead>

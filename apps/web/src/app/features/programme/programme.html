@@ -38,10 +38,10 @@
   } @if (viewMode() === 'overview') {
   <section class="overview" aria-label="Vue d'ensemble des 4 jours">
     @if (overviewLoading()) {
-    <p class="empty-state">Chargement…</p>
+    <app-loading-skeleton variant="cards" label="Chargement de la vue d'ensemble…" />
     } @for (day of filteredOverview(); track day.date) {
     <article class="overview-day">
-      <h3>J{{ day.dayIndex + 1 }} · {{ day.date }}</h3>
+      <h3>J{{ day.dayIndex + 1 }} · {{ day.date | date: 'dd/MM/yyyy' }}</h3>
       @if (!day.locations.length) {
       <p class="empty-state">Aucune séquence.</p>
       } @for (loc of day.locations; track loc.name) {
@@ -191,12 +191,12 @@
     <span>Liste publique jamais générée : l'appli sans connexion n'affiche aucun grand temps.</span>
     } @else if (banner.kind === 'stale') {
     <span>
-      Liste publique générée le {{ banner.generatedAt | date: 'dd/MM/yyyy à HH:mm' }} — {{
+      Liste publique générée le {{ banner.generatedAt | date: 'dd/MM/yyyy HH:mm' }} — {{
       banner.changesSince }} modification{{ banner.changesSince > 1 ? 's' : '' }} depuis.
     </span>
     } @else {
     <span>
-      Liste publique à jour, générée le {{ banner.generatedAt | date: 'dd/MM/yyyy à HH:mm' }}
+      Liste publique à jour, générée le {{ banner.generatedAt | date: 'dd/MM/yyyy HH:mm' }}
       (grands temps seulement).
     </span>
     }
@@ -265,7 +265,7 @@
       </div>
 
       @if (loading() && !allSequences().length) {
-      <p class="empty-state">Chargement du planning…</p>
+      <app-loading-skeleton label="Chargement du planning…" />
       } @if (dayLayout() === 'tracks') {
       <section class="tracks-view" aria-label="Vue par piste">
         <div class="tracks-head">

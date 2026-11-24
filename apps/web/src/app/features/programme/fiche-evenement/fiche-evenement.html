@@ -1,5 +1,5 @@
 @if (loading()) {
-<div class="fiche-loading"><tui-loader size="l" /></div>
+<div class="fiche-loading"><app-loading-skeleton /></div>
 } @else if (loadError()) {
 <div class="fiche-error" role="alert">
   <p>{{ loadError() }}</p>

@@ -33,7 +33,7 @@ export class Home implements OnInit {
     this.seo.apply({
       title: 'Accueil',
       description:
-        'Alegria 2027 : le rassemblement national du MEJ du 30 octobre au 2 novembre 2027 au Centre de Congrès de Saint-Étienne. Jeunes, familles et bénévoles, découvrez comment participer.',
+        'Alegria 2027 : le rassemblement national du MEJ du 31/10/2027 au 03/11/2027 au Centre de Congrès de Saint-Étienne. Jeunes, familles et bénévoles, découvrez comment participer.',
       canonicalPath: '/',
     });
   }

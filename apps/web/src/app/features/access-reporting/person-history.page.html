@@ -31,7 +31,7 @@
   <section class="list" aria-label="Résultats de recherche">
     @for(p of result.items;track p.participantId??'v'+p.volunteerId){
     <article class="person-choice">
-      <b>{{name(p)}}</b> · {{p.type}} · {{p.participantId?'#'+p.participantId:'Bénévole
+      <b>{{name(p)}}</b> · {{p.type | frLabel}} · {{p.participantId?'#'+p.participantId:'Bénévole
       #'+p.volunteerId}}<button (click)="choose(p)">Historique →</button>
     </article>
     }@empty{

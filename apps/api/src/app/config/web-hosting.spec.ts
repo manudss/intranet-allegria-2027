@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { isSpaFallbackRequest, resolveWebStaticDir } from './web-hosting';
+import { isMountRequest, isSpaFallbackRequest, resolveExtraMounts, resolveWebStaticDir } from './web-hosting';
 
 describe('web hosting (preview only)', () => {
   it('is disabled when WEB_STATIC_DIR is empty or has no index.html', () => {
@@ -23,5 +23,20 @@ describe('web hosting (preview only)', () => {
     expect(isSpaFallbackRequest('GET', '/api')).toBe(false);
     expect(isSpaFallbackRequest('GET', '/health')).toBe(false);
     expect(isSpaFallbackRequest('POST', '/participants')).toBe(false);
+  });
+
+  it('mounts extra fronts only when they exist and have a safe prefix', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'site-'));
+    writeFileSync(join(dir, 'index.html'), '<html></html>');
+    const empty = mkdtempSync(join(tmpdir(), 'empty-'));
+    expect(resolveExtraMounts(undefined)).toEqual([]);
+    expect(resolveExtraMounts(`site=${dir},m=${empty},api=${dir},../x=${dir}`)).toEqual([{ prefix: 'site', dir }]);
+  });
+
+  it('routes only GET/HEAD under the mount prefix', () => {
+    expect(isMountRequest('GET', '/site/programme', 'site')).toBe(true);
+    expect(isMountRequest('GET', '/site', 'site')).toBe(true);
+    expect(isMountRequest('GET', '/sitemap.xml', 'site')).toBe(false);
+    expect(isMountRequest('POST', '/site/x', 'site')).toBe(false);
   });
 });

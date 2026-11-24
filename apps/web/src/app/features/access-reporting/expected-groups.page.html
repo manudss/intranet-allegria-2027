@@ -51,7 +51,7 @@
   }@if(notice()){
   <p class="note" role="status">{{notice()}}</p>
   } @if(loading()){
-  <p role="status">Chargement du groupe…</p>
+  <app-loading-skeleton variant="form" label="Chargement du groupe…" />
   }@else{
   <fieldset [disabled]="saving()||passageSaving()" class="editor">
     <div class="filters">

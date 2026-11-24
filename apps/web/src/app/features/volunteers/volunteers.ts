@@ -1,3 +1,4 @@
+import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { form, required, submit } from '@angular/forms/signals';
 import { debounceTime, distinctUntilChanged, finalize, Subject, switchMap } from 'rxjs';
@@ -189,7 +190,7 @@ export class VolunteersPage implements OnInit {
     },
     {
       key: 'email',
-      label: 'Email',
+      label: 'Adresse e-mail',
       type: 'text',
       value: (x) => x.email || '—',
       hidden: true,
@@ -278,6 +279,7 @@ export class VolunteersPage implements OnInit {
   readonly allSkillTypes = ALL_SKILL_TYPES;
 
   private api = inject(VolunteersApiService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly teamsApi = inject(VolunteerTeamsApiService);
   private readonly membershipsApi = inject(VolunteerTeamMembershipsApiService);
   private readonly skillsApi = inject(VolunteerSkillsApiService);
@@ -459,12 +461,13 @@ export class VolunteersPage implements OnInit {
 
   removeSkill(skillId: number) {
     const volunteer = this.requireSelectedVolunteer();
-    if (confirm('Retirer cette compétence ?')) {
+    this.confirmDialog.ask({ title: 'Retirer cette compétence ?', message: 'Cette action est définitive.', yes: 'Retirer' }).subscribe((ok) => {
+      if (!ok) return;
       this.skillsApi.remove(volunteer.id, skillId).subscribe(() => {
         this.skills.update((list) => list.filter((s) => s.id !== skillId));
         this.skillsApi.getCounts().subscribe((counts) => this.skillCounts.set(counts));
       });
-    }
+    });
   }
 
   addTag() {
@@ -481,12 +484,13 @@ export class VolunteersPage implements OnInit {
 
   removeTag(tagId: number) {
     const volunteer = this.requireSelectedVolunteer();
-    if (confirm('Retirer ce tag ?')) {
+    this.confirmDialog.ask({ title: 'Retirer ce tag ?', message: 'Cette action est définitive.', yes: 'Retirer' }).subscribe((ok) => {
+      if (!ok) return;
       this.tagsApi.remove(volunteer.id, tagId).subscribe(() => {
         this.tags.update((list) => list.filter((t) => t.id !== tagId));
         this.tagsApi.getSuggestions().subscribe((s) => this.filterTagSuggestions.set(s));
       });
-    }
+    });
   }
 
   createMembership() {
@@ -535,7 +539,8 @@ export class VolunteersPage implements OnInit {
 
   removeMembership(membershipId: number) {
     const volunteer = this.requireSelectedVolunteer();
-    if (confirm('Retirer ce rattachement ?')) {
+    this.confirmDialog.ask({ title: 'Retirer ce rattachement ?', message: 'Cette action est définitive.', yes: 'Retirer' }).subscribe((ok) => {
+      if (!ok) return;
       this.membershipsApi.delete(volunteer.id, membershipId).subscribe(() => {
         this.teamMemberships.update((memberships) =>
           memberships.filter((item) => item.id !== membershipId),
@@ -544,7 +549,7 @@ export class VolunteersPage implements OnInit {
           this.cancelMembershipEdit();
         }
       });
-    }
+    });
   }
 
   save() {
@@ -564,11 +569,13 @@ export class VolunteersPage implements OnInit {
 
   remove() {
     const x = this.requireSelectedVolunteer();
-    if (confirm(`Supprimer ${x.firstName} ${x.lastName} ?`))
+    this.confirmDialog.askDelete(`${x.firstName} ${x.lastName}`).subscribe((ok) => {
+      if (!ok) return;
       this.api.delete(x.id).subscribe(() => {
         this.items.update((a) => a.filter((i) => i.id !== x.id));
         this.opened.set(false);
       });
+    });
   }
 
   private requireSelectedVolunteer(): Volunteer {

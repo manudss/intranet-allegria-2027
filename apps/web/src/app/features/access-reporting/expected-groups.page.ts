@@ -1,7 +1,9 @@
+import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
+import { LoadingSkeletonComponent } from '../../shared/loading-skeleton.component';
 import { Component, OnInit, OnDestroy, HostListener, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Subscription, forkJoin } from 'rxjs';
+import { Observable, Subscription, forkJoin, of } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ExpectedGroupsApi,
@@ -17,11 +19,12 @@ import { parisInstant, parisLocal } from './paris-datetime';
 @Component({
   selector: 'app-expected-groups',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, LoadingSkeletonComponent],
   templateUrl: './expected-groups.page.html',
   styleUrl: './detail-report.page.scss',
 })
 export class ExpectedGroupsPage implements OnInit, OnDestroy {
+  private readonly confirmDialog = inject(ConfirmDialogService);
   private api = inject(ExpectedGroupsApi);
   private configApi = inject(DetailReportApi);
   private requests: Subscription[] = [];
@@ -102,7 +105,7 @@ export class ExpectedGroupsPage implements OnInit, OnDestroy {
     this.passagesRequest?.unsubscribe();
     this.requests.forEach((s) => s.unsubscribe());
   }
-  canDeactivate() {
+  canDeactivate(): boolean | Observable<boolean> {
     return this.saving() || this.passageSaving() ? false : this.canLeave();
   }
   @HostListener('window:beforeunload', ['$event']) warnBeforeUnload(event: BeforeUnloadEvent) {
@@ -111,11 +114,14 @@ export class ExpectedGroupsPage implements OnInit, OnDestroy {
       event.returnValue = '';
     }
   }
-  private canLeave() {
-    return (
-      !(this.dirty() || this.passageDirty()) ||
-      confirm('Abandonner les modifications non enregistrées du groupe ou du rattachement ?')
-    );
+  private canLeave(): Observable<boolean> {
+    if (!(this.dirty() || this.passageDirty())) return of(true);
+    return this.confirmDialog.ask({
+      title: 'Abandonner les modifications ?',
+      message: 'Les modifications non enregistrées du groupe ou du rattachement seront perdues.',
+      yes: 'Abandonner',
+      no: 'Continuer la modification',
+    });
   }
   loadGroups(reset = true) {
     if (reset) this.groupOffset = 0;
@@ -141,10 +147,15 @@ export class ExpectedGroupsPage implements OnInit, OnDestroy {
   }
   choose(id: number | null) {
     if (this.saving() || this.passageSaving()) return;
-    if (!this.canLeave()) {
-      this.selectedId = this.group()?.id ?? null;
-      return;
-    }
+    this.canLeave().subscribe((ok) => {
+      if (!ok) {
+        this.selectedId = this.group()?.id ?? null;
+        return;
+      }
+      this.applyChoice(id);
+    });
+  }
+  private applyChoice(id: number | null) {
     this.selectedId = id;
     this.dirty.set(false);
     this.passageDirty.set(false);
@@ -360,13 +371,32 @@ export class ExpectedGroupsPage implements OnInit, OnDestroy {
   }
   closePassage() {
     if (this.passageSaving()) return;
-    if (this.passageDirty() && !confirm('Abandonner les modifications du rattachement ?')) return;
+    if (this.passageDirty()) {
+      this.confirmDialog
+        .ask({ title: 'Abandonner les modifications ?', message: 'Les modifications du rattachement non enregistrées seront perdues.', yes: 'Abandonner' })
+        .subscribe((ok) => {
+          if (ok) this.doClosePassage();
+        });
+      return;
+    }
+    this.doClosePassage();
+  }
+  private doClosePassage() {
     this.editorOpen.set(false);
     this.passageDirty.set(false);
   }
   editPassage(p: ManagedPassage | null) {
-    if (this.passageDirty() && !confirm('Abandonner les modifications du rattachement ?')) return;
-    this.passageDirty.set(false);
+    if (this.passageDirty()) {
+      this.confirmDialog
+        .ask({ title: 'Abandonner les modifications ?', message: 'Les modifications du rattachement non enregistrées seront perdues.', yes: 'Abandonner' })
+        .subscribe((ok) => {
+          if (ok) {
+            this.passageDirty.set(false);
+            this.editPassage(p);
+          }
+        });
+      return;
+    }
     this.passage = p;
     this.passagePointId = p?.point_id ?? null;
     this.passageLabel = p?.label ?? '';

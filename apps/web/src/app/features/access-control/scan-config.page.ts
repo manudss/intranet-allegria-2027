@@ -97,13 +97,13 @@ const DUPLICATE_RULES: { value: DuplicateRule; label: string }[] = [
     </main>
   `,
   styles: [`
-    .page { padding: 24px; max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    .page { padding: 24px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; }
     .head h1 { margin: 0; font-size: 22px; }
     .panel { background: var(--appearance-surface); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 10px; }
     .panel h2 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--tui-text-secondary); }
     .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
-    .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--appearance-border); }
-    .tbl td { padding: 8px; border-bottom: 1px solid var(--appearance-border); }
+    .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--line-soft); }
+    .tbl td { padding: 8px; border-bottom: 1px solid var(--line-soft); }
     code { font-family: ui-monospace, monospace; font-size: 12px; }
     input, select { border: 1px solid var(--appearance-border); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
     .grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: center; }

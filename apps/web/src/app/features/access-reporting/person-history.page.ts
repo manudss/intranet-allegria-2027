@@ -1,3 +1,4 @@
+import { FrLabelPipe } from '../../shared/fr-label.pipe';
 import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -22,7 +23,7 @@ export interface HistoryPerson {
 @Component({
   selector: 'app-person-history',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [FrLabelPipe, CommonModule, FormsModule, RouterLink],
   templateUrl: './person-history.page.html',
   styleUrl: './detail-report.page.scss',
 })

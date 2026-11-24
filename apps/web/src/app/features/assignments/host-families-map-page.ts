@@ -1,3 +1,4 @@
+import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -76,6 +77,7 @@ const esc = (v: string): string => v.replace(/[&<>"']/g, (c) => ({ '&': '&amp;',
   styleUrls: ['./host-families-map-page.scss'],
 })
 export class HostFamiliesMapPageComponent implements OnInit {
+  private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly hostFamiliesApi = inject(HostFamiliesApiService);
   private readonly assignmentsApi = inject(AssignmentsApiService);
   private readonly hostingApi = inject(HostingPlacementApiService);
@@ -168,8 +170,16 @@ export class HostFamiliesMapPageComponent implements OnInit {
     const shown = new Set(this.filteredFamilies().map((i) => i.family.id));
     return [...this.checkedIds()].filter((id) => !shown.has(id)).length;
   });
-  private confirmBulk(count: number, action: string): boolean {
-    return count < 20 || window.confirm(`${action} ${count} familles ? Cette action touche beaucoup de familles (dont certaines peuvent être hors de la vue).`);
+  private confirmBulk(count: number, action: string, run: () => void): void {
+    if (count < 20) {
+      run();
+      return;
+    }
+    this.confirmDialog
+      .ask({ title: `${action} ${count} familles ?`, message: 'Cette action touche beaucoup de familles (dont certaines peuvent être hors de la vue).', yes: 'Confirmer' })
+      .subscribe((ok) => {
+        if (ok) run();
+      });
   }
 
 
@@ -321,7 +331,11 @@ export class HostFamiliesMapPageComponent implements OnInit {
 
   assignChecked(groupId: number | null): void {
     const ids = [...this.checkedIds()];
-    if (!ids.length || this.busy() || !this.confirmBulk(ids.length, groupId === null ? 'Retirer du groupe' : 'Affecter au groupe')) return;
+    if (!ids.length || this.busy()) return;
+    this.confirmBulk(ids.length, groupId === null ? 'Retirer du groupe' : 'Affecter au groupe', () => this.doAssignChecked(ids, groupId));
+  }
+
+  private doAssignChecked(ids: number[], groupId: number | null): void {
     this.busy.set(true);
     this.hostingApi.setFamiliesGroup(ids, groupId).subscribe({
       next: (r) => this.afterBulk(groupId === null ? `${r.updated} famille(s) retirée(s) de leur groupe.` : `${r.updated} famille(s) affectée(s) au groupe.`),
@@ -332,7 +346,11 @@ export class HostFamiliesMapPageComponent implements OnInit {
   createGroupAndAssign(): void {
     const name = this.newGroupName().trim();
     const ids = [...this.checkedIds()];
-    if (!name || !ids.length || this.busy() || !this.confirmBulk(ids.length, 'Créer le groupe et y affecter')) return;
+    if (!name || !ids.length || this.busy()) return;
+    this.confirmBulk(ids.length, 'Créer le groupe et y affecter', () => this.doCreateGroupAndAssign(name, ids));
+  }
+
+  private doCreateGroupAndAssign(name: string, ids: number[]): void {
     this.busy.set(true);
     this.hostingApi.createGroup(name, { kind: this.newGroupKind() }).subscribe({
       next: (g) =>

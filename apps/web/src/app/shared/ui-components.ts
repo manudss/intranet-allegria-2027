@@ -1,4 +1,6 @@
-import { Component, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { PAGE_HELP } from './page-help';
 import { TuiNavigation } from "@taiga-ui/layout";
 import { TuiTitle } from "@taiga-ui/core";
 @Component({
@@ -9,7 +11,9 @@ import { TuiTitle } from "@taiga-ui/core";
       <header tuiSubheader>
         <div tuiTitle>
           <h1>{{ title() }}</h1>
-          <p tuiSubtitle>{{ description() }}</p>
+          @if (purpose()) {
+            <p tuiSubtitle class="page-purpose">{{ purpose() }}</p>
+          }
         </div>
         <ng-content select="[actions]"/>
       </header>
@@ -60,4 +64,14 @@ import { TuiTitle } from "@taiga-ui/core";
 export class PageLayoutComponent {
   readonly title = input.required<string>();
   readonly description = input('');
+
+  private readonly route = inject(ActivatedRoute, { optional: true });
+
+  /** Phrase « À quoi sert cette page » : celle de la page, sinon celle du gabarit commun. */
+  protected readonly purpose = computed(() => {
+    const own = this.description().trim();
+    if (own) return own;
+    const path = this.route?.snapshot?.routeConfig?.path ?? '';
+    return PAGE_HELP[path]?.purpose ?? '';
+  });
 }

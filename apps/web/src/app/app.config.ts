@@ -5,13 +5,21 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
   inject,
+  LOCALE_ID,
+  signal,
 } from '@angular/core';
+import { registerLocaleData } from '@angular/common';
+import localeFr from '@angular/common/locales/fr';
 import { provideRouter } from '@angular/router';
+import { TUI_FRENCH_LANGUAGE } from '@taiga-ui/i18n/languages';
+import { TUI_LANGUAGE } from '@taiga-ui/i18n';
 import { provideTaiga, TUI_DARK_MODE } from '@taiga-ui/core';
 import { apiBaseUrlInterceptor } from './core/api-base-url.interceptor';
 import { authInterceptor } from './core/auth.interceptor';
 import { httpErrorInterceptor } from './core/http-error.interceptor';
 import { appRoutes } from './app.routes';
+
+registerLocaleData(localeFr);
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -21,6 +29,15 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(
       withInterceptors([apiBaseUrlInterceptor, authInterceptor, httpErrorInterceptor]),
     ),
+    { provide: LOCALE_ID, useValue: 'fr' },
+    {
+      provide: TUI_LANGUAGE,
+      useValue: signal({
+        ...TUI_FRENCH_LANGUAGE,
+        // Pagination des tableaux : libellés explicites (nombre de pages, plage affichée, total).
+        paginationTexts: { pages: 'Nombre de pages', linesPerPage: 'Lignes affichées', of: 'sur' },
+      }),
+    },
     provideTaiga(),
     {
       provide: TUI_DARK_MODE,

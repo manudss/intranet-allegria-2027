@@ -68,7 +68,7 @@
   </div>
 
   @if (loading()) {
-    <tui-loader/>
+    <app-loading-skeleton />
   } @else {
     <app-data-table
       [rows]="missions()"
@@ -137,7 +137,7 @@
       <section>
         <h3>Shifts</h3>
         @if (shiftsLoading()) {
-          <tui-loader/>
+          <app-loading-skeleton />
         } @else if (shifts().length === 0) {
           <p>Aucun créneaux pour cette mission.</p>
         } @else {
@@ -146,8 +146,8 @@
               <li>
                 <div class="shift-head">
                   <strong
-                  >{{ shift.startAt | date: 'shortTime' }} -
-                    {{ shift.endAt | date: 'shortTime' }}</strong
+                  >{{ shift.startAt | date: 'HH:mm' }} -
+                    {{ shift.endAt | date: 'HH:mm' }}</strong
                   >
                   <span size="s" tuiBadge [appearance]="statusAppearance(shift.status)">{{
                       shiftStatusLabel(shift.status)

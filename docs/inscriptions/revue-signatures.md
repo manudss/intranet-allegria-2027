@@ -26,7 +26,7 @@ Le vérificateur contrôle les octets couverts par chaque signature. Il ne rempl
 
 ## Décision restant à prendre
 
-Si une signature cryptographique directement utilisable par chaque parent est nécessaire, retenir un circuit concret d'identité, certificat, conservation, validation et éventuel prestataire. Un certificat Allegria ne serait qu'une signature/cachet Allegria, jamais la signature personnelle du parent. Aucun choix de cette nature n'est pris ici. L'attestation simple et le dépôt externe ne sont pas présentés comme leur équivalent qualifié.
+Si une signature cryptographique directement utilisable par chaque parent est nécessaire, retenir un circuit concret d'identité, certificat, conservation, validation et éventuel prestataire. Un certificat Alegria ne serait qu'une signature/cachet Alegria, jamais la signature personnelle du parent. Aucun choix de cette nature n'est pris ici. L'attestation simple et le dépôt externe ne sont pas présentés comme leur équivalent qualifié.
 
 ## Sources lues
 
@@ -40,4 +40,4 @@ Si une signature cryptographique directement utilisable par chaque parent est n�
 - signature_pad, API PNG/JPEG/SVG et licence : https://github.com/szimek/signature_pad
 - Règlement eIDAS, types de signatures et certificats : https://eur-lex.europa.eu/eli/reg/2014/910/oj/eng
 
-La démo publique DSS n'a reçu aucun document du projet. Cette note technique n'est pas un avis juridique sur le niveau de signature exigé pour Allegria.
+La démo publique DSS n'a reçu aucun document du projet. Cette note technique n'est pas un avis juridique sur le niveau de signature exigé pour Alegria.

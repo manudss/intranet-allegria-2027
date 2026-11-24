@@ -28,7 +28,12 @@
     />
   </details>
 </div>
-<div class="table-scroll">
+<div
+  class="table-scroll"
+  role="region"
+  tabindex="0"
+  aria-label="Tableau, défilable horizontalement avec les flèches du clavier"
+>
   <table tuiTable size="l" [columns]="tableColumnKeys()">
     <thead>
       <tr tuiThGroup>
@@ -162,7 +167,8 @@
     </thead>
     @let sortedRows = filteredRows() | tuiTableSort;
     <tbody tuiTbody [data]="sortedRows">
-      @for (row of sortedRows; track trackBy(row)) {
+      @let pageRows = sortedRows.slice(pageIndex() * pageSize(), (pageIndex() + 1) * pageSize());
+      @for (row of pageRows; track trackBy(row)) {
         <tr
           tuiTr
           tabindex="0"
@@ -314,4 +320,14 @@
       }
     </tbody>
   </table>
+  @if (filteredRows().length > 10) {
+    <tui-table-pagination
+      [total]="filteredRows().length"
+      [page]="pageIndex()"
+      [size]="pageSize()"
+      [items]="[10, 25, 50, 100]"
+      (pageChange)="pageIndex.set($event)"
+      (sizeChange)="pageSize.set($event); pageIndex.set(0)"
+    />
+  }
 </div>

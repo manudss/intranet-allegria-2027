@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Image de production de l'API Allegria (NestJS).
+# Image de production de l'API Alegria (NestJS).
 #
 # Pourquoi : les builds se font sur GitHub Actions (gratuits sur ce repo public)
 # et Render ne fait QUE tirer l'image GHCR et la demarrer : zero minute de build

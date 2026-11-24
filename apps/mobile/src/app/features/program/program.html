@@ -23,7 +23,7 @@
   }
 
   @if (loading()) {
-    <div class="center"><tui-loader size="l" /></div>
+    <app-loading-skeleton />
   } @else if (failed()) {
     <div class="notice" role="status">
       Programme indisponible. Les jours déjà consultés restent accessibles hors-ligne.

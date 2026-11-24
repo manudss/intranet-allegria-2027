@@ -2,6 +2,26 @@ import type { ConfigService } from '@nestjs/config';
 /** Temporary PR42 demo access, fail closed outside this exact disposable deployment. */
 export const PREVIEW_FAMILY_EMAIL = 'famille-demo@example.test';
 export function familyPreviewEnabled(config: Pick<ConfigService, 'get'>): boolean {
+  return pr42PreviewEnabled(config) || pr49PreviewEnabled(config);
+}
+
+/**
+ * PR49 test phase (user decision of 24 Nov 2026: everything open to test while the interface is
+ * being built, fictional data only). Same fail-closed shape as PR42: explicit opt-ins, exact
+ * disposable image service name and hostname, no Git branch. Never matches production or another PR.
+ */
+function pr49PreviewEnabled(config: Pick<ConfigService, 'get'>): boolean {
+  return (
+    config.get('FAMILY_PREVIEW_DEMO_ENABLED') === 'pr49-fictional-only' &&
+    config.get('FAMILY_PREVIEW_IMAGE_ENABLED') === 'pr49-prebuilt-only' &&
+    config.get('PREVIEW_DEPLOYMENT') === 'true' &&
+    config.get('RENDER_SERVICE_NAME') === 'al-pr49-api-qkcc' &&
+    !config.get('RENDER_GIT_BRANCH') &&
+    config.get('RENDER_EXTERNAL_HOSTNAME') === 'al-pr49-api-qkcc.onrender.com'
+  );
+}
+
+function pr42PreviewEnabled(config: Pick<ConfigService, 'get'>): boolean {
   return (
     config.get('FAMILY_PREVIEW_DEMO_ENABLED') === 'pr42-fictional-only' &&
     (config.get('RENDER_SERVICE_NAME') === 'al-pr42-api' ||

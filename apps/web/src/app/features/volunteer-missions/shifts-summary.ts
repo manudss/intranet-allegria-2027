@@ -40,7 +40,7 @@ const SHIFT_NEXT_STATUSES: Partial<Record<VolunteerShiftStatus, VolunteerShiftSt
     description="Synthèse des missions et créneaux par statut"
   >
     @if (countersLoading()) {
-      <tui-loader />
+      <app-loading-skeleton />
     } @else {
       <!-- Compteurs missions -->
       <section class="section">
@@ -128,7 +128,7 @@ const SHIFT_NEXT_STATUSES: Partial<Record<VolunteerShiftStatus, VolunteerShiftSt
         </div>
 
         @if (detailsLoading()) {
-          <tui-loader />
+          <app-loading-skeleton />
         } @else if (filteredMissions().length === 0) {
           <p class="empty">Aucune mission à afficher.</p>
         } @else {
@@ -189,7 +189,7 @@ const SHIFT_NEXT_STATUSES: Partial<Record<VolunteerShiftStatus, VolunteerShiftSt
         </div>
 
         @if (detailsLoading()) {
-          <tui-loader />
+          <app-loading-skeleton />
         } @else if (filteredShifts().length === 0) {
           <p class="empty">Aucun créneaux à afficher.</p>
         } @else {
@@ -198,7 +198,7 @@ const SHIFT_NEXT_STATUSES: Partial<Record<VolunteerShiftStatus, VolunteerShiftSt
               <li class="detail-item" [class.optional]="shift.isOptional">
                 <div class="item-head">
                   <strong
-                    >{{ shift.startAt | date: 'dd/MM HH:mm' }} –
+                    >{{ shift.startAt | date: 'dd/MM/yyyy HH:mm' }} –
                     {{ shift.endAt | date: 'HH:mm' }}</strong
                   >
                   @if (shift.isOptional) {

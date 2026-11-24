@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-MEJ Allegria intranet — Nx 23 monorepo with three projects:
+MEJ Alegria intranet — Nx 23 monorepo with three projects:
 
 - `apps/web` — Angular 22 (standalone, zoneless, Taiga UI)
 - `apps/api` — NestJS 11 (TypeORM, PostgreSQL)

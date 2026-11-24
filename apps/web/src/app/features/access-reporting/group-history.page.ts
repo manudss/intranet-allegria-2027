@@ -1,3 +1,4 @@
+import { FrLabelPipe } from '../../shared/fr-label.pipe';
 import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -46,7 +47,7 @@ interface History {
 @Component({
   selector: 'app-group-history',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FrLabelPipe, FormsModule, RouterLink],
   templateUrl: './group-history.page.html',
   styleUrl: './detail-report.page.scss',
 })

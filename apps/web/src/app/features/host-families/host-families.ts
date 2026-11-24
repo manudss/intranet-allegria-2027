@@ -1,3 +1,4 @@
+import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { form, min, required, submit } from '@angular/forms/signals';
 import { finalize } from 'rxjs';
@@ -95,7 +96,7 @@ export class HostFamiliesPage implements OnInit {
     },
     {
       key: 'email',
-      label: 'Email',
+      label: 'Adresse e-mail',
       type: 'text',
       value: (x) => x.email || '—',
       hidden: true,
@@ -200,6 +201,7 @@ export class HostFamiliesPage implements OnInit {
     },
   ];
   private api = inject(HostFamiliesApiService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   private hostingApi = inject(HostingPlacementApiService);
   protected groupNames = signal(new Map<number, string>());
   items = signal<HostFamily[]>([]);
@@ -283,11 +285,13 @@ export class HostFamiliesPage implements OnInit {
   }
   remove() {
     const x = this.requireSelectedFamily();
-    if (confirm(`Supprimer ${x.familyName} ?`))
+    this.confirmDialog.askDelete(x.familyName).subscribe((ok) => {
+      if (!ok) return;
       this.api.delete(x.id).subscribe(() => {
         this.items.update((a) => a.filter((i) => i.id !== x.id));
         this.opened.set(false);
       });
+    });
   }
   private requireSelectedFamily(): HostFamily {
     const family = this.selected();

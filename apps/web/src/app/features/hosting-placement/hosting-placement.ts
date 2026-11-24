@@ -1,3 +1,4 @@
+import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
@@ -50,6 +51,7 @@ export type FillFilter = 'all' | GroupFillState;
 })
 export class HostingPlacementPage implements OnInit {
   private readonly api = inject(HostingPlacementApiService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
 
   protected readonly board = signal<Board | null>(null);
   protected readonly loading = signal(true);
@@ -345,7 +347,15 @@ export class HostingPlacementPage implements OnInit {
 
   protected deleteGroup(id: number): void {
     const group = this.groups().find((g) => g.id === id);
-    if (!group || !confirm(`Supprimer le groupe « ${group.name} » ? Ses équipes et familles redeviennent non affectées.`)) return;
+    if (!group) return;
+    this.confirmDialog
+      .askDelete(`le groupe « ${group.name} »`, 'Ses équipes et familles redeviennent non affectées.')
+      .subscribe((ok) => {
+        if (ok) this.doDeleteGroup(id);
+      });
+  }
+
+  private doDeleteGroup(id: number): void {
     this.run(this.api.deleteGroup(id), () => {
       this.patchBoard((b) => ({
         ...b,
@@ -421,9 +431,17 @@ export class HostingPlacementPage implements OnInit {
     if (!member || member.hostFamilyId === familyId) return;
     const moving = member.hostFamilyId !== null;
     if (moving && member.assignmentStatus === 'CONFIRMED') {
-      const ok = confirm(`${this.memberName(member)} a une affectation confirmée. La déplacer vers cette famille ?`);
-      if (!ok) return;
+      this.confirmDialog
+        .ask({ title: 'Déplacer une affectation confirmée ?', message: `${this.memberName(member)} a une affectation confirmée. La déplacer vers cette famille ?`, yes: 'Déplacer' })
+        .subscribe((ok) => {
+          if (ok) this.doPlaceMember(participantId, familyId, moving);
+        });
+      return;
     }
+    this.doPlaceMember(participantId, familyId, moving);
+  }
+
+  private doPlaceMember(participantId: number, familyId: number, moving: boolean): void {
     this.run(
       this.api.place({
         participantId,
@@ -451,7 +469,18 @@ export class HostingPlacementPage implements OnInit {
   protected unplace(participantId: number): void {
     const member = this.board()?.members.find((m) => m.participantId === participantId);
     if (!member || member.hostFamilyId === null) return;
-    if (member.assignmentStatus === 'CONFIRMED' && !confirm(`${this.memberName(member)} a une affectation confirmée. La retirer ?`)) return;
+    if (member.assignmentStatus === 'CONFIRMED') {
+      this.confirmDialog
+        .ask({ title: 'Retirer une affectation confirmée ?', message: `${this.memberName(member)} a une affectation confirmée. La retirer ?`, yes: 'Retirer' })
+        .subscribe((ok) => {
+          if (ok) this.doUnplace(participantId);
+        });
+      return;
+    }
+    this.doUnplace(participantId);
+  }
+
+  private doUnplace(participantId: number): void {
     this.run(this.api.unplace(participantId), () => {
       this.patchBoard((b) => ({
         ...b,

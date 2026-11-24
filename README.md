@@ -1,6 +1,6 @@
-# MEJ Allegria
+# MEJ Alegria
 
-Monorepo intégré Nx pour l’intranet événementiel MEJ Allegria : Angular 22, NestJS,
+Monorepo intégré Nx pour l’intranet événementiel MEJ Alegria : Angular 22, NestJS,
 PostgreSQL/TypeORM et Vitest.
 
 ## Création du workspace

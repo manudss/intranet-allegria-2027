@@ -16,7 +16,7 @@
         />
       </tui-textfield>
       @if (loading()) {
-        <tui-loader />
+        <app-loading-skeleton />
       } @else {
         <app-data-table [rows]="filtered()" [columns]="tableColumns" (rowSelected)="open($event)" />
       }
@@ -35,9 +35,9 @@
             <dt>Statut</dt>
             <dd>{{ selected()?.isActive ? 'Active' : 'Inactive' }}</dd>
             <dt>Créée le</dt>
-            <dd>{{ selected()?.createdAt | date: 'short' }}</dd>
+            <dd>{{ selected()?.createdAt | date: 'dd/MM/yyyy HH:mm' }}</dd>
             <dt>Modifiée le</dt>
-            <dd>{{ selected()?.updatedAt | date: 'short' }}</dd>
+            <dd>{{ selected()?.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</dd>
           </dl>
         } @else {
           <form class="drawer-form">

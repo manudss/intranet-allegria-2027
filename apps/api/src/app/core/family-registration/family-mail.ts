@@ -22,6 +22,27 @@ export function familyMailSettings(config: ConfigService) {
   return { provider, from } as const;
 }
 
+/**
+ * Disposable deployments (PR previews) set MAIL_ALLOWED_RECIPIENTS: only these addresses
+ * (comma separated, case-insensitive) can receive mail. Fail closed: when the variable is set,
+ * every other recipient is refused before any provider call. Unset in production.
+ */
+export const isPreviewDeployment = (config: Pick<ConfigService, 'get'>): boolean =>
+  /^al-pr\d+-api(?:-[a-z0-9]+)?$/.test(String(config.get('RENDER_SERVICE_NAME') ?? '')) ||
+  config.get('PREVIEW_DEPLOYMENT') === 'true';
+
+/** In a preview, a missing or empty allowlist refuses everyone (never falls back to unrestricted). */
+export function mailRecipientAllowed(config: Pick<ConfigService, 'get'>, email: string): boolean {
+  const raw = config.get<string>('MAIL_ALLOWED_RECIPIENTS');
+  const configured = raw !== undefined && raw !== null && raw !== '';
+  if (!configured) return !isPreviewDeployment(config);
+  const allowed = raw
+    .split(',')
+    .map((x) => x.trim().toLowerCase())
+    .filter(Boolean);
+  return allowed.includes(email.trim().toLowerCase());
+}
+
 export async function sendFamilyAccessCode(
   config: ConfigService,
   email: string,
@@ -29,6 +50,8 @@ export async function sendFamilyAccessCode(
   challengeId: string,
   purpose: 'ACCESS' | 'SIGNATURE' = 'ACCESS',
 ) {
+  if (!mailRecipientAllowed(config, email))
+    throw new ForbiddenException('Destinataire de test non autorisé');
   if (familyPreviewEnabled(config) && !familyPreviewRecipientAllowed(config, email))
     throw new ForbiddenException('Destinataire de test non autorisé');
   const settings = familyMailSettings(config);

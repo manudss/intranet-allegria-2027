@@ -11,7 +11,7 @@
         />
       </tui-textfield>
       @if (loading()) {
-        <tui-loader />
+        <app-loading-skeleton />
       } @else {
         <app-data-table [rows]="filtered()" [columns]="tableColumns" (rowSelected)="open($event)" />
       }
@@ -57,7 +57,7 @@
               ><input tuiInput [formField]="familyForm.city" id="ville-2" />
             </tui-textfield>
             <tui-textfield iconStart="@tui.mail">
-              <label for="email-2" tuiLabel>Email</label
+              <label for="email-2" tuiLabel>Adresse e-mail</label
               ><input tuiInput type="email" [formField]="familyForm.email" id="email-2" />
             </tui-textfield>
             <tui-textfield iconStart="@tui.phone">

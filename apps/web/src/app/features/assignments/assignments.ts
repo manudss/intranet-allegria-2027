@@ -491,7 +491,7 @@ export class AssignmentsPage implements OnInit {
     },
     {
       key: 'email',
-      label: 'Email',
+      label: 'Adresse e-mail',
       type: 'text',
       value: (family) => family.email || '—',
       hidden: true,

@@ -431,9 +431,17 @@ export class HostingPlacementPage implements OnInit {
     if (!member || member.hostFamilyId === familyId) return;
     const moving = member.hostFamilyId !== null;
     if (moving && member.assignmentStatus === 'CONFIRMED') {
-      const ok = confirm(`${this.memberName(member)} a une affectation confirmée. La déplacer vers cette famille ?`);
-      if (!ok) return;
+      this.confirmDialog
+        .ask({ title: 'Déplacer une affectation confirmée ?', message: `${this.memberName(member)} a une affectation confirmée. La déplacer vers cette famille ?`, yes: 'Déplacer' })
+        .subscribe((ok) => {
+          if (ok) this.doPlaceMember(participantId, familyId, moving);
+        });
+      return;
     }
+    this.doPlaceMember(participantId, familyId, moving);
+  }
+
+  private doPlaceMember(participantId: number, familyId: number, moving: boolean): void {
     this.run(
       this.api.place({
         participantId,
@@ -461,7 +469,18 @@ export class HostingPlacementPage implements OnInit {
   protected unplace(participantId: number): void {
     const member = this.board()?.members.find((m) => m.participantId === participantId);
     if (!member || member.hostFamilyId === null) return;
-    if (member.assignmentStatus === 'CONFIRMED' && !confirm(`${this.memberName(member)} a une affectation confirmée. La retirer ?`)) return;
+    if (member.assignmentStatus === 'CONFIRMED') {
+      this.confirmDialog
+        .ask({ title: 'Retirer une affectation confirmée ?', message: `${this.memberName(member)} a une affectation confirmée. La retirer ?`, yes: 'Retirer' })
+        .subscribe((ok) => {
+          if (ok) this.doUnplace(participantId);
+        });
+      return;
+    }
+    this.doUnplace(participantId);
+  }
+
+  private doUnplace(participantId: number): void {
     this.run(this.api.unplace(participantId), () => {
       this.patchBoard((b) => ({
         ...b,

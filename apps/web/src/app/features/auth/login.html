@@ -5,13 +5,13 @@
       <p>Intranet des bénévoles</p>
       <form (submit)="onSubmit($event)">
         <tui-textfield>
-          <label tuiLabel for="email">Email</label>
+          <label tuiLabel for="email">Adresse e-mail</label>
           <input tuiInput type="email" autocomplete="username" [formField]="loginForm.email" id="email" />
         </tui-textfield>
         <tui-error
           [error]="
             loginForm.email().touched() && loginForm.email().invalid()
-              ? 'Adresse email requise'
+              ? 'Adresse e-mail requise'
               : null
           "
         />

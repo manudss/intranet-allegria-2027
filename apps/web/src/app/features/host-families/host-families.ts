@@ -96,7 +96,7 @@ export class HostFamiliesPage implements OnInit {
     },
     {
       key: 'email',
-      label: 'Email',
+      label: 'Adresse e-mail',
       type: 'text',
       value: (x) => x.email || '—',
       hidden: true,

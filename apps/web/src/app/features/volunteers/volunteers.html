@@ -60,7 +60,7 @@
         </header>
         @if (mode() === 'detail') {
           <dl>
-            <dt>Email</dt>
+            <dt>Adresse e-mail</dt>
             <dd>{{ selected()?.email || '—' }}</dd>
             <dt>Téléphone</dt>
             <dd>{{ selected()?.phone || '—' }}</dd>
@@ -362,7 +362,7 @@
               ><input tuiInput [formField]="volunteerForm.lastName" id="nom-2" />
             </tui-textfield>
             <tui-textfield iconStart="@tui.mail">
-              <label for="email-2" tuiLabel>Email</label
+              <label for="email-2" tuiLabel>Adresse e-mail</label
               ><input tuiInput type="email" [formField]="volunteerForm.email" id="email-2" />
             </tui-textfield>
             <tui-textfield iconStart="@tui.phone">

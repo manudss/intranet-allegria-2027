@@ -122,7 +122,7 @@ tr[tabindex]:focus-visible td {
 
 /* Bordures douces comme la version d'origine */
 table {
-  --t-table-border: color-mix(in srgb, var(--appearance-border) 28%, transparent);
+  --t-table-border: var(--line-soft);
   border-collapse: separate;
   border-spacing: 0;
 }
@@ -131,9 +131,9 @@ table {
   border-color: var(--t-table-border) !important;
 }
 .table-scroll {
-  border: 1px solid var(--t-table-border, transparent);
+  border: 0;
   background: var(--appearance-surface);
-  box-shadow: 0 0.25rem 1rem rgba(34, 34, 34, 0.06);
+  box-shadow: var(--card-shadow);
 }
 @media (max-width: 640px) {
   [tuiTd],

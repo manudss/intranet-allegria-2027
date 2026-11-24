@@ -51,8 +51,8 @@ export const ACCESS_AUDIT_ACTIONS = ['BADGE_STOCK_ADDED', 'BADGE_ASSIGNED', 'BAD
     .filters { display: flex; gap: 8px; }
     input, select { border: 1px solid var(--appearance-border); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
     .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--appearance-border); }
-    .tbl td { padding: 8px; border-bottom: 1px solid var(--appearance-border); vertical-align: top; }
+    .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--line-soft); }
+    .tbl td { padding: 8px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
     code { font-family: ui-monospace, monospace; font-size: 11px; }
     .detail { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: normal; overflow-wrap: anywhere; font-family: ui-monospace, monospace; font-size: 11px; }
     .pager { display: flex; align-items: center; gap: 10px; justify-content: flex-end; font-size: 13px; color: var(--tui-text-secondary); }

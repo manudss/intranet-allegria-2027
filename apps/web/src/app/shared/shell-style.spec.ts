@@ -16,7 +16,7 @@ describe('identité visuelle du gabarit (thème clair)', () => {
   });
 
   it('place le sélecteur d’apparence dans l’en-tête', () => {
-    expect(read('../layout.html')).toContain('app-appearance-taiga');
+    expect(read('../layout.html')).toContain('app-appearance-toggle');
   });
 });
 

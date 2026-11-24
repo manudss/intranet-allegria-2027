@@ -1,4 +1,4 @@
-import { AppearanceTaigaControl } from '@mej-allegria/appearance/taiga';
+import { AppearanceToggleComponent } from './shared/appearance-toggle.component';
 import { AppearanceService } from '@mej-allegria/appearance';
 import { Component, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -10,7 +10,7 @@ import { LoadingSkeletonComponent } from './shared/loading-skeleton.component';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, TuiRoot, AppearanceTaigaControl, LoadingSkeletonComponent],
+  imports: [RouterOutlet, TuiRoot, AppearanceToggleComponent, LoadingSkeletonComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

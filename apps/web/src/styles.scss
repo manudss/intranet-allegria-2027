@@ -216,6 +216,23 @@ form:has(tui-textfield.field-required)::before {
 }
 
 /* Le sélecteur d'apparence vit dans l'en-tête quand le gabarit est affiché : on libère la hauteur. */
-body:has(.allegria-shell) .appearance-bar {
+body:has(.allegria-shell) .appearance-fab {
   display: none;
+}
+
+/* Cartes : ombre douce sans contour, séparateurs discrets (comme la version d'origine). */
+:root {
+  --card-shadow: 0 0.125rem 0.75rem rgba(34, 34, 34, 0.1);
+  --line-soft: rgba(34, 34, 34, 0.1);
+}
+:root[data-theme='dark'] {
+  --card-shadow: 0 0.125rem 0.75rem rgba(0, 0, 0, 0.5);
+  --line-soft: rgba(255, 255, 255, 0.14);
+}
+
+/* Contours de champs plus légers (la lisibilité des champs reste assurée par le fond et l'ombre). */
+:root,
+[tuiTheme],
+tui-root {
+  --tui-border-normal: color-mix(in srgb, var(--appearance-border) 55%, transparent);
 }

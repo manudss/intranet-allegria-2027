@@ -15,7 +15,7 @@ import {
 import { TuiButton, TuiIcon } from '@taiga-ui/core';
 import { filter, map, startWith } from 'rxjs';
 import { AuthService } from './core/auth.service';
-import { AppearanceTaigaControl } from '@mej-allegria/appearance/taiga';
+import { AppearanceToggleComponent } from './shared/appearance-toggle.component';
 import { LoadingSkeletonComponent } from './shared/loading-skeleton.component';
 import { PAGE_HELP } from './shared/page-help';
 import { TuiNavigation } from '@taiga-ui/layout';
@@ -38,7 +38,7 @@ type MenuGroup = {
   selector: 'app-layout',
   standalone: true,
   imports: [
-    AppearanceTaigaControl,
+    AppearanceToggleComponent,
     NgTemplateOutlet,
     RouterLink,
     RouterLinkActive,

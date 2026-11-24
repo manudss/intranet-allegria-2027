@@ -93,8 +93,8 @@ const STATUS_LABELS: Record<AccessBadgeStatus, string> = {
     .tbl-scroll { max-width: 100%; overflow-x: auto; }
     @media (max-width: 640px) { .page { padding: 12px; } .row > button, .head > a { flex: 1 1 100%; } }
     .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
-    .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--appearance-border); }
-    .tbl td { padding: 8px; border-bottom: 1px solid var(--appearance-border); }
+    .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--line-soft); }
+    .tbl td { padding: 8px; border-bottom: 1px solid var(--line-soft); }
     code { font-family: ui-monospace, monospace; font-size: 12px; }
     .chip { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
     .chip[data-s='AVAILABLE'] { background: var(--appearance-raised); color: var(--appearance-success); }

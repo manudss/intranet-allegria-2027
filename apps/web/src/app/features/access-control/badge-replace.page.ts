@@ -65,7 +65,7 @@ import {
     .panel { background: var(--appearance-surface); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 10px; }
     .panel h2 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--tui-text-secondary); }
     input { border: 1px solid var(--appearance-border); border-radius: 8px; padding: 10px 12px; font-size: 15px; width: 100%; box-sizing: border-box; }
-    .row { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 4px; background: none; border: none; border-bottom: 1px solid var(--appearance-border); cursor: pointer; text-align: left; }
+    .row { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 4px; background: none; border: none; border-bottom: 1px solid var(--line-soft); cursor: pointer; text-align: left; }
     .row small { display: block; color: var(--tui-text-secondary); }
     .card { border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
     .card.old { background: var(--appearance-surface); border-left: 4px solid var(--appearance-error); }

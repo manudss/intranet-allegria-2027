@@ -263,8 +263,6 @@
  .allegria-header,.allegria-sidebar,.allegria-sidebar header,.allegria-sidebar footer {
   background:var(--appearance-surface);color:var(--appearance-text);
  }
- .allegria-header{border-bottom:1px solid var(--appearance-border);}
- .allegria-sidebar{border-right:1px solid var(--appearance-border);}
  .allegria-sidebar [tuiAsideItem],.page-title,.header-title,.mobile-menu-btn{color:var(--appearance-text);}
  .allegria-sidebar a[tuiAsideItem].active{background:var(--appearance-selected);color:var(--appearance-action);}
  .header-right button[tuiButton][appearance='primary']{background:var(--appearance-solid);color:#fff;}
@@ -279,34 +277,7 @@
   color: var(--allegria-muted);
 }
 
-/* Sélecteur d'apparence dans l'en-tête */
+/* Bouton d'apparence discret dans l'en-tête */
 .header-appearance {
-  --appearance-border: rgba(255, 255, 255, 0.6);
-}
-.header-appearance ::ng-deep details {
-  position: relative;
-}
-.header-appearance ::ng-deep summary {
-  min-height: 40px;
-  white-space: nowrap;
-}
-.header-appearance ::ng-deep fieldset {
-  position: absolute !important;
-  right: 0;
-  top: 100%;
-  width: min(280px, calc(100vw - 2rem)) !important;
-}
-@media (max-width: 960px) {
-  .header-appearance ::ng-deep summary {
-    font-size: 0;
-    padding: 0 0.7rem;
-    list-style: none;
-  }
-  .header-appearance ::ng-deep summary::before {
-    content: '◐';
-    font-size: 1.15rem;
-  }
-  .header-appearance ::ng-deep summary::-webkit-details-marker {
-    display: none;
-  }
+  color: #ffffff;
 }

@@ -58,8 +58,8 @@ import { AccessControlApiService, ScannerGrant, ZoneItem } from './access-contro
     @media(max-width: 700px) { .grid { grid-template-columns: 1fr; } }
     input, select { border: 1px solid var(--appearance-border); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
     .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
-    .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--appearance-border); }
-    .tbl td { padding: 8px; border-bottom: 1px solid var(--appearance-border); }
+    .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--line-soft); }
+    .tbl td { padding: 8px; border-bottom: 1px solid var(--line-soft); }
     .chip { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
     .chip[data-s='active'] { background: var(--appearance-raised); color: var(--appearance-success); }
     .chip[data-s='closed'] { background: var(--appearance-surface); color: var(--appearance-muted); }

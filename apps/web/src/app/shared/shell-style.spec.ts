@@ -28,3 +28,9 @@ describe('page Stock des badges, petit écran', () => {
     expect(page).toMatch(/\.tbl-scroll \{[^}]*overflow-x: auto/);
   });
 });
+
+describe('pastilles à couleur automatique', () => {
+  it('gardent un texte foncé lisible, aussi en thème sombre', () => {
+    expect(read('./data-table.scss')).toMatch(/\[tuiChip\]\[style\*='background-color'\]\s*\{[^}]*color:\s*#241c1c/);
+  });
+});

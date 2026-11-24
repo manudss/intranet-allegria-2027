@@ -48,3 +48,12 @@ describe('tableau de données, accessibilité clavier', () => {
     expect(read('./data-table.scss')).toMatch(/\.table-scroll[^}]*&:focus-visible/s);
   });
 });
+
+describe('bandeau en thème sombre', () => {
+  it('garde le rouge de la marque avec texte clair', () => {
+    const layout = read('../layout.scss');
+    const dark = layout.slice(layout.indexOf(":host-context([data-theme='dark'])"));
+    expect(dark).toMatch(/\.allegria-header \{\s*background:#d52f57;color:#ffffff;/);
+    expect(dark).not.toMatch(/\.allegria-header,\s*\.allegria-sidebar/);
+  });
+});

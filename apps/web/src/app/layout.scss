@@ -260,10 +260,15 @@
 }
 
 :host-context([data-theme='dark']) {
- .allegria-header,.allegria-sidebar,.allegria-sidebar header,.allegria-sidebar footer {
+ .allegria-sidebar,.allegria-sidebar header,.allegria-sidebar footer {
   background:var(--appearance-surface);color:var(--appearance-text);
  }
- .allegria-sidebar [tuiAsideItem],.page-title,.header-title,.mobile-menu-btn{color:var(--appearance-text);}
+ /* Le bandeau garde le rouge de la marque en thème sombre, texte et icônes clairs. */
+ .allegria-header {
+  background:#d52f57;color:#ffffff;
+ }
+ .allegria-header .page-title,.allegria-header .header-title,.allegria-header .mobile-menu-btn,.allegria-header .header-appearance{color:#ffffff;}
+ .allegria-sidebar [tuiAsideItem]{color:var(--appearance-text);}
  .allegria-sidebar a[tuiAsideItem].active{background:var(--appearance-selected);color:var(--appearance-action);}
  .header-right button[tuiButton][appearance='primary']{background:var(--appearance-solid);color:#fff;}
 }

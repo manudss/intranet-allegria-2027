@@ -59,8 +59,9 @@ describe('Validated group composition management', () => {
   it('guards navigation and browser close with unsaved or pending work', () => {
     const { c } = make();
     c.dirty.set(true);
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
-    expect(c.canDeactivate()).toBe(false);
+    let allowed: unknown = null;
+    (c.canDeactivate() as import('rxjs').Observable<boolean>).subscribe((v) => (allowed = v));
+    expect(allowed).toBe(false);
     const event = { preventDefault: vi.fn(), returnValue: undefined };
     c.warnBeforeUnload(event as unknown as BeforeUnloadEvent);
     expect(event.preventDefault).toHaveBeenCalled();
@@ -74,7 +75,6 @@ describe('Validated group composition management', () => {
     c.editPassage(null);
     c.passageDirty.set(true);
     c.passageLabel = 'En cours';
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
     c.closePassage();
     expect(c.editorOpen()).toBe(true);
     c.choose(null);
@@ -115,7 +115,6 @@ describe('Validated group composition management', () => {
     expect(c.name).toBe('Nouvelle composition');
     expect(c.dirty()).toBe(true);
     expect(c.error()).toContain('autre session');
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
     c.reload();
     expect(c.name).toBe('Nouvelle composition');
   });

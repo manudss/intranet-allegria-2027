@@ -184,3 +184,15 @@ body {
 }
 
 @include taiga.theme;
+
+/* Champ obligatoire vide non touché : pas d'erreur (voir l'intranet). */
+tui-textfield.field-pristine[data-appearance='textfield'] {
+  outline-color: var(--tui-border-normal) !important;
+}
+tui-textfield.field-pristine[data-appearance='textfield']:focus-within {
+  outline-color: var(--tui-background-accent-1) !important;
+}
+tui-textfield.field-pristine [tuiLabel] {
+  color: var(--tui-text-tertiary) !important;
+}
+

@@ -3,7 +3,7 @@ import { LoadingSkeletonComponent } from '../../shared/loading-skeleton.componen
 import { Component, OnInit, OnDestroy, HostListener, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Subscription, forkJoin } from 'rxjs';
+import { Observable, Subscription, forkJoin, of } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ExpectedGroupsApi,
@@ -105,7 +105,7 @@ export class ExpectedGroupsPage implements OnInit, OnDestroy {
     this.passagesRequest?.unsubscribe();
     this.requests.forEach((s) => s.unsubscribe());
   }
-  canDeactivate() {
+  canDeactivate(): boolean | Observable<boolean> {
     return this.saving() || this.passageSaving() ? false : this.canLeave();
   }
   @HostListener('window:beforeunload', ['$event']) warnBeforeUnload(event: BeforeUnloadEvent) {
@@ -114,11 +114,14 @@ export class ExpectedGroupsPage implements OnInit, OnDestroy {
       event.returnValue = '';
     }
   }
-  private canLeave() {
-    return (
-      !(this.dirty() || this.passageDirty()) ||
-      confirm('Abandonner les modifications non enregistrées du groupe ou du rattachement ?')
-    );
+  private canLeave(): Observable<boolean> {
+    if (!(this.dirty() || this.passageDirty())) return of(true);
+    return this.confirmDialog.ask({
+      title: 'Abandonner les modifications ?',
+      message: 'Les modifications non enregistrées du groupe ou du rattachement seront perdues.',
+      yes: 'Abandonner',
+      no: 'Continuer la modification',
+    });
   }
   loadGroups(reset = true) {
     if (reset) this.groupOffset = 0;
@@ -144,10 +147,15 @@ export class ExpectedGroupsPage implements OnInit, OnDestroy {
   }
   choose(id: number | null) {
     if (this.saving() || this.passageSaving()) return;
-    if (!this.canLeave()) {
-      this.selectedId = this.group()?.id ?? null;
-      return;
-    }
+    this.canLeave().subscribe((ok) => {
+      if (!ok) {
+        this.selectedId = this.group()?.id ?? null;
+        return;
+      }
+      this.applyChoice(id);
+    });
+  }
+  private applyChoice(id: number | null) {
     this.selectedId = id;
     this.dirty.set(false);
     this.passageDirty.set(false);

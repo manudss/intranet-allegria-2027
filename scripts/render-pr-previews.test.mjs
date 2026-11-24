@@ -285,6 +285,7 @@ test('/preview (account 1) and /preview2 (account 2) are strictly distinct comma
   const two = cond('refresh2-comment');
   assert.ok(one.includes("body == '/preview'") && one.includes("'/preview{0}', ' '"));
   assert.ok(two.includes("body == '/preview2'") && two.includes("'/preview2{0}', ' '"));
+  for (const c of [one, two]) assert.ok(c.includes(String.raw`fromJSON('"\n"')`) && c.includes(String.raw`fromJSON('"\r"')`), 'multiline comments are handled');
   // /preview2 never matches the /preview condition (no bare prefix match), and the reverse.
   assert.ok(!/startsWith\(github\.event\.comment\.body, '\/preview2?'\)/.test(wf), 'no bare prefix match');
   assert.ok(!one.includes('/preview2') && !two.replace(/\/preview2/g, '').includes('/preview'));

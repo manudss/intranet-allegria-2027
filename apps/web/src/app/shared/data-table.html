@@ -155,7 +155,7 @@
             }
           </th>
         }
-        <th *tuiHead="'actions'" tuiTh [sorter]="null" [sticky]="true" [minWidth]="96">
+        <th *tuiHead="'actions'" tuiTh [sorter]="null" [sticky]="true" [minWidth]="140">
           Actions
         </th>
       </tr>
@@ -297,16 +297,17 @@
             <span class="row-actions">
               @for (action of tableActions(); track action.id) {
                 <button
-                  tuiIconButton
-                  size="s"
+                  tuiButton
+                  size="xs"
                   type="button"
                   [appearance]="action.appearance || 'action'"
                   [iconStart]="action.icon"
-                  [attr.aria-label]="action.label"
                   [title]="action.label"
                   [disabled]="action.disabled?.(row) || false"
                   (click)="runAction($event, action, row)"
-                ></button>
+                >
+                  {{ action.label }}
+                </button>
               }
             </span>
           </td>

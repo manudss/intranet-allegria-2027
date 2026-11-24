@@ -20,7 +20,7 @@ export const ACCESS_AUDIT_ACTIONS = ['BADGE_STOCK_ADDED', 'BADGE_ASSIGNED', 'BAD
           <label class="fld">ID utilisateur<input type="text" [(ngModel)]="userId" (ngModelChange)="filterChanged()" /></label>
         </div>
         @if (loading()) { <app-loading-skeleton /> }
-        <table class="tbl">
+        <div class="tbl-scroll" tabindex="0" role="region" aria-label="Journal des actions"><table class="tbl">
           <thead><tr><th>Date</th><th>Action</th><th>Utilisateur</th><th>Objet</th><th>Identifiant</th><th>Détail</th></tr></thead>
           <tbody>
             @for (e of items(); track e.id) {
@@ -34,7 +34,7 @@ export const ACCESS_AUDIT_ACTIONS = ['BADGE_STOCK_ADDED', 'BADGE_ASSIGNED', 'BAD
               </tr>
             }
           </tbody>
-        </table>
+        </table></div>
         @if (!loading() && items().length === 0) { <p class="hint">Aucune entrée.</p> }
         <div class="pager">
           <span>{{ total() }} entrée(s)</span>
@@ -52,6 +52,9 @@ export const ACCESS_AUDIT_ACTIONS = ['BADGE_STOCK_ADDED', 'BADGE_ASSIGNED', 'BAD
     .fld > input, .fld > select { display: block; font-weight: 400; min-width: 0; box-sizing: border-box; }
     .filters { display: flex; gap: 8px; }
     input, select { border: 1px solid var(--appearance-border); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
+    .tbl-scroll { max-width: 100%; overflow-x: auto; background: linear-gradient(to right, var(--appearance-surface, #fff) 30%, transparent), linear-gradient(to left, var(--appearance-surface, #fff) 30%, transparent) 100% 0, radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), transparent), radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), transparent) 100% 0; background-repeat: no-repeat; background-size: 2.5rem 100%, 2.5rem 100%, 0.8rem 100%, 0.8rem 100%; background-attachment: local, local, scroll, scroll; }
+    .tbl-scroll:focus-visible { outline: 2px solid var(--tui-border-focus, #d52f57); outline-offset: 2px; }
+    .tbl-scroll > .tbl { min-width: 34rem; }
     .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
     .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--line-soft); }
     .tbl td { padding: 8px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }

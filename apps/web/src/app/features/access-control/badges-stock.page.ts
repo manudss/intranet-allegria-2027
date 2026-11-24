@@ -91,6 +91,7 @@ const STATUS_LABELS: Record<AccessBadgeStatus, string> = {
     .fld { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; flex: 1 1 10rem; min-width: 0; }
     .fld > input, .fld > select, .fld > textarea { display: block; font-weight: 400; min-width: 0; box-sizing: border-box; }
     .row { align-items: flex-end; }
+    .panel > .fld { flex: 0 0 auto; }
     textarea { width: 100%; box-sizing: border-box; }
     .tbl-scroll { max-width: 100%; overflow-x: auto; }
     @media (max-width: 640px) { .page { padding: 12px; } .row > button, .head > a { flex: 1 1 100%; } }

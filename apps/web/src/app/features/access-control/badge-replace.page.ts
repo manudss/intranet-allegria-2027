@@ -78,7 +78,7 @@ import {
     .err { color: var(--appearance-error); margin: 0; font-size: 14px; }
     .done { background: var(--appearance-raised); }
     .done p { margin: 0; font-weight: 600; color: var(--appearance-success); }
-    .actions { display: flex; gap: 8px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; }
   `],
 })
 export class BadgeReplacePage {

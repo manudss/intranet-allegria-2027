@@ -1,4 +1,7 @@
 <tui-root>
   <div class="appearance-bar"><app-appearance-taiga /></div>
+  @if (booting()) {
+    <div class="boot-skeleton"><app-loading-skeleton variant="page" /></div>
+  }
   <router-outlet></router-outlet>
 </tui-root>

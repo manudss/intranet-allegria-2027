@@ -286,3 +286,24 @@
 .header-appearance {
   color: #ffffff;
 }
+
+.skip-link {
+  position: absolute;
+  left: 0.5rem;
+  top: -4rem;
+  z-index: 1000;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  background: #fff;
+  color: #1a1a1a;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+  &:focus-visible {
+    top: 0.5rem;
+  }
+}
+
+#contenu:focus {
+  outline: none;
+}

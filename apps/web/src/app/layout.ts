@@ -185,6 +185,11 @@ export class Layout {
     this.expanded.update((value) => !value);
   }
 
+  protected focusContent(event: Event): void {
+    event.preventDefault();
+    document.getElementById('contenu')?.focus();
+  }
+
   protected toggleMobileMenu(): void {
     this.isMobileMenuOpen.update((value) => !value);
   }

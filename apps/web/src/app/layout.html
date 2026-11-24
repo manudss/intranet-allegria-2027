@@ -1,4 +1,5 @@
 <div class="allegria-shell">
+  <a class="skip-link" href="#contenu" (click)="focusContent($event)">Aller au contenu</a>
   <header tuiNavigationHeader class="allegria-header">
     <div tuiNavigationLogo class="header-left">
       <button
@@ -7,6 +8,7 @@
         appearance="flat"
         class="mobile-menu-btn"
         aria-controls="main-navigation"
+        [attr.aria-label]="isMobileMenuOpen() ? 'Fermer le menu' : 'Ouvrir le menu'"
         [attr.aria-expanded]="isMobileMenuOpen()"
         (click)="toggleMobileMenu()"
       >
@@ -15,7 +17,7 @@
       <img src="assets/logo-allegria.svg" alt="Alegria 2027" class="logo" />
       <div class="header-titles" >
         <span class="header-title" tuiFade>Alegria 2027 - Intranet des bénévoles</span>
-        <h1 class="page-title">{{ currentPageTitle() }}</h1>
+        <p class="page-title">{{ currentPageTitle() }}</p>
       </div>
     </div>
 
@@ -107,7 +109,7 @@
       </footer>
     </aside>
 
-    <main class="allegria-content" id="contenu" [attr.aria-busy]="navigating()">
+    <main class="allegria-content" id="contenu" tabindex="-1" [attr.aria-busy]="navigating()">
       @if (navigating()) {
         <app-loading-skeleton variant="page" label="Ouverture de la page…" />
       }

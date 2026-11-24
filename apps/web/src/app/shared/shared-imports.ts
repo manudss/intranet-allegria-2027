@@ -3,7 +3,7 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 import { FormsModule } from '@angular/forms';
 import { FormField } from '@angular/forms/signals';
 import { TuiItem } from '@taiga-ui/cdk';
-import { TuiButton, TuiGroup, TuiIcon, TuiInput, TuiLabel, TuiRadio } from '@taiga-ui/core';
+import { TuiButton, TuiGroup, TuiHint, TuiIcon, TuiInput, TuiLabel, TuiRadio } from '@taiga-ui/core';
 import { TuiBadge, TuiChevron, TuiDrawer, TuiSelect, TuiTextarea, TuiBlock } from '@taiga-ui/kit';
 import { FrLabelPipe } from './fr-label.pipe';
 import { RequiredFieldDirective } from './required-field.directive';
@@ -24,6 +24,7 @@ export const SHARED_IMPORTS = [
   DataTableComponent,
   EventDateSelectorComponent,
   TuiButton,
+  TuiHint,
   TuiIcon,
   TuiItem,
   TuiLabel,

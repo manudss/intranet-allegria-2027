@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, TemplateRef, effect, inject, signal, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
 import {
@@ -12,7 +12,8 @@ import {
   RouterLinkActive,
   RouterOutlet,
 } from '@angular/router';
-import { TuiButton, TuiIcon } from '@taiga-ui/core';
+import { TuiButton, TuiDialogService, TuiIcon } from '@taiga-ui/core';
+import { GLOSSARY, tourFor } from './shared/help-content';
 import { filter, map, startWith } from 'rxjs';
 import { AuthService } from './core/auth.service';
 import { AppearanceToggleComponent } from './shared/appearance-toggle.component';
@@ -98,6 +99,20 @@ export class Layout {
 
   protected readonly expanded = signal(true);
   protected readonly isMobileMenuOpen = signal(false);
+
+  private readonly dialogs = inject(TuiDialogService);
+  private readonly helpTemplate = viewChild.required<TemplateRef<unknown>>('helpDialog');
+  protected readonly glossary = GLOSSARY;
+  protected readonly helpStep = signal(0);
+  protected get helpTour() {
+    return tourFor(this.auth.currentUser()?.roles ?? []);
+  }
+
+  /** Ouvre l'aide : visite guidée de 3 étapes (relançable) et glossaire. */
+  protected openHelp(): void {
+    this.helpStep.set(0);
+    this.dialogs.open(this.helpTemplate(), { label: 'Aide', size: 'm' }).subscribe();
+  }
 
   protected readonly navGroups: MenuGroup[] = [
     {

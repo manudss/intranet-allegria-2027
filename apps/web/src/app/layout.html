@@ -22,6 +22,16 @@
     </div>
 
     <div class="header-right">
+      <button
+        tuiIconButton
+        type="button"
+        appearance="flat"
+        size="s"
+        class="header-help"
+        iconStart="@tui.circle-help"
+        aria-label="Aide : visite guidée et glossaire"
+        (click)="openHelp()"
+      ></button>
       <app-appearance-toggle class="header-appearance" />
       <button tuiButton appearance="secondary" type="button">
         <div tuiAvatar="@tui.user"></div>
@@ -122,3 +132,27 @@
     </main>
   </div>
 </div>
+
+<ng-template #helpDialog let-observer>
+  <section class="help" aria-labelledby="help-step-title">
+    <p class="help-count">Étape {{ helpStep() + 1 }} sur {{ helpTour.length }}</p>
+    <h2 id="help-step-title" class="help-title">{{ helpTour[helpStep()].title }}</h2>
+    <p>{{ helpTour[helpStep()].text }}</p>
+    <div class="help-actions">
+      <button tuiButton type="button" appearance="secondary" size="s" [disabled]="helpStep() === 0" (click)="helpStep.set(helpStep() - 1)">Précédent</button>
+      @if (helpStep() < helpTour.length - 1) {
+        <button tuiButton type="button" size="s" (click)="helpStep.set(helpStep() + 1)">Suivant</button>
+      } @else {
+        <button tuiButton type="button" size="s" (click)="observer.complete()">Terminer</button>
+      }
+    </div>
+    <h3 class="help-subtitle">Glossaire</h3>
+    <dl class="help-glossary">
+      @for (entry of glossary; track entry.term) {
+        <dt>{{ entry.term }}</dt>
+        <dd>{{ entry.meaning }}</dd>
+      }
+    </dl>
+    <p class="help-note">Cette aide se rouvre à tout moment avec le bouton « ? » en haut de l'écran.</p>
+  </section>
+</ng-template>

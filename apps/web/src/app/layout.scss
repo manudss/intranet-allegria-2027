@@ -267,7 +267,7 @@
  .allegria-header {
   background:#d52f57;color:#ffffff;
  }
- .allegria-header .page-title,.allegria-header .header-title,.allegria-header .mobile-menu-btn,.allegria-header .header-appearance{color:#ffffff;}
+ .allegria-header .page-title,.allegria-header .header-title,.allegria-header .mobile-menu-btn,.allegria-header .header-help,.allegria-header .header-appearance{color:#ffffff;}
  .allegria-sidebar [tuiAsideItem]{color:var(--appearance-text);}
  .allegria-sidebar a[tuiAsideItem].active{background:var(--appearance-selected);color:var(--appearance-action);}
  .header-right button[tuiButton][appearance='primary']{background:var(--appearance-solid);color:#fff;}
@@ -306,4 +306,21 @@
 
 #contenu:focus {
   outline: none;
+}
+
+.help-count { margin: 0 0 4px; font-size: 0.8rem; opacity: 0.75; }
+.help-title { margin: 0 0 8px; font-size: 1.15rem; }
+.help-actions { display: flex; gap: 8px; margin: 12px 0 16px; }
+.help-subtitle { margin: 0 0 6px; font-size: 1rem; }
+.help-glossary { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; }
+.help-glossary dt { font-weight: 700; }
+.help-glossary dd { margin: 0; }
+.help-note { margin: 12px 0 0; font-size: 0.85rem; opacity: 0.8; }
+@media (max-width: 480px) {
+  .help-glossary { grid-template-columns: 1fr; gap: 0; }
+  .help-glossary dd { margin-bottom: 8px; }
+}
+
+.allegria-header .header-right button.header-help[tuiIconButton] {
+  color: #ffffff;
 }

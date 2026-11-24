@@ -4,7 +4,7 @@
       <h1>Connexion</h1>
       <p>Intranet des bénévoles</p>
       <form (submit)="onSubmit($event)">
-        <tui-textfield>
+        <tui-textfield [class.field-pristine]="!loginForm.email().touched()">
           <label tuiLabel for="email">Adresse e-mail</label>
           <input tuiInput type="email" autocomplete="username" [formField]="loginForm.email" id="email" />
         </tui-textfield>
@@ -15,7 +15,7 @@
               : null
           "
         />
-        <tui-textfield>
+        <tui-textfield [class.field-pristine]="!loginForm.password().touched()">
           <label tuiLabel for="password">Mot de passe</label>
           <input
             tuiInput

@@ -170,12 +170,16 @@ input:-webkit-autofill:focus {
 
 /*
  * Un champ obligatoire vide n'est pas en erreur avant que l'utilisateur l'ait touché ou envoyé
- * le formulaire : Taiga applique le style « invalide » dès que l'attribut `required` natif est
- * présent, on le neutralise tant que le champ n'est pas marqué invalide (aria-invalid="true").
+ * le formulaire. Taiga applique le style « invalide » dès que l'attribut `required` natif est
+ * présent : on le neutralise avec la classe `field-pristine`, posée tant que le champ n'est pas touché
+ * (ex. `[class.field-pristine]="!form.email().touched()"`).
  */
-tui-textfield[data-appearance='textfield']:not(:focus-within):has(input[aria-invalid='false'], textarea[aria-invalid='false']) {
+tui-textfield.field-pristine[data-appearance='textfield'] {
   outline-color: var(--tui-border-normal) !important;
 }
-tui-textfield:has(input[aria-invalid='false']) [tuiLabel] {
+tui-textfield.field-pristine[data-appearance='textfield']:focus-within {
+  outline-color: var(--tui-background-accent-1) !important;
+}
+tui-textfield.field-pristine [tuiLabel] {
   color: var(--tui-text-tertiary) !important;
 }

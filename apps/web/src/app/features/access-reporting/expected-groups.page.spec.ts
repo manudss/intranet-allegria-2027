@@ -1,3 +1,4 @@
+import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError, Subject } from 'rxjs';
@@ -41,6 +42,7 @@ function make() {
     imports: [ExpectedGroupsPage],
     providers: [
       provideRouter([]),
+      { provide: ConfirmDialogService, useValue: { ask: vi.fn(() => of(false)) } },
       { provide: ExpectedGroupsApi, useValue: api },
       { provide: DetailReportApi, useValue: config },
     ],

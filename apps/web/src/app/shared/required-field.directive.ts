@@ -11,6 +11,7 @@ let nextId = 0;
  * Appliqué automatiquement à tout `tui-textfield` des écrans qui importent SHARED_IMPORTS.
  */
 @Directive({
+  // eslint-disable-next-line @angular-eslint/directive-selector -- appliqué à tous les champs Taiga
   selector: 'tui-textfield',
   standalone: true,
   host: {
@@ -43,8 +44,10 @@ export class RequiredFieldDirective implements OnInit, OnDestroy {
       // Validation de la zone (formulaire ou fenêtre) : tout bouton cliqué ou Entrée.
       this.renderer.listen('document', 'click', (event: Event) => {
         const button = (event.target as HTMLElement | null)?.closest('button');
-        const zone = this.host.closest('form, tui-dialog, tui-drawer, [tuiDialog], [tuiDrawer]');
-        if (button && zone?.contains(button)) {
+        const zone =
+          this.host.closest('aside, tui-dialog, tui-drawer, [role="dialog"]') ?? this.host.closest('form');
+        const label = button?.textContent?.trim() ?? '';
+        if (button && zone?.contains(button) && !/^(Fermer|Annuler|Effacer)/i.test(label)) {
           this.touched.set(true);
           sync();
         }

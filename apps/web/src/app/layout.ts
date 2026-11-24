@@ -104,6 +104,7 @@ export class Layout {
       items: [
         { label: 'Accueil', path: '/accueil', icon: '@tui.house' },
         { label: 'Rassemblement', path: '/rassemblement', icon: '@tui.calendar' },
+        { label: 'Glossaire', path: '/glossaire', icon: '@tui.book-open' },
       ],
     },
     {

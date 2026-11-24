@@ -28,6 +28,7 @@ export const PAGE_HELP: Readonly<Record<string, PageHelp>> = {
   'hebergement/carte': { purpose: 'Les logements placés sur une carte.' },
   'hebergement/placement': { purpose: 'Placer les équipes dans les logements, avec une proposition à valider.' },
   transports: { purpose: 'Planifier les transports des groupes.', shell: true },
+  glossaire: { purpose: 'Le vocabulaire commun de l’intranet : un seul nom par notion, avec les formats de date et d’heure.' },
   programme: { purpose: 'Le programme des quatre jours (J1 à J4) : séquences, lieux et publication de la liste publique.' },
   'programme/journal': { purpose: 'L’historique des modifications du programme.' },
   'programme/evenements/:id': { purpose: 'Toutes les informations d’un événement : horaires, missions, tâches et documents.' },

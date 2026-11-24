@@ -30,6 +30,11 @@ export const appRoutes: Route[] = [
         loadComponent: () => import('./pages/accueil').then((m) => m.Accueil),
       },
       {
+        path: 'glossaire',
+        title: 'Glossaire',
+        loadComponent: () => import('./features/glossaire/glossaire').then((m) => m.GlossairePage),
+      },
+      {
         path: 'rassemblement',
         title: 'Rassemblement',
         loadComponent: () => import('./features/groups/groups').then((m) => m.GroupsPage),

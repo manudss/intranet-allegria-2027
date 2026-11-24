@@ -2,6 +2,21 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { AccessAuditEntry, AccessControlApiService } from './access-control-api.service';
 
+/** Libellés français des codes d'action du journal ; un code inconnu reste affiché tel quel. */
+export const ACCESS_AUDIT_LABELS: Readonly<Record<string, string>> = {
+  BADGE_STOCK_ADDED: 'Badges ajoutés au stock',
+  BADGE_ASSIGNED: 'Badge attribué',
+  BADGE_REPLACED: 'Badge remplacé',
+  BADGE_REVOKED: 'Badge révoqué',
+  SCANNER_GRANTED: 'Habilitation accordée',
+  SCANNER_REVOKED: 'Habilitation retirée',
+  SCAN_SESSION_STARTED: 'Session de scan ouverte',
+  SCAN_SESSION_CLOSED: 'Session de scan fermée',
+  UNKNOWN_CODE_LOOKUP: 'Code inconnu recherché',
+  LOOKUP_RATE_LIMITED: 'Recherches trop fréquentes bloquées',
+  CONFIG_CHANGED: 'Configuration modifiée',
+};
+
 export const ACCESS_AUDIT_ACTIONS = ['BADGE_STOCK_ADDED', 'BADGE_ASSIGNED', 'BADGE_REPLACED', 'BADGE_REVOKED', 'SCANNER_GRANTED', 'SCANNER_REVOKED', 'SCAN_SESSION_STARTED', 'SCAN_SESSION_CLOSED', 'UNKNOWN_CODE_LOOKUP', 'LOOKUP_RATE_LIMITED', 'CONFIG_CHANGED'];
 
 @Component({
@@ -15,7 +30,7 @@ export const ACCESS_AUDIT_ACTIONS = ['BADGE_STOCK_ADDED', 'BADGE_ASSIGNED', 'BAD
         <div class="filters">
           <label class="fld">Action<select [(ngModel)]="action" (ngModelChange)="filterChanged()">
             <option value="">Toutes actions</option>
-            @for (a of actions; track a) { <option [value]="a">{{ a }}</option> }
+            @for (a of actions; track a) { <option [value]="a">{{ label(a) }}</option> }
           </select></label>
           <label class="fld">ID utilisateur<input type="text" [(ngModel)]="userId" (ngModelChange)="filterChanged()" /></label>
         </div>
@@ -26,7 +41,7 @@ export const ACCESS_AUDIT_ACTIONS = ['BADGE_STOCK_ADDED', 'BADGE_ASSIGNED', 'BAD
             @for (e of items(); track e.id) {
               <tr>
                 <td>{{ e.createdAt | date: 'dd/MM/yyyy HH:mm:ss' }}</td>
-                <td><code>{{ e.action }}</code></td>
+                <td><span [attr.title]="e.action">{{ label(e.action) }}</span></td>
                 <td>{{ e.userId ?? '—' }}</td>
                 <td>{{ e.entityType }}</td>
                 <td>{{ e.entityId ?? '—' }}</td>
@@ -67,6 +82,9 @@ export const ACCESS_AUDIT_ACTIONS = ['BADGE_STOCK_ADDED', 'BADGE_ASSIGNED', 'BAD
 export class AccessAuditPage implements OnInit {
   private readonly api = inject(AccessControlApiService);
   readonly actions = ACCESS_AUDIT_ACTIONS;
+  protected label(action: string): string {
+    return ACCESS_AUDIT_LABELS[action] ?? action;
+  }
   readonly limit = 50;
 
   readonly items = signal<AccessAuditEntry[]>([]);

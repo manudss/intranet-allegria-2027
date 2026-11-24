@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
-import { AccessAuditPage, ACCESS_AUDIT_ACTIONS } from './access-audit.page';
+import { AccessAuditPage, ACCESS_AUDIT_ACTIONS, ACCESS_AUDIT_LABELS } from './access-audit.page';
 import { AccessControlApiService } from './access-control-api.service';
 describe('AccessAuditPage API contract', () => {
   it('renders actual entity and details fields and uses real action enum', async () => {
@@ -11,5 +11,12 @@ describe('AccessAuditPage API contract', () => {
     expect(ACCESS_AUDIT_ACTIONS).toContain('BADGE_STOCK_ADDED'); expect(ACCESS_AUDIT_ACTIONS).toContain('CONFIG_CHANGED');
     expect(ACCESS_AUDIT_ACTIONS).not.toContain('SCAN_UPLOADED');
     fixture.componentInstance.offset.set(50); fixture.componentInstance.filterChanged(); expect(fixture.componentInstance.offset()).toBe(0);
+  });
+
+  it('donne un libellé français à chaque code d’action du journal', () => {
+    for (const a of ACCESS_AUDIT_ACTIONS) {
+      expect(ACCESS_AUDIT_LABELS[a], a).toBeTruthy();
+      expect(ACCESS_AUDIT_LABELS[a]).not.toMatch(/_/);
+    }
   });
 });

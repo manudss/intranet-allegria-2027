@@ -23,7 +23,7 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
 const COMMON_STEPS: readonly HelpStep[] = [
   {
     title: 'Le menu',
-    text: 'Le menu à gauche regroupe les pages par thème. Sur téléphone, il s’ouvre avec le bouton à trois barres en haut à gauche. Vous ne voyez que les pages de votre rôle.',
+    text: 'Le menu à gauche regroupe les pages par thème. Sur téléphone, il s’ouvre avec le bouton à trois barres en haut à gauche.',
   },
   {
     title: 'À quoi sert la page',
@@ -34,7 +34,7 @@ const COMMON_STEPS: readonly HelpStep[] = [
 const ROLE_STEP: Readonly<Record<string, HelpStep>> = {
   ADMIN: {
     title: 'Votre rôle : administration',
-    text: 'Vous avez accès à toutes les pages, dont les paramètres et les rôles. Les modifications sensibles demandent une confirmation qui nomme l’objet concerné.',
+    text: 'Vous avez accès à toutes les pages, dont les paramètres et les rôles.',
   },
   COORDINATOR: {
     title: 'Votre rôle : coordination',
@@ -50,7 +50,7 @@ const ROLE_STEP: Readonly<Record<string, HelpStep>> = {
   },
   SCANNER: {
     title: 'Votre rôle : contrôle d’accès',
-    text: 'Vous scannez les badges aux points de contrôle. Une habilitation vous autorise à scanner pour une durée donnée.',
+    text: 'Une habilitation vous autorise à scanner les badges pour une durée donnée.',
   },
   BADGE_MANAGER: {
     title: 'Votre rôle : badges',
@@ -60,7 +60,7 @@ const ROLE_STEP: Readonly<Record<string, HelpStep>> = {
 
 const DEFAULT_ROLE_STEP: HelpStep = {
   title: 'Votre rôle : bénévole',
-  text: 'Vous consultez les pages qui vous concernent. Si une page est refusée, contactez l’équipe de coordination.',
+  text: 'Vous consultez les pages qui vous concernent. Chaque page indique en une phrase à quoi elle sert.',
 };
 
 const ROLE_ORDER = ['ADMIN', 'COORDINATOR', 'HEALTH', 'CATERING', 'BADGE_MANAGER', 'SCANNER'];

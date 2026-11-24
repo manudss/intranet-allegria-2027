@@ -115,6 +115,7 @@
               type="button"
               size="xs"
               [tuiHint]="acronymHints.TA"
+              [attr.aria-label]="acronymHints.TA"
               [appearance]="draft.track === ProgramSequenceTrack.TA ? 'primary' : 'secondary'"
               (click)="updateEditDraft({ track: ProgramSequenceTrack.TA })"
             >
@@ -125,6 +126,7 @@
               type="button"
               size="xs"
               [tuiHint]="acronymHints.ES"
+              [attr.aria-label]="acronymHints.ES"
               [appearance]="draft.track === ProgramSequenceTrack.ES ? 'primary' : 'secondary'"
               (click)="updateEditDraft({ track: ProgramSequenceTrack.ES })"
             >

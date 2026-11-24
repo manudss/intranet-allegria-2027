@@ -64,7 +64,8 @@
 }
 
 .header-right button[tuiButton][appearance='secondary'] {
-  background: rgba(255, 255, 255, 0.16);
+  /* Fond un peu plus sombre que le rouge de la marque : le texte blanc de l'e-mail reste lisible (contraste mesuré). */
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .header-right button[tuiButton][appearance='primary'] {
@@ -323,4 +324,10 @@
 
 .allegria-header .header-right button.header-help[tuiIconButton] {
   color: #ffffff;
+}
+
+/* Entrée de menu active en thème sombre : fond sombre de la palette et texte clair (contraste mesuré). */
+:host-context([data-theme='dark']) .allegria-sidebar ::ng-deep .t-nav-content ._custom._active {
+  background: var(--appearance-selected) !important;
+  color: #fff5ee !important;
 }

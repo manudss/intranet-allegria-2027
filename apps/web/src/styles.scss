@@ -167,3 +167,15 @@ input:-webkit-autofill:focus {
 }
 
 @include taiga.theme;
+
+/*
+ * Un champ obligatoire vide n'est pas en erreur avant que l'utilisateur l'ait touché ou envoyé
+ * le formulaire : Taiga applique le style « invalide » dès que l'attribut `required` natif est
+ * présent, on le neutralise tant que le champ n'est pas marqué invalide (aria-invalid="true").
+ */
+tui-textfield[data-appearance='textfield']:not(:focus-within):has(input[aria-invalid='false'], textarea[aria-invalid='false']) {
+  outline-color: var(--tui-border-normal) !important;
+}
+tui-textfield:has(input[aria-invalid='false']) [tuiLabel] {
+  color: var(--tui-text-tertiary) !important;
+}

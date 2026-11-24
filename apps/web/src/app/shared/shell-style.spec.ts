@@ -37,6 +37,6 @@ describe('pastilles à couleur automatique', () => {
 
 describe('cadre de page', () => {
   it('est une carte en ombre, sans contour', () => {
-    expect(readFileSync(new URL('../../styles.scss', import.meta.url), 'utf8')).toMatch(/\.page \{[^}]*border: 0;[^}]*box-shadow: var\(--card-shadow/);
+    expect(read('../../styles.scss')).toMatch(/\.page \{[^}]*border: 0;[^}]*box-shadow: var\(--card-shadow/);
   });
 });

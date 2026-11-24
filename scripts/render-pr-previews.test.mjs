@@ -261,7 +261,7 @@ test('workflow never pins trusted-code checkouts to pull_request metadata (stale
   // passed) and failed every synchronize. Trusted code must always come from the default branch head,
   // exactly like the workflow file itself — so no checkout may take a ref from pull_request metadata.
   const wf = readFileSync(new URL('../.github/workflows/pr-previews.yml', import.meta.url), 'utf8');
-  assert.ok((wf.match(/uses: actions\/checkout@/g) ?? []).length >= 3, 'expected several checkout steps');
+  assert.ok((wf.match(/uses: actions\/checkout@/g) ?? []).length >= 2, 'expected the ensure and cleanup checkout steps');
   assert.ok(!/ref:\s*\$\{\{\s*github\.event\.pull_request/.test(wf), 'a checkout must never take its ref from pull_request event metadata');
 });
 

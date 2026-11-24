@@ -27,9 +27,15 @@ export function familyMailSettings(config: ConfigService) {
  * (comma separated, case-insensitive) can receive mail. Fail closed: when the variable is set,
  * every other recipient is refused before any provider call. Unset in production.
  */
+export const isPreviewDeployment = (config: Pick<ConfigService, 'get'>): boolean =>
+  /^al-pr\d+-api(?:-[a-z0-9]+)?$/.test(String(config.get('RENDER_SERVICE_NAME') ?? '')) ||
+  config.get('PREVIEW_DEPLOYMENT') === 'true';
+
+/** In a preview, a missing or empty allowlist refuses everyone (never falls back to unrestricted). */
 export function mailRecipientAllowed(config: Pick<ConfigService, 'get'>, email: string): boolean {
   const raw = config.get<string>('MAIL_ALLOWED_RECIPIENTS');
-  if (raw === undefined || raw === null || raw === '') return true;
+  const configured = raw !== undefined && raw !== null && raw !== '';
+  if (!configured) return !isPreviewDeployment(config);
   const allowed = raw
     .split(',')
     .map((x) => x.trim().toLowerCase())

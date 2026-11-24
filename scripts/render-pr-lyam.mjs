@@ -55,6 +55,7 @@ export async function deploy(e, fetcher = fetch) {
     { key: 'DATABASE_URL', value: e.PREVIEW_DB_URL },
     { key: 'DATABASE_URL_DIRECT', value: e.PREVIEW_DB_URL_DIRECT },
     { key: 'DB_SSL', value: 'true' },
+    { key: 'PREVIEW_DEPLOYMENT', value: 'true' },
   ];
   // Mail (Resend, sender alegria@dss.name) only when the repo secret exists, and ALWAYS locked to the
   // owner's own address: the API refuses every other recipient before any provider call.

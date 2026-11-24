@@ -455,3 +455,25 @@ textarea.form-control {
 :focus-visible {outline:3px solid var(--appearance-focus);outline-offset:3px;}
 input,textarea,select {color-scheme:inherit;}
 input:-webkit-autofill {-webkit-text-fill-color:var(--appearance-text);caret-color:var(--appearance-text);}
+
+/* Squelettes de chargement (le site public n'utilise pas Taiga UI : CSS seul, sans dépendance). */
+.skeleton-card {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 48rem;
+  margin: 2rem auto;
+  padding: 1.5rem;
+}
+.skeleton-line {
+  display: block;
+  height: 1rem;
+  width: 70%;
+  border-radius: 0.5rem;
+  background: linear-gradient(90deg, #e9e3e6 25%, #f6f2f4 50%, #e9e3e6 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s linear infinite;
+}
+.skeleton-line.wide { width: 100%; height: 2rem; }
+.skeleton-line.short { width: 40%; }
+@keyframes skeleton-shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .skeleton-line { animation: none; } }

@@ -192,9 +192,25 @@ tui-textfield.field-required [tuiLabel]::after {
 tui-textfield.field-invalid[data-appearance='textfield'] {
   outline-color: var(--tui-status-negative) !important;
 }
+tui-textfield.field-invalid {
+  position: relative;
+  margin-block-end: 1.25rem;
+}
 .field-error-message {
-  display: block;
-  margin-top: 0.25rem;
+  position: absolute;
+  inset-inline-start: 0.25rem;
+  top: 100%;
+  margin-top: 0.15rem;
   font: var(--tui-font-text-s);
   color: var(--tui-text-negative);
+}
+
+/* Légende affichée en tête de tout formulaire qui contient des champs obligatoires. */
+form:has(tui-textfield.field-required)::before {
+  content: '* champ obligatoire';
+  display: block;
+  grid-column: 1 / -1;
+  margin-bottom: 0.75rem;
+  font: var(--tui-font-text-s);
+  color: var(--tui-text-secondary);
 }

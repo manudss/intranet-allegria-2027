@@ -62,8 +62,8 @@ export class RequiredFieldDirective implements OnInit, OnDestroy {
     this.message?.remove();
   }
 
-  private input(): HTMLInputElement | HTMLTextAreaElement | null {
-    return this.host.querySelector('input, textarea');
+  private input(): HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null {
+    return this.host.querySelector('input, textarea, select');
   }
 
   private refresh(): void {
@@ -77,7 +77,7 @@ export class RequiredFieldDirective implements OnInit, OnDestroy {
         this.message.id = this.messageId;
         this.message.className = 'field-error-message';
         this.message.textContent = 'Champ obligatoire';
-        this.host.insertAdjacentElement('afterend', this.message);
+        this.host.appendChild(this.message);
       }
       input.setAttribute('aria-describedby', this.messageId);
       this.renderer.addClass(this.host, 'field-invalid');

@@ -111,6 +111,8 @@ export class FamilySpacePage implements OnInit, OnDestroy {
   protected readonly error = signal('');
   protected readonly status = signal('');
   protected readonly busy = signal(false);
+  /** Vrai tant que les règles et la session n'ont pas été chargées : affiche un squelette. */
+  protected readonly initializing = signal(true);
   protected readonly challengeId = signal('');
   protected readonly accessModel = signal({ email: '', code: '' });
   protected readonly accessForm = form(this.accessModel, (p) => {
@@ -214,6 +216,8 @@ export class FamilySpacePage implements OnInit, OnDestroy {
       await this.reload();
     } catch (e) {
       if (!(e instanceof HttpErrorResponse) || e.status !== 401) this.fail(e);
+    } finally {
+      this.initializing.set(false);
     }
   }
   ngOnDestroy() {

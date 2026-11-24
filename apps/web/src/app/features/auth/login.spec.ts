@@ -52,21 +52,21 @@ describe('LoginComponent : champs requis', () => {
       expect(i.getAttribute('aria-invalid')).toBe('false');
       expect(i.hasAttribute('aria-describedby')).toBe(false);
     });
-    expect(el.querySelector('form')!.hasAttribute('novalidate')).toBe(true);
+    expect(el.querySelector('form')?.hasAttribute('novalidate')).toBe(true);
   });
 
   it("affiche les erreurs et retire le mode neutre après l'envoi à vide", async () => {
     const fixture = await setup();
     const el: HTMLElement = fixture.nativeElement;
-    el.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }));
+    el.querySelector('form')?.dispatchEvent(new Event('submit', { cancelable: true }));
     await fixture.whenStable();
     fixture.detectChanges();
     expect(el.textContent).toContain('Adresse e-mail requise');
     expect(el.textContent).toContain('Mot de passe requis');
     for (const [inputId, errorId] of [['email', 'email-error'], ['password', 'password-error']]) {
-      const input = el.querySelector(`#${inputId}`)!;
-      expect(input.getAttribute('aria-invalid')).toBe('true');
-      expect(input.getAttribute('aria-describedby')).toBe(errorId);
+      const input = el.querySelector(`#${inputId}`);
+      expect(input?.getAttribute('aria-invalid')).toBe('true');
+      expect(input?.getAttribute('aria-describedby')).toBe(errorId);
       expect(el.querySelector(`#${errorId}`)?.textContent).toContain('requis');
     }
     el.querySelectorAll('tui-textfield').forEach((f) =>

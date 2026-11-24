@@ -223,6 +223,8 @@ export class ParticipantsPage implements OnInit {
   items = signal<Participant[]>([]);
   groups = signal<Group[]>([]);
   groupIds = computed(() => this.groups().map(({ id }) => id));
+  stringifySex = (sex: ParticipantSex) => SEX_LABELS[sex] ?? '';
+  stringifyAge = (age: MejAgeGroup) => MEJ_AGE_LABELS[age] ?? '';
   stringifyGroup = (id: number) => this.groups().find((group) => group.id === id)?.name ?? '';
   query = signal('');
   groupFilter = signal<number | null>(null);

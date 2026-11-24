@@ -183,3 +183,18 @@ tui-textfield.field-pristine[data-appearance='textfield']:focus-within {
 tui-textfield.field-pristine [tuiLabel] {
   color: var(--tui-text-tertiary) !important;
 }
+
+/* Champs obligatoires (voir RequiredFieldDirective). */
+tui-textfield.field-required [tuiLabel]::after {
+  content: ' *';
+  color: var(--tui-text-negative);
+}
+tui-textfield.field-invalid[data-appearance='textfield'] {
+  outline-color: var(--tui-status-negative) !important;
+}
+.field-error-message {
+  display: block;
+  margin-top: 0.25rem;
+  font: var(--tui-font-text-s);
+  color: var(--tui-text-negative);
+}

@@ -81,7 +81,7 @@
     <dt>Naissance</dt>
     <dd>{{ selected()?.dateOfBirth | date: 'dd/MM/yyyy' }}</dd>
     <dt>Sexe</dt>
-    <dd>{{ selected()?.sex }}</dd>
+    <dd>{{ selected()?.sex ? stringifySex(selected()!.sex!) : '—' }}</dd>
     <dt>Tranche d'âge MEJ</dt>
     <dd>{{ selected()?.mejAgeGroup || '—' }}</dd>
     <dt>Groupe</dt>
@@ -181,11 +181,11 @@
         id="date-de-naissance"
       />
     </tui-textfield>
-    <tui-textfield iconStart="@tui.user-round" tuiChevron>
+    <tui-textfield iconStart="@tui.user-round" tuiChevron [stringify]="stringifySex">
       <label for="sexe-2" tuiLabel>Sexe</label
       ><select tuiSelect [items]="sexes" [formField]="participantForm.sex" id="sexe-2"></select>
     </tui-textfield>
-    <tui-textfield iconStart="@tui.users" tuiChevron>
+    <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyAge">
       <label for="tranche-d-age-mej" tuiLabel>Tranche d'âge MEJ</label
       ><select
         tuiSelect

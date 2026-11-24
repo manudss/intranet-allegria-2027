@@ -5,6 +5,7 @@ import { FormField } from '@angular/forms/signals';
 import { TuiItem } from '@taiga-ui/cdk';
 import { TuiButton, TuiGroup, TuiIcon, TuiInput, TuiLabel, TuiRadio } from '@taiga-ui/core';
 import { TuiBadge, TuiChevron, TuiDrawer, TuiSelect, TuiTextarea, TuiBlock } from '@taiga-ui/kit';
+import { RequiredFieldDirective } from './required-field.directive';
 import { PageLayoutComponent } from './ui-components';
 import { LoadingSkeletonComponent } from './loading-skeleton.component';
 import { DataTableComponent } from './data-table';
@@ -15,6 +16,7 @@ export const SHARED_IMPORTS = [
   ScrollingModule,
   FormsModule,
   FormField,
+  RequiredFieldDirective,
   PageLayoutComponent,
   LoadingSkeletonComponent,
   DataTableComponent,

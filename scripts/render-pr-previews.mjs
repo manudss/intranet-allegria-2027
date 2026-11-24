@@ -84,7 +84,7 @@ function linksTable(apiUrl, webUrl, siteUrl, mobileUrl) {
   if (mobileUrl) rows.push(`| App mobile (PWA) | ${mobileUrl} |`);
   return rows.join('\n');
 }
-const HOWTO = "Pour deployer ou mettre a jour les previews avec le dernier commit : commente `/preview` sur cette PR (premier compte Render, onglet **Actions > PR Previews > Run workflow** avec le numero de la PR), ou `/preview2` pour le deuxieme compte Render (image construite sur GitHub, API + intranet, sans le site public).";
+const HOWTO = "Pour deployer ou mettre a jour les previews avec le dernier commit : commente `/preview` sur cette PR (premier compte Render, onglet **Actions > PR Previews > Run workflow** avec le numero de la PR), ou `/preview2` pour le deuxieme compte Render (image construite sur GitHub : API, intranet, site public et appli mobile, sans minute de build Render).";
 
 // ensure: PR opened/updated. Never builds; only keeps the status comment accurate.
 async function ensure() {

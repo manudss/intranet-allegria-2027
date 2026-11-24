@@ -1,13 +1,13 @@
 name: PR Preview (second Render account, image)
 
-# Preview gratuite d'une PR interne : l'API et l'intranet (une seule image) sur le DEUXIEME compte
+# Preview gratuite d'une PR interne : l'API, l'intranet, le site public (/site/) et l'appli mobile (/m/) (une seule image) sur le DEUXIEME compte
 # Render (choix d'Emmanuel du 20 nov. 2026). Aucune minute de build Render : l'image est construite
-# ici (GitHub Actions) puis Render ne fait que la tirer. Le site public n'est pas dans cette image.
+# ici (GitHub Actions) puis Render ne fait que la tirer. Le site public est servi en statique (sans SSR).
 #
 # Declenchement :
 # - label `deploy-preview-lyam` sur la PR (evenement pull_request : le workflow de la PR s'execute
 #   AVANT fusion, avec les secrets car la PR est interne) ;
-# - workflow_dispatch (Actions > Run workflow, ou le commentaire `/preview` relaye par pr-previews.yml) :
+# - workflow_dispatch (Actions > Run workflow, ou le commentaire `/preview2` relaye par pr-previews.yml) :
 #   cette version lit alors la branche par defaut, donc disponible APRES fusion.
 # Isolation : les scripts qui voient la cle Render viennent du dossier `trusted/` ; le code de la PR
 # (dossier `pr/`) ne voit que l'URL de sa propre base Neon. Les PR de fork sont refusees.
@@ -136,6 +136,12 @@ jobs:
           PREVIEW_DB_URL_DIRECT: ${{ steps.creds.outputs.db_url }}
           PREVIEW_IMAGE: ghcr.io/${{ github.repository }}@${{ steps.image.outputs.digest }}
         run: node scripts/render-pr-lyam.mjs
+
+      - name: Post the preview links on the PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMENT: ${{ steps.deploy.outputs.comment }}
+        run: gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body "$COMMENT"
 
   cleanup:
     name: Delete the free preview when the PR closes

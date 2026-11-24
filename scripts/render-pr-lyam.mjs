@@ -101,11 +101,19 @@ export async function deploy(e, fetcher = fetch) {
       image: e.PREVIEW_IMAGE,
     }),
   );
-  if (e.GITHUB_STEP_SUMMARY)
-    appendFileSync(
-      e.GITHUB_STEP_SUMMARY,
-      `Preview PR${e.PR_NUMBER}, second Render account, free image service (API + intranet, no public site)\n\n${service.serviceDetails.url}\n\nRender deployment must be confirmed live before testing. Mail key must be configured separately; no mail is sent by this workflow.\n`,
-    );
+  const base = service.serviceDetails.url.replace(/\/+$/, '');
+  const body = [
+    `Preview PR${e.PR_NUMBER}, deuxieme compte Render, service image gratuit (zero minute de build Render).`,
+    '',
+    `- Intranet : ${base}/`,
+    `- Site public : ${base}/site/`,
+    `- Appli mobile : ${base}/m/`,
+    `- API : ${base}/api (Swagger : ${base}/api/docs)`,
+    '',
+    'Plan gratuit : le service s\'endort apres environ 15 minutes sans visite, la premiere page peut prendre une a deux minutes a se reveler. Le site public est servi en mode statique (pas de rendu serveur). Donnees fictives uniquement ; aucun mail n\'est envoye.',
+  ].join('\n');
+  if (e.GITHUB_STEP_SUMMARY) appendFileSync(e.GITHUB_STEP_SUMMARY, `${body}\n`);
+  if (e.GITHUB_OUTPUT) appendFileSync(e.GITHUB_OUTPUT, `comment<<EOF_PREVIEW\n${body}\nEOF_PREVIEW\n`);
   return service;
 }
 if (process.argv[1]?.endsWith('/render-pr-lyam.mjs')) await deploy(process.env);

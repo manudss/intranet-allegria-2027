@@ -34,9 +34,9 @@ const DUPLICATE_RULES: { value: DuplicateRule; label: string }[] = [
           </tbody>
         </table>
         <div class="grid4">
-          <input type="text" [(ngModel)]="stCode" aria-label="Code" placeholder="Code (ex. MEAL)" />
-          <input type="text" [(ngModel)]="stLabel" aria-label="Libellé" placeholder="Libellé" />
-          <select [(ngModel)]="stRule">@for (r of rules; track r.value) { <option [ngValue]="r.value">{{ r.label }}</option> }</select>
+          <label class="fld">Code<input type="text" [(ngModel)]="stCode" placeholder="ex. MEAL" /></label>
+          <label class="fld">Libellé<input type="text" [(ngModel)]="stLabel" /></label>
+          <label class="fld">Règle de doublon<select [(ngModel)]="stRule">@for (r of rules; track r.value) { <option [ngValue]="r.value">{{ r.label }}</option> }</select></label>
           <button tuiButton size="s" type="button" (click)="addScanType()" [disabled]="!stCode.trim() || !stLabel.trim()">Ajouter</button>
         </div>
       </section>
@@ -57,13 +57,13 @@ const DUPLICATE_RULES: { value: DuplicateRule; label: string }[] = [
           </tbody>
         </table>
         <div class="grid4">
-          <input type="text" [(ngModel)]="zoneName" aria-label="Nom de la zone" placeholder="Nom de la zone" />
+          <label class="fld">Nom de la zone<input type="text" [(ngModel)]="zoneName" /></label>
           <span class="chk-group">
             @for (t of personTypes; track t) {
               <label class="chk"><input type="checkbox" [checked]="zoneTypes.has(t)" (change)="toggleType(t)" /> {{ t }}</label>
             }
           </span>
-          <label class="chk"><input type="checkbox" [(ngModel)]="zoneOnline" /> Validation en ligne</label><input type="number" min="0" max="720" [(ngModel)]="zoneMaxOffline" aria-label="Hors-ligne max" placeholder="Hors-ligne max (min)" />
+          <label class="chk"><input type="checkbox" [(ngModel)]="zoneOnline" /> Validation en ligne</label><label class="fld">Durée hors-ligne max (minutes)<input type="number" min="0" max="720" [(ngModel)]="zoneMaxOffline" /></label>
           <button tuiButton size="s" type="button" (click)="addZone()" [disabled]="!zoneName.trim()">{{ editingZoneId ? 'Enregistrer' : 'Ajouter' }}</button>
         </div>
       </section>
@@ -85,10 +85,10 @@ const DUPLICATE_RULES: { value: DuplicateRule; label: string }[] = [
           </tbody>
         </table>
         <div class="grid5">
-          <input type="text" [(ngModel)]="ptName" aria-label="Nom du point" placeholder="Nom (ex. Porte A)" />
-          <select [(ngModel)]="ptZoneId">@for (z of zones(); track z.id) { <option [ngValue]="z.id">{{ z.name }}</option> }</select>
-          <select [(ngModel)]="ptScanTypeId">@for (t of scanTypes(); track t.id) { <option [ngValue]="t.id">{{ t.label }}</option> }</select>
-          <input type="text" [(ngModel)]="ptServiceKey" aria-label="Clé de service" placeholder="Clé de service (optionnel)" />
+          <label class="fld">Nom du point<input type="text" [(ngModel)]="ptName" placeholder="ex. Porte A" /></label>
+          <label class="fld">Zone<select [(ngModel)]="ptZoneId">@for (z of zones(); track z.id) { <option [ngValue]="z.id">{{ z.name }}</option> }</select></label>
+          <label class="fld">Type de scan<select [(ngModel)]="ptScanTypeId">@for (t of scanTypes(); track t.id) { <option [ngValue]="t.id">{{ t.label }}</option> }</select></label>
+          <label class="fld">Clé de service (optionnel)<input type="text" [(ngModel)]="ptServiceKey" /></label>
           <button tuiButton size="s" type="button" (click)="addPoint()" [disabled]="!ptName.trim() || !ptZoneId || !ptScanTypeId">Ajouter</button>
         </div>
       </section>
@@ -106,8 +106,10 @@ const DUPLICATE_RULES: { value: DuplicateRule; label: string }[] = [
     .tbl td { padding: 8px; border-bottom: 1px solid var(--line-soft); }
     code { font-family: ui-monospace, monospace; font-size: 12px; }
     input, select { border: 1px solid var(--appearance-border); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
-    .grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: center; }
-    .grid5 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 8px; align-items: center; }
+    .fld { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; min-width: 0; }
+    .fld > input, .fld > select { display: block; font-weight: 400; min-width: 0; box-sizing: border-box; }
+    .grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: end; }
+    .grid5 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 8px; align-items: end; }
     @media(max-width: 900px) { .grid4, .grid5 { grid-template-columns: 1fr 1fr; } }
     .chk { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; margin-right: 10px; }
     .ok-msg { color: var(--appearance-success); font-size: 13px; margin: 0; }

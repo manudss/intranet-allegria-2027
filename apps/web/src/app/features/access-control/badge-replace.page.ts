@@ -17,7 +17,7 @@ import {
 
       <section class="panel">
         <h2>1 · Trouver la personne</h2>
-        <input type="search" [(ngModel)]="query" (ngModelChange)="onQuery($event)" aria-label="Rechercher par nom ou prénom" placeholder="Nom, prénom…" />
+        <label class="fld">Rechercher par nom ou prénom<input type="search" [(ngModel)]="query" (ngModelChange)="onQuery($event)" placeholder="Nom, prénom…" /></label>
         @for (p of results(); track p.id) {
           <button type="button" class="row" (click)="choose(p)">
             <span><strong>{{ p.firstName }} {{ p.lastName }}</strong><small>{{ sub(p) }}</small></span><span>›</span>
@@ -38,7 +38,7 @@ import {
           }
           <div class="card new">
             <span class="lbl">NOUVEAU BADGE — scannez ou saisissez le code (stock disponible)</span>
-            <input type="text" [(ngModel)]="newCode" aria-label="Code du nouveau badge" placeholder="Code du nouveau badge" />
+            <label class="fld">Code du nouveau badge<input type="text" [(ngModel)]="newCode" /></label>
           </div>
           <p class="hint">Historique et repas déjà validés restent rattachés à {{ p.firstName }}. Mettre à jour le nom imprimé sur le badge de remplacement.</p>
           <div class="actions">
@@ -60,6 +60,8 @@ import {
     </main>
   `,
   styles: [`
+    .fld { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; min-width: 0; }
+    .fld > input, .fld > select { display: block; font-weight: 400; min-width: 0; box-sizing: border-box; }
     .page { padding: 24px; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
     .head h1 { margin: 0; font-size: 22px; }
     .panel { background: var(--appearance-surface); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 10px; }

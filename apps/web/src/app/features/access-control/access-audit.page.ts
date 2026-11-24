@@ -13,11 +13,11 @@ export const ACCESS_AUDIT_ACTIONS = ['BADGE_STOCK_ADDED', 'BADGE_ASSIGNED', 'BAD
       <header class="head"><h1>Journal du contrôle d'accès</h1></header>
       <section class="panel">
         <div class="filters">
-          <select [(ngModel)]="action" (ngModelChange)="filterChanged()">
+          <label class="fld">Action<select [(ngModel)]="action" (ngModelChange)="filterChanged()">
             <option value="">Toutes actions</option>
             @for (a of actions; track a) { <option [value]="a">{{ a }}</option> }
-          </select>
-          <input type="text" [(ngModel)]="userId" (ngModelChange)="filterChanged()" aria-label="ID utilisateur" placeholder="ID utilisateur" />
+          </select></label>
+          <label class="fld">ID utilisateur<input type="text" [(ngModel)]="userId" (ngModelChange)="filterChanged()" /></label>
         </div>
         @if (loading()) { <app-loading-skeleton /> }
         <table class="tbl">
@@ -48,6 +48,8 @@ export const ACCESS_AUDIT_ACTIONS = ['BADGE_STOCK_ADDED', 'BADGE_ASSIGNED', 'BAD
     .page { padding: 24px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; }
     .head h1 { margin: 0; font-size: 22px; }
     .panel { background: var(--appearance-surface); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 10px; }
+    .fld { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; min-width: 0; }
+    .fld > input, .fld > select { display: block; font-weight: 400; min-width: 0; box-sizing: border-box; }
     .filters { display: flex; gap: 8px; }
     input, select { border: 1px solid var(--appearance-border); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
     .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }

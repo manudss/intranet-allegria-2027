@@ -1,3 +1,4 @@
+import { FrLabelPipe } from '../../shared/fr-label.pipe';
 import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -16,7 +17,7 @@ import { reportFilters } from './access-reporting.page';
 @Component({
   selector: 'app-detail-report',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [FrLabelPipe, CommonModule, FormsModule, RouterLink],
   templateUrl: './detail-report.page.html',
   styleUrl: './detail-report.page.scss',
 })

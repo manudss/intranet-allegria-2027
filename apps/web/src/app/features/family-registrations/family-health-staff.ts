@@ -127,7 +127,7 @@ interface HealthRow {
         @for (row of rows(); track row.youthId) {
           <article>
             <h2>{{ row.name }}</h2>
-            <p>{{ row.state }} · {{ row.attested ? 'Fiche attestée' : 'Attestation à obtenir' }}</p>
+            <p>{{ row.state | frLabel }} · {{ row.attested ? 'Fiche attestée' : 'Attestation à obtenir' }}</p>
             <button tuiButton appearance="secondary" (click)="open(row)">
               Ouvrir ce dossier sanitaire
             </button>

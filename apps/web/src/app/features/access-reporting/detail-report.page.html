@@ -281,7 +281,7 @@
         <tr>
           <td>
             <b>{{name(p)}}</b
-            ><small>{{p.participantId?'#'+p.participantId:'Sans identité'}} · {{p.type}}</small
+            ><small>{{p.participantId?'#'+p.participantId:'Sans identité'}} · {{p.type | frLabel}}</small
             >@if(p.teams?.length){@for(t of p.teams;track t.id){<small>{{t.name}}</small>}}
           </td>
           <td>

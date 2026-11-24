@@ -173,7 +173,7 @@
               >Historique →</a
             >}@else{<small>Sans fiche participant, consultation sans création.</small>}
           </td>
-          <td>{{p.type}}</td>
+          <td>{{p.type | frLabel}}</td>
           <td>
             {{p.hasAccepted?'Au moins un accepté sans ambiguïté':'Aucun accepté sans ambiguïté'}}
           </td>

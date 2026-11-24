@@ -197,7 +197,7 @@
                         {{ assignment.shift?.startAt | date: 'dd/MM/yyyy HH:mm' }} →
                         {{ assignment.shift?.endAt | date: 'dd/MM/yyyy HH:mm' }}
                       </div>
-                      <small>{{ assignment.status }}</small>
+                      <small>{{ assignment.status | frLabel }}</small>
                     </div>
                   </li>
                 }

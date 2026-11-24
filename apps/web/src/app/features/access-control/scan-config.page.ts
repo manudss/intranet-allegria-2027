@@ -34,8 +34,8 @@ const DUPLICATE_RULES: { value: DuplicateRule; label: string }[] = [
           </tbody>
         </table>
         <div class="grid4">
-          <input type="text" [(ngModel)]="stCode" placeholder="Code (ex. MEAL)" />
-          <input type="text" [(ngModel)]="stLabel" placeholder="Libellé" />
+          <input type="text" [(ngModel)]="stCode" aria-label="Code" placeholder="Code (ex. MEAL)" />
+          <input type="text" [(ngModel)]="stLabel" aria-label="Libellé" placeholder="Libellé" />
           <select [(ngModel)]="stRule">@for (r of rules; track r.value) { <option [ngValue]="r.value">{{ r.label }}</option> }</select>
           <button tuiButton size="s" type="button" (click)="addScanType()" [disabled]="!stCode.trim() || !stLabel.trim()">Ajouter</button>
         </div>
@@ -57,13 +57,13 @@ const DUPLICATE_RULES: { value: DuplicateRule; label: string }[] = [
           </tbody>
         </table>
         <div class="grid4">
-          <input type="text" [(ngModel)]="zoneName" placeholder="Nom de la zone" />
+          <input type="text" [(ngModel)]="zoneName" aria-label="Nom de la zone" placeholder="Nom de la zone" />
           <span class="chk-group">
             @for (t of personTypes; track t) {
               <label class="chk"><input type="checkbox" [checked]="zoneTypes.has(t)" (change)="toggleType(t)" /> {{ t }}</label>
             }
           </span>
-          <label class="chk"><input type="checkbox" [(ngModel)]="zoneOnline" /> Validation en ligne</label><input type="number" min="0" max="720" [(ngModel)]="zoneMaxOffline" placeholder="Hors-ligne max (min)" />
+          <label class="chk"><input type="checkbox" [(ngModel)]="zoneOnline" /> Validation en ligne</label><input type="number" min="0" max="720" [(ngModel)]="zoneMaxOffline" aria-label="Hors-ligne max" placeholder="Hors-ligne max (min)" />
           <button tuiButton size="s" type="button" (click)="addZone()" [disabled]="!zoneName.trim()">{{ editingZoneId ? 'Enregistrer' : 'Ajouter' }}</button>
         </div>
       </section>
@@ -85,10 +85,10 @@ const DUPLICATE_RULES: { value: DuplicateRule; label: string }[] = [
           </tbody>
         </table>
         <div class="grid5">
-          <input type="text" [(ngModel)]="ptName" placeholder="Nom (ex. Porte A)" />
+          <input type="text" [(ngModel)]="ptName" aria-label="Nom du point" placeholder="Nom (ex. Porte A)" />
           <select [(ngModel)]="ptZoneId">@for (z of zones(); track z.id) { <option [ngValue]="z.id">{{ z.name }}</option> }</select>
           <select [(ngModel)]="ptScanTypeId">@for (t of scanTypes(); track t.id) { <option [ngValue]="t.id">{{ t.label }}</option> }</select>
-          <input type="text" [(ngModel)]="ptServiceKey" placeholder="Clé de service (optionnel)" />
+          <input type="text" [(ngModel)]="ptServiceKey" aria-label="Clé de service" placeholder="Clé de service (optionnel)" />
           <button tuiButton size="s" type="button" (click)="addPoint()" [disabled]="!ptName.trim() || !ptZoneId || !ptScanTypeId">Ajouter</button>
         </div>
       </section>

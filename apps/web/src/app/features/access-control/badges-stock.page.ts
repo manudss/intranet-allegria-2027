@@ -31,9 +31,9 @@ const STATUS_LABELS: Record<AccessBadgeStatus, string> = {
       <section class="panel">
         <h2>Enregistrer un lot</h2>
         <p class="hint">Un code par ligne (code opaque, sans nom). Le stock seul ne suffit pas : chaque badge doit ensuite être attribué.</p>
-        <textarea rows="4" [(ngModel)]="stockCodes" placeholder="9f2c1e0a4b6d8f30…&#10;ab12cd34ef56ab78…"></textarea>
+        <textarea rows="4" [(ngModel)]="stockCodes" aria-label="Codes des badges, un par ligne" placeholder="9f2c1e0a4b6d8f30…&#10;ab12cd34ef56ab78…"></textarea>
         <div class="row">
-          <input type="text" [(ngModel)]="stockLot" placeholder="Lot (obligatoire, ex. L2027-A)" />
+          <input type="text" [(ngModel)]="stockLot" aria-label="Lot" placeholder="Lot (obligatoire, ex. L2027-A)" />
           <button tuiButton type="button" (click)="registerStock()" [disabled]="saving() || !stockLot.trim()">Enregistrer</button>
         </div>
         @if (stockMsg(); as m) { <p class="ok-msg">{{ m }}</p> }
@@ -48,8 +48,8 @@ const STATUS_LABELS: Record<AccessBadgeStatus, string> = {
             <option value="LOST">Perdu</option>
             <option value="REVOKED">Révoqué</option>
           </select>
-          <input type="text" [(ngModel)]="lotFilter" (ngModelChange)="reload()" placeholder="Lot" />
-          <input type="text" [(ngModel)]="qFilter" (ngModelChange)="reload()" placeholder="Début de code" />
+          <input type="text" [(ngModel)]="lotFilter" (ngModelChange)="reload()" aria-label="Lot" placeholder="Lot" />
+          <input type="text" [(ngModel)]="qFilter" (ngModelChange)="reload()" aria-label="Début de code" placeholder="Début de code" />
         </div>
         @if (loading()) { <app-loading-skeleton /> }
         <div class="tbl-scroll" tabindex="0" role="region" aria-label="Liste des badges">

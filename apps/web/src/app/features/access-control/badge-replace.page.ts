@@ -17,7 +17,7 @@ import {
 
       <section class="panel">
         <h2>1 · Trouver la personne</h2>
-        <input type="search" [(ngModel)]="query" (ngModelChange)="onQuery($event)" placeholder="Nom, prénom…" />
+        <input type="search" [(ngModel)]="query" (ngModelChange)="onQuery($event)" aria-label="Rechercher par nom ou prénom" placeholder="Nom, prénom…" />
         @for (p of results(); track p.id) {
           <button type="button" class="row" (click)="choose(p)">
             <span><strong>{{ p.firstName }} {{ p.lastName }}</strong><small>{{ sub(p) }}</small></span><span>›</span>
@@ -38,7 +38,7 @@ import {
           }
           <div class="card new">
             <span class="lbl">NOUVEAU BADGE — scannez ou saisissez le code (stock disponible)</span>
-            <input type="text" [(ngModel)]="newCode" placeholder="Code du nouveau badge" />
+            <input type="text" [(ngModel)]="newCode" aria-label="Code du nouveau badge" placeholder="Code du nouveau badge" />
           </div>
           <p class="hint">Historique et repas déjà validés restent rattachés à {{ p.firstName }}. Mettre à jour le nom imprimé sur le badge de remplacement.</p>
           <div class="actions">

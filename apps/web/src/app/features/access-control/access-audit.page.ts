@@ -17,7 +17,7 @@ export const ACCESS_AUDIT_ACTIONS = ['BADGE_STOCK_ADDED', 'BADGE_ASSIGNED', 'BAD
             <option value="">Toutes actions</option>
             @for (a of actions; track a) { <option [value]="a">{{ a }}</option> }
           </select>
-          <input type="text" [(ngModel)]="userId" (ngModelChange)="filterChanged()" placeholder="ID utilisateur" />
+          <input type="text" [(ngModel)]="userId" (ngModelChange)="filterChanged()" aria-label="ID utilisateur" placeholder="ID utilisateur" />
         </div>
         @if (loading()) { <app-loading-skeleton /> }
         <table class="tbl">

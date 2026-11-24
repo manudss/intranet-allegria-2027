@@ -48,6 +48,11 @@ describe('LoginComponent : champs requis', () => {
     expect(fields.length).toBe(2);
     fields.forEach((f) => expect(f.classList.contains('field-pristine')).toBe(true));
     expect(el.textContent).not.toContain('requis');
+    el.querySelectorAll('input').forEach((i) => {
+      expect(i.getAttribute('aria-invalid')).toBe('false');
+      expect(i.hasAttribute('aria-describedby')).toBe(false);
+    });
+    expect(el.querySelector('form')!.hasAttribute('novalidate')).toBe(true);
   });
 
   it("affiche les erreurs et retire le mode neutre après l'envoi à vide", async () => {
@@ -58,6 +63,12 @@ describe('LoginComponent : champs requis', () => {
     fixture.detectChanges();
     expect(el.textContent).toContain('Adresse e-mail requise');
     expect(el.textContent).toContain('Mot de passe requis');
+    for (const [inputId, errorId] of [['email', 'email-error'], ['password', 'password-error']]) {
+      const input = el.querySelector(`#${inputId}`)!;
+      expect(input.getAttribute('aria-invalid')).toBe('true');
+      expect(input.getAttribute('aria-describedby')).toBe(errorId);
+      expect(el.querySelector(`#${errorId}`)?.textContent).toContain('requis');
+    }
     el.querySelectorAll('tui-textfield').forEach((f) =>
       expect(f.classList.contains('field-pristine')).toBe(false),
     );

@@ -3,12 +3,15 @@
       <img src="assets/logo-allegria.svg" alt="Alegria 2027" />
       <h1>Connexion</h1>
       <p>Intranet des bénévoles</p>
-      <form (submit)="onSubmit($event)">
+      <form novalidate (submit)="onSubmit($event)">
         <tui-textfield [class.field-pristine]="!loginForm.email().touched()">
           <label tuiLabel for="email">Adresse e-mail</label>
-          <input tuiInput type="email" autocomplete="username" [formField]="loginForm.email" id="email" />
+          <input tuiInput type="email" autocomplete="username" [formField]="loginForm.email" id="email"
+            [attr.aria-invalid]="emailInvalid() ? 'true' : 'false'"
+            [attr.aria-describedby]="emailInvalid() ? 'email-error' : null" />
         </tui-textfield>
         <tui-error
+          id="email-error"
           [error]="
             loginForm.email().touched() && loginForm.email().invalid()
               ? 'Adresse e-mail requise'
@@ -23,10 +26,13 @@
             autocomplete="current-password"
             [formField]="loginForm.password"
             id="password"
+            [attr.aria-invalid]="passwordInvalid() ? 'true' : 'false'"
+            [attr.aria-describedby]="passwordInvalid() ? 'password-error' : null"
           />
           <tui-icon tuiPassword />
         </tui-textfield>
         <tui-error
+          id="password-error"
           [error]="
             loginForm.password().touched() && loginForm.password().invalid()
               ? 'Mot de passe requis'

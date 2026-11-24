@@ -19,3 +19,12 @@ describe('identité visuelle du gabarit (thème clair)', () => {
     expect(read('../layout.html')).toContain('app-appearance-taiga');
   });
 });
+
+describe('page Stock des badges, petit écran', () => {
+  it('empile champs et boutons et fait défiler le tableau', () => {
+    const page = read('../features/access-control/badges-stock.page.ts');
+    expect(page).toMatch(/\.row, \.filters \{[^}]*flex-wrap: wrap/);
+    expect(page).toContain('class="tbl-scroll"');
+    expect(page).toMatch(/\.tbl-scroll \{[^}]*overflow-x: auto/);
+  });
+});

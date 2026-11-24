@@ -52,6 +52,7 @@ const STATUS_LABELS: Record<AccessBadgeStatus, string> = {
           <input type="text" [(ngModel)]="qFilter" (ngModelChange)="reload()" placeholder="Début de code" />
         </div>
         @if (loading()) { <app-loading-skeleton /> }
+        <div class="tbl-scroll" tabindex="0" role="region" aria-label="Liste des badges">
         <table class="tbl">
           <thead><tr><th>Code</th><th>Lot</th><th>Statut</th><th>Créé le</th><th></th></tr></thead>
           <tbody>
@@ -70,13 +71,14 @@ const STATUS_LABELS: Record<AccessBadgeStatus, string> = {
             }
           </tbody>
         </table>
+        </div>
         @if (!loading() && items().length === 0) { <p class="hint">Aucun badge.</p> }
       </section>
     </main>
   `,
   styles: [`
     .page { padding: 24px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; }
-    .head { display: flex; align-items: baseline; gap: 12px; }
+    .head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; }
     .head h1 { margin: 0; font-size: 22px; }
     .total { color: var(--tui-text-secondary); font-size: 14px; }
     .panel { background: var(--appearance-surface); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 10px; }
@@ -84,7 +86,12 @@ const STATUS_LABELS: Record<AccessBadgeStatus, string> = {
     .hint { font-size: 13px; color: var(--tui-text-secondary); margin: 0; }
     textarea, input, select { border: 1px solid var(--appearance-border); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
     textarea { font-family: ui-monospace, monospace; }
-    .row, .filters { display: flex; gap: 8px; }
+    .page, .panel { min-width: 0; max-width: 100%; }
+    .row, .filters { display: flex; flex-wrap: wrap; gap: 8px; }
+    .row > input, .filters > input, .filters > select { flex: 1 1 10rem; min-width: 0; box-sizing: border-box; }
+    textarea { width: 100%; box-sizing: border-box; }
+    .tbl-scroll { max-width: 100%; overflow-x: auto; }
+    @media (max-width: 640px) { .page { padding: 12px; } .row > button, .head > a { flex: 1 1 100%; } }
     .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
     .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--appearance-border); }
     .tbl td { padding: 8px; border-bottom: 1px solid var(--appearance-border); }

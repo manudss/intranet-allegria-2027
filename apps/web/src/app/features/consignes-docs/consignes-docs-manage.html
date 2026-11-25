@@ -55,34 +55,23 @@
       ><input tuiInput [formField]="docForm.title" id="titre-fiche" />
     </tui-textfield>
 
-    <tui-textfield iconStart="@tui.tag" tuiChevron>
-      <label for="categorie-fiche" tuiLabel>Catégorie</label
-      ><select
-        tuiSelect
-        [ngModel]="model().categoryId"
-        (ngModelChange)="setCategory($event)"
-        id="categorie-fiche"
-      >
-        <option [ngValue]="null">Sans catégorie</option>
-        @for (category of activeCategories(); track category.id) {
-        <option [ngValue]="category.id">{{ category.label }}</option>
-        }
-      </select>
-    </tui-textfield>
+    <app-select-field
+      label="Catégorie"
+      icon="@tui.tag"
+      testId="categorie-fiche"
+      [options]="categoryOptions()"
+      [value]="model().categoryId ?? 0"
+      (valueChange)="setCategory($event)"
+    />
 
-    <tui-textfield iconStart="@tui.file" tuiChevron>
-      <label for="type-fiche" tuiLabel>Type de fichier</label
-      ><select
-        tuiSelect
-        [ngModel]="model().fileType"
-        (ngModelChange)="setFileType($event)"
-        id="type-fiche"
-      >
-        @for (type of fileTypes; track type) {
-        <option [ngValue]="type">{{ type }}</option>
-        }
-      </select>
-    </tui-textfield>
+    <app-select-field
+      label="Type de fichier"
+      icon="@tui.file"
+      testId="type-fiche"
+      [options]="fileTypeOptions"
+      [value]="model().fileType"
+      (valueChange)="$event && setFileType($event)"
+    />
 
     <tui-textfield iconStart="@tui.link" class="wide">
       <label for="lien-fiche" tuiLabel>Lien du document</label
@@ -101,52 +90,86 @@
       <label for="description-fiche" tuiLabel>Description</label
       ><textarea
         tuiTextarea
-        [ngModel]="model().description"
-        (ngModelChange)="model.update((m) => ({ ...m, description: $event }))"
+        [value]="model().description ?? ''"
+        (input)="model.update((m) => ({ ...m, description: $any($event.target).value }))"
         id="description-fiche"
       ></textarea>
     </tui-textfield>
 
     <fieldset class="audience">
       <legend>1 · Qui voit la fiche dans Allegria ?</legend>
-      <label tuiBlock for="audience-tous">
-        <input
-          tuiRadio
-          type="radio"
-          name="visibility"
-          value="ALL"
-          [checked]="model().visibility === 'ALL'"
-          (change)="setVisibility('ALL')"
-          id="audience-tous"
-        />
-        Tous les utilisateurs connectés
-      </label>
-      <label tuiBlock for="audience-equipes">
-        <input
-          tuiRadio
-          type="radio"
-          name="visibility"
-          value="TEAMS"
-          [checked]="model().visibility === 'TEAMS'"
-          (change)="setVisibility('TEAMS')"
-          id="audience-equipes"
-        />
-        Certaines équipes opérationnelles
-      </label>
+      <app-select-field
+        label="Audience"
+        icon="@tui.users"
+        testId="audience-fiche"
+        [options]="audienceOptions"
+        [value]="model().visibility"
+        (valueChange)="$event && setVisibility($event)"
+      />
       @if (model().visibility === 'TEAMS') {
       <div class="team-picker">
-        @for (team of teams(); track team.id) {
-        <label class="check" [class.team-inactive]="!team.isActive">
+        <tui-textfield iconStart="@tui.search">
+          <label for="recherche-equipe" tuiLabel>Rechercher une équipe</label>
           <input
-            type="checkbox"
-            [checked]="isTeamSelected(team.id)"
-            (change)="toggleTeam(team.id, $any($event.target).checked)"
+            tuiInput
+            id="recherche-equipe"
+            placeholder="Nom ou code…"
+            [ngModel]="teamSearch()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="teamSearch.set($event)"
           />
-          {{ team.name }} ({{ team.code }}) @if (!team.isActive) { — inactive }
-        </label>
-        }
+        </tui-textfield>
+        <div class="type-filters" role="group" aria-label="Filtrer par type d'équipe">
+          @for (type of teamTypes(); track type) {
+          <button
+            tuiChip
+            type="button"
+            size="s"
+            [appearance]="teamTypeFilter() === type ? 'primary' : 'neutral'"
+            [attr.aria-pressed]="teamTypeFilter() === type"
+            (click)="toggleTeamType(type)"
+          >
+            {{ type }}
+          </button>
+          }
+        </div>
+        <div class="picker-actions">
+          <button
+            tuiButton
+            type="button"
+            size="s"
+            appearance="flat"
+            (click)="selectFilteredTeams()"
+          >
+            Tout sélectionner ({{ filteredTeams().length }})
+          </button>
+          <button tuiButton type="button" size="s" appearance="flat" (click)="clearTeams()">
+            Tout désélectionner
+          </button>
+        </div>
+        <ul class="team-list">
+          @for (team of filteredTeams(); track team.id) {
+          <li [class.team-inactive]="!team.isActive">
+            <label>
+              <input
+                tuiCheckbox
+                type="checkbox"
+                size="s"
+                [ngModel]="isTeamSelected(team.id)"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="toggleTeam(team.id, $event)"
+                [attr.aria-label]="team.name"
+              />
+              {{ team.name }} ({{ team.code }}) @if (!team.isActive) { — inactive }
+            </label>
+          </li>
+          } @empty {
+          <li class="hint">Aucune équipe ne correspond.</li>
+          }
+        </ul>
         <p class="hint">
-          Appartenir à au moins une équipe suffit. Une équipe inactive ne donne pas accès.
+          {{ selectedTeams().length }} équipe(s) sélectionnée(s). Appartenir à au moins une équipe
+          suffit. Une équipe inactive ne donne pas accès.
         </p>
       </div>
       }
@@ -159,6 +182,9 @@
         Allegria.
       </p>
     </fieldset>
+    @if (saveError()) {
+    <p class="notice" role="alert">{{ saveError() }}</p>
+    }
   </form>
   }
 

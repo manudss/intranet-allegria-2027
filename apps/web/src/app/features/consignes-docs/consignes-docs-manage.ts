@@ -16,9 +16,21 @@ import {
   VolunteerTeamsApiService,
 } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
+import { SelectFieldComponent, SelectOption } from '../../shared/select-field.component';
+import { TuiCheckbox } from '@taiga-ui/core';
+import { TuiChip } from '@taiga-ui/kit';
 import { DataTableColumn } from '../../shared/data-table';
 
 const FILE_TYPES: readonly DocumentFileType[] = ['PDF', 'DOCX', 'XLSX', 'PPTX', 'OTHER'];
+
+const NO_CATEGORY = 0;
+const OTHER_TYPE = 'Autre';
+
+/** Type d'équipe opérationnelle : partie avant « · » du nom (ex. « Sécurité · Contrôle d'accès »). */
+export const teamTypeOf = (team: Pick<VolunteerTeam, 'name'>): string => {
+  const [type, ...rest] = team.name.split('·');
+  return rest.length > 0 && type.trim() ? type.trim() : OTHER_TYPE;
+};
 
 const blank = (): DocumentLinkPayload => ({
   title: '',
@@ -33,12 +45,19 @@ const blank = (): DocumentLinkPayload => ({
 @Component({
   selector: 'app-consignes-docs-manage',
   standalone: true,
-  imports: [...SHARED_IMPORTS],
+  imports: [...SHARED_IMPORTS, SelectFieldComponent, TuiCheckbox, TuiChip],
   templateUrl: './consignes-docs-manage.html',
   styleUrls: ['../../shared/crud.scss', './consignes-docs-manage.scss'],
 })
 export class ConsignesDocsManagePage implements OnInit {
   protected readonly fileTypes = FILE_TYPES;
+  protected readonly audienceOptions: readonly SelectOption<DocumentVisibility>[] = [
+    { value: 'ALL', label: 'Tous les utilisateurs connectés' },
+    { value: 'TEAMS', label: 'Certaines équipes opérationnelles' },
+  ];
+  protected readonly fileTypeOptions: readonly SelectOption<DocumentFileType>[] = FILE_TYPES.map(
+    (type) => ({ value: type, label: type }),
+  );
 
   protected readonly tableColumns: readonly DataTableColumn<DocumentLink>[] = [
     {
@@ -99,6 +118,9 @@ export class ConsignesDocsManagePage implements OnInit {
   categories = signal<DocumentCategory[]>([]);
   teams = signal<VolunteerTeam[]>([]);
   query = signal('');
+  teamSearch = signal('');
+  teamTypeFilter = signal<string | null>(null);
+  saveError = signal<string | null>(null);
   loading = signal(true);
   opened = signal(false);
   mode = signal<'detail' | 'create' | 'edit'>('detail');
@@ -124,6 +146,31 @@ export class ConsignesDocsManagePage implements OnInit {
     this.categories().filter((category) => category.isActive),
   );
 
+  readonly categoryOptions = computed<SelectOption<number>[]>(() => [
+    { value: NO_CATEGORY, label: 'Sans catégorie' },
+    ...this.activeCategories().map((category) => ({ value: category.id, label: category.label })),
+  ]);
+
+  readonly teamTypes = computed(() =>
+    [...new Set(this.teams().map((team) => teamTypeOf(team)))].sort((a, b) =>
+      a.localeCompare(b, 'fr'),
+    ),
+  );
+
+  readonly filteredTeams = computed(() => {
+    const q = this.teamSearch().toLowerCase().trim();
+    const type = this.teamTypeFilter();
+    return this.teams().filter((team) => {
+      if (type && teamTypeOf(team) !== type) return false;
+      return !q || `${team.name} ${team.code}`.toLowerCase().includes(q);
+    });
+  });
+
+  readonly selectedTeams = computed(() => {
+    const ids = new Set(this.model().teamIds ?? []);
+    return this.teams().filter((team) => ids.has(team.id));
+  });
+
   ngOnInit(): void {
     this.reload();
     this.categoriesApi.list().subscribe({ next: (categories) => this.categories.set(categories) });
@@ -147,6 +194,7 @@ export class ConsignesDocsManagePage implements OnInit {
   create(): void {
     this.selected.set(null);
     this.model.set(blank());
+    this.resetEditor();
     this.mode.set('create');
     this.opened.set(true);
   }
@@ -163,7 +211,30 @@ export class ConsignesDocsManagePage implements OnInit {
       visibility: link.visibility,
       teamIds: link.teams.map((team) => team.id),
     });
+    this.resetEditor();
     this.mode.set('edit');
+  }
+
+  private resetEditor(): void {
+    this.teamSearch.set('');
+    this.teamTypeFilter.set(null);
+    this.saveError.set(null);
+  }
+
+  toggleTeamType(type: string): void {
+    this.teamTypeFilter.update((current) => (current === type ? null : type));
+  }
+
+  selectFilteredTeams(): void {
+    const ids = this.filteredTeams().map((team) => team.id);
+    this.model.update((current) => ({
+      ...current,
+      teamIds: [...new Set([...(current.teamIds ?? []), ...ids])],
+    }));
+  }
+
+  clearTeams(): void {
+    this.model.update((current) => ({ ...current, teamIds: [] }));
   }
 
   setVisibility(visibility: DocumentVisibility): void {
@@ -184,7 +255,10 @@ export class ConsignesDocsManagePage implements OnInit {
   }
 
   setCategory(value: number | null): void {
-    this.model.update((current) => ({ ...current, categoryId: value }));
+    this.model.update((current) => ({
+      ...current,
+      categoryId: value && value !== NO_CATEGORY ? value : null,
+    }));
   }
 
   setFileType(value: DocumentFileType): void {
@@ -197,15 +271,29 @@ export class ConsignesDocsManagePage implements OnInit {
   }
 
   save(): void {
+    this.saveError.set(null);
     submit(this.docForm, async () => {
       const payload = this.model();
+      if (payload.visibility === 'TEAMS' && (payload.teamIds ?? []).length === 0) {
+        this.saveError.set('Choisissez au moins une équipe, ou ouvrez la fiche à tous.');
+        return;
+      }
       const request =
         this.mode() === 'create'
           ? this.linksApi.create(payload)
           : this.linksApi.update(this.selected()!.id, payload);
-      request.subscribe(() => {
-        this.opened.set(false);
-        this.reload();
+      request.subscribe({
+        next: () => {
+          this.opened.set(false);
+          this.reload();
+        },
+        error: (error: { error?: { message?: string | string[] } }) => {
+          const message = error?.error?.message;
+          this.saveError.set(
+            (Array.isArray(message) ? message.join(' ') : message) ??
+              "L'enregistrement a échoué. Vérifiez les champs et réessayez.",
+          );
+        },
       });
     });
   }

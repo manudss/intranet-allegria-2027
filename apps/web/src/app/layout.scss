@@ -20,7 +20,8 @@
   min-height: 3.5rem;
   padding: 0.5rem 1rem;
   border-bottom: 0;
-  background: var(--allegria-primary);
+  --tui-theme-color: #d52f57;
+  background: #d52f57;
   color: #ffffff;
   box-shadow: 0 0.25rem 1rem rgba(34, 34, 34, 0.12);
 }
@@ -55,7 +56,7 @@
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.86);
+  color: #ffffff;
 }
 
 .header-right button[tuiButton] {
@@ -63,12 +64,25 @@
 }
 
 .header-right button[tuiButton][appearance='secondary'] {
-  background: rgba(255, 255, 255, 0.16);
+  /* Fond un peu plus sombre que le rouge de la marque : le texte blanc de l'e-mail reste lisible (contraste mesuré). */
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.header-right button[tuiButton][appearance='secondary'] {
+  max-width: 20rem;
+}
+
+.header-right .user-email {
+  display: inline-block;
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .header-right button[tuiButton][appearance='primary'] {
   background: #ffffff;
-  color: var(--allegria-primary);
+  color: #d52f57;
 }
 
 .mobile-menu-btn {
@@ -99,8 +113,8 @@
   overflow-y: auto;
   overflow-x: hidden;
   border-right: 0;
-  background: var(--allegria-secondary);
-  color: var(--allegria-primary);
+  background: #f5a623;
+  color: #2b1a00;
   box-shadow: 0.25rem 0 1rem rgba(34, 34, 34, 0.1);
   overscroll-behavior: contain;
 }
@@ -112,7 +126,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  background: var(--allegria-secondary);
+  background: #f5a623;
 }
 
 .allegria-sidebar header {
@@ -133,19 +147,28 @@
   border-top: 1px solid rgba(255, 255, 255, 0.18);
 }
 
+.allegria-sidebar {
+  --tui-background-neutral-1: rgba(255, 255, 255, 0.28);
+  --tui-background-neutral-1-hover: rgba(255, 255, 255, 0.4);
+  --tui-background-neutral-1-pressed: rgba(255, 255, 255, 0.5);
+  --tui-text-primary: #2b1a00;
+  --tui-text-secondary: #4a3000;
+}
+
 .allegria-sidebar [tuiAsideItem] {
-  color: rgba(255, 255, 255, 0.9);
+  color: #2b1a00;
 }
 
 .allegria-sidebar [tuiAsideItem]:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--allegria-on-secondary);
+  background: rgba(255, 255, 255, 0.4);
+  color: #2b1a00;
 }
 
 .allegria-sidebar a[tuiAsideItem].active {
-  background: rgba(255, 255, 255, 0.2);
-  color: var(--allegria-on-secondary);
+  background: rgba(255, 255, 255, 0.6);
+  color: #2b1a00;
   font-weight: 700;
+  box-shadow: inset 0.25rem 0 0 #d52f57;
 }
 
 .allegria-sidebar tui-icon {
@@ -219,8 +242,9 @@
   .page-title {
     font-size: 0.7rem;
     line-height: 1.15;
-    white-space: normal;
-    overflow-wrap: break-word;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .header-right {
@@ -238,4 +262,84 @@
   .allegria-content {
     padding: 1rem;
   }
+}
+
+/* Très petit écran : le titre de la page est déjà affiché dans le contenu (h1),
+   on ne le casse pas lettre par lettre dans l'en-tête fixe. */
+@media (max-width: 400px) {
+  .allegria-header .page-title {
+    display: none;
+  }
+}
+
+:host-context([data-theme='dark']) {
+ .allegria-sidebar,.allegria-sidebar header,.allegria-sidebar footer {
+  background:var(--appearance-surface);color:var(--appearance-text);
+ }
+ /* Le bandeau garde le rouge de la marque en thème sombre, texte et icônes clairs. */
+ .allegria-header {
+  background:#d52f57;color:#ffffff;
+ }
+ .allegria-header .page-title,.allegria-header .header-title,.allegria-header .mobile-menu-btn,.allegria-header .header-help,.allegria-header .header-appearance{color:#ffffff;}
+ .allegria-sidebar [tuiAsideItem]{color:var(--appearance-text);}
+ .allegria-sidebar a[tuiAsideItem].active{background:var(--appearance-selected);color:var(--appearance-action);}
+ .header-right button[tuiButton][appearance='primary']{background:var(--appearance-solid);color:#fff;}
+}
+
+.route-host--hidden {
+  display: none;
+}
+
+.page-purpose {
+  margin: 0 0 1rem;
+  color: var(--allegria-muted);
+}
+
+/* Bouton d'apparence discret dans l'en-tête */
+.header-appearance {
+  color: #ffffff;
+}
+
+.skip-link {
+  position: absolute;
+  left: 0.5rem;
+  top: -4rem;
+  z-index: 1000;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  background: #fff;
+  color: #1a1a1a;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+  &:focus-visible {
+    top: 0.5rem;
+  }
+}
+
+#contenu:focus {
+  outline: none;
+}
+
+.help-count { margin: 0 0 4px; font-size: 0.8rem; opacity: 0.75; }
+.help-title { margin: 0 0 8px; font-size: 1.15rem; }
+.help-actions { display: flex; gap: 8px; margin: 12px 0 16px; }
+.help-subtitle { margin: 0 0 6px; font-size: 1rem; }
+.help-glossary { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; }
+.help-glossary dt { font-weight: 700; }
+.help-glossary dd { margin: 0; }
+.help-note { margin: 12px 0 0; font-size: 0.85rem; opacity: 0.8; }
+@media (max-width: 480px) {
+  .help-glossary { grid-template-columns: 1fr; gap: 0; }
+  .help-glossary dd { margin-bottom: 8px; }
+}
+
+.allegria-header .header-right button.header-help[tuiIconButton] {
+  color: #ffffff;
+}
+
+/* Entrée de menu active en thème sombre : fond sombre de la palette et texte clair (contraste mesuré). */
+:host-context([data-theme='dark']) .allegria-sidebar ::ng-deep .t-nav-content ._custom._active {
+  background: var(--appearance-selected) !important;
+  color: #fff5ee !important;
 }

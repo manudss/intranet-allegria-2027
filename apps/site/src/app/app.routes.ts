@@ -1,6 +1,7 @@
 import { Route } from '@angular/router';
 
 export const appRoutes: Route[] = [
+  { path: 'espace-famille', title: 'Mon espace famille', loadComponent: () => import('./features/family-space/family-space').then(m => m.FamilySpacePage) },
   {
     path: '',
     pathMatch: 'full',

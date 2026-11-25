@@ -1,3 +1,4 @@
+@use '../../../libs/appearance/palette';
 /* Design tokens et styles globaux — Alegria 2027 */
 
 :root {
@@ -59,17 +60,6 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #201a18;
-    --color-bg-alt: #2b2320;
-    --color-surface: #2f2723;
-    --color-border: #47372f;
-    --color-text: #fdf6ee;
-    --color-text-muted: #d8c6ba;
-    --color-primary-light: #ff7a4d;
-  }
-}
 
 * {
   box-sizing: border-box;
@@ -448,3 +438,42 @@ textarea.form-control {
   overflow: hidden;
 }
 
+
+:root[data-theme] {
+ --color-bg:var(--appearance-bg); --color-bg-alt:var(--appearance-raised);
+ --color-surface:var(--appearance-surface); --color-border:var(--appearance-border);
+ --color-text:var(--appearance-text); --color-text-muted:var(--appearance-muted);
+ --color-primary:var(--appearance-action); --color-secondary:var(--appearance-warning);
+ --color-accent:var(--appearance-info); --color-success:var(--appearance-success);
+ --color-error:var(--appearance-error); --color-warning:var(--appearance-warning);
+ --color-info:var(--appearance-info);
+}
+/* Solid brand surfaces retain white text; links use the brighter action token. */
+.btn-primary,.skip-link {background:var(--appearance-solid);color:var(--appearance-on-solid);}
+.form-alert--success {background:var(--appearance-success-bg);}
+.form-alert--error {background:var(--appearance-error-bg);}
+:focus-visible {outline:3px solid var(--appearance-focus);outline-offset:3px;}
+input,textarea,select {color-scheme:inherit;}
+input:-webkit-autofill {-webkit-text-fill-color:var(--appearance-text);caret-color:var(--appearance-text);}
+
+/* Squelettes de chargement (le site public n'utilise pas Taiga UI : CSS seul, sans dépendance). */
+.skeleton-card {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 48rem;
+  margin: 2rem auto;
+  padding: 1.5rem;
+}
+.skeleton-line {
+  display: block;
+  height: 1rem;
+  width: 70%;
+  border-radius: 0.5rem;
+  background: linear-gradient(90deg, #e9e3e6 25%, #f6f2f4 50%, #e9e3e6 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s linear infinite;
+}
+.skeleton-line.wide { width: 100%; height: 2rem; }
+.skeleton-line.short { width: 40%; }
+@keyframes skeleton-shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .skeleton-line { animation: none; } }

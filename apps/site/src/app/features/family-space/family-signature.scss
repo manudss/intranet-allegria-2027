@@ -1,0 +1,184 @@
+:host {
+  display: block;
+  min-width: 0;
+  color: var(--appearance-text);
+}
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+.steps span {
+  padding: 0.6rem;
+  background: var(--appearance-raised);
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+.steps .current {
+  background: var(--appearance-solid);
+  color: white;
+}
+.notice {
+  padding: 1rem;
+  border-left: 3px solid var(--appearance-border);
+  background: var(--appearance-raised);
+  line-height: 1.5;
+  font-size: 0.9rem;
+}
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(280px, 1.2fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+.workspace.single {
+  display: block;
+}
+.controls,
+fieldset {
+  min-width: 0;
+}
+fieldset {
+  padding: 0;
+  border: 0;
+}
+legend {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+label {
+  display: block;
+  font-weight: 650;
+  margin: 1rem 0 0.5rem;
+}
+input,
+select {
+  display: block;
+  font: inherit;
+  width: 100%;
+  min-height: 48px;
+  padding: 0.7rem;
+  border: 1px solid var(--appearance-border);
+  border-radius: 6px;
+  background: var(--appearance-surface);
+  color: var(--appearance-text);
+  box-sizing: border-box;
+  margin-top: 0.4rem;
+}
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  line-height: 1.5;
+}
+.check input {
+  flex: 0 0 24px;
+  width: 24px;
+  min-height: 24px;
+  margin: 0;
+}
+button {
+  font: inherit;
+  font-weight: 700;
+  background: var(--appearance-solid);
+  color: white;
+  border: 1px solid var(--appearance-border);
+  border-radius: 6px;
+  padding: 0.8rem;
+  min-height: 48px;
+  cursor: pointer;
+  margin: 0.3rem 0.3rem 0.3rem 0;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.secondary,
+.methods button {
+  background: var(--appearance-surface);
+  color: var(--appearance-action);
+  border-color: var(--appearance-border);
+}
+.methods {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 1rem 0;
+}
+.methods [aria-pressed='true'] {
+  background: var(--appearance-solid);
+  color: white;
+}
+.sample {
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-size: 1.7rem;
+  padding: 1.4rem;
+  border: 1px dashed var(--appearance-border);
+  background: var(--appearance-surface);
+  overflow-wrap: anywhere;
+}
+canvas {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 5 / 3;
+  display: block;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  border: 1px solid var(--appearance-border);
+  background: var(--appearance-surface);
+  box-sizing: border-box;
+}
+.mark {
+  display: block;
+  max-width: 100%;
+  height: 80px;
+  object-fit: contain;
+  object-position: left;
+  margin: 1rem 0;
+}
+p {
+  line-height: 1.6;
+}
+h3 {
+  font-size: 1.2rem;
+}
+.error {
+  color: var(--appearance-error);
+}
+input:focus-visible,
+button:focus-visible,
+select:focus-visible {
+  outline: 3px solid var(--appearance-focus);
+  outline-offset: 3px;
+}
+app-family-pdf-preview {
+  position: sticky;
+  top: 6rem;
+}
+@media (max-width: 800px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+  app-family-pdf-preview {
+    position: static;
+  }
+}
+
+/* Signature ink and transparent signature images are shown on their paper surface. */
+canvas,
+.sample,
+.mark {
+  background: #fff;
+  color: #202936;
+  color-scheme: light;
+}
+.mark {
+  padding: 8px;
+  box-sizing: border-box;
+  border: 1px solid var(--appearance-border);
+  border-radius: 6px;
+}

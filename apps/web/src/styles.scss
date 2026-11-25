@@ -1,7 +1,8 @@
+@use '../../../libs/appearance/palette';
+@use '../../../libs/appearance/taiga';
 :root {
-  /* Thème clair uniquement : empêche Chrome/Android d'assombrir la page
-   * (le texte des champs passait blanc sur fond blanc en mode sombre forcé). */
-  color-scheme: only light;
+  /* AppearanceService resolves the screen palette before display. */
+  color-scheme: light dark;
 
   --allegria-primary: #d52f57;
   --allegria-secondary: #f5a623;
@@ -13,9 +14,9 @@
   --allegria-muted: #777777;
 
   /*
-  * Thème Taiga UI - Allegria
-  * Couleur principale : rose Allegria
-  * Couleur secondaire : orange Allegria
+  * Thème Taiga UI - Alegria
+  * Couleur principale : rose Alegria
+  * Couleur secondaire : orange Alegria
   */
 
   --tui-theme-color: var(--allegria-primary);
@@ -92,9 +93,10 @@ body {
 
 .page {
   padding: 1.25rem;
-  border: 1px solid #ececf1;
+  border: 0;
   border-radius: 0.75rem;
   background: #ffffff;
+  box-shadow: var(--card-shadow, 0 0.125rem 0.75rem rgba(34, 34, 34, 0.1));
 }
 
 .page h1 {
@@ -163,4 +165,75 @@ input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {
   -webkit-text-fill-color: var(--allegria-text);
   caret-color: var(--allegria-text);
+}
+
+@include taiga.theme;
+
+/*
+ * Un champ obligatoire vide n'est pas en erreur avant que l'utilisateur l'ait touché ou envoyé
+ * le formulaire. Taiga applique le style « invalide » dès que l'attribut `required` natif est
+ * présent : on le neutralise avec la classe `field-pristine`, posée tant que le champ n'est pas touché
+ * (ex. `[class.field-pristine]="!form.email().touched()"`).
+ */
+tui-textfield.field-pristine[data-appearance='textfield'] {
+  outline-color: var(--tui-border-normal) !important;
+}
+tui-textfield.field-pristine[data-appearance='textfield']:focus-within {
+  outline-color: var(--tui-background-accent-1) !important;
+}
+tui-textfield.field-pristine [tuiLabel] {
+  color: var(--tui-text-tertiary) !important;
+}
+
+/* Champs obligatoires (voir RequiredFieldDirective). */
+tui-textfield.field-required [tuiLabel]::after {
+  content: ' *';
+  color: var(--tui-text-negative);
+}
+tui-textfield.field-invalid[data-appearance='textfield'] {
+  outline-color: var(--tui-status-negative) !important;
+}
+tui-textfield.field-invalid {
+  position: relative;
+  margin-block-end: 1.25rem;
+}
+.field-error-message {
+  position: absolute;
+  inset-inline-start: 0.25rem;
+  top: 100%;
+  margin-top: 0.15rem;
+  font: var(--tui-font-text-s);
+  color: var(--tui-text-negative);
+}
+
+/* Légende affichée en tête de tout formulaire qui contient des champs obligatoires. */
+form:has(tui-textfield.field-required)::before {
+  content: '* champ obligatoire';
+  display: block;
+  grid-column: 1 / -1;
+  margin-bottom: 0.75rem;
+  font: var(--tui-font-text-s);
+  color: var(--tui-text-secondary);
+}
+
+/* Le sélecteur d'apparence vit dans l'en-tête quand le gabarit est affiché : on libère la hauteur. */
+body:has(.allegria-shell) .appearance-fab {
+  display: none;
+}
+
+/* Cartes : ombre douce sans contour, séparateurs discrets (comme la version d'origine). */
+:root {
+  --card-shadow: 0 0.125rem 0.75rem rgba(34, 34, 34, 0.1);
+  --line-soft: rgba(34, 34, 34, 0.1);
+}
+:root[data-theme='dark'] {
+  --card-shadow: 0 0.125rem 0.75rem rgba(0, 0, 0, 0.5);
+  --line-soft: rgba(255, 255, 255, 0.14);
+}
+
+/* Contours de champs plus légers (la lisibilité des champs reste assurée par le fond et l'ombre). */
+:root,
+[tuiTheme],
+tui-root {
+  --tui-border-normal: color-mix(in srgb, var(--appearance-border) 55%, transparent);
 }

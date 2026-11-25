@@ -24,13 +24,7 @@ import { DataTableColumn } from '../../shared/data-table';
 const FILE_TYPES: readonly DocumentFileType[] = ['PDF', 'DOCX', 'XLSX', 'PPTX', 'OTHER'];
 
 const NO_CATEGORY = 0;
-const OTHER_TYPE = 'Autre';
-
-/** Type d'équipe opérationnelle : partie avant « · » du nom (ex. « Sécurité · Contrôle d'accès »). */
-export const teamTypeOf = (team: Pick<VolunteerTeam, 'name'>): string => {
-  const [type, ...rest] = team.name.split('·');
-  return rest.length > 0 && type.trim() ? type.trim() : OTHER_TYPE;
-};
+type TeamStatusFilter = 'all' | 'active' | 'inactive' | 'selected';
 
 const blank = (): DocumentLinkPayload => ({
   title: '',
@@ -119,7 +113,13 @@ export class ConsignesDocsManagePage implements OnInit {
   teams = signal<VolunteerTeam[]>([]);
   query = signal('');
   teamSearch = signal('');
-  teamTypeFilter = signal<string | null>(null);
+  teamStatusFilter = signal<TeamStatusFilter>('all');
+  protected readonly teamStatusFilters: readonly { id: TeamStatusFilter; label: string }[] = [
+    { id: 'all', label: 'Toutes' },
+    { id: 'active', label: 'Actives' },
+    { id: 'inactive', label: 'Inactives' },
+    { id: 'selected', label: 'Sélectionnées' },
+  ];
   saveError = signal<string | null>(null);
   loading = signal(true);
   opened = signal(false);
@@ -151,17 +151,14 @@ export class ConsignesDocsManagePage implements OnInit {
     ...this.activeCategories().map((category) => ({ value: category.id, label: category.label })),
   ]);
 
-  readonly teamTypes = computed(() =>
-    [...new Set(this.teams().map((team) => teamTypeOf(team)))].sort((a, b) =>
-      a.localeCompare(b, 'fr'),
-    ),
-  );
-
   readonly filteredTeams = computed(() => {
     const q = this.teamSearch().toLowerCase().trim();
-    const type = this.teamTypeFilter();
+    const status = this.teamStatusFilter();
+    const selected = new Set(this.model().teamIds ?? []);
     return this.teams().filter((team) => {
-      if (type && teamTypeOf(team) !== type) return false;
+      if (status === 'active' && !team.isActive) return false;
+      if (status === 'inactive' && team.isActive) return false;
+      if (status === 'selected' && !selected.has(team.id)) return false;
       return !q || `${team.name} ${team.code}`.toLowerCase().includes(q);
     });
   });
@@ -217,12 +214,12 @@ export class ConsignesDocsManagePage implements OnInit {
 
   private resetEditor(): void {
     this.teamSearch.set('');
-    this.teamTypeFilter.set(null);
+    this.teamStatusFilter.set('all');
     this.saveError.set(null);
   }
 
-  toggleTeamType(type: string): void {
-    this.teamTypeFilter.update((current) => (current === type ? null : type));
+  setTeamStatusFilter(status: TeamStatusFilter): void {
+    this.teamStatusFilter.set(status);
   }
 
   selectFilteredTeams(): void {

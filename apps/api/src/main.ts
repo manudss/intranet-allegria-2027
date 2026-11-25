@@ -1,3 +1,4 @@
+import { configureFamilyPortal } from './app/config/family-portal-hosting';
 import { Logger, RequestMethod } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
@@ -5,7 +6,8 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app/app.module';
 import { parseCorsOrigins } from './app/config/environment';
-import { configureWebHosting, resolveWebStaticDir } from './app/config/web-hosting';
+import { configureTrustProxy } from './app/config/trust-proxy';
+import { configureExtraMounts, configureWebHosting, resolveExtraMounts, resolveWebStaticDir } from './app/config/web-hosting';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -13,6 +15,7 @@ async function bootstrap() {
 
   try {
     app.enableShutdownHooks();
+    configureTrustProxy(app);
 
     const configService = app.get(ConfigService);
     const globalPrefix = 'api';
@@ -28,9 +31,9 @@ async function bootstrap() {
     });
 
     const swaggerConfig = new DocumentBuilder()
-      .setTitle('MEJ Allegria 2027 API')
+      .setTitle('MEJ Alegria 2027 API')
       .setDescription(
-        'API REST Intranet Allegria 2027 - participants, equipes, hebergement, sante et RBAC',
+        'API REST Intranet Alegria 2027 - participants, equipes, hebergement, sante et RBAC',
       )
       .setVersion('1.0.0')
       .addBearerAuth(
@@ -48,8 +51,10 @@ async function bootstrap() {
       swaggerOptions: { persistAuthorization: true },
     });
 
+    configureFamilyPortal(app);
     const webStaticDir = resolveWebStaticDir(configService.get<string>('WEB_STATIC_DIR'));
     if (webStaticDir) {
+      configureExtraMounts(app, resolveExtraMounts(configService.get<string>('EXTRA_STATIC_MOUNTS')));
       configureWebHosting(app, webStaticDir);
       logger.log(`Serving the web app from ${webStaticDir} (preview mode)`);
     }

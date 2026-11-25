@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
+import { deploymentManifest } from './check-static-production.mjs';
 // Publie les builds statiques (web admin, site public, mobile si present) sur la
 // branche `deploy` du repo, que les static sites Render suivent avec une commande
-// de build VIDE : Render ne fait que copier les fichiers sur son CDN, zero minute
+// de build VIDE : Render ne fait que copier les fichiers sur son CDN, faible usage
 // de pipeline (docs/deploiement.md).
 //
 // La branche `deploy` garde un historique (un commit par push sur main qui change
@@ -55,7 +56,10 @@ function run() {
     for (const entry of execFileSync('ls', ['-A', wt]).toString().split('\n')) {
       if (entry && entry !== '.git') rmSync(join(wt, entry), { recursive: true, force: true });
     }
-    for (const [app, dist] of present) cpSync(dist, join(wt, app), { recursive: true });
+    for (const [app, dist] of present) {
+      cpSync(dist, join(wt, app), { recursive: true });
+      writeFileSync(join(wt, app, 'deployment.json'), JSON.stringify(deploymentManifest(app, sha, readFileSync(join(wt, app, 'index.html'), 'utf8'))) + '\n');
+    }
     writeFileSync(join(wt, 'SOURCE.txt'), `source: ${sha}\napps: ${present.map(([a]) => a).join(', ')}\n`);
 
     git(['add', '-A'], wt);

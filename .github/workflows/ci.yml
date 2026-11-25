@@ -42,8 +42,10 @@ jobs:
       - name: Test the Render orchestration scripts
         run: node --test scripts/*.test.mjs
 
-      - name: Build public site
-        run: npm run build:site
+      - name: Build public site and mobile PWA
+        run: |
+          npm run build:site
+          npm run build:mobile
 
   api-auth-smoke:
     name: API auth smoke test (fictitious data)

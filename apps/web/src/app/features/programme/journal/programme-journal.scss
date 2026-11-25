@@ -1,0 +1,80 @@
+:host {
+  display: block;
+}
+
+.seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.125rem;
+  padding: 0.15rem;
+  margin-bottom: 1rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--tui-border-normal);
+  background: var(--tui-background-base, #fff);
+}
+
+.seg-btn {
+  border: none;
+  background: transparent;
+  padding: 0.3rem 0.65rem;
+  border-radius: 0.4rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--tui-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--tui-background-neutral-1);
+  }
+
+  &.on {
+    background: var(--appearance-solid);
+    color: #fff;
+  }
+}
+
+.empty-state {
+  color: var(--tui-text-secondary);
+  font-style: italic;
+}
+
+.journal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.journal-entry {
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--tui-border-normal);
+  background: var(--tui-background-neutral-1);
+}
+
+.entry-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.entry-action {
+  font-weight: 700;
+  color: var(--allegria-primary, #d52f57);
+}
+
+.entry-meta {
+  font-size: 0.8rem;
+  color: var(--tui-text-secondary);
+}
+
+.entry-comment {
+  margin: 0.3rem 0 0;
+  font-size: 0.85rem;
+  color: var(--tui-text-secondary);
+}

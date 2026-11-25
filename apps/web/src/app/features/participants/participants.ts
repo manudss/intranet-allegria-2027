@@ -1,3 +1,6 @@
+import { ACRONYM_HINTS } from '../../shared/help-content';
+import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { form, required, submit } from '@angular/forms/signals';
 import { forkJoin } from 'rxjs';
@@ -70,8 +73,8 @@ function formatDateFull(dateStr: string | null): string {
   if (isNaN(date.getTime())) return '—';
   return date.toLocaleDateString('fr-FR', {
     year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
   });
 }
 const blank = (): ParticipantPayload => ({
@@ -97,7 +100,7 @@ const blankHealth = (): ParticipantHealthPayload => ({
 @Component({
   selector: 'app-participants',
   standalone: true,
-  imports: [...SHARED_IMPORTS],
+  imports: [RouterLink, ...SHARED_IMPORTS],
   templateUrl: './participants.html',
   styleUrls: ['../../shared/crud.scss', './participants.scss'],
 })
@@ -167,7 +170,7 @@ export class ParticipantsPage implements OnInit {
     },
     {
       key: 'mejAgeGroup',
-      label: 'Groupe d\'âge MEJ',
+      label: "Groupe d'âge MEJ",
       type: 'list',
       value: (x) => (x.mejAgeGroup ? MEJ_AGE_LABELS[x.mejAgeGroup] : '—'),
       filterValue: (x) => x.mejAgeGroup || '',
@@ -193,7 +196,7 @@ export class ParticipantsPage implements OnInit {
     },
     {
       key: 'emergencyContactName',
-      label: 'Contact d\'urgence',
+      label: "Contact d'urgence",
       type: 'text',
       value: (x) => x.emergencyContactName || '—',
       hidden: true,
@@ -210,13 +213,19 @@ export class ParticipantsPage implements OnInit {
       size: 'small',
     },
   ];
+  private route = inject(ActivatedRoute);
+  protected canSeeAdministrative = computed(() => this.auth.hasAnyRole(['ADMIN', 'COORDINATOR']));
+  protected canSeeFamilyHealth = computed(() => this.auth.hasRole('HEALTH'));
   private api = inject(ParticipantsApiService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   private groupsApi = inject(GroupsApiService);
   private healthApi = inject(HealthApiService);
   private auth = inject(AuthService);
   items = signal<Participant[]>([]);
   groups = signal<Group[]>([]);
   groupIds = computed(() => this.groups().map(({ id }) => id));
+  stringifySex = (sex: ParticipantSex) => SEX_LABELS[sex] ?? '';
+  stringifyAge = (age: MejAgeGroup) => MEJ_AGE_LABELS[age] ?? '';
   stringifyGroup = (id: number) => this.groups().find((group) => group.id === id)?.name ?? '';
   query = signal('');
   groupFilter = signal<number | null>(null);
@@ -240,6 +249,7 @@ export class ParticipantsPage implements OnInit {
   healthForm = form(this.healthModel);
   sexes = Object.values(ParticipantSex);
   mejAgeGroups = Object.values(MejAgeGroup);
+  protected readonly acronymHints = ACRONYM_HINTS;
   readonly canSeeHealth = computed(() => this.auth.hasAnyRole(['ADMIN', 'HEALTH']));
   filtered = computed(() => {
     const q = this.query().toLowerCase();
@@ -258,6 +268,9 @@ export class ParticipantsPage implements OnInit {
         this.items.set(x.items);
         this.groups.set(x.groups);
         this.loading.set(false);
+        const id = Number(this.route.snapshot.queryParamMap.get('participant'));
+        const selected = x.items.find((p) => p.id === id);
+        if (selected) this.open(selected);
       },
     );
   }
@@ -335,11 +348,13 @@ export class ParticipantsPage implements OnInit {
   }
   remove() {
     const x = this.requireSelectedParticipant();
-    if (confirm(`Supprimer ${x.firstName} ${x.lastName} ?`))
+    this.confirmDialog.askDelete(`${x.firstName} ${x.lastName}`).subscribe((ok) => {
+      if (!ok) return;
       this.api.deleteParticipant(x.id).subscribe(() => {
         this.items.update((a) => a.filter((i) => i.id !== x.id));
         this.opened.set(false);
       });
+    });
   }
   private requireSelectedParticipant(): Participant {
     const participant = this.selected();

@@ -1,3 +1,4 @@
+import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { form, required, submit } from '@angular/forms/signals';
 import { finalize, forkJoin } from 'rxjs';
@@ -13,8 +14,8 @@ function formatDateTime(datetimeStr: string | null): string {
   if (isNaN(date.getTime())) return '—';
   return date.toLocaleDateString('fr-FR', {
     year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
   }) + ' ' + date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 }
 
@@ -82,6 +83,7 @@ export class GroupsPage implements OnInit {
     },
   ];
   private readonly api = inject(GroupsApiService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   readonly items = signal<Group[]>([]);
   readonly query = signal('');
   readonly loading = signal(true);
@@ -163,11 +165,14 @@ export class GroupsPage implements OnInit {
   }
   remove() {
     const x = this.selected();
-    if (x && confirm(`Supprimer ${x.name} ?`))
+    if (!x) return;
+    this.confirmDialog.askDelete(x.name).subscribe((ok) => {
+      if (!ok) return;
       this.api.delete(x.id).subscribe(() => {
         this.items.update((a) => a.filter((i) => i.id !== x.id));
         this.close();
       });
+    });
   }
   private requireSelectedGroup(): Group {
     const group = this.selected();

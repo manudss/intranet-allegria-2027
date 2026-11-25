@@ -1,3 +1,4 @@
+import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { form, min, required, submit } from '@angular/forms/signals';
 import { forkJoin, of } from 'rxjs';
@@ -95,6 +96,7 @@ export class TeamsPage implements OnInit {
     },
   ];
   private api = inject(TeamsApiService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   private membersApi = inject(TeamParticipantsApiService);
   private benevolesApi = inject(TeamBenevolesApiService);
   private groupsApi = inject(GroupsApiService);
@@ -224,11 +226,13 @@ export class TeamsPage implements OnInit {
   }
   remove() {
     const x = this.requireSelectedTeam();
-    if (confirm(`Supprimer ${x.name} ?`))
+    this.confirmDialog.askDelete(x.name).subscribe((ok) => {
+      if (!ok) return;
       this.api.delete(x.id).subscribe(() => {
         this.items.update((a) => a.filter((i) => i.id !== x.id));
         this.opened.set(false);
       });
+    });
   }
   addMember() {
     const id = this.candidateId();

@@ -33,6 +33,7 @@ permissions:
   contents: read
   pull-requests: write
   issues: write
+  actions: write
 
 concurrency:
   group: pr-previews-${{ github.event.pull_request.number || github.event.issue.number || inputs.pr }}
@@ -80,7 +81,7 @@ jobs:
     if: >-
       github.event_name == 'issue_comment' &&
       github.event.issue.pull_request &&
-      startsWith(github.event.comment.body, '/preview') &&
+      (github.event.comment.body == '/preview' || startsWith(github.event.comment.body, format('/preview{0}', ' ')) || startsWith(github.event.comment.body, format('/preview{0}', fromJSON('"\n"'))) || startsWith(github.event.comment.body, format('/preview{0}', fromJSON('"\r"')))) &&
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
     runs-on: ubuntu-latest
     steps:
@@ -128,6 +129,25 @@ jobs:
           NEON_DB_URL_DIRECT: ${{ steps.creds.outputs.db_url }}
           NEON_BRANCH_NAME: preview/pr-${{ github.event.issue.number }}
         run: node scripts/render-pr-previews.mjs refresh
+
+  refresh2-comment:
+    name: Preview on the second Render account (/preview2 comment)
+    if: >-
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request &&
+      (github.event.comment.body == '/preview2' || startsWith(github.event.comment.body, format('/preview2{0}', ' ')) || startsWith(github.event.comment.body, format('/preview2{0}', fromJSON('"\n"'))) || startsWith(github.event.comment.body, format('/preview2{0}', fromJSON('"\r"')))) &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    steps:
+      # /preview2 only dispatches the image workflow (built on GitHub, served by the second
+      # Render account, zero Render build minutes). No secret is used here; the dispatched
+      # run reads its code from the default branch.
+      - name: Dispatch the second-account image preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: gh workflow run pr-preview-lyam.yml --repo "$GITHUB_REPOSITORY" --ref "$DEFAULT_BRANCH" -f pr="$PR_NUMBER"
 
   refresh-manual:
     name: Deploy the previews on demand (manual dispatch)

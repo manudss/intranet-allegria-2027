@@ -35,6 +35,10 @@ tui-reorder {
   min-block-size: 24rem;
   overflow: auto;
   border-radius: 0.75rem;
+  &:focus-visible {
+    outline: 2px solid var(--tui-border-focus, #d52f57);
+    outline-offset: 2px;
+  }
 }
 table {
   inline-size: 100%;
@@ -118,4 +122,49 @@ tr[tabindex] {
 tr[tabindex]:hover td,
 tr[tabindex]:focus-visible td {
   background: var(--tui-background-neutral-1-hover);
+}
+
+/* Bordures douces comme la version d'origine */
+table {
+  --t-table-border: var(--line-soft);
+  border-collapse: separate;
+  border-spacing: 0;
+}
+[tuiTh],
+[tuiTd] {
+  border-color: var(--t-table-border) !important;
+}
+.table-scroll {
+  border: 0;
+  background: var(--appearance-surface);
+  box-shadow: var(--card-shadow);
+}
+@media (max-width: 640px) {
+  [tuiTd],
+  [tuiTh] {
+    padding-inline: 0.5rem;
+  }
+  .person-cell,
+  .icon-cell,
+  .chips-cell {
+    gap: 0.375rem;
+  }
+}
+
+/* Pastilles à couleur automatique : fond pastel, donc texte toujours foncé (aussi en thème sombre). */
+[tuiChip][style*='background-color'] {
+  color: #241c1c;
+  --tui-text-primary: #241c1c;
+}
+
+.scroll-hint {
+  display: none;
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+@media (max-width: 640px) {
+  .scroll-hint {
+    display: block;
+  }
 }

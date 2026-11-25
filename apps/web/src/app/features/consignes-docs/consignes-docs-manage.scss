@@ -68,3 +68,13 @@
     color: var(--tui-text-secondary, #6b6b6b);
   }
 }
+
+.description-field {
+  display: grid;
+  gap: 0.35rem;
+
+  .field-label {
+    font-size: 0.85rem;
+    color: var(--tui-text-secondary, #6b6b6b);
+  }
+}

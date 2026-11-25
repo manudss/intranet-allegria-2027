@@ -9,7 +9,7 @@
         <button tuiTab routerLink="/hebergement/placement">🏠 Placement</button>
       </tui-tabs>
       @if (loading()) {
-        <tui-loader />
+        <app-loading-skeleton />
       } @else if (view === 0) {
         <app-data-table
           [rows]="families()"

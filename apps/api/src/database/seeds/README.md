@@ -1,4 +1,4 @@
-# Seed data (Allegria 2027)
+# Seed data (Alegria 2027)
 
 Ce dossier contient un script de generation de donnees de test coherentes pour l'API.
 

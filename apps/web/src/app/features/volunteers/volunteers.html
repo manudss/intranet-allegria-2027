@@ -42,7 +42,7 @@
         </datalist>
       </div>
       @if (loading()) {
-        <tui-loader />
+        <app-loading-skeleton />
       } @else {
         <app-data-table [rows]="filtered()" [columns]="tableColumns" (rowSelected)="open($event)" />
       }
@@ -60,7 +60,7 @@
         </header>
         @if (mode() === 'detail') {
           <dl>
-            <dt>Email</dt>
+            <dt>Adresse e-mail</dt>
             <dd>{{ selected()?.email || '—' }}</dd>
             <dt>Téléphone</dt>
             <dd>{{ selected()?.phone || '—' }}</dd>
@@ -194,10 +194,10 @@
                     <div>
                       <strong>{{ assignment.shift?.mission?.title || 'Mission' }}</strong>
                       <div>
-                        {{ assignment.shift?.startAt | date: 'short' }} →
-                        {{ assignment.shift?.endAt | date: 'short' }}
+                        {{ assignment.shift?.startAt | date: 'dd/MM/yyyy HH:mm' }} →
+                        {{ assignment.shift?.endAt | date: 'dd/MM/yyyy HH:mm' }}
                       </div>
-                      <small>{{ assignment.status }}</small>
+                      <small>{{ assignment.status | frLabel }}</small>
                     </div>
                   </li>
                 }
@@ -362,7 +362,7 @@
               ><input tuiInput [formField]="volunteerForm.lastName" id="nom-2" />
             </tui-textfield>
             <tui-textfield iconStart="@tui.mail">
-              <label for="email-2" tuiLabel>Email</label
+              <label for="email-2" tuiLabel>Adresse e-mail</label
               ><input tuiInput type="email" [formField]="volunteerForm.email" id="email-2" />
             </tui-textfield>
             <tui-textfield iconStart="@tui.phone">

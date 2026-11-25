@@ -110,41 +110,41 @@ type Step = 'scan' | 'search' | 'confirm' | 'done';
     .flow { max-width: 480px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; min-height: 100dvh; }
     .bar { display: flex; align-items: center; gap: 12px; }
     .bar h1 { font-size: 17px; margin: 0; flex: 1; }
-    .link { color: #526ed3; text-decoration: none; font-size: 15px; }
-    .step { font-size: 12px; color: #6b7280; }
+    .link { color: var(--appearance-info); text-decoration: none; font-size: 15px; }
+    .step { font-size: 12px; color: var(--appearance-muted); }
     .viewer { position: relative; height: 320px; background: #1c1c28; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
     video { width: 100%; height: 100%; object-fit: cover; }
-    .frame { position: absolute; width: 200px; height: 200px; border: 3px solid #7cffb2; border-radius: 20px; pointer-events: none; }
+    .frame { position: absolute; width: 200px; height: 200px; border: 3px solid var(--appearance-border); border-radius: 20px; pointer-events: none; }
     .cap { position: absolute; bottom: 10px; color: #fff; font-size: 13px; opacity: .85; }
     .manual { display: flex; gap: 8px; }
-    .manual input { flex: 1; height: 48px; border-radius: 12px; border: 1px solid #d7dbe3; padding: 0 14px; font-size: 15px; }
+    .manual input { flex: 1; height: 48px; border-radius: 12px; border: 1px solid var(--appearance-border); padding: 0 14px; font-size: 15px; }
     .manual button { height: 48px; padding: 0 18px; border: none; border-radius: 12px; background: #526ed3; color: #fff; font-weight: 700; }
-    .card { background: #fff; border-radius: 16px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .card { background: var(--appearance-surface); border-radius: 16px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
     .badge-card { display: flex; justify-content: space-between; align-items: center; }
-    .lbl { display: block; font-size: 11px; color: #6b7280; margin-bottom: 2px; }
-    code { font-family: ui-monospace, monospace; font-size: 13px; color: #3c4457; }
+    .lbl { display: block; font-size: 11px; color: var(--appearance-muted); margin-bottom: 2px; }
+    code { font-family: ui-monospace, monospace; font-size: 13px; color: var(--appearance-info); }
     .chip { padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-    .chip.ok { background: #e3f6ea; color: #1a9e4b; }
+    .chip.ok { background: var(--appearance-raised); color: var(--appearance-success); }
     .search { width: 100%; height: 48px; border: none; font-size: 16px; outline: none; background: transparent; }
     .results { padding: 6px 0; }
-    .row { display: flex; width: 100%; justify-content: space-between; align-items: center; padding: 12px 16px; background: none; border: none; border-bottom: 1px solid #f3f4f6; cursor: pointer; text-align: left; }
+    .row { display: flex; width: 100%; justify-content: space-between; align-items: center; padding: 12px 16px; background: none; border: none; border-bottom: 1px solid var(--appearance-border); cursor: pointer; text-align: left; }
     .row:last-child { border-bottom: none; }
-    .row small { display: block; color: #6b7280; font-size: 12px; }
-    .chev { color: #526ed3; }
-    .old { border-left: 4px solid #d8453a; }
-    .new { border-left: 4px solid #1a9e4b; }
-    .arrow { text-align: center; color: #526ed3; font-size: 20px; }
+    .row small { display: block; color: var(--appearance-muted); font-size: 12px; }
+    .chev { color: var(--appearance-info); }
+    .old { border-left: 4px solid var(--appearance-error); }
+    .new { border-left: 4px solid var(--appearance-success); }
+    .arrow { text-align: center; color: var(--appearance-info); font-size: 20px; }
     .confirm { text-align: center; padding: 24px 16px; display: flex; flex-direction: column; gap: 8px; align-items: center; }
     .name { font-size: 24px; font-weight: 800; }
-    .sub { font-size: 13px; color: #6b7280; }
+    .sub { font-size: 13px; color: var(--appearance-muted); }
     .cta { height: 52px; border: none; border-radius: 12px; background: #526ed3; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; }
     .cta.danger { background: #d8453a; }
     .cta:disabled { opacity: .5; }
-    .ghost { height: 48px; border: none; border-radius: 12px; background: #e8ecf7; color: #526ed3; font-weight: 600; cursor: pointer; }
-    .error { color: #d8453a; font-size: 14px; margin: 0; }
-    .note { font-size: 12px; color: #6b7280; margin: 0; }
-    .muted { color: #6b7280; font-size: 14px; text-align: center; }
-    .big-ok { font-size: 48px; color: #1a9e4b; }
+    .ghost { height: 48px; border: none; border-radius: 12px; background: var(--appearance-raised); color: var(--appearance-info); font-weight: 600; cursor: pointer; }
+    .error { color: var(--appearance-error); font-size: 14px; margin: 0; }
+    .note { font-size: 12px; color: var(--appearance-muted); margin: 0; }
+    .muted { color: var(--appearance-muted); font-size: 14px; text-align: center; }
+    .big-ok { font-size: 48px; color: var(--appearance-success); }
   `],
 })
 export class BadgeAssignComponent implements AfterViewInit, OnDestroy {

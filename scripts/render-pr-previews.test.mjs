@@ -261,7 +261,7 @@ test('workflow never pins trusted-code checkouts to pull_request metadata (stale
   // passed) and failed every synchronize. Trusted code must always come from the default branch head,
   // exactly like the workflow file itself — so no checkout may take a ref from pull_request metadata.
   const wf = readFileSync(new URL('../.github/workflows/pr-previews.yml', import.meta.url), 'utf8');
-  assert.ok((wf.match(/uses: actions\/checkout@/g) ?? []).length >= 3, 'expected several checkout steps');
+  assert.ok((wf.match(/uses: actions\/checkout@/g) ?? []).length >= 2, 'expected the ensure and cleanup checkout steps');
   assert.ok(!/ref:\s*\$\{\{\s*github\.event\.pull_request/.test(wf), 'a checkout must never take its ref from pull_request event metadata');
 });
 
@@ -276,4 +276,19 @@ test('cleanup deletes the existing services, mobile included, and comments', asy
   assert.equal(renderCalls(calls, 'DELETE', /\/services\//).length, 4);
   const comments = ghCalls(calls, 'POST', /\/issues\/3\/comments/);
   assert.match(comments[0].body.body, /supprimes/);
+});
+
+test('/preview (account 1) and /preview2 (account 2) are strictly distinct commands', () => {
+  const wf = readFileSync(new URL('../.github/workflows/pr-previews.yml', import.meta.url), 'utf8');
+  const cond = (job) => wf.split(`  ${job}:`)[1].split('runs-on:')[0];
+  const one = cond('refresh-comment');
+  const two = cond('refresh2-comment');
+  assert.ok(one.includes("body == '/preview'") && one.includes("'/preview{0}', ' '"));
+  assert.ok(two.includes("body == '/preview2'") && two.includes("'/preview2{0}', ' '"));
+  for (const c of [one, two]) assert.ok(c.includes(String.raw`fromJSON('"\n"')`) && c.includes(String.raw`fromJSON('"\r"')`), 'multiline comments are handled');
+  // /preview2 never matches the /preview condition (no bare prefix match), and the reverse.
+  assert.ok(!/startsWith\(github\.event\.comment\.body, '\/preview2?'\)/.test(wf), 'no bare prefix match');
+  assert.ok(!one.includes('/preview2') && !two.replace(/\/preview2/g, '').includes('/preview'));
+  assert.ok(two.includes('pr-preview-lyam.yml') || wf.split('  refresh2-comment:')[1].split('  refresh-manual:')[0].includes('pr-preview-lyam.yml'));
+  assert.ok(wf.split('  refresh-comment:')[1].split('  refresh2-comment:')[0].includes('render-pr-previews.mjs refresh'));
 });

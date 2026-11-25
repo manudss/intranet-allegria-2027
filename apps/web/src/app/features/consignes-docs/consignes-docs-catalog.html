@@ -49,7 +49,7 @@
     }
   </div>
   } @if (loading()) {
-  <tui-loader />
+  <app-loading-skeleton variant="cards" />
   } @else if (!filtered().length) {
   <p class="empty">Aucune fiche ne correspond à cette recherche.</p>
   } @else {

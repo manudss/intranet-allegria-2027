@@ -10,13 +10,27 @@
     "importHelpers": true,
     "target": "es2015",
     "module": "esnext",
-    "lib": ["es2020", "dom"],
+    "lib": [
+      "es2020",
+      "dom"
+    ],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "strict": false,
     "paths": {
-      "@mej-allegria/shared": ["./libs/shared/src/index.ts"]
+      "@mej-allegria/shared": [
+        "./libs/shared/src/index.ts"
+      ],
+      "@mej-allegria/appearance": [
+        "./libs/appearance/src/index.ts"
+      ],
+      "@mej-allegria/appearance/taiga": [
+        "./libs/appearance/src/appearance-taiga.ts"
+      ]
     }
   },
-  "exclude": ["node_modules", "tmp"]
+  "exclude": [
+    "node_modules",
+    "tmp"
+  ]
 }

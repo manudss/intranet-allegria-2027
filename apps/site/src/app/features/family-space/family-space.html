@@ -1,0 +1,583 @@
+<section class="family-shell">
+  @if(rules().previewDemo){
+  <aside>
+    <strong>DÉMONSTRATION : données fictives partagées entre testeurs</strong>
+    <p>
+      Ne saisissez aucune information personnelle ou médicale réelle. Les brouillons administratifs
+      sont enregistrés dans la base isolée de cette preview.
+      @if(rules().healthMode==='DIGITAL_DEMO'){Les fiches santé sont modifiables pour les tests
+      fictifs uniquement.}@else{Les exemples santé sont uniquement consultables, sans collecte.}
+      Aucun paiement réel. @if(rules().previewMailEnabled){Les codes de connexion sont envoyés
+      uniquement à l’adresse de test autorisée.} @else{Aucun e-mail réel.}
+    </p>
+  </aside>
+  }
+  <header class="family-header">
+    <div>
+      <a routerLink="/inscription/jeunes">Alegria 2027</a>
+      <p>Espace d'inscription des jeunes</p>
+    </div>
+    @if(space()){<button type="button" class="quiet" (click)="logout()">Se déconnecter</button>}
+  </header>
+  @if(error()){
+  <div class="error" role="alert">
+    {{error()}} @if(canRetrySave()){<button
+      type="button"
+      (click)="save()"
+      [disabled]="busy() || retryBlocked()"
+    >
+      Réessayer la sauvegarde</button
+    >}
+  </div>
+  } @if(status()){
+  <p class="save-state" [class.unsaved]="canRetrySave()" role="status" aria-live="polite">
+    {{status()}}
+  </p>
+  } @if(initializing()){
+  <div class="skeleton-card" role="status" aria-busy="true" aria-live="polite">
+    <span class="visually-hidden">Chargement de votre espace famille…</span>
+    <span class="skeleton-line wide"></span>
+    <span class="skeleton-line"></span>
+    <span class="skeleton-line short"></span>
+  </div>
+  } @else if(!space()){
+  <article class="access card">
+    @if(rules().previewDemo){
+    <h2>Essayer les dossiers fictifs existants</h2>
+    <button type="button" (click)="previewDemo()" [disabled]="busy()">
+      Ouvrir la famille de démonstration
+    </button>
+    <p>
+      @if(rules().previewMailEnabled){L’accès e-mail ci-dessous est réservé à l’adresse de test
+      autorisée. Créez uniquement des dossiers fictifs.} @else{L’accès e-mail ci-dessous est
+      désactivé dans cette preview.}
+    </p>
+    }
+    <p class="eyebrow">Une seule saisie, plusieurs dossiers</p>
+    <h1 tabindex="-1">Commençons votre espace famille</h1>
+    <p>
+      Vérifiez votre adresse e-mail pour créer ou retrouver vos inscriptions. Vous pourrez compléter
+      chaque dossier en plusieurs fois, jusqu'à son envoi final.
+    </p>
+    <ol class="intro-steps">
+      <li>Votre accès</li>
+      <li>Premier jeune</li>
+      <li>Votre espace</li>
+    </ol>
+    <form (submit)="$event.preventDefault(); challengeId() ? verify() : requestCode()">
+      <label for="family-email">Votre e-mail</label
+      ><input
+        id="family-email"
+        type="email"
+        aria-describedby="email-help"
+        autocomplete="email"
+        [formField]="accessForm.email"
+      />
+      <p class="help" id="email-help">
+        Une adresse suffit pour tous les jeunes dont vous êtes responsable. Un contact d'urgence
+        n'est pas automatiquement un représentant légal.
+      </p>
+      @if(!challengeId()){<button type="submit" [disabled]="busy()">
+        Recevoir mon code de vérification</button
+      >}@else{ <label for="family-code">Code reçu par e-mail</label
+      ><input
+        id="family-code"
+        aria-describedby="code-help"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        [formField]="accessForm.code"
+      />
+      <p class="help" id="code-help">
+        Huit chiffres, valables dix minutes. Votre code ne doit être partagé avec personne.
+      </p>
+      <button type="submit" [disabled]="busy()">Ouvrir mon espace</button
+      ><button class="quiet" type="button" (click)="requestCode()" [disabled]="busy()">
+        Recevoir un nouveau code</button
+      >}
+    </form>
+    <aside>
+      Vous avez déjà commencé ? Utilisez la même adresse : vos informations restent enregistrées,
+      même après déconnexion.
+    </aside>
+  </article>
+  }@else if(!youth()){
+  <div class="title-row">
+    <div>
+      <p class="eyebrow">Les inscriptions de ma famille</p>
+      <h1 tabindex="-1">Tous les jeunes, une seule vue</h1>
+      <p>
+        Retrouvez chaque dossier et ce qu'il reste à faire. Vos coordonnées communes ne sont
+        demandées qu'une fois.
+      </p>
+    </div>
+  </div>
+  @if(!space()!.youths.length){
+  <aside>
+    <h2>Votre premier dossier</h2>
+    <p>
+      Ajoutez un jeune pour commencer. Vous pourrez revenir à tout moment avant l'envoi, sans perdre
+      votre saisie.
+    </p>
+  </aside>
+  }
+  <div class="youth-grid">
+    @for(y of space()!.youths;track y.id){
+    <article class="card">
+      <div class="title-row">
+        <h2>{{y.identity.firstName || 'Nouveau jeune'}}</h2>
+        <span class="badge">{{states[y.state]}}</span>
+      </div>
+      <p>
+        {{y.identity.mejAgeGroup || 'Tranche MEJ à préciser'}} · {{y.identity.city ||
+        space()!.contact.city || 'Ville à préciser'}}
+      </p>
+      <p>
+        {{y.state === 'DRAFT' || y.state === 'CORRECTION' ? 'Complétez les pages puis relisez avant
+        l’envoi final.' : 'Dossier envoyé. Retrouvez ici son suivi.'}}
+      </p>
+      @if(y.correction){
+      <aside>{{y.correction}}</aside>
+      }
+      <ul>
+        <li>Documents et signatures propres à ce jeune</li>
+        <li>
+          Fiche sanitaire : {{rules().healthMode==='PAPER'?'remise confidentielle à organiser':'à
+          compléter dans le volet santé'}}
+        </li>
+        <li>{{simulationLabels[y.simulation]}}</li>
+      </ul>
+      <button type="button" (click)="openYouth(y)">
+        {{y.state === 'DRAFT' || y.state === 'CORRECTION' ? 'Continuer le dossier' : 'Consulter le
+        dossier'}}
+      </button>
+    </article>
+    }
+  </div>
+  <button class="secondary wide" type="button" (click)="addYouth()" [disabled]="busy()">
+    {{space()!.youths.length ? '+ Ajouter un autre jeune' : '+ Ajouter mon premier jeune'}}
+  </button>
+  <p class="help">
+    Seules les coordonnées communes sont réutilisées. La santé, les pièces et les signatures ne sont
+    jamais copiées d'un jeune à l'autre.
+  </p>
+  }@else{
+  <button class="quiet" type="button" (click)="dashboard()">← Toutes les inscriptions</button>
+  <div class="title-row">
+    <div>
+      <p class="eyebrow">Dossier de {{youth()!.identity.firstName || 'votre jeune'}}</p>
+      <h1 tabindex="-1">{{pages[page()]}}</h1>
+    </div>
+    <span class="badge">{{states[youth()!.state]}}</span>
+  </div>
+  <div class="mobile-pages">
+    <label for="family-page">Page du dossier</label
+    ><select id="family-page" [value]="page()" (change)="go(+$any($event.target).value)">
+      @for(label of pages;track label;let i=$index){
+      <option [value]="i">{{i+1}} / {{pages.length}}. {{label}}</option>
+      }
+    </select>
+  </div>
+  <nav aria-label="Pages du dossier" class="page-nav">
+    @for(label of pages;track label;let i=$index){<button
+      type="button"
+      class="quiet"
+      [class.active]="page()===i"
+      [attr.aria-current]="page()===i?'step':null"
+      (click)="go(i)"
+    >
+      {{i+1}}. {{label}}</button
+    >}
+  </nav>
+  <p class="help">
+    Page {{page()+1}} sur {{pages.length}}. Vous pouvez revenir sur les pages précédentes. «
+    Enregistré » apparaît uniquement après confirmation du serveur.
+  </p>
+  @if(youth()!.correction){
+  <aside role="status">
+    <strong>Correction demandée</strong>
+    <p>{{youth()!.correction}}</p>
+  </aside>
+  }
+  <fieldset class="card" [disabled]="readOnly() && page() < 3">
+    @switch(page()){ @case(0){
+    <legend>Qui participe ?</legend>
+    <p>Les informations de cette page concernent ce jeune uniquement.</p>
+    <div class="field-grid">
+      <div>
+        <label for="y-first">Prénom</label
+        ><input
+          id="y-first"
+          autocomplete="given-name"
+          [formField]="editForm.firstName"
+          (input)="changed()"
+        />
+      </div>
+      <div>
+        <label for="y-last">Nom</label
+        ><input
+          id="y-last"
+          autocomplete="family-name"
+          [formField]="editForm.lastName"
+          (input)="changed()"
+        />
+      </div>
+      <div>
+        <label for="y-dob">Date de naissance</label
+        ><input id="y-dob" type="date" [formField]="editForm.dateOfBirth" (input)="changed()" />
+        <p class="help">L'âge est vérifié à la date de référence définie pour l'événement.</p>
+      </div>
+      <div>
+        <label for="y-sex">Sexe</label
+        ><select id="y-sex" [formField]="editForm.sex" (change)="changed()">
+          <option value="">À compléter</option>
+          <option value="FEMALE">Féminin</option>
+          <option value="MALE">Masculin</option>
+          <option value="OTHER">Autre</option>
+          <option value="UNDISCLOSED">Non précisé</option>
+        </select>
+      </div>
+      <div>
+        <label for="y-age">Tranche MEJ</label
+        ><select id="y-age" [formField]="editForm.mejAgeGroup" (change)="changed()">
+          <option value="">À compléter</option>
+          <option value="TA">TA</option>
+          <option value="ES">ES</option>
+        </select>
+      </div>
+      <div>
+        <label for="y-capacity">Votre qualité pour ce jeune</label
+        ><select id="y-capacity" [formField]="editForm.legalCapacity" (change)="changed()">
+          <option value="">À préciser</option>
+          <option value="LEGAL">Représentant légal</option>
+          <option value="DELEGATED">Responsable avec autorisation à vérifier</option>
+          <option value="SELF_ADULT">Je suis majeur et m'inscris moi-même</option>
+        </select>
+      </div>
+    </div>
+    <app-diocese-select
+      [value]="editModel().dioceseId"
+      [disabled]="readOnly()"
+      (selected)="chooseDiocese($event)"
+    />
+    @if(editModel().dioceseId==='OTHER'){<label for="y-other">Pays et diocèse / juridiction</label
+    ><input id="y-other" [formField]="editForm.otherDiocese" (input)="changed()" />}
+    <div class="field-grid">
+      <div>
+        <label for="y-city">Ville du jeune, si différente du foyer</label
+        ><input id="y-city" [formField]="editForm.city" (input)="changed()" />
+      </div>
+      <div>
+        <label for="y-group">Équipe / groupe MEJ, si connu</label
+        ><input id="y-group" [formField]="editForm.mejGroup" (input)="changed()" />
+      </div>
+    </div>
+    } @case(1){
+    <legend>Des coordonnées communes à tous les jeunes</legend>
+    <p>
+      Ces contacts sont enregistrés une seule fois pour votre espace. L'identité et les
+      autorisations restent propres à chaque jeune.
+    </p>
+    <div class="field-grid">
+      <div>
+        <label for="c-name">Nom du responsable de l'espace</label
+        ><input id="c-name" [formField]="contactForm.name" (input)="contactChanged()" />
+      </div>
+      <div>
+        <label for="c-phone">Téléphone</label
+        ><input
+          id="c-phone"
+          type="tel"
+          [formField]="contactForm.phone"
+          (input)="contactChanged()"
+        />
+      </div>
+      <div>
+        <label for="c-address">Adresse</label
+        ><input
+          id="c-address"
+          autocomplete="street-address"
+          [formField]="contactForm.address"
+          (input)="contactChanged()"
+        />
+      </div>
+      <div>
+        <label for="c-post">Code postal</label
+        ><input id="c-post" [formField]="contactForm.postalCode" (input)="contactChanged()" />
+      </div>
+      <div>
+        <label for="c-city">Ville du foyer</label
+        ><input id="c-city" [formField]="contactForm.city" (input)="contactChanged()" />
+      </div>
+      <div>
+        <label for="c-emergency">Contact d'urgence : nom</label
+        ><input
+          id="c-emergency"
+          [formField]="contactForm.emergencyName"
+          (input)="contactChanged()"
+        />
+      </div>
+      <div>
+        <label for="c-emergency-phone">Contact d'urgence : téléphone</label
+        ><input
+          id="c-emergency-phone"
+          type="tel"
+          [formField]="contactForm.emergencyPhone"
+          (input)="contactChanged()"
+        />
+      </div>
+    </div>
+    <p class="help">
+      Un contact d'urgence n'acquiert aucun accès au dossier ni droit de signature.
+    </p>
+    } @case(2){
+    <legend>Participation et accueil</legend>
+    <p>
+      Les possibilités et conditions définitives dépendent de l'organisation. N'indiquez aucune
+      information médicale ici.
+    </p>
+    <label for="l-presence">Présence souhaitée</label
+    ><select id="l-presence" [formField]="editForm.presence" (change)="changed()">
+      <option value="">À compléter</option>
+      <option value="FULL">Tout le rassemblement</option>
+      <option value="PARTIAL">Présence partielle à confirmer</option>
+    </select>
+    <div class="field-grid">
+      <div>
+        <label for="l-arrival">Arrivée prévue</label
+        ><input id="l-arrival" [formField]="editForm.arrival" (input)="changed()" />
+      </div>
+      <div>
+        <label for="l-departure">Départ prévu</label
+        ><input id="l-departure" [formField]="editForm.departure" (input)="changed()" />
+      </div>
+      <div>
+        <label for="l-transport">Transport envisagé</label
+        ><input id="l-transport" [formField]="editForm.transport" (input)="changed()" />
+      </div>
+      <div>
+        <label for="l-hosting">Hébergement à organiser</label
+        ><input id="l-hosting" [formField]="editForm.accommodation" (input)="changed()" />
+      </div>
+    </div>
+    <label for="l-notes">Précisions logistiques, sans donnée de santé</label
+    ><textarea id="l-notes" [formField]="editForm.notes" (input)="changed()"></textarea>} @case(3){
+    <legend>Santé et adaptations : un circuit confidentiel</legend>
+    @if(rules().healthMode!=='PAPER' || rules().previewHealthSamples?.[youth()!.id]){
+    @if(rules().healthMode==='DIGITAL_DEMO'){
+    <p class="notice">
+      Démonstration sanitaire : saisissez uniquement des données fictives. Aucune donnée médicale
+      réelle.
+    </p>
+    }
+    <app-family-health
+      [sharedDemo]="!!rules().previewDemo && space()!.email==='famille-demo@example.test'"
+      [youthId]="youth()!.id"
+      [identity]="youth()!.identity"
+      [contact]="space()!.contact"
+      [readOnly]="readOnly() || (rules().healthMode==='PAPER' && !!rules().previewHealthSamples?.[youth()!.id])"
+      [previewSample]="rules().healthMode==='PAPER' ? rules().previewHealthSamples?.[youth()!.id] : undefined"
+    />}@else{
+    <aside>
+      <strong>Collecte numérique non activée</strong>
+      <p>{{rules().healthNotice}}</p>
+    </aside>
+    <p>
+      La cible prévue permet de compléter la fiche sanitaire habituelle par pages, puis de produire
+      le document complet signé. Les informations structurées sont séparées du document et
+      accessibles uniquement pour les usages autorisés.
+    </p>
+    <ol>
+      <li>Identité et personnes à joindre</li>
+      <li>Santé utile au séjour</li>
+      <li>Traitements et accompagnement</li>
+      <li>Allergies et repas</li>
+      <li>Vaccinations et justificatif</li>
+      <li>Vie quotidienne et adaptations</li>
+      <li>Relire la fiche habituelle et signer</li>
+    </ol>
+    <p>
+      Aucune information médicale ne doit être saisie dans les autres pages ou envoyée par e-mail.
+      La famille et l'équipe santé organiseront la remise confidentielle selon le circuit validé.
+    </p>
+    }} @case(4){
+    <app-family-documents [youthId]="youth()!.id" [readOnly]="readOnly()" />
+    <legend>Documents et autorisations</legend>
+    <p>
+      Chaque document est propre à ce jeune. Vérifiez son identité, le texte entier, la version et
+      votre qualité de signataire.
+    </p>
+    @for(t of rules().templates;track t.id){@if(t.enabled){
+    <article class="document">
+      <h2>{{t.title}}</h2>
+      <p>Version {{t.version}} · {{t.required?'Requis':'Facultatif'}}</p>
+      <p>Jeune : {{youth()!.identity.firstName}} {{youth()!.identity.lastName}}</p>
+      <pre>{{t.text}}</pre>
+      <a [href]="'/api/public/family-space/youths/'+youth()!.id+'/templates/'+t.id+'/pdf'"
+        >Télécharger ce document sans attestation (PDF)</a
+      >
+      @if(!readOnly()){
+      <app-family-signature
+        [sharedDemo]="!!rules().previewDemo && space()!.email==='famille-demo@example.test'"
+        [endpoint]="'/api/public/family-space/youths/'+youth()!.id+'/signatures'"
+        [prepare]="signaturePrepare(t.id,t.version)"
+        [documentKey]="signatureKey(t)"
+        [preview]="signaturePreview(t.id)"
+        [signer]="space()!.contact.name"
+        [capacity]="youth()!.identity.legalCapacity"
+        (completed)="signatureCompleted($event)"
+      />
+      }
+    </article>
+    }}@empty{
+    <aside>
+      Les modèles validés et les signataires requis seront précisés par l'organisation. Aucun texte
+      d'autorisation n'est inventé ni signé à votre place.
+    </aside>
+    }@for(s of youth()!.signatures;track $index){
+    <p>
+      {{s.templateId}} · version {{s.version}} · {{s.withdrawnAt?'À relire et attester de
+      nouveau':'Attesté par '+s.signerName}} · {{frenchDate(s.signedAt)}}
+      <a [href]="'/api/public/family-space/youths/'+youth()!.id+'/signatures/'+$index+'/pdf'"
+        >Télécharger mon exemplaire</a
+      >
+    </p>
+    }} @case(5){
+    <legend>Paiement : simulation uniquement</legend>
+    <aside>
+      <strong>Aucun paiement réel</strong>
+      <p>
+        Aucun débit, aucune carte, aucun IBAN. Ce test ne confirme pas l'inscription et ne produit
+        aucun reçu de paiement.
+      </p>
+    </aside>
+    <p>Le tarif réel n'est pas établi par cet écran.</p>
+    <p class="badge">{{simulationLabels[youth()!.simulation]}}</p>
+    @if(!readOnly()){<button type="button" (click)="simulate('SUCCESS')">
+      Simuler un paiement réussi</button
+    ><button class="secondary" type="button" (click)="simulate('FAILURE')">Simuler un échec</button
+    ><button class="quiet" type="button" (click)="simulate('CANCELLED')">
+      Simuler une annulation</button
+    >}} @case(6){
+    <legend>Tout relire, puis envoyer</legend>
+    <h2>{{youth()!.identity.firstName}} {{youth()!.identity.lastName}}</h2>
+    <dl>
+      <dt>Naissance</dt>
+      <dd>{{frenchDate(youth()!.identity.dateOfBirth)}}</dd>
+      <dt>Diocèse</dt>
+      <dd>{{dioceseLabel(youth()!.identity.dioceseId)}}</dd>
+      <dt>Tranche MEJ</dt>
+      <dd>{{youth()!.identity.mejAgeGroup || 'Non renseignée'}}</dd>
+      <dt>Qualité du responsable</dt>
+      <dd>{{capacityLabel(youth()!.identity.legalCapacity)}}</dd>
+      <dt>Ville et groupe du jeune</dt>
+      <dd>
+        {{youth()!.identity.city || reviewContact().city || 'Non renseignée'}} ·
+        {{youth()!.identity.mejGroup || 'Groupe non renseigné'}}
+      </dd>
+      <dt>Contact</dt>
+      <dd>{{reviewContact().name}} · {{reviewContact().phone}}</dd>
+      <dt>Adresse du foyer</dt>
+      <dd>
+        {{reviewContact().address || 'Non renseignée'}} {{reviewContact().postalCode}}
+        {{reviewContact().city}}
+      </dd>
+      <dt>Contact d'urgence</dt>
+      <dd>{{reviewContact().emergencyName}} · {{reviewContact().emergencyPhone}}</dd>
+      <dt>Participation</dt>
+      <dd>
+        {{youth()!.logistics.presence==='FULL'?'Tout le
+        rassemblement':youth()!.logistics.presence==='PARTIAL'?'Présence partielle à confirmer':'Non
+        renseignée'}}
+      </dd>
+      <dt>Arrivée et départ</dt>
+      <dd>
+        {{youth()!.logistics.arrival || 'À préciser'}} / {{youth()!.logistics.departure || 'À
+        préciser'}}
+      </dd>
+      <dt>Transport et hébergement</dt>
+      <dd>
+        {{youth()!.logistics.transport || 'À préciser'}} / {{youth()!.logistics.accommodation || 'À
+        préciser'}}
+      </dd>
+      <dt>Précisions logistiques</dt>
+      <dd>{{youth()!.logistics.notes || 'Aucune'}}</dd>
+      <dt>Documents attestés</dt>
+      <dd>
+        {{youth()!.signatures.length}} attestation(s), détails et exemplaires à la page Documents et
+        autorisations.
+      </dd>
+      <dt>Santé</dt>
+      <dd>
+        À relire dans la page confidentielle Santé et adaptations, séparément des informations
+        administratives.
+      </dd>
+      <dt>Paiement</dt>
+      <dd>{{simulationLabels[youth()!.simulation]}}</dd>
+    </dl>
+    @if(!readOnly()){ @if(missing().length){
+    <aside>
+      <h2>Ce qu'il reste à compléter</h2>
+      <ul>
+        @for(label of missing();track label){
+        <li>
+          <button class="quiet" type="button" (click)="go(requirementPage(label))">
+            {{label}} : compléter la page {{requirementPage(label)+1}}
+          </button>
+        </li>
+        }
+      </ul>
+    </aside>
+    }@else{
+    <p>
+      Les informations administratives requises sont présentes. Vous pouvez encore les corriger
+      avant l'envoi.
+    </p>
+    }<label class="check"
+      ><input type="checkbox" [formField]="signatureForm.finalAccepted" />
+      {{rules().finalDeclaration}}</label
+    >@if(!rules().registrationOpen){
+    <aside>
+      L'envoi final sera ouvert par l'organisation après validation des règles. Votre brouillon
+      reste enregistré.
+    </aside>
+    }<button
+      type="button"
+      (click)="submit()"
+      [disabled]="busy()||!!missing().length||!rules().registrationOpen||!signatureModel().finalAccepted"
+    >
+      Envoyer ce dossier pour vérification</button
+    >} @else{
+    <p>
+      Consultation de votre dossier envoyé. Les coordonnées ci-dessus sont celles conservées au
+      moment de l’envoi.
+    </p>
+    } } }
+  </fieldset>
+  @if(youth()!.state==='DRAFT'||youth()!.state==='CORRECTION'){ @if(page()===3 &&
+  rules().healthMode!=='PAPER'){
+  <p class="help">
+    Navigation du dossier : les boutons ci-dessous quittent la fiche santé. Les réponses santé sont
+    sauvegardées avant de changer de page.
+  </p>
+  }
+  <div class="page-actions">
+    @if(page()>0){<button class="secondary" type="button" (click)="go(page()-1)">
+      {{page()===3 && rules().healthMode!=='PAPER' ? 'Enregistrer et revenir à la participation' :
+      'Précédent'}}</button
+    >}@if(page()!==3 || rules().healthMode==='PAPER'){<button
+      type="button"
+      (click)="save()"
+      [disabled]="busy() || retryBlocked()"
+    >
+      Enregistrer cette page</button
+    >}@if(page()<6){<button type="button" (click)="go(page()+1)" [disabled]="busy()">
+      {{page()===3 && rules().healthMode!=='PAPER' ? 'Enregistrer et passer aux documents' :
+      'Enregistrer et continuer'}}</button
+    >}
+  </div>
+  } }
+  <footer>
+    Un dossier complet ne vaut pas confirmation de participation. Aucun paiement réel n'est réalisé
+    dans cet espace.
+  </footer>
+</section>

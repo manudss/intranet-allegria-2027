@@ -45,6 +45,11 @@ test('publish creates the deploy branch, then skips when dists are unchanged', a
     assert.ok(files.includes('web/index.html'));
     assert.ok(files.includes('site/index.html'));
     assert.ok(files.includes('SOURCE.txt'));
+    const marker = JSON.parse(git(['show', 'origin/deploy:web/deployment.json'], work));
+    assert.equal(marker.app, 'web');
+    assert.equal(marker.sourceSha, git(['rev-parse', 'HEAD'], work));
+    assert.match(marker.indexSha256, /^[a-f0-9]{64}$/);
+    assert.equal(JSON.parse(git(['show', 'origin/deploy:site/deployment.json'], work)).app, 'site');
     const source = git(['show', 'origin/deploy:SOURCE.txt'], work);
     assert.match(source, /apps: web, site/);
 

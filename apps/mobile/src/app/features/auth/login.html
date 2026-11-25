@@ -1,50 +1,50 @@
 <main class="login">
-  <section class="card">
-    <img src="assets/logo-allegria.svg" alt="Allegria 2027" />
-    <h1>ALEGRIA</h1>
-    <p>L'appli du jour J des bénévoles</p>
-    <form (submit)="onSubmit($event)">
-      <tui-textfield>
-        <label tuiLabel for="email">Email</label>
-        <input
-          tuiInput
-          type="email"
-          autocomplete="username"
-          [formField]="loginForm.email"
-          id="email"
+    <section class="card">
+      <img src="assets/logo-allegria.svg" alt="Alegria 2027" />
+      <h1>Connexion</h1>
+      <p>Application Jour J des bénévoles</p>
+      <form novalidate (submit)="onSubmit($event)">
+        <tui-textfield [class.field-pristine]="!loginForm.email().touched()">
+          <label tuiLabel for="email">Adresse e-mail</label>
+          <input tuiInput type="email" autocomplete="username" [formField]="loginForm.email" id="email"
+            [attr.aria-invalid]="emailInvalid() ? 'true' : 'false'"
+            [attr.aria-describedby]="emailInvalid() ? 'email-error' : null" />
+        </tui-textfield>
+        <tui-error
+          id="email-error"
+          [error]="
+            loginForm.email().touched() && loginForm.email().invalid()
+              ? 'Adresse e-mail requise'
+              : null
+          "
         />
-      </tui-textfield>
-      <tui-error
-        [error]="
-          loginForm.email().touched() && loginForm.email().invalid()
-            ? 'Adresse email requise'
-            : null
-        "
-      />
-      <tui-textfield>
-        <label tuiLabel for="password">Mot de passe</label>
-        <input
-          tuiInput
-          type="password"
-          autocomplete="current-password"
-          [formField]="loginForm.password"
-          id="password"
+        <tui-textfield [class.field-pristine]="!loginForm.password().touched()">
+          <label tuiLabel for="password">Mot de passe</label>
+          <input
+            tuiInput
+            type="password"
+            autocomplete="current-password"
+            [formField]="loginForm.password"
+            id="password"
+            [attr.aria-invalid]="passwordInvalid() ? 'true' : 'false'"
+            [attr.aria-describedby]="passwordInvalid() ? 'password-error' : null"
+          />
+          <tui-icon tuiPassword />
+        </tui-textfield>
+        <tui-error
+          id="password-error"
+          [error]="
+            loginForm.password().touched() && loginForm.password().invalid()
+              ? 'Mot de passe requis'
+              : null
+          "
         />
-        <tui-icon tuiPassword />
-      </tui-textfield>
-      <tui-error
-        [error]="
-          loginForm.password().touched() && loginForm.password().invalid()
-            ? 'Mot de passe requis'
-            : null
-        "
-      />
-      @if (error()) {
-        <p class="error" role="alert">{{ error() }}</p>
-      }
-      <button tuiButton appearance="primary" type="submit" [disabled]="loading()">
-        {{ loading() ? 'Connexion…' : 'Se connecter' }}
-      </button>
-    </form>
-  </section>
-</main>
+        @if (error()) {
+          <p class="error" role="alert">{{ error() }}</p>
+        }
+        <button tuiButton appearance="primary" type="submit" [disabled]="loading()">
+          {{ loading() ? 'Connexion…' : 'Se connecter' }}
+        </button>
+      </form>
+    </section>
+  </main>

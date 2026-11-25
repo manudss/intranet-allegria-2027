@@ -2,6 +2,21 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { AccessAuditEntry, AccessControlApiService } from './access-control-api.service';
 
+/** Libellés français des codes d'action du journal ; un code inconnu reste affiché tel quel. */
+export const ACCESS_AUDIT_LABELS: Readonly<Record<string, string>> = {
+  BADGE_STOCK_ADDED: 'Badges ajoutés au stock',
+  BADGE_ASSIGNED: 'Badge attribué',
+  BADGE_REPLACED: 'Badge remplacé',
+  BADGE_REVOKED: 'Badge révoqué',
+  SCANNER_GRANTED: 'Habilitation accordée',
+  SCANNER_REVOKED: 'Habilitation retirée',
+  SCAN_SESSION_STARTED: 'Session de scan ouverte',
+  SCAN_SESSION_CLOSED: 'Session de scan fermée',
+  UNKNOWN_CODE_LOOKUP: 'Code inconnu recherché',
+  LOOKUP_RATE_LIMITED: 'Recherches trop fréquentes bloquées',
+  CONFIG_CHANGED: 'Configuration modifiée',
+};
+
 export const ACCESS_AUDIT_ACTIONS = ['BADGE_STOCK_ADDED', 'BADGE_ASSIGNED', 'BADGE_REPLACED', 'BADGE_REVOKED', 'SCANNER_GRANTED', 'SCANNER_REVOKED', 'SCAN_SESSION_STARTED', 'SCAN_SESSION_CLOSED', 'UNKNOWN_CODE_LOOKUP', 'LOOKUP_RATE_LIMITED', 'CONFIG_CHANGED'];
 
 @Component({
@@ -13,20 +28,20 @@ export const ACCESS_AUDIT_ACTIONS = ['BADGE_STOCK_ADDED', 'BADGE_ASSIGNED', 'BAD
       <header class="head"><h1>Journal du contrôle d'accès</h1></header>
       <section class="panel">
         <div class="filters">
-          <select [(ngModel)]="action" (ngModelChange)="filterChanged()">
+          <label class="fld">Action<select [(ngModel)]="action" (ngModelChange)="filterChanged()">
             <option value="">Toutes actions</option>
-            @for (a of actions; track a) { <option [value]="a">{{ a }}</option> }
-          </select>
-          <input type="text" [(ngModel)]="userId" (ngModelChange)="filterChanged()" placeholder="ID utilisateur" />
+            @for (a of actions; track a) { <option [value]="a">{{ label(a) }}</option> }
+          </select></label>
+          <label class="fld">ID utilisateur<input type="text" [(ngModel)]="userId" (ngModelChange)="filterChanged()" /></label>
         </div>
-        @if (loading()) { <tui-loader size="l" /> }
-        <table class="tbl">
+        @if (loading()) { <app-loading-skeleton /> }
+        <div class="tbl-scroll" tabindex="0" role="region" aria-label="Journal des actions"><table class="tbl">
           <thead><tr><th>Date</th><th>Action</th><th>Utilisateur</th><th>Objet</th><th>Identifiant</th><th>Détail</th></tr></thead>
           <tbody>
             @for (e of items(); track e.id) {
               <tr>
-                <td>{{ e.createdAt | date: 'dd/MM HH:mm:ss' }}</td>
-                <td><code>{{ e.action }}</code></td>
+                <td>{{ e.createdAt | date: 'dd/MM/yyyy HH:mm:ss' }}</td>
+                <td><span [attr.title]="e.action">{{ label(e.action) }}</span></td>
                 <td>{{ e.userId ?? '—' }}</td>
                 <td>{{ e.entityType }}</td>
                 <td>{{ e.entityId ?? '—' }}</td>
@@ -34,7 +49,7 @@ export const ACCESS_AUDIT_ACTIONS = ['BADGE_STOCK_ADDED', 'BADGE_ASSIGNED', 'BAD
               </tr>
             }
           </tbody>
-        </table>
+        </table></div>
         @if (!loading() && items().length === 0) { <p class="hint">Aucune entrée.</p> }
         <div class="pager">
           <span>{{ total() }} entrée(s)</span>
@@ -45,14 +60,19 @@ export const ACCESS_AUDIT_ACTIONS = ['BADGE_STOCK_ADDED', 'BADGE_ASSIGNED', 'BAD
     </main>
   `,
   styles: [`
-    .page { padding: 24px; max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    .page { padding: 24px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; }
     .head h1 { margin: 0; font-size: 22px; }
-    .panel { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 10px; }
+    .panel { background: var(--appearance-surface); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 10px; }
+    .fld { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; min-width: 0; }
+    .fld > input, .fld > select { display: block; font-weight: 400; min-width: 0; box-sizing: border-box; }
     .filters { display: flex; gap: 8px; }
-    input, select { border: 1px solid #d7dbe3; border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
+    input, select { border: 1px solid var(--appearance-border); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
+    .tbl-scroll { max-width: 100%; overflow-x: auto; background: linear-gradient(to right, var(--appearance-surface, #fff) 30%, transparent), linear-gradient(to left, var(--appearance-surface, #fff) 30%, transparent) 100% 0, radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), transparent), radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), transparent) 100% 0; background-repeat: no-repeat; background-size: 2.5rem 100%, 2.5rem 100%, 0.8rem 100%, 0.8rem 100%; background-attachment: local, local, scroll, scroll; }
+    .tbl-scroll:focus-visible { outline: 2px solid var(--tui-border-focus, #d52f57); outline-offset: 2px; }
+    .tbl-scroll > .tbl { min-width: 34rem; }
     .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid #eceef2; }
-    .tbl td { padding: 8px; border-bottom: 1px solid #f4f5f7; vertical-align: top; }
+    .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--line-soft); }
+    .tbl td { padding: 8px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
     code { font-family: ui-monospace, monospace; font-size: 11px; }
     .detail { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: normal; overflow-wrap: anywhere; font-family: ui-monospace, monospace; font-size: 11px; }
     .pager { display: flex; align-items: center; gap: 10px; justify-content: flex-end; font-size: 13px; color: var(--tui-text-secondary); }
@@ -62,6 +82,9 @@ export const ACCESS_AUDIT_ACTIONS = ['BADGE_STOCK_ADDED', 'BADGE_ASSIGNED', 'BAD
 export class AccessAuditPage implements OnInit {
   private readonly api = inject(AccessControlApiService);
   readonly actions = ACCESS_AUDIT_ACTIONS;
+  protected label(action: string): string {
+    return ACCESS_AUDIT_LABELS[action] ?? action;
+  }
   readonly limit = 50;
 
   readonly items = signal<AccessAuditEntry[]>([]);

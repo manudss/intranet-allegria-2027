@@ -27,7 +27,7 @@ import { AccessControlApiService, ScannerGrant, ZoneItem } from './access-contro
       </section>
       <section class="panel">
         <h2>Habilitations</h2>
-        @if (loading()) { <tui-loader size="l" /> }
+        @if (loading()) { <app-loading-skeleton /> }
         <table class="tbl">
           <thead><tr><th>Utilisateur</th><th>Zone</th><th>Début</th><th>Fin</th><th>Statut</th><th></th></tr></thead>
           <tbody>
@@ -35,8 +35,8 @@ import { AccessControlApiService, ScannerGrant, ZoneItem } from './access-contro
               <tr>
                 <td>{{ g.user?.email ?? 'Utilisateur #' + g.userId }}</td>
                 <td>{{ g.zone?.name ?? 'Toutes' }}</td>
-                <td>{{ g.startsAt | date: 'dd/MM HH:mm' }}</td>
-                <td>{{ g.endsAt ? (g.endsAt | date: 'dd/MM HH:mm') : '—' }}</td>
+                <td>{{ g.startsAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+                <td>{{ g.endsAt ? (g.endsAt | date: 'dd/MM/yyyy HH:mm') : '—' }}</td>
                 <td><span class="chip" [attr.data-s]="isActive(g) ? 'active' : 'closed'">{{ isActive(g) ? 'Active' : 'Terminée' }}</span></td>
                 <td>@if (isActive(g)) { <button tuiButton appearance="secondary" size="s" type="button" (click)="revoke(g)">Clore</button> }</td>
               </tr>
@@ -48,22 +48,22 @@ import { AccessControlApiService, ScannerGrant, ZoneItem } from './access-contro
     </main>
   `,
   styles: [`
-    .page { padding: 24px; max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    .page { padding: 24px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; }
     .head h1 { margin: 0; font-size: 22px; }
-    .panel { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 10px; }
+    .panel { background: var(--appearance-surface); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 10px; }
     .panel h2 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--tui-text-secondary); }
     .hint { font-size: 13px; color: var(--tui-text-secondary); margin: 0; }
     .grid { display: grid; grid-template-columns: minmax(180px,1fr) minmax(180px,1fr); gap: 8px; }
     .grid button { justify-self: start; min-width: 100px; }
     @media(max-width: 700px) { .grid { grid-template-columns: 1fr; } }
-    input, select { border: 1px solid #d7dbe3; border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
+    input, select { border: 1px solid var(--appearance-border); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
     .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
-    .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid #eceef2; }
-    .tbl td { padding: 8px; border-bottom: 1px solid #f4f5f7; }
+    .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--line-soft); }
+    .tbl td { padding: 8px; border-bottom: 1px solid var(--line-soft); }
     .chip { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-    .chip[data-s='active'] { background: #e3f6ea; color: #1a9e4b; }
-    .chip[data-s='closed'] { background: #f3f4f6; color: #6b7280; }
-    .ok-msg { color: #1a9e4b; font-size: 13px; margin: 0; }
+    .chip[data-s='active'] { background: var(--appearance-raised); color: var(--appearance-success); }
+    .chip[data-s='closed'] { background: var(--appearance-surface); color: var(--appearance-muted); }
+    .ok-msg { color: var(--appearance-success); font-size: 13px; margin: 0; }
   `],
 })
 export class ScannerGrantsPage implements OnInit {

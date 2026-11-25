@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Image de production de l'API Allegria (NestJS).
+# Image de production de l'API Alegria (NestJS).
 #
 # Pourquoi : les builds se font sur GitHub Actions (gratuits sur ce repo public)
 # et Render ne fait QUE tirer l'image GHCR et la demarrer : zero minute de build
@@ -23,6 +23,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/dist/apps/api ./dist/apps/api
+COPY --from=build /app/dist/apps/family-portal ./dist/apps/family-portal
 # Render fournit PORT ; l'API ecoute dessus (defaut 3000 en local).
 EXPOSE 3000
 CMD ["node", "dist/apps/api/main.js"]

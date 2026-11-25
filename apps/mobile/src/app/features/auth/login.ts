@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { form, FormField, required, email, submit } from '@angular/forms/signals';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TuiButton, TuiError, TuiInput, TuiTextfield, TuiIcon } from '@taiga-ui/core';
@@ -24,6 +24,11 @@ export class LoginComponent {
     email(p.email);
     required(p.password);
   });
+  /** Erreur affichée (et annoncée) seulement après interaction ou envoi. */
+  readonly emailInvalid = computed(() => this.loginForm.email().touched() && this.loginForm.email().invalid());
+  readonly passwordInvalid = computed(
+    () => this.loginForm.password().touched() && this.loginForm.password().invalid(),
+  );
   readonly loading = signal(false);
   readonly error = signal('');
 

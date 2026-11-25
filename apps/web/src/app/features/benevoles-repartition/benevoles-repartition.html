@@ -8,7 +8,7 @@
   </div>
 
   @if (loading()) {
-    <tui-loader />
+    <app-loading-skeleton />
   } @else {
     <nav class="steps" aria-label="Étapes">
       <button type="button" class="step" [class.active]="step() === 1" (click)="step.set(1)">

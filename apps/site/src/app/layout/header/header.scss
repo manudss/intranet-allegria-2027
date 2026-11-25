@@ -31,7 +31,7 @@
   width: 2.4rem;
   height: 2.4rem;
   border-radius: 50%;
-  background: var(--color-primary);
+  background: var(--appearance-solid);
   color: var(--color-text-on-primary);
   font-weight: 800;
 }
@@ -39,6 +39,7 @@
 .site-header__burger {
   display: none;
   background: none;
+  color: var(--color-text);
   border: 2px solid var(--color-border);
   border-radius: var(--radius-sm);
   padding: var(--space-xs) var(--space-sm);

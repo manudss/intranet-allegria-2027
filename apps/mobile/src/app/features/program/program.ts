@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { TuiLoader } from '@taiga-ui/core';
+import { LoadingSkeletonComponent } from '../../shared/loading-skeleton.component';
 import { catchError, of } from 'rxjs';
 import { ProgramApiService } from '../../services/api.services';
 import {
@@ -13,7 +13,7 @@ import { dayLabel, defaultDay, eventDays } from '../../core/event-dates';
 @Component({
   selector: 'app-program',
   standalone: true,
-  imports: [TuiLoader],
+  imports: [LoadingSkeletonComponent],
   templateUrl: './program.html',
   styleUrl: './program.scss',
 })

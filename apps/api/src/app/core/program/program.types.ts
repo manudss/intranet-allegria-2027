@@ -182,6 +182,11 @@ export interface ProgramSequenceDetailView extends ProgramSequenceView {
   groupIds: number[];
 }
 
+/** Ligne de la vue jour : la séquence et ses groupes de rassemblement liés. */
+export interface ProgramSequenceDayView extends ProgramSequenceView {
+  groupIds: number[];
+}
+
 export interface ProgramSequenceView {
   id: number;
   eventDate: string;

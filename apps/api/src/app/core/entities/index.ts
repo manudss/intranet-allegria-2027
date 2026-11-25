@@ -68,3 +68,5 @@ export { DocumentFileType } from './document-file-type.enum';
 export { DocumentCategory } from './document-category.entity';
 export { DocumentLink } from './document-link.entity';
 export { DocumentLinkTeam } from './document-link-team.entity';
+
+export * from './registration-family.entity';

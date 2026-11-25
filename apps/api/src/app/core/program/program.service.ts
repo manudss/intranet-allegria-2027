@@ -1,9 +1,11 @@
+import { ProgramMissionTimingService, ShiftTimingDiff } from './program-mission-timing.service';
 import { createHash } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In } from 'typeorm';
@@ -37,6 +39,7 @@ import {
   InsertSequenceDto,
   ProgramChangeLogView,
   ProgramRequestUser,
+  ProgramSequenceDayView,
   ProgramSequenceDetailView,
   ProgramSequenceView,
   ResizeSequenceDto,
@@ -127,29 +130,98 @@ export class ProgramService {
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly recalc: ProgramRecalcService,
+    @Optional() private readonly missionTiming?: ProgramMissionTimingService,
   ) {}
 
+  private async timingVersion(manager: EntityManager, chain: ProgramSequenceData[]) {
+    return (
+      chainVersion(chain) +
+      (this.missionTiming ? ':' + (await this.missionTiming.version(manager)) : '')
+    );
+  }
+  private linkedOutcome(linked?: { conflicts: string[] }) {
+    return linked?.conflicts.length
+      ? { outcome: 'impossible' as const, message: linked.conflicts.join(' ') }
+      : {};
+  }
+  private assertLinked(linked?: { conflicts: string[] }) {
+    if (linked?.conflicts.length) throw new ConflictException(linked.conflicts.join(' '));
+  }
+  private resizeDiffs(
+    chain: ProgramSequenceData[],
+    sequenceId: number,
+    preview: ProgramResizePreview,
+  ): ProgramSequenceDiff[] {
+    const target = chain.find((s) => s.id === sequenceId)!;
+    return [
+      {
+        sequenceId,
+        title: target.title,
+        before: {
+          startTime: target.startTime,
+          endTime: target.endTime,
+          durationMinutes: target.durationMinutes,
+        },
+        after: {
+          startTime: target.startTime,
+          endTime: computeEndTime(target.startTime, preview.newDurationMinutes),
+          durationMinutes: preview.newDurationMinutes,
+        },
+      },
+      ...preview.affected,
+    ];
+  }
+
   /** Toutes les séquences d'un jour (tous lieux, branches incluses). */
-  async getDay(date: string): Promise<{ date: string; sequences: ProgramSequenceView[] }> {
+  async getDay(date: string): Promise<{ date: string; sequences: ProgramSequenceDayView[] }> {
     this.assertDate(date);
     const sequences = await this.dataSource.manager.find(ProgramSequence, {
       where: { eventDate: date },
       relations: { volunteerTeam: true, frozenByUser: true },
       order: { location: 'ASC', startTime: 'ASC', id: 'ASC' },
     });
-    return { date, sequences: sequences.map(toView) };
+    const ids = sequences.map((sequence) => sequence.id);
+    const links = ids.length
+      ? await this.dataSource.manager.find(ProgramSequenceGroup, {
+          where: { sequenceId: In(ids) },
+          order: { groupId: 'ASC' },
+        })
+      : [];
+    const groupIdsBySequence = new Map<number, number[]>();
+    for (const link of links) {
+      groupIdsBySequence.set(link.sequenceId, [
+        ...(groupIdsBySequence.get(link.sequenceId) ?? []),
+        link.groupId,
+      ]);
+    }
+    return {
+      date,
+      sequences: sequences.map((sequence) => ({
+        ...toView(sequence),
+        groupIds: groupIdsBySequence.get(sequence.id) ?? [],
+      })),
+    };
   }
 
   async previewInsert(
     afterSequenceId: number,
     dto: InsertSequenceDto,
-  ): Promise<ProgramInsertPreview & { version: string }> {
-    const { chain, preview } = await this.computeInsert(
-      this.dataSource.manager,
-      afterSequenceId,
-      dto,
-    );
-    return { ...preview, version: chainVersion(chain) };
+  ): Promise<ProgramInsertPreview & { version: string; shiftChanges?: ShiftTimingDiff[] }> {
+    return this.dataSource.transaction(async (manager) => {
+      await this.missionTiming?.lock(manager);
+      const { chain, preview } = await this.computeInsert(manager, afterSequenceId, dto);
+      const linked = await this.missionTiming?.plan(
+        manager,
+        preview.newSequence.eventDate,
+        preview.affected,
+      );
+      return {
+        ...preview,
+        ...this.linkedOutcome(linked),
+        version: await this.timingVersion(manager, chain),
+        shiftChanges: linked?.shifts ?? [],
+      };
+    });
   }
 
   async applyInsert(
@@ -159,12 +231,22 @@ export class ProgramService {
     version: string,
   ): Promise<{ sequence: ProgramSequenceView; affected: ProgramSequenceDiff[] }> {
     return this.dataSource.transaction(async (manager) => {
+      await this.missionTiming?.lock(manager);
       const { chain, preview } = await this.computeInsert(manager, afterSequenceId, dto, true);
-      this.assertApplicable(chain, preview.outcome, version);
+      if (version !== (await this.timingVersion(manager, chain)))
+        throw new ConflictException("L'aperçu a changé. Prévisualiser à nouveau.");
+      this.assertApplicable(chain, preview.outcome, chainVersion(chain));
       if (preview.outcome !== 'ok') {
         throw new BadRequestException(preview.message);
       }
 
+      const linked = await this.missionTiming?.plan(
+        manager,
+        preview.newSequence.eventDate,
+        preview.affected,
+      );
+      this.assertLinked(linked);
+      if (linked) await this.missionTiming?.apply(manager, linked.shifts);
       const { followingSequenceId } = this.recalc.applyInsert(chain, preview);
       for (const diff of preview.affected) {
         await this.persistTiming(manager, diff);
@@ -209,9 +291,19 @@ export class ProgramService {
   async previewResize(
     sequenceId: number,
     dto: ResizeSequenceDto,
-  ): Promise<ProgramResizePreview & { version: string }> {
-    const { chain, preview } = await this.computeResize(this.dataSource.manager, sequenceId, dto);
-    return { ...preview, version: chainVersion(chain) };
+  ): Promise<ProgramResizePreview & { version: string; shiftChanges?: ShiftTimingDiff[] }> {
+    return this.dataSource.transaction(async (manager) => {
+      await this.missionTiming?.lock(manager);
+      const { chain, preview, eventDate } = await this.computeResize(manager, sequenceId, dto);
+      const diffs = this.resizeDiffs(chain, sequenceId, preview);
+      const linked = await this.missionTiming?.plan(manager, eventDate, diffs);
+      return {
+        ...preview,
+        ...this.linkedOutcome(linked),
+        version: await this.timingVersion(manager, chain),
+        shiftChanges: linked?.shifts ?? [],
+      };
+    });
   }
 
   async applyResize(
@@ -221,13 +313,16 @@ export class ProgramService {
     version: string,
   ): Promise<{ affected: ProgramSequenceDiff[] }> {
     return this.dataSource.transaction(async (manager) => {
+      await this.missionTiming?.lock(manager);
       const { chain, preview, eventDate } = await this.computeResize(
         manager,
         sequenceId,
         dto,
         true,
       );
-      this.assertApplicable(chain, preview.outcome, version);
+      if (version !== (await this.timingVersion(manager, chain)))
+        throw new ConflictException("L'aperçu a changé. Prévisualiser à nouveau.");
+      this.assertApplicable(chain, preview.outcome, chainVersion(chain));
       if (preview.outcome !== 'ok') {
         throw new BadRequestException(preview.message);
       }
@@ -248,6 +343,9 @@ export class ProgramService {
         },
       };
       const diffs = [resizedTarget, ...preview.affected];
+      const linked = await this.missionTiming?.plan(manager, eventDate, diffs);
+      this.assertLinked(linked);
+      if (linked) await this.missionTiming?.apply(manager, linked.shifts);
       for (const diff of diffs) {
         await this.persistTiming(manager, diff);
       }
@@ -258,11 +356,88 @@ export class ProgramService {
         eventDate,
         affectedSequenceIds: diffs.map((d) => d.sequenceId),
         before: snapshotOf(diffs, 'before'),
-        after: snapshotOf(diffs, 'after'),
+        after: { events: snapshotOf(diffs, 'after'), shifts: linked?.shifts ?? [] },
         comment: preview.message,
       });
 
       return { affected: diffs };
+    });
+  }
+
+  private async computeBatch(
+    manager: EntityManager,
+    targets: { id: number; durationMinutes: number }[],
+  ) {
+    if (
+      !Array.isArray(targets) ||
+      !targets.length ||
+      targets.length > 2 ||
+      new Set(targets.map((t) => t.id)).size !== targets.length
+    )
+      throw new BadRequestException('Choisir un ou deux créneaux distincts.');
+    const all: ProgramSequenceDiff[] = [];
+    let first: ProgramResizePreview | null = null;
+    let eventDate = '';
+    for (const t of targets) {
+      if (!Number.isInteger(t.id) || t.id <= 0)
+        throw new BadRequestException('Identifiant invalide.');
+      const r = await this.computeResize(
+        manager,
+        t.id,
+        { durationMinutes: t.durationMinutes },
+        true,
+      );
+      if (r.preview.outcome !== 'ok') throw new ConflictException(r.preview.message);
+      if (eventDate && eventDate !== r.eventDate)
+        throw new BadRequestException('Les voies doivent être du même jour.');
+      eventDate = r.eventDate;
+      first ??= r.preview;
+      const diffs = this.resizeDiffs(r.chain, t.id, r.preview);
+      if (diffs.some((d) => all.some((a) => a.sequenceId === d.sequenceId)))
+        throw new ConflictException(
+          'Les recalculs se recouvrent : prévisualiser une opération à la fois.',
+        );
+      all.push(...diffs);
+    }
+    const linked = await this.missionTiming?.plan(manager, eventDate, all);
+    return { all, first: first!, eventDate, linked };
+  }
+  async previewResizeBatch(targets: { id: number; durationMinutes: number }[]) {
+    return this.dataSource.transaction(async (manager) => {
+      await this.missionTiming?.lock(manager);
+      const r = await this.computeBatch(manager, targets);
+      return {
+        ...r.first,
+        affected: r.all.slice(1),
+        ...this.linkedOutcome(r.linked),
+        shiftChanges: r.linked?.shifts ?? [],
+        version: await this.missionTiming!.version(manager),
+      };
+    });
+  }
+  async applyResizeBatch(
+    user: ProgramRequestUser,
+    targets: { id: number; durationMinutes: number }[],
+    version: string,
+  ) {
+    return this.dataSource.transaction(async (manager) => {
+      await this.missionTiming?.lock(manager);
+      if ((await this.missionTiming!.version(manager)) !== version)
+        throw new ConflictException("L'aperçu a changé. Prévisualiser à nouveau.");
+      const r = await this.computeBatch(manager, targets);
+      this.assertLinked(r.linked);
+      if (r.linked) await this.missionTiming?.apply(manager, r.linked.shifts);
+      for (const diff of r.all) await this.persistTiming(manager, diff);
+      await this.writeLog(manager, {
+        action: ProgramChangeLogAction.RESIZE,
+        user,
+        eventDate: r.eventDate,
+        affectedSequenceIds: r.all.map((d) => d.sequenceId),
+        before: snapshotOf(r.all, 'before'),
+        after: { events: snapshotOf(r.all, 'after'), shifts: r.linked?.shifts ?? [] },
+        comment: 'Recalcul commun des voies et créneaux bénévoles.',
+      });
+      return { affected: r.all };
     });
   }
 
@@ -287,11 +462,12 @@ export class ProgramService {
       throw new BadRequestException(`Le lieu est obligatoire (${MAX_LOCATION_LENGTH} car. max).`);
     }
     if (!TIME_PATTERN.test(dto.startTime ?? '')) {
-      throw new BadRequestException("Heure de début invalide, format attendu : HH:mm.");
+      throw new BadRequestException('Heure de début invalide, format attendu : HH:mm.');
     }
     const patch = this.validateMetadata(dto);
 
     return this.dataSource.transaction(async (manager) => {
+      await this.missionTiming?.lock(manager);
       const existing = await manager.find(ProgramSequence, {
         where: { eventDate: dto.eventDate, location },
       });
@@ -370,7 +546,10 @@ export class ProgramService {
     }
 
     return this.dataSource.transaction(async (manager) => {
+      await this.missionTiming?.lock(manager);
       const sequence = await this.loadSequence(manager, sequenceId);
+      if (dto.missionIds)
+        await this.missionTiming?.assertMembership(manager, sequenceId, dto.missionIds);
       const before: Record<string, unknown> = {};
       for (const key of Object.keys(patch)) {
         before[key] = (sequence as unknown as Record<string, unknown>)[key];
@@ -405,6 +584,7 @@ export class ProgramService {
     options: { closeGap?: boolean } = {},
   ): Promise<{ deletedId: number; shiftedMinutes: number }> {
     return this.dataSource.transaction(async (manager) => {
+      await this.missionTiming?.lock(manager);
       const sequence = await this.loadSequence(manager, sequenceId);
       if (sequence.status === ProgramSequenceStatus.FROZEN) {
         throw new ConflictException('Une séquence figée ne peut pas être supprimée : défigez-la.');
@@ -422,6 +602,17 @@ export class ProgramService {
         where: { eventDate: sequence.eventDate, location: sequence.location },
       });
       const next = siblings.find((s) => s.previousSequenceId === sequenceId);
+      if (this.missionTiming) {
+        const ids = options.closeGap ? siblings.map((s) => s.id) : [sequenceId];
+        const bound = await manager.query(
+          'SELECT shift_id FROM program_shift_bindings WHERE sequence_id=ANY($1::int[]) LIMIT 1',
+          [ids],
+        );
+        if (bound.length)
+          throw new ConflictException(
+            'Des horaires bénévoles sont pilotés dans cette chaîne. Retirer explicitement leur pilotage avant cette suppression.',
+          );
+      }
 
       // Séquences à avancer (toute la queue de chaîne) et décalage, calculés avant toute écriture.
       const tail: ProgramSequence[] = [];
@@ -430,7 +621,7 @@ export class ProgramService {
         const predecessor = siblings.find((s) => s.id === sequence.previousSequenceId);
         const newStart = predecessor ? predecessor.endTime : sequence.startTime;
         shift = Math.max(0, timeToMinutes(next.startTime) - timeToMinutes(newStart));
-        for (let cursor: ProgramSequence | undefined = next; cursor; ) {
+        for (let cursor: ProgramSequence | undefined = next; cursor;) {
           tail.push(cursor);
           const current: ProgramSequence = cursor;
           cursor = siblings.find((s) => s.previousSequenceId === current.id);
@@ -462,7 +653,10 @@ export class ProgramService {
         action: ProgramChangeLogAction.DELETE,
         user,
         eventDate: sequence.eventDate,
-        affectedSequenceIds: [sequenceId, ...(shift > 0 ? tail : next ? [next] : []).map((s) => s.id)],
+        affectedSequenceIds: [
+          sequenceId,
+          ...(shift > 0 ? tail : next ? [next] : []).map((s) => s.id),
+        ],
         before: {
           [String(sequenceId)]: {
             title: sequence.title,
@@ -522,6 +716,7 @@ export class ProgramService {
     frozen: boolean,
   ): Promise<ProgramSequenceView> {
     return this.dataSource.transaction(async (manager) => {
+      await this.missionTiming?.lock(manager);
       const sequence = await this.loadSequence(manager, sequenceId);
       const isFrozen = sequence.status === ProgramSequenceStatus.FROZEN;
       if (isFrozen === frozen) {
@@ -656,6 +851,7 @@ export class ProgramService {
     }
     const wanted = [...new Set(dto.groupIds)];
     return this.dataSource.transaction(async (manager) => {
+      await this.missionTiming?.lock(manager);
       const sequence = await this.loadSequence(manager, sequenceId);
       if (wanted.length) {
         const found = await manager.find(Group, { where: { id: In(wanted) } });
@@ -697,6 +893,7 @@ export class ProgramService {
     sequenceId: number,
   ): Promise<ProgramSequenceDetailView> {
     return this.dataSource.transaction(async (manager) => {
+      await this.missionTiming?.lock(manager);
       const source = await this.loadSequence(manager, sequenceId);
       const suffix = ' (copie)';
       const title =
@@ -797,8 +994,14 @@ export class ProgramService {
       );
     }
     if (hasOffset) {
-      if (!Number.isInteger(dueOffsetMinutes) || dueOffsetMinutes! < 0 || dueOffsetMinutes! > 10080) {
-        throw new BadRequestException("L'échéance relative est un nombre de minutes entre 0 et 10080.");
+      if (
+        !Number.isInteger(dueOffsetMinutes) ||
+        dueOffsetMinutes! < 0 ||
+        dueOffsetMinutes! > 10080
+      ) {
+        throw new BadRequestException(
+          "L'échéance relative est un nombre de minutes entre 0 et 10080.",
+        );
       }
       return null;
     }
@@ -823,6 +1026,7 @@ export class ProgramService {
     this.assertTitle(dto.title);
     const dueDate = this.validateTaskDue(dto.dueOffsetMinutes, dto.dueDate);
     return this.dataSource.transaction(async (manager) => {
+      await this.missionTiming?.lock(manager);
       const sequence = await this.loadSequence(manager, sequenceId);
       const task = await manager.save(
         manager.create(EventPreparationTask, {
@@ -855,6 +1059,7 @@ export class ProgramService {
     dto: UpdateTaskDto,
   ): Promise<EventTaskView> {
     return this.dataSource.transaction(async (manager) => {
+      await this.missionTiming?.lock(manager);
       const sequence = await this.loadSequence(manager, sequenceId);
       const task = await manager.findOne(EventPreparationTask, {
         where: { id: taskId, sequenceId },
@@ -901,6 +1106,7 @@ export class ProgramService {
     taskId: number,
   ): Promise<{ deletedId: number }> {
     return this.dataSource.transaction(async (manager) => {
+      await this.missionTiming?.lock(manager);
       const sequence = await this.loadSequence(manager, sequenceId);
       const task = await manager.findOne(EventPreparationTask, {
         where: { id: taskId, sequenceId },
@@ -1020,7 +1226,10 @@ export class ProgramService {
       patch.minMarginMinutes = dto.minMarginMinutes;
     }
     if (dto.missionIds !== undefined) {
-      if (!Array.isArray(dto.missionIds) || !dto.missionIds.every((id) => Number.isInteger(id) && id > 0)) {
+      if (
+        !Array.isArray(dto.missionIds) ||
+        !dto.missionIds.every((id) => Number.isInteger(id) && id > 0)
+      ) {
         throw new BadRequestException('Liste de missions invalide.');
       }
       patch.missionIds = [...new Set(dto.missionIds)];
@@ -1060,6 +1269,7 @@ export class ProgramService {
       byDate.set(sequence.eventDate, list);
     }
     return this.dataSource.transaction(async (manager) => {
+      await this.missionTiming?.lock(manager);
       const tx = manager.getRepository(ProgramPublicExport);
       const dates = [...byDate.keys()];
       for (const [date, daySequences] of byDate) {
@@ -1112,7 +1322,11 @@ export class ProgramService {
   /** Instantané public d'un jour, lu par l'appli non connectée ; vide si jamais publié. */
   async getPublicProgramDay(
     date: string,
-  ): Promise<{ date: string; updatedAt: string | null; sequences: ProgramPublicExport['sequences'] }> {
+  ): Promise<{
+    date: string;
+    updatedAt: string | null;
+    sequences: ProgramPublicExport['sequences'];
+  }> {
     const entry = await this.dataSource.manager.findOne(ProgramPublicExport, {
       where: { eventDate: date },
     });

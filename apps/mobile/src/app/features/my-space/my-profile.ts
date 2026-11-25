@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { TuiLoader } from '@taiga-ui/core';
+import { LoadingSkeletonComponent } from '../../shared/loading-skeleton.component';
 import { catchError, of } from 'rxjs';
 import { MySpaceApiService } from '../../services/api.services';
 import { Volunteer, VolunteerHosting } from '../../models/models';
@@ -23,15 +23,15 @@ const SKILL_LABELS: Record<string, string> = {
 
 const formatDate = (iso: string): string =>
   new Date(`${iso}T12:00:00`).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'short',
+    day: '2-digit',
+    month: '2-digit',
     year: 'numeric',
   });
 
 @Component({
   selector: 'app-my-profile',
   standalone: true,
-  imports: [RouterLink, TuiLoader],
+  imports: [RouterLink, LoadingSkeletonComponent],
   templateUrl: './my-profile.html',
   styleUrl: './my-profile.scss',
 })

@@ -24,7 +24,7 @@
 .stock-form input,
 .stock-form select {
   font: inherit;
-  border: 1px solid #d9dbe3;
+  border: 1px solid var(--appearance-border);
   border-radius: 0.5rem;
   padding: 0.65rem;
   min-width: 0;
@@ -42,7 +42,7 @@ th,
 td {
   text-align: left;
   padding: 0.8rem 0.5rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--line-soft);
 }
 code {
   font-size: 0.8rem;
@@ -144,3 +144,6 @@ app-select-field {
     padding-inline: 0.5rem;
   }
 }
+
+/* The printable badge is deliberately a paper preview in both themes. */
+.print-card {background:#fff;color:#222;color-scheme:light;}

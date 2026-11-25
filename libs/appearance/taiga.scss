@@ -1,0 +1,127 @@
+@mixin theme {
+  :root {
+    --appearance-action: #b51d43;
+    --appearance-solid: #c01f49;
+    --appearance-solid-hover: #a91b40;
+    --appearance-bg: #f6f5f8;
+    --appearance-text: #27232b;
+    --appearance-muted: #6b5f70;
+    --appearance-raised: #fce7ef;
+    --appearance-selected: #fce7ef;
+    --appearance-border: #9b8395;
+  }
+  :root[data-theme='dark'] {
+    --appearance-bg: #1b1a20;
+    --appearance-surface: #28262e;
+    --appearance-text: #fff5fa;
+    --appearance-muted: #cfc3cf;
+    --appearance-raised: #3c2937;
+    --appearance-selected: #493044;
+    --appearance-border: #8f7b8a;
+    --appearance-action: #ff91ad;
+  }
+  :root,
+  [tuiTheme],
+  tui-root {
+    --allegria-primary: var(--appearance-action);
+    --allegria-secondary: #8a5200;
+    --allegria-on-primary: #fff;
+    --allegria-on-secondary: #fff;
+    --allegria-bg: var(--appearance-bg);
+    --allegria-bg-alt: var(--appearance-raised);
+    --allegria-surface: var(--appearance-surface);
+    --allegria-text: var(--appearance-text);
+    --allegria-muted: var(--appearance-muted);
+    --allegria-border: var(--appearance-border);
+    --tui-background-base: var(--appearance-surface);
+    --tui-background-base-alt: var(--appearance-bg);
+    --tui-background-neutral-1: var(--appearance-raised);
+    --tui-background-neutral-1-hover: var(--appearance-selected);
+    --tui-background-neutral-1-pressed: var(--appearance-selected);
+    --tui-background-neutral-2: var(--appearance-raised);
+    --tui-background-neutral-2-hover: var(--appearance-selected);
+    --tui-background-accent-1: var(--appearance-solid);
+    --tui-background-accent-1-hover: var(--appearance-solid-hover);
+    --tui-background-accent-1-pressed: var(--appearance-solid-hover);
+    --tui-background-accent-2: #8a5200;
+    --tui-background-accent-2-hover: #704200;
+    --tui-background-accent-2-pressed: #5c3600;
+    --tui-text-primary: var(--appearance-text);
+    --tui-text-secondary: var(--appearance-muted);
+    --tui-text-tertiary: var(--appearance-muted);
+    --tui-text-action: var(--appearance-action);
+    --tui-text-action-hover: var(--appearance-action);
+    --tui-text-negative: var(--appearance-error);
+    --tui-text-positive: var(--appearance-success);
+    --tui-text-primary-on-accent-1: #fff;
+    --tui-text-primary-on-accent-2: #fff;
+    --tui-border-normal: var(--appearance-border);
+    --tui-border-hover: var(--appearance-action);
+    --tui-border-focus: var(--appearance-focus);
+    --tui-status-info: var(--appearance-info);
+    --tui-status-info-pale: var(--appearance-info-bg);
+    --tui-status-warning: var(--appearance-warning);
+    --tui-status-warning-pale: var(--appearance-warning-bg);
+    --tui-status-positive: var(--appearance-success);
+    --tui-status-positive-pale: var(--appearance-success-bg);
+    --tui-status-negative: var(--appearance-error);
+    --tui-status-negative-pale: var(--appearance-error-bg);
+    --tui-service-selection-background: var(--appearance-selected);
+    --tui-service-autofill-background: var(--appearance-raised);
+  }
+  .page {
+    background: var(--appearance-surface);
+    border-color: var(--appearance-border);
+  }
+  .page h1,
+  a,
+  [tuiButton][appearance='secondary'],
+  [tuiButton][appearance='flat'] {
+    color: var(--appearance-action);
+  }
+  a:hover {
+    color: var(--appearance-action);
+  }
+  :focus-visible {
+    outline: 3px solid var(--appearance-focus);
+    outline-offset: 3px;
+  }
+  button {
+    color: inherit;
+  }
+  input,
+  textarea,
+  select {
+    color-scheme: inherit;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--appearance-muted);
+    opacity: 1;
+  }
+  @media print {
+    :root[data-theme] {
+      --appearance-bg: #fff;
+      --appearance-surface: #fff;
+      --appearance-text: #27232b;
+      --appearance-muted: #6b5f70;
+      --appearance-border: #756056;
+      --appearance-action: #b51d43;
+      --appearance-raised: #fce7ef;
+      --appearance-selected: #fce7ef;
+    }
+  }
+
+  tui-root {
+    background: var(--appearance-bg);
+  }
+  [tuiButton][appearance='primary'],
+  [tuiButton][appearance='accent'] {
+    background: var(--appearance-solid);
+    color: #fff;
+  }
+  [tuiButton][appearance='primary']:hover,
+  [tuiButton][appearance='accent']:hover {
+    background: var(--appearance-solid-hover);
+  }
+}

@@ -1,7 +1,8 @@
+@use '../../../libs/appearance/palette';
+@use '../../../libs/appearance/taiga';
 :root {
-  /* Thème clair uniquement : empêche Chrome/Android d'assombrir la page
-   * (le texte des champs passait blanc sur fond blanc en mode sombre forcé). */
-  color-scheme: only light;
+  /* AppearanceService resolves the screen palette before display. */
+  color-scheme: light dark;
 
   --allegria-primary: #d52f57;
   --allegria-secondary: #f5a623;
@@ -13,9 +14,9 @@
   --allegria-muted: #777777;
 
   /*
-  * Thème Taiga UI - Allegria
-  * Couleur principale : rose Allegria
-  * Couleur secondaire : orange Allegria
+  * Thème Taiga UI - Alegria
+  * Couleur principale : rose Alegria
+  * Couleur secondaire : orange Alegria
   */
 
   --tui-theme-color: var(--allegria-primary);
@@ -181,3 +182,17 @@ body {
 * {
   box-sizing: border-box;
 }
+
+@include taiga.theme;
+
+/* Champ obligatoire vide non touché : pas d'erreur (voir l'intranet). */
+tui-textfield.field-pristine[data-appearance='textfield'] {
+  outline-color: var(--tui-border-normal) !important;
+}
+tui-textfield.field-pristine[data-appearance='textfield']:focus-within {
+  outline-color: var(--tui-background-accent-1) !important;
+}
+tui-textfield.field-pristine [tuiLabel] {
+  color: var(--tui-text-tertiary) !important;
+}
+

@@ -16,7 +16,7 @@
     />
   </tui-textfield>
   @if (loading()) {
-  <tui-loader />
+  <app-loading-skeleton variant="table" />
   } @else {
   <app-data-table [rows]="filtered()" [columns]="tableColumns" (rowSelected)="open($event)" />
   }
@@ -86,15 +86,17 @@
       Le lien doit être vérifié avec un compte Microsoft autorisé. Aucun lien public créé ici.
     </p>
 
-    <tui-textfield iconStart="@tui.note" class="wide">
-      <label for="description-fiche" tuiLabel>Description</label
-      ><textarea
-        tuiTextarea
-        [value]="model().description ?? ''"
-        (input)="model.update((m) => ({ ...m, description: $any($event.target).value }))"
-        id="description-fiche"
-      ></textarea>
-    </tui-textfield>
+    <div class="wide description-field">
+      <label for="description-fiche" class="field-label">Description</label>
+      <tui-textfield [tuiTextfieldCleaner]="false">
+        <textarea
+          tuiTextarea
+          rows="3"
+          [formField]="$any(docForm.description)"
+          id="description-fiche"
+        ></textarea>
+      </tui-textfield>
+    </div>
 
     <fieldset class="audience">
       <legend>1 · Qui voit la fiche dans Allegria ?</legend>
@@ -119,17 +121,17 @@
             (ngModelChange)="teamSearch.set($event)"
           />
         </tui-textfield>
-        <div class="type-filters" role="group" aria-label="Filtrer par type d'équipe">
-          @for (type of teamTypes(); track type) {
+        <div class="type-filters" role="group" aria-label="Filtrer les équipes">
+          @for (filter of teamStatusFilters; track filter.id) {
           <button
             tuiChip
             type="button"
             size="s"
-            [appearance]="teamTypeFilter() === type ? 'primary' : 'neutral'"
-            [attr.aria-pressed]="teamTypeFilter() === type"
-            (click)="toggleTeamType(type)"
+            [appearance]="teamStatusFilter() === filter.id ? 'primary' : 'neutral'"
+            [attr.aria-pressed]="teamStatusFilter() === filter.id"
+            (click)="setTeamStatusFilter(filter.id)"
           >
-            {{ type }}
+            {{ filter.label }}
           </button>
           }
         </div>

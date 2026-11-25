@@ -1,6 +1,14 @@
 <a class="skip-link" href="#main-content">Aller au contenu</a>
 <app-header></app-header>
-<main id="main-content" tabindex="-1">
+<main id="main-content" tabindex="-1" [attr.aria-busy]="navigating()">
+  @if (navigating()) {
+    <div class="skeleton-card" role="status" aria-live="polite">
+      <span class="visually-hidden">Chargement de la page…</span>
+      <span class="skeleton-line wide"></span>
+      <span class="skeleton-line"></span>
+      <span class="skeleton-line short"></span>
+    </div>
+  }
   <router-outlet></router-outlet>
 </main>
 <app-footer></app-footer>

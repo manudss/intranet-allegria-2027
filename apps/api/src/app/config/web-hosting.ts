@@ -28,3 +28,44 @@ export const configureWebHosting = (app: NestExpressApplication, dir: string): v
     res.sendFile(join(dir, 'index.html'));
   });
 };
+
+export interface ExtraMount {
+  prefix: string;
+  dir: string;
+}
+
+/**
+ * Preview only: extra front-ends served by the same process under a path prefix
+ * (one free Render service carries API + intranet + public site + mobile app).
+ * Format: `site=/app/dist/apps/site/browser,m=/app/dist/apps/mobile/browser`.
+ * A mount without index.html is skipped. Each front must be built with the matching --base-href.
+ */
+export const resolveExtraMounts = (value: string | undefined): ExtraMount[] =>
+  (value ?? '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .flatMap((entry) => {
+      const [rawPrefix, ...rest] = entry.split('=');
+      const prefix = (rawPrefix ?? '').trim();
+      const dir = resolve(rest.join('=').trim());
+      if (!/^[a-z0-9-]+$/.test(prefix) || prefix === 'api' || !existsSync(join(dir, 'index.html'))) return [];
+      return [{ prefix, dir }];
+    });
+
+export const isMountRequest = (method: string, path: string, prefix: string): boolean =>
+  (method === 'GET' || method === 'HEAD') && (path === `/${prefix}` || path.startsWith(`/${prefix}/`));
+
+export const configureExtraMounts = (app: NestExpressApplication, mounts: ExtraMount[]): void => {
+  for (const { prefix, dir } of mounts) {
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if (req.path === `/${prefix}`) return res.redirect(301, `/${prefix}/`);
+      return next();
+    });
+    app.useStaticAssets(dir, { prefix: `/${prefix}/`, index: false });
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if (!isMountRequest(req.method, req.path, prefix)) return next();
+      res.sendFile(join(dir, 'index.html'));
+    });
+  }
+};

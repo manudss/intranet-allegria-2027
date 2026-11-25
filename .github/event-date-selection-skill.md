@@ -1,6 +1,6 @@
 # Skill: Event date selection
 
-For every new date field related to MEJ Allegria 2027:
+For every new date field related to MEJ Alegria 2027:
 
 1. Reuse the shared `app-event-date-selector`.
 2. Use the centralized `ALLEGRIA_2027_EVENT_DATES` configuration.

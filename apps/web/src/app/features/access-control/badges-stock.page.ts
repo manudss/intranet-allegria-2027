@@ -31,9 +31,9 @@ const STATUS_LABELS: Record<AccessBadgeStatus, string> = {
       <section class="panel">
         <h2>Enregistrer un lot</h2>
         <p class="hint">Un code par ligne (code opaque, sans nom). Le stock seul ne suffit pas : chaque badge doit ensuite être attribué.</p>
-        <textarea rows="4" [(ngModel)]="stockCodes" placeholder="9f2c1e0a4b6d8f30…&#10;ab12cd34ef56ab78…"></textarea>
+        <label class="fld">Codes des badges (un par ligne)<textarea rows="4" [(ngModel)]="stockCodes" placeholder="9f2c1e0a4b6d8f30…&#10;ab12cd34ef56ab78…"></textarea></label>
         <div class="row">
-          <input type="text" [(ngModel)]="stockLot" placeholder="Lot (obligatoire, ex. L2027-A)" />
+          <label class="fld">Lot (obligatoire)<input type="text" [(ngModel)]="stockLot" placeholder="ex. L2027-A" /></label>
           <button tuiButton type="button" (click)="registerStock()" [disabled]="saving() || !stockLot.trim()">Enregistrer</button>
         </div>
         @if (stockMsg(); as m) { <p class="ok-msg">{{ m }}</p> }
@@ -41,17 +41,18 @@ const STATUS_LABELS: Record<AccessBadgeStatus, string> = {
 
       <section class="panel">
         <div class="filters">
-          <select [(ngModel)]="statusFilter" (ngModelChange)="reload()">
+          <label class="fld">Statut<select [(ngModel)]="statusFilter" (ngModelChange)="reload()">
             <option value="">Tous statuts</option>
             <option value="AVAILABLE">Disponible</option>
             <option value="ASSIGNED">Attribué</option>
             <option value="LOST">Perdu</option>
             <option value="REVOKED">Révoqué</option>
-          </select>
-          <input type="text" [(ngModel)]="lotFilter" (ngModelChange)="reload()" placeholder="Lot" />
-          <input type="text" [(ngModel)]="qFilter" (ngModelChange)="reload()" placeholder="Début de code" />
+          </select></label>
+          <label class="fld">Lot<input type="text" [(ngModel)]="lotFilter" (ngModelChange)="reload()" /></label>
+          <label class="fld">Début de code<input type="text" [(ngModel)]="qFilter" (ngModelChange)="reload()" /></label>
         </div>
-        @if (loading()) { <tui-loader size="l" /> }
+        @if (loading()) { <app-loading-skeleton /> }
+        <div class="tbl-scroll" tabindex="0" role="region" aria-label="Liste des badges">
         <table class="tbl">
           <thead><tr><th>Code</th><th>Lot</th><th>Statut</th><th>Créé le</th><th></th></tr></thead>
           <tbody>
@@ -70,30 +71,39 @@ const STATUS_LABELS: Record<AccessBadgeStatus, string> = {
             }
           </tbody>
         </table>
+        </div>
         @if (!loading() && items().length === 0) { <p class="hint">Aucun badge.</p> }
       </section>
     </main>
   `,
   styles: [`
-    .page { padding: 24px; max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
-    .head { display: flex; align-items: baseline; gap: 12px; }
+    .page { padding: 24px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; }
+    .head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; }
     .head h1 { margin: 0; font-size: 22px; }
     .total { color: var(--tui-text-secondary); font-size: 14px; }
-    .panel { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 10px; }
+    .panel { background: var(--appearance-surface); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 10px; }
     .panel h2 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--tui-text-secondary); }
     .hint { font-size: 13px; color: var(--tui-text-secondary); margin: 0; }
-    textarea, input, select { border: 1px solid #d7dbe3; border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
+    textarea, input, select { border: 1px solid var(--appearance-border); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
     textarea { font-family: ui-monospace, monospace; }
-    .row, .filters { display: flex; gap: 8px; }
+    .page, .panel { min-width: 0; max-width: 100%; }
+    .row, .filters { display: flex; flex-wrap: wrap; gap: 8px; }
+    .fld { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; flex: 1 1 10rem; min-width: 0; }
+    .fld > input, .fld > select, .fld > textarea { display: block; font-weight: 400; min-width: 0; box-sizing: border-box; }
+    .row { align-items: flex-end; }
+    .panel > .fld { flex: 0 0 auto; }
+    textarea { width: 100%; box-sizing: border-box; }
+    .tbl-scroll { max-width: 100%; overflow-x: auto; }
+    @media (max-width: 640px) { .page { padding: 12px; } .row > button, .head > a { flex: 1 1 100%; } }
     .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
-    .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid #eceef2; }
-    .tbl td { padding: 8px; border-bottom: 1px solid #f4f5f7; }
+    .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--line-soft); }
+    .tbl td { padding: 8px; border-bottom: 1px solid var(--line-soft); }
     code { font-family: ui-monospace, monospace; font-size: 12px; }
     .chip { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-    .chip[data-s='AVAILABLE'] { background: #e3f6ea; color: #1a9e4b; }
-    .chip[data-s='ASSIGNED'] { background: #e8ecf7; color: #526ed3; }
-    .chip[data-s='LOST'], .chip[data-s='REVOKED'] { background: #fdeaea; color: #d8453a; }
-    .ok-msg { color: #1a9e4b; font-size: 13px; margin: 0; }
+    .chip[data-s='AVAILABLE'] { background: var(--appearance-raised); color: var(--appearance-success); }
+    .chip[data-s='ASSIGNED'] { background: var(--appearance-raised); color: var(--appearance-info); }
+    .chip[data-s='LOST'], .chip[data-s='REVOKED'] { background: var(--appearance-surface); color: var(--appearance-error); }
+    .ok-msg { color: var(--appearance-success); font-size: 13px; margin: 0; }
   `],
 })
 export class BadgesStockPage implements OnInit {

@@ -23,6 +23,7 @@ export { VolunteerShift } from './volunteer-shift.entity';
 export { VolunteerShiftAssignmentStatus } from './volunteer-shift-assignment-status.enum';
 export { VolunteerShiftAssignment } from './volunteer-shift-assignment.entity';
 export { VolunteerTeam } from './volunteer-team.entity';
+export { VolunteerTeamType } from './volunteer-team-type.entity';
 export { VolunteerSkillType } from './volunteer-skill-type.enum';
 export { VolunteerSkill } from './volunteer-skill.entity';
 export { VolunteerTag } from './volunteer-tag.entity';

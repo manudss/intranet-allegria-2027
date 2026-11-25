@@ -119,8 +119,25 @@ export interface Volunteer {
   skills?: VolunteerSkill[];
   tags?: VolunteerTag[];
 }
+export interface VolunteerTeamType {
+  id: number;
+  code: string;
+  label: string;
+  description: string | null;
+  sortOrder: number;
+  isActive: boolean;
+}
+export type VolunteerTeamTypePayload = {
+  code: string;
+  label: string;
+  description: string | null;
+  sortOrder: number;
+  isActive: boolean;
+};
 export interface VolunteerTeam {
   id: number;
+  typeId?: number | null;
+  type?: VolunteerTeamType | null;
   name: string;
   code: string;
   description: string | null;
@@ -313,6 +330,7 @@ export type VolunteerPayload = Pick<Volunteer, 'firstName' | 'lastName' | 'isGro
 };
 export type VolunteerTeamPayload = Pick<VolunteerTeam, 'name' | 'code' | 'isActive'> & {
   description: string;
+  typeId: number | null;
 };
 export type VolunteerTeamMembershipPayload = {
   volunteerTeamId: number | null;
@@ -965,4 +983,7 @@ export interface EventBindingPreview {
 }
 
 export type { FamilySpace, FamilyRules, YouthDossier } from '@mej-allegria/shared';
-export interface CateringNeeds { notice:string; items:{allergen:string;range:string}[] }
+export interface CateringNeeds {
+  notice: string;
+  items: { allergen: string; range: string }[];
+}

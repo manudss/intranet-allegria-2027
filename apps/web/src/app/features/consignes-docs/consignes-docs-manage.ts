@@ -9,11 +9,13 @@ import {
   DocumentLinkPayload,
   DocumentVisibility,
   VolunteerTeam,
+  VolunteerTeamType,
 } from '../../models/models';
 import {
   DocumentCategoriesApiService,
   DocumentLinksApiService,
   VolunteerTeamsApiService,
+  VolunteerTeamTypesApiService,
 } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { SelectFieldComponent, SelectOption } from '../../shared/select-field.component';
@@ -104,6 +106,7 @@ export class ConsignesDocsManagePage implements OnInit {
   private readonly linksApi = inject(DocumentLinksApiService);
   private readonly categoriesApi = inject(DocumentCategoriesApiService);
   private readonly teamsApi = inject(VolunteerTeamsApiService);
+  private readonly teamTypesApi = inject(VolunteerTeamTypesApiService);
   private readonly auth = inject(AuthService);
 
   readonly canWrite = computed(() => this.auth.hasAnyRole(['ADMIN', 'COORDINATOR']));
@@ -113,6 +116,13 @@ export class ConsignesDocsManagePage implements OnInit {
   teams = signal<VolunteerTeam[]>([]);
   query = signal('');
   teamSearch = signal('');
+  teamTypes = signal<VolunteerTeamType[]>([]);
+  teamTypeFilter = signal<number | null>(null);
+  /** Types utilisés par au moins une équipe : on ne propose pas de filtre vide. */
+  readonly usedTeamTypes = computed(() => {
+    const used = new Set(this.teams().map((team) => team.typeId));
+    return this.teamTypes().filter((type) => used.has(type.id));
+  });
   teamStatusFilter = signal<TeamStatusFilter>('all');
   protected readonly teamStatusFilters: readonly { id: TeamStatusFilter; label: string }[] = [
     { id: 'all', label: 'Toutes' },
@@ -159,6 +169,8 @@ export class ConsignesDocsManagePage implements OnInit {
       if (status === 'active' && !team.isActive) return false;
       if (status === 'inactive' && team.isActive) return false;
       if (status === 'selected' && !selected.has(team.id)) return false;
+      const typeFilter = this.teamTypeFilter();
+      if (typeFilter !== null && team.typeId !== typeFilter) return false;
       return !q || `${team.name} ${team.code}`.toLowerCase().includes(q);
     });
   });
@@ -172,6 +184,7 @@ export class ConsignesDocsManagePage implements OnInit {
     this.reload();
     this.categoriesApi.list().subscribe({ next: (categories) => this.categories.set(categories) });
     this.teamsApi.list().subscribe({ next: (teams) => this.teams.set(teams) });
+    this.teamTypesApi.list().subscribe({ next: (types) => this.teamTypes.set(types) });
   }
 
   private reload(): void {
@@ -216,6 +229,10 @@ export class ConsignesDocsManagePage implements OnInit {
     this.teamSearch.set('');
     this.teamStatusFilter.set('all');
     this.saveError.set(null);
+  }
+
+  setTeamTypeFilter(typeId: number | null): void {
+    this.teamTypeFilter.set(typeId);
   }
 
   setTeamStatusFilter(status: TeamStatusFilter): void {

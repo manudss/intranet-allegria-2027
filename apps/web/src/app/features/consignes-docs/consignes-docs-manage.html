@@ -135,6 +135,32 @@
           </button>
           }
         </div>
+        @if (usedTeamTypes().length) {
+        <div class="type-filters" role="group" aria-label="Filtrer par type d'équipe">
+          <button
+            tuiChip
+            type="button"
+            size="s"
+            [appearance]="teamTypeFilter() === null ? 'primary' : 'neutral'"
+            [attr.aria-pressed]="teamTypeFilter() === null"
+            (click)="setTeamTypeFilter(null)"
+          >
+            Tous les types
+          </button>
+          @for (type of usedTeamTypes(); track type.id) {
+          <button
+            tuiChip
+            type="button"
+            size="s"
+            [appearance]="teamTypeFilter() === type.id ? 'primary' : 'neutral'"
+            [attr.aria-pressed]="teamTypeFilter() === type.id"
+            (click)="setTeamTypeFilter(type.id)"
+          >
+            {{ type.label }}
+          </button>
+          }
+        </div>
+        }
         <div class="picker-actions">
           <button
             tuiButton
@@ -162,7 +188,8 @@
                 (ngModelChange)="toggleTeam(team.id, $event)"
                 [attr.aria-label]="team.name"
               />
-              {{ team.name }} ({{ team.code }}) @if (!team.isActive) { — inactive }
+              {{ team.name }} ({{ team.code }}) @if (team.type) { · {{ team.type.label }} } @if
+              (!team.isActive) { — inactive }
             </label>
           </li>
           } @empty {

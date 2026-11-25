@@ -3,7 +3,10 @@ import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { AuthService } from '../../core/auth.service';
 import { VolunteerTeam } from '../../models/models';
-import { VolunteerTeamsApiService } from '../../services/api.services';
+import {
+  VolunteerTeamsApiService,
+  VolunteerTeamTypesApiService,
+} from '../../services/api.services';
 import { VolunteerTeamsPage } from './volunteer-teams';
 
 const team: VolunteerTeam = {
@@ -25,10 +28,29 @@ describe('VolunteerTeamsPage', () => {
       delete: vi.fn(),
     };
 
+    const typesApi = {
+      list: vi.fn(() =>
+        of([
+          {
+            id: 7,
+            code: 'SECURITE',
+            label: 'Sécurité',
+            description: null,
+            sortOrder: 10,
+            isActive: true,
+          },
+        ]),
+      ),
+      create: vi.fn(() => of({})),
+      update: vi.fn(() => of({})),
+      delete: vi.fn(() => of({ deleted: true })),
+    };
+
     await TestBed.configureTestingModule({
       imports: [VolunteerTeamsPage],
       providers: [
         { provide: VolunteerTeamsApiService, useValue: api },
+        { provide: VolunteerTeamTypesApiService, useValue: typesApi },
         { provide: AuthService, useValue: { hasAnyRole: () => true } },
       ],
     }).compileComponents();
@@ -42,5 +64,12 @@ describe('VolunteerTeamsPage', () => {
     fixture.componentInstance.create();
     expect(fixture.componentInstance.opened()).toBe(true);
     expect(fixture.componentInstance.mode()).toBe('create');
+    expect(fixture.componentInstance.model().typeId).toBeNull();
+
+    fixture.componentInstance.setType(7);
+    expect(fixture.componentInstance.model().typeId).toBe(7);
+    fixture.componentInstance.setType(0);
+    expect(fixture.componentInstance.model().typeId).toBeNull();
+    expect(fixture.componentInstance.types().length).toBe(1);
   });
 });

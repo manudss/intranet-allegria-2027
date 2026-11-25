@@ -2,7 +2,11 @@ import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@
 import { Reflector } from '@nestjs/core';
 import { AccessRightsService } from '../access-rights/access-rights.service';
 import { AccessLevel, LEVEL_RANK } from '../access-rights/access-modules';
-import { ACCESS_LEVEL_KEY, ACCESS_MODULE_KEY } from './access-module.decorator';
+import {
+  ACCESS_LEVEL_KEY,
+  ACCESS_MODULE_KEY,
+  GROUP_SCOPE_AWARE_KEY,
+} from './access-module.decorator';
 import { ROLES_KEY } from './roles.decorator';
 
 type AuthenticatedUser = {
@@ -79,9 +83,25 @@ export class RoleGuard implements CanActivate {
 
     const grants = await this.accessRights.effective(user.id, user.roles);
     const grant = grants[module];
-    if (!grant || LEVEL_RANK[grant.level] < LEVEL_RANK[required] || grant.scope !== 'ALL') {
+    if (!grant || LEVEL_RANK[grant.level] < LEVEL_RANK[required]) {
       throw new ForbiddenException('Droits insuffisants pour ce module');
     }
-    return true;
+    if (grant.scope === 'ALL') {
+      request.accessScope = { all: true };
+      return true;
+    }
+    const aware = this.reflector.getAllAndOverride<boolean | undefined>(GROUP_SCOPE_AWARE_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (grant.scope === 'GROUPS' && aware) {
+      // Portée par groupes : la route filtre ses données avec cette liste (vide = aucun accès).
+      request.accessScope = {
+        all: false,
+        groupIds: await this.accessRights.groupIdsForUser(user.id),
+      };
+      return true;
+    }
+    throw new ForbiddenException('Portée de droits non prise en charge par cette route');
   }
 }

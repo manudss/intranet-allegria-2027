@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { NotFoundException, BadRequestException, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import {
   ACCESS_MODULE_CODES,
@@ -101,6 +101,30 @@ export class AccessRightsService {
 
     this.cache.set(key, { at: Date.now(), value: result });
     return result;
+  }
+
+  /** Vrai si la portée couvre ce groupe (portée « tout » ou groupe dans la liste). */
+  static groupInScope(
+    scope: { all: boolean; groupIds?: number[] },
+    groupId: number | null | undefined,
+  ) {
+    if (scope.all) return true;
+    return groupId != null && (scope.groupIds ?? []).includes(groupId);
+  }
+
+  /** Refuse (404, pour ne rien révéler) si le participant est hors de la portée. */
+  async assertParticipantInScope(
+    scope: { all: boolean; groupIds?: number[] },
+    participantId: number,
+  ) {
+    if (scope.all) return;
+    const rows: { group_id: number | null }[] = await this.dataSource.query(
+      `SELECT group_id FROM participants WHERE id = $1`,
+      [participantId],
+    );
+    if (!rows.length || !AccessRightsService.groupInScope(scope, rows[0].group_id)) {
+      throw new NotFoundException(`Participant ${participantId} introuvable`);
+    }
   }
 
   async groupIdsForUser(userId: number): Promise<number[]> {

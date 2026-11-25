@@ -17,7 +17,13 @@ type Rule = {
   level: string;
   scope: string;
 };
-type Grant = { module: string; level: string; scope: string; sources: string[] };
+type Grant = {
+  module: string;
+  level: string;
+  scope: string;
+  pairs: { level: string; scope: string }[];
+  sources: string[];
+};
 type Described = {
   user: { id: number; email: string };
   roles: string[];

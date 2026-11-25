@@ -153,4 +153,44 @@ th {
   .bar {
     align-items: stretch;
   }
+  .table-wrap table,
+  .table-wrap tbody,
+  .table-wrap tr,
+  .table-wrap td {
+    display: block;
+    width: 100%;
+  }
+  .table-wrap thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .table-wrap tr {
+    border: 1px solid #e3e7ec;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .table-wrap td {
+    border: 0;
+    padding: 0.3rem 0;
+    display: grid;
+    grid-template-columns: 6rem 1fr;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .table-wrap td[data-label]::before {
+    content: attr(data-label);
+    font-size: 0.8rem;
+    color: #5b6470;
+  }
+  .table-wrap td.mod {
+    font-weight: 600;
+    display: block;
+  }
+  .table-wrap td.mod::before {
+    content: none;
+  }
 }

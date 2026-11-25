@@ -2,9 +2,9 @@
   <h1>Paramètres et rôles</h1>
   <p class="intro">
     Les droits se règlent ici : pour chaque rôle ou type d’équipe, un niveau (Voir, Modifier, Gérer)
-    et une portée par module. Quand une personne cumule plusieurs profils, le niveau le plus haut
-    s’applique et « Tout » l’emporte sur une portée limitée. Un module sans niveau n’est pas
-    accessible.
+    et une portée par module. Quand une personne cumule plusieurs profils, chaque couple niveau et
+    portée est conservé tel quel : Voir sur tout et Modifier sur ses groupes ne donnent jamais
+    Modifier sur tout. Un module sans niveau n’est pas accessible.
   </p>
 
   <nav class="tabs" role="tablist" aria-label="Sections">
@@ -85,8 +85,8 @@
       <tbody>
         @for (m of catalog()?.modules ?? []; track m.code) {
         <tr>
-          <td>{{ m.label }}</td>
-          <td>
+          <td data-label="Module" class="mod">{{ m.label }}</td>
+          <td data-label="Niveau">
             <select
               [value]="cell(m.code).level"
               (change)="setCell(m.code, 'level', $any($event.target).value)"
@@ -98,7 +98,7 @@
               }
             </select>
           </td>
-          <td>
+          <td data-label="Portée">
             <select
               [value]="cell(m.code).scope"
               [disabled]="!cell(m.code).level"
@@ -116,9 +116,9 @@
     </table>
   </div>
   <p class="hint">
-    Portées : « Groupes autorisés » est appliquée par le serveur sur les participants, les groupes
-    et les dossiers santé. Sur les autres modules, une portée limitée refuse l’accès (sécurité par
-    défaut) tant que le filtrage n’y est pas branché.
+    Portées : « Groupes autorisés » est filtrée par le serveur sur les participants, les groupes et
+    les dossiers santé. Ailleurs, une portée limitée refuse l’accès (sécurité par défaut) tant que
+    le filtrage n’y est pas branché.
   </p>
   } @if (tab() === 'user') {
   <div class="bar">
@@ -155,14 +155,15 @@
         </tr>
       </thead>
       <tbody>
-        @for (g of d.grants; track g.module) {
+        @for (g of d.grants; track g.module) { @for (pair of g.pairs; track pair.level + pair.scope)
+        {
         <tr>
-          <td>{{ moduleLabel(g.module) }}</td>
-          <td>{{ levelLabel(g.level) }}</td>
-          <td>{{ scopeLabel(g.scope) }}</td>
-          <td class="muted">{{ g.sources.join(', ') }}</td>
+          <td data-label="Module">{{ moduleLabel(g.module) }}</td>
+          <td data-label="Niveau">{{ levelLabel(pair.level) }}</td>
+          <td data-label="Portée">{{ scopeLabel(pair.scope) }}</td>
+          <td data-label="Origine" class="muted">{{ g.sources.join(', ') }}</td>
         </tr>
-        } @empty {
+        } } @empty {
         <tr>
           <td colspan="4" class="muted">Aucun accès.</td>
         </tr>
@@ -211,10 +212,10 @@
       <tbody>
         @for (o of userOverrides(); track o.id) {
         <tr>
-          <td>{{ moduleLabel(o.module) }}</td>
-          <td>{{ levelLabel(o.level) }}</td>
-          <td>{{ scopeLabel(o.scope) }}</td>
-          <td>{{ o.reason }}</td>
+          <td data-label="Module">{{ moduleLabel(o.module) }}</td>
+          <td data-label="Niveau">{{ levelLabel(o.level) }}</td>
+          <td data-label="Portée">{{ scopeLabel(o.scope) }}</td>
+          <td data-label="Motif">{{ o.reason }}</td>
           <td>{{ o.expiresAt ? (o.expiresAt | date: 'dd/MM/yyyy HH:mm') : 'Sans fin' }}</td>
           <td>
             <button type="button" class="secondary" (click)="removeOverride(o)">Supprimer</button>

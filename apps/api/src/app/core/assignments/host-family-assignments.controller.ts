@@ -1,8 +1,12 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { AccessModule } from '../auth/access-module.decorator';
+import { RoleGuard } from '../auth/role.guard';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AssignmentsService } from './assignments.service';
 
 @ApiTags('HostFamilies')
+@UseGuards(RoleGuard)
+@AccessModule('HOST_FAMILIES')
 @Controller('host-families')
 export class HostFamilyAssignmentsController {
   constructor(private readonly assignmentsService: AssignmentsService) {}

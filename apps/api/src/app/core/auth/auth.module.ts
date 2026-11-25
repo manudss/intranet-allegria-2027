@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Role, User, UserRole } from '../entities';
+import { AccessRightsService } from '../access-rights/access-rights.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AuthTokenGuard } from './auth-token.guard';
@@ -21,8 +22,16 @@ import { UsersService } from './users.service';
     RolesService,
     AuthTokenGuard,
     RoleGuard,
+    AccessRightsService,
     { provide: APP_GUARD, useClass: GlobalAuthGuard },
   ],
-  exports: [AuthService, UsersService, RolesService, AuthTokenGuard, RoleGuard],
+  exports: [
+    AuthService,
+    UsersService,
+    RolesService,
+    AuthTokenGuard,
+    RoleGuard,
+    AccessRightsService,
+  ],
 })
 export class AuthModule {}

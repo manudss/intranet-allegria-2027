@@ -7,6 +7,7 @@ import { RolesController } from '../auth/roles.controller';
 import { UsersController } from '../auth/users.controller';
 import { RolesService } from '../auth/roles.service';
 import { UsersService } from '../auth/users.service';
+import { AccessRightsService } from '../access-rights/access-rights.service';
 import { RoleGuard } from '../auth/role.guard';
 import { Test } from '@nestjs/testing';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -76,6 +77,7 @@ describe('Family HTTP contract with disposable real SQL storage, no mail sent', 
           useValue: { create: () => ({ id: 1 }), update: () => ({ id: 1 }) },
         },
         RoleGuard,
+        { provide: AccessRightsService, useValue: { effective: async () => new Map() } },
         AuthTokenGuard,
         { provide: APP_GUARD, useClass: GlobalAuthGuard },
         {

@@ -1,3 +1,4 @@
+import { DEFAULT_ACCESS_RULES } from '../../app/core/access-rights/access-defaults';
 import { PROPOSED_VOLUNTEER_TEAM_TYPES } from '../volunteer-team-types.data';
 import { buildFamilyDemo } from './family-demo-seed';
 import { registrationPdf } from '../../app/core/family-registration/registration-pdf';
@@ -740,6 +741,10 @@ async function run(): Promise<void> {
           "volunteer_team_memberships",
           "volunteer_teams",
           "volunteer_team_types",
+          "access_rules",
+          "access_overrides",
+          "user_group_scopes",
+          "access_rule_logs",
           "user_roles",
           "participant_health",
           "participant_host_family_assignments",
@@ -773,6 +778,13 @@ async function run(): Promise<void> {
     const hostingGroupRepository = dataSource.getRepository(HostingGroup);
     const teamParticipantRepository = dataSource.getRepository(TeamParticipant);
     const volunteerTeamRepository = dataSource.getRepository(VolunteerTeam);
+    // La matrice de droits est vidée avec le reste : on remet les droits de départ proposés.
+    for (const rule of DEFAULT_ACCESS_RULES) {
+      await dataSource.query(
+        `INSERT INTO "access_rules" ("subject_kind", "subject_key", "module", "level", "scope") VALUES ($1, $2, $3, $4, $5)`,
+        [rule.subjectKind, rule.subjectKey, rule.module, rule.level, rule.scope],
+      );
+    }
     // La table des types est vidée avec le reste : on remet la liste de départ (aucun rattachement).
     for (const [index, [code, label, description]] of PROPOSED_VOLUNTEER_TEAM_TYPES.entries()) {
       await dataSource.query(

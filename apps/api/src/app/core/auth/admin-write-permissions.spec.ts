@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthService } from './auth.service';
 import { GlobalAuthGuard } from './global-auth.guard';
 import { AuthTokenGuard } from './auth-token.guard';
+import { AccessRightsService } from '../access-rights/access-rights.service';
 import { RoleGuard } from './role.guard';
 import { RolesController } from './roles.controller';
 import { UsersController } from './users.controller';
@@ -20,6 +21,7 @@ describe('Administrative mutations require ADMIN through the real HTTP guards', 
       controllers: [RolesController, UsersController],
       providers: [
         RoleGuard,
+        { provide: AccessRightsService, useValue: { effective: async () => new Map() } },
         AuthTokenGuard,
         { provide: APP_GUARD, useClass: GlobalAuthGuard },
         {

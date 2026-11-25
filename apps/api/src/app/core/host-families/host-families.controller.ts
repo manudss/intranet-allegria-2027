@@ -1,9 +1,23 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import { AccessModule } from '../auth/access-module.decorator';
+import { RoleGuard } from '../auth/role.guard';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { HostFamiliesService } from './host-families.service';
 import { CreateHostFamilyDto, UpdateHostFamilyDto } from './host-families.types';
 
 @ApiTags('HostFamilies')
+@UseGuards(RoleGuard)
+@AccessModule('HOST_FAMILIES')
 @Controller('host-families')
 export class HostFamiliesController {
   constructor(private readonly hostFamiliesService: HostFamiliesService) {}
@@ -39,5 +53,3 @@ export class HostFamiliesController {
     return { deleted: true };
   }
 }
-
-

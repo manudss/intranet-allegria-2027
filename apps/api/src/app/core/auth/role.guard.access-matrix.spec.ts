@@ -9,7 +9,13 @@ import {
 } from './access-module.decorator';
 import { RoleGuard } from './role.guard';
 
-type Grant = { module: string; level: string; scope: string; sources: string[] };
+type Grant = {
+  module: string;
+  level: string;
+  scope: string;
+  pairs: { level: string; scope: string }[];
+  sources: string[];
+};
 
 function run(opts: {
   method: string;
@@ -47,7 +53,18 @@ const g = (level: string, scope = 'ALL'): Grant => ({
   module: 'PARTICIPANTS',
   level,
   scope,
+  pairs: [{ level, scope }],
   sources: ['ROLE:X'],
+});
+const mixed = (): Grant => ({
+  module: 'PARTICIPANTS',
+  level: 'EDIT',
+  scope: 'GROUPS',
+  pairs: [
+    { level: 'VIEW', scope: 'ALL' },
+    { level: 'EDIT', scope: 'GROUPS' },
+  ],
+  sources: ['ROLE:A', 'ROLE:B'],
 });
 
 describe('RoleGuard avec la matrice de droits', () => {
@@ -103,6 +120,18 @@ describe('RoleGuard avec la matrice de droits', () => {
     await expect(
       run({ method: 'GET', aware: true, grants: [g('VIEW', 'OWN_TEAM')] }).result,
     ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+  it('ne croise pas niveau et portée : Voir/Tout + Modifier/Groupes ne donne pas Modifier/Tout', async () => {
+    await expect(run({ method: 'GET', aware: true, grants: [mixed()] }).result).resolves.toBe(true);
+    const read = run({ method: 'GET', aware: true, grants: [mixed()] });
+    await read.result;
+    expect(read.request['accessScope']).toEqual({ all: true });
+    const write = run({ method: 'PATCH', aware: true, groupIds: [2], grants: [mixed()] });
+    await write.result;
+    expect(write.request['accessScope']).toEqual({ all: false, groupIds: [2] });
+    await expect(run({ method: 'PATCH', grants: [mixed()] }).result).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
   });
   it('refuse sans utilisateur authentifié', async () => {
     await expect(

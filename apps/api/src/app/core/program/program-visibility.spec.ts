@@ -73,16 +73,16 @@ function createFakeDataSource(sequences: ProgramSequence[]) {
       if (entity === ProgramPublicExport) return exportsRepo.find();
       const where = options.where ?? {};
       return state.sequences.filter((item) =>
-        Object.entries(where).every(([k, v]) => (item as unknown as Record<string, unknown>)[k] === v),
+        Object.entries(where).every(
+          ([k, v]) => (item as unknown as Record<string, unknown>)[k] === v,
+        ),
       );
     },
     findOne: async (entity: unknown, options: { where: Record<string, unknown> }) => {
       if (entity === ProgramPublicExport) {
         return state.exports.get(options.where.eventDate as string) ?? null;
       }
-      return (
-        state.sequences.find((s) => s.id === (options.where as { id: number }).id) ?? null
-      );
+      return state.sequences.find((s) => s.id === (options.where as { id: number }).id) ?? null;
     },
     findOneOrFail: async (_entity: unknown, options: { where: { id: number } }) =>
       state.sequences.find((s) => s.id === options.where.id) as ProgramSequence,
@@ -128,14 +128,18 @@ describe('ProgramService — visibilité public / réservé', () => {
   });
 
   it('refuse une visibilité invalide à la mise à jour', async () => {
-    const { service } = createFakeDataSource([row(1, 'Veillée', ProgramSequenceVisibility.INTERNAL)]);
+    const { service } = createFakeDataSource([
+      row(1, 'Veillée', ProgramSequenceVisibility.INTERNAL),
+    ]);
     await expect(
       service.updateSequence(USER, 1, { visibility: 'PRIVATE' as never }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('publie puis dépublie un créneau', async () => {
-    const { service } = createFakeDataSource([row(1, 'Veillée', ProgramSequenceVisibility.INTERNAL)]);
+    const { service } = createFakeDataSource([
+      row(1, 'Veillée', ProgramSequenceVisibility.INTERNAL),
+    ]);
     const updated = await service.updateSequence(USER, 1, {
       visibility: ProgramSequenceVisibility.PUBLIC,
     });

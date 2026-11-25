@@ -13,7 +13,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthTokenGuard } from '../auth/auth-token.guard';
 import { RoleGuard } from '../auth/role.guard';
-import { Roles } from '../auth/roles.decorator';
+import { AccessModule, AccessLevelRequired } from '../auth/access-module.decorator';
 import {
   CancelVolunteerShiftAssignmentDto,
   ChangeVolunteerShiftAssignmentStatusDto,
@@ -45,7 +45,7 @@ export class VolunteerShiftAssignmentsController {
   constructor(private readonly assignmentsService: VolunteerShiftAssignmentsService) {}
 
   @ApiOperation({ summary: 'Rechercher des benevoles pour une affectation de shift' })
-  @Roles(...READ_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
   @Get('volunteer-shift-assignments/volunteer-search')
   searchVolunteers(
     @Req() req: UserRequest,
@@ -55,7 +55,7 @@ export class VolunteerShiftAssignmentsController {
   }
 
   @ApiOperation({ summary: 'Lister les affectations d un shift' })
-  @Roles(...READ_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
   @Get('volunteer-missions/:missionId/shifts/:shiftId/assignments')
   listForShift(
     @Req() req: UserRequest,
@@ -67,7 +67,8 @@ export class VolunteerShiftAssignmentsController {
   }
 
   @ApiOperation({ summary: 'Affecter un benevole a un shift' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
+  @AccessLevelRequired('EDIT')
   @Post('volunteer-missions/:missionId/shifts/:shiftId/assignments')
   create(
     @Req() req: UserRequest,
@@ -79,7 +80,8 @@ export class VolunteerShiftAssignmentsController {
   }
 
   @ApiOperation({ summary: 'Changer le statut d une affectation de shift' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
+  @AccessLevelRequired('EDIT')
   @Patch('volunteer-missions/:missionId/shifts/:shiftId/assignments/:assignmentId/status')
   changeStatus(
     @Req() req: UserRequest,
@@ -92,7 +94,8 @@ export class VolunteerShiftAssignmentsController {
   }
 
   @ApiOperation({ summary: 'Annuler une affectation de shift' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
+  @AccessLevelRequired('EDIT')
   @Post('volunteer-missions/:missionId/shifts/:shiftId/assignments/:assignmentId/cancel')
   cancel(
     @Req() req: UserRequest,
@@ -105,7 +108,7 @@ export class VolunteerShiftAssignmentsController {
   }
 
   @ApiOperation({ summary: 'Afficher le planning d affectation d un benevole' })
-  @Roles(...READ_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
   @Get('volunteers/:volunteerId/shift-assignments')
   listVolunteerPlanning(
     @Req() req: UserRequest,

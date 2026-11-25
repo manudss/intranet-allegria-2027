@@ -22,7 +22,7 @@ import {
 } from '@nestjs/common';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { Public } from '../auth/public.decorator';
-import { Roles } from '../auth/roles.decorator';
+import { AccessLevelRequired, AccessModule } from '../auth/access-module.decorator';
 import { RoleGuard } from '../auth/role.guard';
 import { FamilyRegistrationService, plainObject } from './family-registration.service';
 import type { Request, Response } from 'express';
@@ -325,7 +325,8 @@ export class FamilyRegistrationController {
 @UseInterceptors(PrivateResponseInterceptor)
 @Controller('family-registrations')
 @UseGuards(RoleGuard)
-@Roles('ADMIN', 'COORDINATOR')
+@AccessModule('PARTICIPANTS')
+@AccessLevelRequired('EDIT')
 export class FamilyRegistrationStaffController {
   constructor(
     private readonly service: FamilyRegistrationService,
@@ -367,7 +368,7 @@ export class FamilyRegistrationStaffController {
   @Get('rules') rules() {
     return this.service.rules();
   }
-  @Patch('rules') @Roles('ADMIN') configure(@Body() p: unknown) {
+  @Patch('rules') @AccessModule('ADMIN') configure(@Body() p: unknown) {
     return this.service.configure(p);
   }
   @Post(':id/youths/:youthId/review') review(
@@ -383,7 +384,7 @@ export class FamilyRegistrationStaffController {
 
 @Controller('catering-needs')
 @UseGuards(RoleGuard)
-@Roles('CATERING')
+@AccessModule('CATERING')
 export class CateringNeedsController {
   constructor(private readonly health: RegistrationHealthService) {}
   @Get() async list(@Res({ passthrough: true }) res: Response) {
@@ -394,7 +395,7 @@ export class CateringNeedsController {
 
 @UseInterceptors(PrivateResponseInterceptor)
 @UseGuards(RoleGuard)
-@Roles('HEALTH')
+@AccessModule('HEALTH')
 @Controller('family-health')
 export class FamilyHealthStaffController {
   constructor(

@@ -13,7 +13,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthTokenGuard } from '../auth/auth-token.guard';
 import { RoleGuard } from '../auth/role.guard';
-import { Roles } from '../auth/roles.decorator';
+import { AccessModule, AccessLevelRequired } from '../auth/access-module.decorator';
 import { AddSkillDto, AddTagDto } from './volunteer-skills.types';
 import { VolunteerSkillsService } from './volunteer-skills.service';
 
@@ -30,14 +30,14 @@ export class VolunteerSkillsController {
   // ── Suggestions partagées ──────────────────────────────────────────────────
 
   @ApiOperation({ summary: 'Suggestions de tags déjà utilisés' })
-  @Roles(...READ_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
   @Get('volunteer-tags/suggestions')
   getTagSuggestions(@Query('q') q?: string) {
     return this.volunteerSkillsService.getTagSuggestions(q);
   }
 
   @ApiOperation({ summary: 'Nombre de bénévoles par compétence' })
-  @Roles(...READ_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
   @Get('volunteer-skills/counts')
   getSkillUsageCounts() {
     return this.volunteerSkillsService.getSkillUsageCounts();
@@ -46,14 +46,15 @@ export class VolunteerSkillsController {
   // ── Compétences par bénévole ───────────────────────────────────────────────
 
   @ApiOperation({ summary: "Lister les compétences d'un bénévole" })
-  @Roles(...READ_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
   @Get('volunteers/:volunteerId/skills')
   listSkills(@Param('volunteerId', ParseIntPipe) volunteerId: number) {
     return this.volunteerSkillsService.listSkills(volunteerId);
   }
 
   @ApiOperation({ summary: 'Ajouter une compétence à un bénévole' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
+  @AccessLevelRequired('EDIT')
   @Post('volunteers/:volunteerId/skills')
   addSkill(
     @Req() req: { user: { id: number; email: string; roles: string[] } },
@@ -64,7 +65,8 @@ export class VolunteerSkillsController {
   }
 
   @ApiOperation({ summary: "Supprimer une compétence d'un bénévole" })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
+  @AccessLevelRequired('EDIT')
   @Delete('volunteers/:volunteerId/skills/:skillId')
   async removeSkill(
     @Req() req: { user: { id: number; email: string; roles: string[] } },
@@ -78,14 +80,15 @@ export class VolunteerSkillsController {
   // ── Tags par bénévole ──────────────────────────────────────────────────────
 
   @ApiOperation({ summary: "Lister les tags d'un bénévole" })
-  @Roles(...READ_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
   @Get('volunteers/:volunteerId/tags')
   listTags(@Param('volunteerId', ParseIntPipe) volunteerId: number) {
     return this.volunteerSkillsService.listTags(volunteerId);
   }
 
   @ApiOperation({ summary: 'Ajouter un tag à un bénévole' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
+  @AccessLevelRequired('EDIT')
   @Post('volunteers/:volunteerId/tags')
   addTag(
     @Req() req: { user: { id: number; email: string; roles: string[] } },
@@ -96,7 +99,8 @@ export class VolunteerSkillsController {
   }
 
   @ApiOperation({ summary: "Supprimer un tag d'un bénévole" })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
+  @AccessLevelRequired('EDIT')
   @Delete('volunteers/:volunteerId/tags/:tagId')
   async removeTag(
     @Req() req: { user: { id: number; email: string; roles: string[] } },

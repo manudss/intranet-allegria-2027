@@ -14,7 +14,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthTokenGuard } from '../auth/auth-token.guard';
 import { RoleGuard } from '../auth/role.guard';
-import { Roles } from '../auth/roles.decorator';
+import { AccessModule, AccessLevelRequired } from '../auth/access-module.decorator';
 import {
   ChangeVolunteerMissionStatusDto,
   ChangeVolunteerShiftStatusDto,
@@ -49,35 +49,37 @@ export class VolunteerMissionsController {
   constructor(private readonly volunteerMissionsService: VolunteerMissionsService) {}
 
   @ApiOperation({ summary: 'Creer une mission benevole' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
+  @AccessLevelRequired('EDIT')
   @Post()
   create(@Req() req: UserRequest, @Body() dto: CreateVolunteerMissionDto) {
     return this.volunteerMissionsService.create(req.user, dto);
   }
 
   @ApiOperation({ summary: 'Lister les missions benevoles' })
-  @Roles(...READ_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
   @Get()
   findAll(@Req() req: UserRequest, @Query() query: FindVolunteerMissionsQueryDto) {
     return this.volunteerMissionsService.findAll(req.user, query);
   }
 
   @ApiOperation({ summary: 'Vue mobile jour J des shifts' })
-  @Roles(...READ_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
   @Get('day-view')
   dayView(@Req() req: UserRequest, @Query() query: DayViewQueryDto) {
     return this.volunteerMissionsService.dayView(req.user, query);
   }
 
   @ApiOperation({ summary: 'Recuperer une mission benevole' })
-  @Roles(...READ_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
   @Get(':id')
   findOne(@Req() req: UserRequest, @Param('id', ParseIntPipe) id: number) {
     return this.volunteerMissionsService.findOne(req.user, id);
   }
 
   @ApiOperation({ summary: 'Mettre a jour une mission benevole' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
+  @AccessLevelRequired('EDIT')
   @Patch(':id')
   update(
     @Req() req: UserRequest,
@@ -88,7 +90,8 @@ export class VolunteerMissionsController {
   }
 
   @ApiOperation({ summary: 'Changer le statut d une mission benevole' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
+  @AccessLevelRequired('EDIT')
   @Patch(':id/status')
   changeStatus(
     @Req() req: UserRequest,
@@ -99,7 +102,8 @@ export class VolunteerMissionsController {
   }
 
   @ApiOperation({ summary: 'Supprimer une mission benevole' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
+  @AccessLevelRequired('EDIT')
   @Delete(':id')
   async remove(@Req() req: UserRequest, @Param('id', ParseIntPipe) id: number) {
     await this.volunteerMissionsService.remove(req.user, id);
@@ -107,14 +111,15 @@ export class VolunteerMissionsController {
   }
 
   @ApiOperation({ summary: 'Lister les shifts d une mission' })
-  @Roles(...READ_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
   @Get(':missionId/shifts')
   listShifts(@Req() req: UserRequest, @Param('missionId', ParseIntPipe) missionId: number) {
     return this.volunteerMissionsService.listShifts(req.user, missionId);
   }
 
   @ApiOperation({ summary: 'Creer un shift' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
+  @AccessLevelRequired('EDIT')
   @Post(':missionId/shifts')
   createShift(
     @Req() req: UserRequest,
@@ -125,7 +130,8 @@ export class VolunteerMissionsController {
   }
 
   @ApiOperation({ summary: 'Mettre a jour un shift' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
+  @AccessLevelRequired('EDIT')
   @Patch(':missionId/shifts/:shiftId')
   updateShift(
     @Req() req: UserRequest,
@@ -137,7 +143,8 @@ export class VolunteerMissionsController {
   }
 
   @ApiOperation({ summary: 'Changer le statut d un shift' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
+  @AccessLevelRequired('EDIT')
   @Patch(':missionId/shifts/:shiftId/status')
   changeShiftStatus(
     @Req() req: UserRequest,
@@ -149,7 +156,8 @@ export class VolunteerMissionsController {
   }
 
   @ApiOperation({ summary: 'Supprimer un shift' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
+  @AccessLevelRequired('EDIT')
   @Delete(':missionId/shifts/:shiftId')
   async removeShift(
     @Req() req: UserRequest,
@@ -161,14 +169,14 @@ export class VolunteerMissionsController {
   }
 
   @ApiOperation({ summary: 'Obtenir les compteurs de statuts des missions et shifts' })
-  @Roles(...READ_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
   @Get('summary/counters')
   getStatusCounters(@Req() req: UserRequest) {
     return this.volunteerMissionsService.getStatusCounters(req.user);
   }
 
   @ApiOperation({ summary: 'Lister les shifts par statut' })
-  @Roles(...READ_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
   @Get('shifts/by-status/:status')
   listShiftsByStatus(
     @Req() req: UserRequest,
@@ -180,7 +188,7 @@ export class VolunteerMissionsController {
   }
 
   @ApiOperation({ summary: 'Lister les missions par statut' })
-  @Roles(...READ_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
   @Get('missions/by-status/:status')
   listMissionsByStatus(
     @Req() req: UserRequest,

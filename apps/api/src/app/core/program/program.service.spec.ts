@@ -289,7 +289,9 @@ describe('ProgramService', () => {
     expect(state.logs[0].action).toBe(ProgramChangeLogAction.UPDATE);
 
     await expect(
-      service.updateSequence(USER, 2, { documentLinks: [{ label: 'x', url: 'javascript:alert(1)' }] }),
+      service.updateSequence(USER, 2, {
+        documentLinks: [{ label: 'x', url: 'javascript:alert(1)' }],
+      }),
     ).rejects.toBeInstanceOf(BadRequestException);
     await expect(service.updateSequence(USER, 2, {})).rejects.toBeInstanceOf(BadRequestException);
   });
@@ -369,12 +371,15 @@ describe('ProgramService', () => {
   it('refuse preview/apply sous le minimum sans écriture ni journal', async () => {
     const { service, state } = createFakeDataSource();
     const { version } = await service.previewResize(1, { durationMinutes: 20 });
-    await expect(service.previewResize(1, { durationMinutes: 5 })).rejects.toBeInstanceOf(BadRequestException);
-    await expect(service.applyResize(USER, 1, { durationMinutes: 5 }, version)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.previewResize(1, { durationMinutes: 5 })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    await expect(
+      service.applyResize(USER, 1, { durationMinutes: 5 }, version),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(state.sequences[0].durationMinutes).toBe(60);
     expect(state.logs).toHaveLength(0);
     await service.applyResize(USER, 1, { durationMinutes: 20 }, version);
     expect(state.sequences[0].durationMinutes).toBe(20);
   });
-
 });

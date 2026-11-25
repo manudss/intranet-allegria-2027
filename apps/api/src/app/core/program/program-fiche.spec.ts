@@ -63,8 +63,14 @@ function taskRow(id: number, sequenceId: number, overrides: Partial<EventPrepara
 /** Fake en mémoire couvrant séquences, groupes, liens et tâches. */
 function createFake() {
   const state = {
-    sequences: [seq(1), seq(2, { status: ProgramSequenceStatus.MOBILE, frozenByUserId: null, frozenAt: null })],
-    groups: [{ id: 11, name: 'Rassemblement Lyon 1' }, { id: 12, name: 'Rassemblement Grenoble 1' }] as Group[],
+    sequences: [
+      seq(1),
+      seq(2, { status: ProgramSequenceStatus.MOBILE, frozenByUserId: null, frozenAt: null }),
+    ],
+    groups: [
+      { id: 11, name: 'Rassemblement Lyon 1' },
+      { id: 12, name: 'Rassemblement Grenoble 1' },
+    ] as Group[],
     links: [] as ProgramSequenceGroup[],
     tasks: [] as EventPreparationTask[],
     logs: [] as Record<string, unknown>[],
@@ -185,9 +191,9 @@ describe('Fiche événement — détail et groupes', () => {
     await expect(service.setSequenceGroups(USER, 1, { groupIds: [99] })).rejects.toBeInstanceOf(
       BadRequestException,
     );
-    await expect(
-      service.setSequenceGroups(USER, 1, { groupIds: [1.5] }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.setSequenceGroups(USER, 1, { groupIds: [1.5] })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 });
 
@@ -258,7 +264,10 @@ describe('Fiche événement — tâches de préparation', () => {
     const reopened = await service.updateTask(USER, 1, 5, { isDone: false });
     expect(reopened.isDone).toBe(false);
     expect(reopened.doneAt).toBeNull();
-    const fixed = await service.updateTask(USER, 1, 5, { dueDate: '2027-10-29', dueOffsetMinutes: null });
+    const fixed = await service.updateTask(USER, 1, 5, {
+      dueDate: '2027-10-29',
+      dueOffsetMinutes: null,
+    });
     expect(fixed.dueDate).toBe('2027-10-29');
     expect(fixed.dueOffsetMinutes).toBeNull();
   });

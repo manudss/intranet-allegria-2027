@@ -16,7 +16,7 @@ import {
 } from '@nestjs/common';
 import { AuthTokenGuard } from '../auth/auth-token.guard';
 import { RoleGuard } from '../auth/role.guard';
-import { Roles } from '../auth/roles.decorator';
+import { AccessModule } from '../auth/access-module.decorator';
 import { AccessExpectedGroupsService } from './access-expected-groups.service';
 import {
   ExpectedPageQuery,
@@ -25,7 +25,7 @@ import {
 } from './access-expected-groups.types';
 @Controller('access-control/expected')
 @UseGuards(AuthTokenGuard, RoleGuard)
-@Roles('ADMIN', 'BADGE_MANAGER')
+@AccessModule('BADGES')
 @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
 export class AccessExpectedGroupsController {
   constructor(private readonly service: AccessExpectedGroupsService) {}

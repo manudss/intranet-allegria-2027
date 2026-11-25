@@ -20,14 +20,22 @@ describe('preview mail allowlist', () => {
   });
 
   it('refuses everyone in a preview when the allowlist is absent or empty (provider enabled)', () => {
-    for (const env of [{ RENDER_SERVICE_NAME: 'al-pr49-api' }, { RENDER_SERVICE_NAME: 'al-pr7-api-qkcc' }, { PREVIEW_DEPLOYMENT: 'true' }]) {
+    for (const env of [
+      { RENDER_SERVICE_NAME: 'al-pr49-api' },
+      { RENDER_SERVICE_NAME: 'al-pr7-api-qkcc' },
+      { PREVIEW_DEPLOYMENT: 'true' },
+    ]) {
       expect(mailRecipientAllowed(cfg(undefined, env), 'owner@example.com')).toBe(false);
       expect(mailRecipientAllowed(cfg('', env), 'owner@example.com')).toBe(false);
       expect(mailRecipientAllowed(cfg('owner@example.com', env), 'owner@example.com')).toBe(true);
     }
   });
   it('leaves production unchanged (other service names, no allowlist)', () => {
-    expect(mailRecipientAllowed(cfg(undefined, { RENDER_SERVICE_NAME: 'alegria-api' }), 'a@b.fr')).toBe(true);
-    expect(mailRecipientAllowed(cfg(undefined, { RENDER_SERVICE_NAME: 'al-pr49-web' }), 'a@b.fr')).toBe(true);
+    expect(
+      mailRecipientAllowed(cfg(undefined, { RENDER_SERVICE_NAME: 'alegria-api' }), 'a@b.fr'),
+    ).toBe(true);
+    expect(
+      mailRecipientAllowed(cfg(undefined, { RENDER_SERVICE_NAME: 'al-pr49-web' }), 'a@b.fr'),
+    ).toBe(true);
   });
 });

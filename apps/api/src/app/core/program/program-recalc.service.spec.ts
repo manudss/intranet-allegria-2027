@@ -227,5 +227,4 @@ describe('ProgramRecalcService', () => {
     expect(refused.affected).toEqual([]);
     expect(service.previewResize(chain, 1, 20).outcome).toBe('ok');
   });
-
 });

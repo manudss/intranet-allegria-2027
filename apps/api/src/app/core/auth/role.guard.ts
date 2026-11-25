@@ -83,10 +83,12 @@ export class RoleGuard implements CanActivate {
 
     const grants = await this.accessRights.effective(user.id, user.roles);
     const grant = grants[module];
-    if (!grant || LEVEL_RANK[grant.level] < LEVEL_RANK[required]) {
+    // Seuls les couples dont le niveau suffit comptent ; on garde la portée la plus large parmi eux.
+    const usable = (grant?.pairs ?? []).filter((p) => LEVEL_RANK[p.level] >= LEVEL_RANK[required]);
+    if (usable.length === 0) {
       throw new ForbiddenException('Droits insuffisants pour ce module');
     }
-    if (grant.scope === 'ALL') {
+    if (usable.some((p) => p.scope === 'ALL')) {
       request.accessScope = { all: true };
       return true;
     }
@@ -94,7 +96,7 @@ export class RoleGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-    if (grant.scope === 'GROUPS' && aware) {
+    if (aware && usable.some((p) => p.scope === 'GROUPS')) {
       // Portée par groupes : la route filtre ses données avec cette liste (vide = aucun accès).
       request.accessScope = {
         all: false,

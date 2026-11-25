@@ -16,6 +16,13 @@ export type EffectiveGrant = {
   module: string;
   level: AccessLevel;
   scope: AccessScope;
+  /**
+   * Couples niveau/portée conservés tels que définis (jamais croisés) : Voir/Tout + Modifier/Groupes
+   * donne « voir tout » et « modifier dans ses groupes », pas « modifier tout ». Les couples
+   * dominés (niveau et portée tous deux inférieurs ou égaux à un autre couple) sont retirés.
+   * `level` et `scope` ci-dessus décrivent le couple de niveau le plus haut (affichage seulement).
+   */
+  pairs: { level: AccessLevel; scope: AccessScope }[];
   /** D'où vient le droit (pour « Voir comme ») : "ROLE:ADMIN", "TEAM_TYPE:SECURITE", "OVERRIDE:3". */
   sources: string[];
 };
@@ -88,13 +95,25 @@ export class AccessRightsService {
     const add = (module: string, level: AccessLevel, scope: AccessScope, source: string) => {
       const current = result[module];
       if (!current) {
-        result[module] = { module, level, scope, sources: [source] };
+        result[module] = { module, level, scope, pairs: [{ level, scope }], sources: [source] };
         return;
       }
-      // Cumul : niveau le plus haut, portée la plus large (jamais élargie sans règle explicite).
-      if (LEVEL_RANK[level] > LEVEL_RANK[current.level]) current.level = level;
-      if (SCOPE_RANK[scope] > SCOPE_RANK[current.scope]) current.scope = scope;
       current.sources.push(source);
+      const dominated = current.pairs.some(
+        (p) => LEVEL_RANK[p.level] >= LEVEL_RANK[level] && SCOPE_RANK[p.scope] >= SCOPE_RANK[scope],
+      );
+      if (dominated) return;
+      current.pairs = current.pairs.filter(
+        (p) =>
+          !(LEVEL_RANK[level] >= LEVEL_RANK[p.level] && SCOPE_RANK[scope] >= SCOPE_RANK[p.scope]),
+      );
+      current.pairs.push({ level, scope });
+      const top = [...current.pairs].sort(
+        (a, b) =>
+          LEVEL_RANK[b.level] - LEVEL_RANK[a.level] || SCOPE_RANK[b.scope] - SCOPE_RANK[a.scope],
+      )[0];
+      current.level = top.level;
+      current.scope = top.scope;
     };
     for (const r of rules) add(r.module, r.level, r.scope, `${r.subject_kind}:${r.subject_key}`);
     for (const o of overrides) add(o.module, o.level, o.scope, `OVERRIDE:${o.id}`);

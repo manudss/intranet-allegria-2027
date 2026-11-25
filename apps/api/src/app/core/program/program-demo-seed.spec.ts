@@ -72,7 +72,10 @@ describe('programme de démonstration', () => {
     const expected =
       day.slots.length + day.branches.reduce((sum, branch) => sum + branch.items.length, 0);
 
-    const created = await insertProgramDemoDay(manager, day, { teamIds: [10, 11], coordinatorId: 3 });
+    const created = await insertProgramDemoDay(manager, day, {
+      teamIds: [10, 11],
+      coordinatorId: 3,
+    });
 
     expect(created).toBe(expected);
     expect(saved).toHaveLength(expected);

@@ -3,7 +3,7 @@ import { Type } from 'class-transformer';
 import { IsEnum, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { AuthTokenGuard } from '../auth/auth-token.guard';
 import { RoleGuard } from '../auth/role.guard';
-import { Roles } from '../auth/roles.decorator';
+import { AccessModule } from '../auth/access-module.decorator';
 import { MejAgeGroup, ParticipantSex, VolunteerSkillType } from '../entities';
 import { JeunesRepartitionService } from '../jeunes-repartition/jeunes-repartition.service';
 import { TeamBenevolesService } from '../team-benevoles/team-benevoles.service';
@@ -31,7 +31,7 @@ export class SelectPrintVolunteersQuery extends SelectionPageQuery {
 /** Reuse the assignment selectors, including their minor privacy rules. Read-only: no badge or projection is created here. */
 @Controller('access-control/printing/selection')
 @UseGuards(AuthTokenGuard, RoleGuard)
-@Roles('ADMIN', 'BADGE_MANAGER')
+@AccessModule('BADGES')
 @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
 export class BadgeSelectionController {
   constructor(

@@ -44,6 +44,8 @@ const ROLE_GRANTS: Record<string, Grants> = {
   },
   HEALTH: {
     PARTICIPANTS: 'V',
+    HOUSING: 'V',
+    OPERATIONAL_TEAMS: 'E',
     HEALTH: 'G',
     VOLUNTEER_DIRECTORY: 'V',
     AGENDA: 'V',
@@ -57,7 +59,7 @@ const ROLE_GRANTS: Record<string, Grants> = {
     HOUSING: 'G',
     GATHERING_TEAMS: 'V',
     VOLUNTEER_DIRECTORY: 'V',
-    OPERATIONAL_TEAMS: 'E',
+    OPERATIONAL_TEAMS: 'G',
     AGENDA: 'V',
     DASHBOARD: 'E',
     CATERING: 'V',
@@ -76,13 +78,20 @@ const ROLE_GRANTS: Record<string, Grants> = {
   ANIMATOR: {
     PARTICIPANTS: 'V',
     GATHERING_TEAMS: 'E',
-    OPERATIONAL_TEAMS: 'V',
+    OPERATIONAL_TEAMS: 'E',
     AGENDA: 'G',
     DASHBOARD: 'V',
     DOCUMENTS: 'V',
   },
-  VOLUNTEERS: { OPERATIONAL_TEAMS: 'V', AGENDA: 'V', DOCUMENTS: 'V' },
+  VOLUNTEERS: {
+    HOUSING: 'V',
+    VOLUNTEER_DIRECTORY: 'V',
+    OPERATIONAL_TEAMS: 'E',
+    AGENDA: 'V',
+    DOCUMENTS: 'V',
+  },
   VIEWER: {
+    HOUSING: 'V',
     GATHERING_TEAMS: 'V',
     VOLUNTEER_DIRECTORY: 'V',
     OPERATIONAL_TEAMS: 'V',
@@ -148,3 +157,38 @@ export const DEFAULT_ACCESS_RULES: readonly DefaultAccessRule[] = [
   ...expand('ROLE', ROLE_GRANTS),
   ...expand('TEAM_TYPE', TEAM_TYPE_GRANTS),
 ];
+
+/**
+ * Droits effectifs calculés depuis les seuls défauts pour une liste de rôles (sans base de données).
+ * Sert aux tests ; la vraie résolution est AccessRightsService.effective.
+ */
+export function defaultEffectiveForRoles(roles: string[]) {
+  const out: Record<
+    string,
+    {
+      module: string;
+      level: AccessLevel;
+      scope: 'ALL';
+      pairs: { level: AccessLevel; scope: 'ALL' }[];
+      sources: string[];
+    }
+  > = {};
+  const rank: Record<AccessLevel, number> = { VIEW: 1, EDIT: 2, MANAGE: 3 };
+  for (const rule of DEFAULT_ACCESS_RULES) {
+    if (rule.subjectKind !== 'ROLE' || !roles.includes(rule.subjectKey)) continue;
+    const cur = out[rule.module];
+    if (!cur) {
+      out[rule.module] = {
+        module: rule.module,
+        level: rule.level,
+        scope: 'ALL',
+        pairs: [{ level: rule.level, scope: 'ALL' }],
+        sources: [`ROLE:${rule.subjectKey}`],
+      };
+    } else if (rank[rule.level] > rank[cur.level]) {
+      cur.level = rule.level;
+      cur.pairs = [{ level: rule.level, scope: 'ALL' }];
+    }
+  }
+  return out;
+}

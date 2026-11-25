@@ -25,7 +25,7 @@ import {
 } from 'class-validator';
 import { AuthTokenGuard } from '../auth/auth-token.guard';
 import { RoleGuard } from '../auth/role.guard';
-import { Roles } from '../auth/roles.decorator';
+import { AccessModule } from '../auth/access-module.decorator';
 import { PersonType } from '../entities';
 import { BadgePrintService } from './badge-print.service';
 export class PrintPeopleQuery {
@@ -54,7 +54,7 @@ export class PreparePrintDto {
 }
 @Controller('access-control/printing')
 @UseGuards(AuthTokenGuard, RoleGuard)
-@Roles('ADMIN', 'BADGE_MANAGER')
+@AccessModule('BADGES')
 @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
 export class BadgePrintController {
   constructor(private readonly service: BadgePrintService) {}

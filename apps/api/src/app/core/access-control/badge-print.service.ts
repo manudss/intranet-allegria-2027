@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { DataSource, IsNull, In } from 'typeorm';
 import {
@@ -10,6 +15,7 @@ import {
   PersonType,
   Volunteer,
 } from '../entities';
+import type { AccessScopeInfo } from '../auth/access-module.decorator';
 import { AccessAuditService } from './access-audit.service';
 export interface PrintPerson {
   id: number;
@@ -26,17 +32,40 @@ export class BadgePrintService {
     private readonly db: DataSource,
     private readonly audit: AccessAuditService,
   ) {}
-  async people(q: { q?: string; type?: PersonType; limit?: number; offset?: number }) {
-    const params = [
+  /** Group-limited accounts: no volunteer projections, every participant must belong to an allowed group. */
+  private async assertSelectionInScope(
+    scope: AccessScopeInfo,
+    participantIds: number[],
+    volunteerIds: number[],
+  ) {
+    if (scope.all) return;
+    if (volunteerIds.length) throw new ForbiddenException('Bénévoles hors de votre périmètre');
+    const ids = [...new Set(participantIds)];
+    if (!ids.length) return;
+    const rows: { id: number }[] = await this.db.query(
+      'SELECT id FROM participants WHERE id = ANY($1::int[]) AND group_id = ANY($2::int[])',
+      [ids, scope.groupIds],
+    );
+    if (rows.length !== ids.length)
+      throw new ForbiddenException('Participant hors de votre périmètre');
+  }
+
+  async people(
+    q: { q?: string; type?: PersonType; limit?: number; offset?: number },
+    scope: AccessScopeInfo = { all: true },
+  ) {
+    const params: (string | number | number[] | null)[] = [
       q.type ?? null,
       q.q?.trim() ? `%${q.q.trim()}%` : null,
       q.limit ?? 50,
       q.offset ?? 0,
     ];
-    const where = `WHERE ($1::text IS NULL OR p.type::text=$1) AND ($2::text IS NULL OR concat_ws(' ',p."firstName",p."lastName") ILIKE $2)`;
+    const groupIds = scope.all ? null : scope.groupIds;
+    if (groupIds) params.push(groupIds);
+    const where = `WHERE ($1::text IS NULL OR p.type::text=$1) AND ($2::text IS NULL OR concat_ws(' ',p."firstName",p."lastName") ILIKE $2) ${groupIds ? 'AND p.group_id = ANY($5::int[])' : ''}`;
     const [count] = await this.db.query(
-      `SELECT count(*)::int AS total FROM participants p ${where}`,
-      params.slice(0, 2),
+      `SELECT count(*)::int AS total FROM participants p ${where.replace('$5', '$3')}`,
+      groupIds ? [params[0], params[1], groupIds] : params.slice(0, 2),
     );
     const items = await this.db.query(
       `SELECT p.id,p."firstName",CASE WHEN p.type='JEUNE' THEN NULL ELSE p."lastName" END AS "lastName",p.type,b.id AS "badgeId",b.code
@@ -48,7 +77,12 @@ export class BadgePrintService {
     return { items, total: count.total };
   }
 
-  async preview(participantIds: number[], volunteerIds: number[] = []) {
+  async preview(
+    participantIds: number[],
+    volunteerIds: number[] = [],
+    scope: AccessScopeInfo = { all: true },
+  ) {
+    await this.assertSelectionInScope(scope, participantIds, volunteerIds);
     const ids = [...new Set(participantIds)],
       vs = [...new Set(volunteerIds)];
     if ((!ids.length && !vs.length) || ids.length + vs.length > 100)
@@ -115,7 +149,13 @@ export class BadgePrintService {
     };
   }
 
-  async prepare(participantIds: number[], actorId: number, volunteerIds: number[] = []) {
+  async prepare(
+    participantIds: number[],
+    actorId: number,
+    volunteerIds: number[] = [],
+    scope: AccessScopeInfo = { all: true },
+  ) {
+    await this.assertSelectionInScope(scope, participantIds, volunteerIds);
     const ids = [...new Set(participantIds)].sort((a, b) => a - b);
     const volunteers = [...new Set(volunteerIds)].sort((a, b) => a - b);
     if ((!ids.length && !volunteers.length) || ids.length + volunteers.length > 100)
@@ -161,35 +201,27 @@ export class BadgePrintService {
             `Badge actif incohérent pour ${id}. Vérifiez son historique.`,
           );
         if (!assignment) {
-          badge = await manager
-            .getRepository(AccessBadge)
-            .save(
-              manager
-                .getRepository(AccessBadge)
-                .create({
-                  code: randomBytes(16).toString('hex'),
-                  lot: 'IMPRESSION-PARTICIPANTS',
-                  status: AccessBadgeStatus.ASSIGNED,
-                }),
-            );
+          badge = await manager.getRepository(AccessBadge).save(
+            manager.getRepository(AccessBadge).create({
+              code: randomBytes(16).toString('hex'),
+              lot: 'IMPRESSION-PARTICIPANTS',
+              status: AccessBadgeStatus.ASSIGNED,
+            }),
+          );
           const [meta] = await manager.query(
             'UPDATE access_control_meta SET version=version+1 WHERE id=1 RETURNING version',
           );
           if (!meta) throw new ConflictException('Configuration contrôle accès absente');
-          assignment = await manager
-            .getRepository(AccessBadgeAssignment)
-            .save(
-              manager
-                .getRepository(AccessBadgeAssignment)
-                .create({
-                  participantId: id,
-                  badgeId: badge.id,
-                  version: 1,
-                  metaCreatedVersion: meta.version,
-                  createdByUserId: actorId,
-                  reason: 'Création pour impression nominative',
-                }),
-            );
+          assignment = await manager.getRepository(AccessBadgeAssignment).save(
+            manager.getRepository(AccessBadgeAssignment).create({
+              participantId: id,
+              badgeId: badge.id,
+              version: 1,
+              metaCreatedVersion: meta.version,
+              createdByUserId: actorId,
+              reason: 'Création pour impression nominative',
+            }),
+          );
           await this.audit.record(
             {
               userId: actorId,

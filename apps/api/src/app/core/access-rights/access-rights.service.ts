@@ -146,6 +146,21 @@ export class AccessRightsService {
     }
   }
 
+  /** Ids (parmi ceux fournis) dont le participant est dans un groupe de la portée. */
+  async participantIdsInScope(
+    scope: { all: boolean; groupIds?: number[] },
+    ids: (number | null | undefined)[],
+  ): Promise<Set<number>> {
+    const wanted = [...new Set(ids.filter((i): i is number => typeof i === 'number'))];
+    if (scope.all) return new Set(wanted);
+    if (!wanted.length || !(scope.groupIds ?? []).length) return new Set();
+    const rows: { id: number }[] = await this.dataSource.query(
+      `SELECT id FROM participants WHERE id = ANY($1::int[]) AND group_id = ANY($2::int[])`,
+      [wanted, scope.groupIds],
+    );
+    return new Set(rows.map((r) => r.id));
+  }
+
   async groupIdsForUser(userId: number): Promise<number[]> {
     const rows: { group_id: number }[] = await this.dataSource.query(
       `SELECT group_id FROM user_group_scopes WHERE user_id = $1 ORDER BY group_id`,

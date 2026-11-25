@@ -1,3 +1,4 @@
+import type { AccessScopeInfo } from '../auth/access-module.decorator';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
@@ -62,14 +63,18 @@ export class JeunesRepartitionService {
 
   // ── Étape 1 : participants ────────────────────────────────────────────────
 
-  async repartitionFilters(): Promise<JeunesRepartitionFilters> {
-    const participants = await this.participantsRepository.find({
-      where: [
-        { type: PersonType.JEUNE, status: ParticipantRegistrationStatus.CONFIRMED },
-        { type: PersonType.ANIMATEUR, status: ParticipantRegistrationStatus.CONFIRMED },
-      ],
-      relations: { group: true },
-    });
+  async repartitionFilters(
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<JeunesRepartitionFilters> {
+    const participants = (
+      await this.participantsRepository.find({
+        where: [
+          { type: PersonType.JEUNE, status: ParticipantRegistrationStatus.CONFIRMED },
+          { type: PersonType.ANIMATEUR, status: ParticipantRegistrationStatus.CONFIRMED },
+        ],
+        relations: { group: true },
+      })
+    ).filter((p) => scope.all || scope.groupIds.includes(p.group?.id ?? -1));
 
     const groups = new Map<number, string>();
     const cities = new Set<string>();
@@ -94,14 +99,19 @@ export class JeunesRepartitionService {
     };
   }
 
-  async searchParticipants(query: RepartitionParticipantsQueryDto): Promise<RepartitionParticipantsResult> {
-    const participants = await this.participantsRepository.find({
-      where: [
-        { type: PersonType.JEUNE, status: ParticipantRegistrationStatus.CONFIRMED },
-        { type: PersonType.ANIMATEUR, status: ParticipantRegistrationStatus.CONFIRMED },
-      ],
-      relations: { group: true, teamMemberships: { team: true } },
-    });
+  async searchParticipants(
+    query: RepartitionParticipantsQueryDto,
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<RepartitionParticipantsResult> {
+    const participants = (
+      await this.participantsRepository.find({
+        where: [
+          { type: PersonType.JEUNE, status: ParticipantRegistrationStatus.CONFIRMED },
+          { type: PersonType.ANIMATEUR, status: ParticipantRegistrationStatus.CONFIRMED },
+        ],
+        relations: { group: true, teamMemberships: { team: true } },
+      })
+    ).filter((p) => scope.all || scope.groupIds.includes(p.group?.id ?? -1));
 
     const search = query.search?.trim().toLowerCase();
     const assignment = query.assignment ?? 'all';
@@ -218,7 +228,8 @@ export class JeunesRepartitionService {
   // ── Étape 3 : proposition automatique ─────────────────────────────────────
 
   async propose(dto: ProposeRepartitionDto): Promise<ProposeRepartitionResult> {
-    if (!dto.participantIds?.length) throw new BadRequestException('Aucun participant selectionne.');
+    if (!dto.participantIds?.length)
+      throw new BadRequestException('Aucun participant selectionne.');
     if (!dto.teamIds?.length) throw new BadRequestException('Aucune equipe selectionnee.');
 
     const params = normalizeParams(dto.params);
@@ -284,7 +295,9 @@ export class JeunesRepartitionService {
     if (!dto.assignments?.length) return { applied: 0 };
 
     const participantIds = [...new Set(dto.assignments.map((a) => a.participantId))];
-    const teamIds = [...new Set(dto.assignments.map((a) => a.teamId).filter((id): id is number => id !== null))];
+    const teamIds = [
+      ...new Set(dto.assignments.map((a) => a.teamId).filter((id): id is number => id !== null)),
+    ];
 
     return this.participantsRepository.manager.transaction(async (manager) => {
       const participants = await manager.find(Participant, {

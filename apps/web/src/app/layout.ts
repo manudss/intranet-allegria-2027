@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, ElementRef, TemplateRef, effect, inject, signal, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
 import {
@@ -12,8 +12,9 @@ import {
   RouterLinkActive,
   RouterOutlet,
 } from '@angular/router';
-import { TuiButton, TuiIcon } from '@taiga-ui/core';
-import { filter, map, startWith } from 'rxjs';
+import { TuiButton, TuiDialogService, TuiIcon } from '@taiga-ui/core';
+import { GLOSSARY, tourFor } from './shared/help-content';
+import { filter, finalize, map, startWith } from 'rxjs';
 import { AuthService } from './core/auth.service';
 import { AppearanceToggleComponent } from './shared/appearance-toggle.component';
 import { LoadingSkeletonComponent } from './shared/loading-skeleton.component';
@@ -99,6 +100,28 @@ export class Layout {
   protected readonly expanded = signal(true);
   protected readonly isMobileMenuOpen = signal(false);
 
+  private readonly dialogs = inject(TuiDialogService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly helpTemplate = viewChild.required<TemplateRef<unknown>>('helpDialog');
+  protected readonly glossary = GLOSSARY;
+  protected readonly helpStep = signal(0);
+  protected get helpTour() {
+    return tourFor(this.auth.currentUser()?.roles ?? []);
+  }
+
+  /** Ouvre l'aide : visite guidée de 3 étapes (relançable) et glossaire. */
+  protected openHelp(): void {
+    this.helpStep.set(0);
+    // La boîte est rendue hors de la coque de l'application : on rend la coque inerte
+    // tant qu'elle est ouverte (ni focus, ni lecture du fond). La boîte elle-même ne l'est pas.
+    const shell = this.host.nativeElement.querySelector<HTMLElement>('.allegria-shell');
+    shell?.setAttribute('inert', '');
+    this.dialogs
+      .open(this.helpTemplate(), { label: 'Aide', size: 'm' })
+      .pipe(finalize(() => shell?.removeAttribute('inert')))
+      .subscribe();
+  }
+
   protected readonly navGroups: MenuGroup[] = [
     {
       label: 'Vue générale',
@@ -183,6 +206,11 @@ export class Layout {
 
   protected handleToggle(): void {
     this.expanded.update((value) => !value);
+  }
+
+  protected focusContent(event: Event): void {
+    event.preventDefault();
+    document.getElementById('contenu')?.focus();
   }
 
   protected toggleMobileMenu(): void {

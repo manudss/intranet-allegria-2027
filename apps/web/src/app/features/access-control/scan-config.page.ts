@@ -25,25 +25,25 @@ const DUPLICATE_RULES: { value: DuplicateRule; label: string }[] = [
 
       <section class="panel">
         <h2>Types de scan</h2>
-        <table class="tbl">
+        <div class="tbl-scroll" tabindex="0" role="region" aria-label="Types de scan"><table class="tbl">
           <thead><tr><th>Code</th><th>Libellé</th><th>Règle de doublon</th></tr></thead>
           <tbody>
             @for (t of scanTypes(); track t.id) {
               <tr><td><code>{{ t.code }}</code></td><td>{{ t.label }}</td><td>{{ ruleLabel(t.duplicateRule) }}</td></tr>
             }
           </tbody>
-        </table>
+        </table></div>
         <div class="grid4">
-          <input type="text" [(ngModel)]="stCode" placeholder="Code (ex. MEAL)" />
-          <input type="text" [(ngModel)]="stLabel" placeholder="Libellé" />
-          <select [(ngModel)]="stRule">@for (r of rules; track r.value) { <option [ngValue]="r.value">{{ r.label }}</option> }</select>
+          <label class="fld">Code<input type="text" [(ngModel)]="stCode" placeholder="ex. MEAL" /></label>
+          <label class="fld">Libellé<input type="text" [(ngModel)]="stLabel" /></label>
+          <label class="fld">Règle de doublon<select [(ngModel)]="stRule">@for (r of rules; track r.value) { <option [ngValue]="r.value">{{ r.label }}</option> }</select></label>
           <button tuiButton size="s" type="button" (click)="addScanType()" [disabled]="!stCode.trim() || !stLabel.trim()">Ajouter</button>
         </div>
       </section>
 
       <section class="panel">
         <h2>Zones</h2>
-        <table class="tbl">
+        <div class="tbl-scroll" tabindex="0" role="region" aria-label="Zones"><table class="tbl">
           <thead><tr><th>Nom</th><th>Types admis</th><th>Validation en ligne</th><th>Durée hors-ligne max</th></tr></thead>
           <tbody>
             @for (z of zones(); track z.id) {
@@ -55,22 +55,22 @@ const DUPLICATE_RULES: { value: DuplicateRule; label: string }[] = [
               </tr>
             }
           </tbody>
-        </table>
+        </table></div>
         <div class="grid4">
-          <input type="text" [(ngModel)]="zoneName" placeholder="Nom de la zone" />
+          <label class="fld">Nom de la zone<input type="text" [(ngModel)]="zoneName" /></label>
           <span class="chk-group">
             @for (t of personTypes; track t) {
               <label class="chk"><input type="checkbox" [checked]="zoneTypes.has(t)" (change)="toggleType(t)" /> {{ t }}</label>
             }
           </span>
-          <label class="chk"><input type="checkbox" [(ngModel)]="zoneOnline" /> Validation en ligne</label><input type="number" min="0" max="720" [(ngModel)]="zoneMaxOffline" placeholder="Hors-ligne max (min)" />
+          <label class="chk"><input type="checkbox" [(ngModel)]="zoneOnline" /> Validation en ligne</label><label class="fld">Durée hors-ligne max (minutes)<input type="number" min="0" max="720" [(ngModel)]="zoneMaxOffline" /></label>
           <button tuiButton size="s" type="button" (click)="addZone()" [disabled]="!zoneName.trim()">{{ editingZoneId ? 'Enregistrer' : 'Ajouter' }}</button>
         </div>
       </section>
 
       <section class="panel">
         <h2>Points de contrôle</h2>
-        <table class="tbl">
+        <div class="tbl-scroll" tabindex="0" role="region" aria-label="Points de contrôle"><table class="tbl">
           <thead><tr><th>Nom</th><th>Zone</th><th>Type de scan</th><th>Service</th><th>Actif</th></tr></thead>
           <tbody>
             @for (p of points(); track p.id) {
@@ -83,12 +83,12 @@ const DUPLICATE_RULES: { value: DuplicateRule; label: string }[] = [
               </tr>
             }
           </tbody>
-        </table>
+        </table></div>
         <div class="grid5">
-          <input type="text" [(ngModel)]="ptName" placeholder="Nom (ex. Porte A)" />
-          <select [(ngModel)]="ptZoneId">@for (z of zones(); track z.id) { <option [ngValue]="z.id">{{ z.name }}</option> }</select>
-          <select [(ngModel)]="ptScanTypeId">@for (t of scanTypes(); track t.id) { <option [ngValue]="t.id">{{ t.label }}</option> }</select>
-          <input type="text" [(ngModel)]="ptServiceKey" placeholder="Clé de service (optionnel)" />
+          <label class="fld">Nom du point<input type="text" [(ngModel)]="ptName" placeholder="ex. Porte A" /></label>
+          <label class="fld">Zone<select [(ngModel)]="ptZoneId">@for (z of zones(); track z.id) { <option [ngValue]="z.id">{{ z.name }}</option> }</select></label>
+          <label class="fld">Type de scan<select [(ngModel)]="ptScanTypeId">@for (t of scanTypes(); track t.id) { <option [ngValue]="t.id">{{ t.label }}</option> }</select></label>
+          <label class="fld">Clé de service (optionnel)<input type="text" [(ngModel)]="ptServiceKey" /></label>
           <button tuiButton size="s" type="button" (click)="addPoint()" [disabled]="!ptName.trim() || !ptZoneId || !ptScanTypeId">Ajouter</button>
         </div>
       </section>
@@ -101,14 +101,20 @@ const DUPLICATE_RULES: { value: DuplicateRule; label: string }[] = [
     .head h1 { margin: 0; font-size: 22px; }
     .panel { background: var(--appearance-surface); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 10px; }
     .panel h2 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--tui-text-secondary); }
+    .tbl-scroll { max-width: 100%; overflow-x: auto; background: linear-gradient(to right, var(--appearance-surface, #fff) 30%, transparent), linear-gradient(to left, var(--appearance-surface, #fff) 30%, transparent) 100% 0, radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.28), transparent), radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.28), transparent) 100% 0; background-repeat: no-repeat; background-size: 2.5rem 100%, 2.5rem 100%, 0.8rem 100%, 0.8rem 100%; background-attachment: local, local, scroll, scroll; }
+    .tbl-scroll:focus-visible { outline: 2px solid var(--tui-border-focus, #d52f57); outline-offset: 2px; }
+    .tbl-scroll > .tbl { min-width: 34rem; }
     .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
     .tbl th { text-align: left; font-size: 12px; color: var(--tui-text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--line-soft); }
     .tbl td { padding: 8px; border-bottom: 1px solid var(--line-soft); }
     code { font-family: ui-monospace, monospace; font-size: 12px; }
     input, select { border: 1px solid var(--appearance-border); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
-    .grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: center; }
-    .grid5 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 8px; align-items: center; }
+    .fld { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; min-width: 0; }
+    .fld > input, .fld > select { display: block; font-weight: 400; min-width: 0; box-sizing: border-box; }
+    .grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: end; }
+    .grid5 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 8px; align-items: end; }
     @media(max-width: 900px) { .grid4, .grid5 { grid-template-columns: 1fr 1fr; } }
+    @media(max-width: 520px) { .grid4, .grid5 { grid-template-columns: 1fr; } }
     .chk { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; margin-right: 10px; }
     .ok-msg { color: var(--appearance-success); font-size: 13px; margin: 0; }
   `],

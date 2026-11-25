@@ -31,9 +31,9 @@ const STATUS_LABELS: Record<AccessBadgeStatus, string> = {
       <section class="panel">
         <h2>Enregistrer un lot</h2>
         <p class="hint">Un code par ligne (code opaque, sans nom). Le stock seul ne suffit pas : chaque badge doit ensuite être attribué.</p>
-        <textarea rows="4" [(ngModel)]="stockCodes" placeholder="9f2c1e0a4b6d8f30…&#10;ab12cd34ef56ab78…"></textarea>
+        <label class="fld">Codes des badges (un par ligne)<textarea rows="4" [(ngModel)]="stockCodes" placeholder="9f2c1e0a4b6d8f30…&#10;ab12cd34ef56ab78…"></textarea></label>
         <div class="row">
-          <input type="text" [(ngModel)]="stockLot" placeholder="Lot (obligatoire, ex. L2027-A)" />
+          <label class="fld">Lot (obligatoire)<input type="text" [(ngModel)]="stockLot" placeholder="ex. L2027-A" /></label>
           <button tuiButton type="button" (click)="registerStock()" [disabled]="saving() || !stockLot.trim()">Enregistrer</button>
         </div>
         @if (stockMsg(); as m) { <p class="ok-msg">{{ m }}</p> }
@@ -41,15 +41,15 @@ const STATUS_LABELS: Record<AccessBadgeStatus, string> = {
 
       <section class="panel">
         <div class="filters">
-          <select [(ngModel)]="statusFilter" (ngModelChange)="reload()">
+          <label class="fld">Statut<select [(ngModel)]="statusFilter" (ngModelChange)="reload()">
             <option value="">Tous statuts</option>
             <option value="AVAILABLE">Disponible</option>
             <option value="ASSIGNED">Attribué</option>
             <option value="LOST">Perdu</option>
             <option value="REVOKED">Révoqué</option>
-          </select>
-          <input type="text" [(ngModel)]="lotFilter" (ngModelChange)="reload()" placeholder="Lot" />
-          <input type="text" [(ngModel)]="qFilter" (ngModelChange)="reload()" placeholder="Début de code" />
+          </select></label>
+          <label class="fld">Lot<input type="text" [(ngModel)]="lotFilter" (ngModelChange)="reload()" /></label>
+          <label class="fld">Début de code<input type="text" [(ngModel)]="qFilter" (ngModelChange)="reload()" /></label>
         </div>
         @if (loading()) { <app-loading-skeleton /> }
         <div class="tbl-scroll" tabindex="0" role="region" aria-label="Liste des badges">
@@ -88,7 +88,10 @@ const STATUS_LABELS: Record<AccessBadgeStatus, string> = {
     textarea { font-family: ui-monospace, monospace; }
     .page, .panel { min-width: 0; max-width: 100%; }
     .row, .filters { display: flex; flex-wrap: wrap; gap: 8px; }
-    .row > input, .filters > input, .filters > select { flex: 1 1 10rem; min-width: 0; box-sizing: border-box; }
+    .fld { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; flex: 1 1 10rem; min-width: 0; }
+    .fld > input, .fld > select, .fld > textarea { display: block; font-weight: 400; min-width: 0; box-sizing: border-box; }
+    .row { align-items: flex-end; }
+    .panel > .fld { flex: 0 0 auto; }
     textarea { width: 100%; box-sizing: border-box; }
     .tbl-scroll { max-width: 100%; overflow-x: auto; }
     @media (max-width: 640px) { .page { padding: 12px; } .row > button, .head > a { flex: 1 1 100%; } }

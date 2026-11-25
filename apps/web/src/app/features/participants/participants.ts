@@ -1,3 +1,4 @@
+import { ACRONYM_HINTS } from '../../shared/help-content';
 import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
@@ -248,6 +249,7 @@ export class ParticipantsPage implements OnInit {
   healthForm = form(this.healthModel);
   sexes = Object.values(ParticipantSex);
   mejAgeGroups = Object.values(MejAgeGroup);
+  protected readonly acronymHints = ACRONYM_HINTS;
   readonly canSeeHealth = computed(() => this.auth.hasAnyRole(['ADMIN', 'HEALTH']));
   filtered = computed(() => {
     const q = this.query().toLowerCase();

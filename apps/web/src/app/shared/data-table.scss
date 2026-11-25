@@ -156,3 +156,15 @@ table {
   color: #241c1c;
   --tui-text-primary: #241c1c;
 }
+
+.scroll-hint {
+  display: none;
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+@media (max-width: 640px) {
+  .scroll-hint {
+    display: block;
+  }
+}

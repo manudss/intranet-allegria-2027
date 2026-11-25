@@ -57,3 +57,21 @@ describe('bandeau en thème sombre', () => {
     expect(dark).not.toMatch(/\.allegria-header,\s*\.allegria-sidebar/);
   });
 });
+
+describe('accessibilité du gabarit (lot 6)', () => {
+  const html = read('../layout.html');
+
+  it('propose un lien d’évitement vers le contenu', () => {
+    expect(html).toMatch(/<a class="skip-link" href="#contenu"/);
+    expect(html).toMatch(/<main[^>]*id="contenu"/);
+  });
+
+  it('laisse le titre de page aux pages : un seul h1 par écran', () => {
+    expect(html).not.toContain('<h1');
+  });
+
+  it('nomme le bouton de menu mobile', () => {
+    expect(html).toMatch(/mobile-menu-btn/);
+    expect(html).toContain("'Ouvrir le menu'");
+  });
+});

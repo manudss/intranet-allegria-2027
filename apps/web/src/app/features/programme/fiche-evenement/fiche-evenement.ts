@@ -1,3 +1,4 @@
+import { ACRONYM_HINTS } from '../../../shared/help-content';
 import { ShiftChangesComponent } from '../event-mission-links/shift-changes';
 import { EventMissionLinksComponent } from '../event-mission-links/event-mission-links';
 import { Component, computed, inject, signal } from '@angular/core';
@@ -118,6 +119,7 @@ export class FicheEvenementPage {
 
   readonly ProgramSequenceStatus = ProgramSequenceStatus;
   readonly ProgramSequenceTrack = ProgramSequenceTrack;
+  protected readonly acronymHints = ACRONYM_HINTS;
   readonly ProgramSequenceVisibility = ProgramSequenceVisibility;
   readonly TRACK_LABELS = TRACK_LABELS;
   readonly VISIBILITY_LABELS = VISIBILITY_LABELS;

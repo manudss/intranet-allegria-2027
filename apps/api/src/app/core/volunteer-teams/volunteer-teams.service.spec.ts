@@ -198,5 +198,21 @@ describe('VolunteerTeamsService', () => {
         ConflictException,
       );
     });
+
+    it('renomme un type sans changer son code ni son id', async () => {
+      const type = { id: 4, code: 'SECURITE', label: 'Securite', sortOrder: 10, isActive: true };
+      const typesRepository = {
+        findOneBy: vi.fn().mockResolvedValue(type),
+        save: vi.fn((t) => Promise.resolve(t)),
+      };
+      const service = new VolunteerTeamsService(
+        {} as never,
+        {} as never,
+        {} as never,
+        typesRepository as never,
+      );
+      const updated = await service.updateTeamType(4, { label: '  Sécurité  ' });
+      expect(updated).toMatchObject({ id: 4, code: 'SECURITE', label: 'Sécurité' });
+    });
   });
 });

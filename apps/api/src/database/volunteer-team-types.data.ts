@@ -1,30 +1,28 @@
 /**
- * Types d'équipes PROPOSÉS (note « Droits Alegria », 25 nov. 2026). Liste de départ non validée :
- * l'admin peut renommer, désactiver ou ajouter des types.
+ * Types d'équipes opérationnelles PROPOSÉS (fonctions de terrain uniquement, pas de profils de droits).
+ * Liste de départ non validée : l'admin peut renommer, désactiver ou ajouter des types.
+ * Un type ne donne aucun droit.
  */
 export const PROPOSED_VOLUNTEER_TEAM_TYPES: readonly [string, string, string][] = [
-  [
-    'ADMINISTRATION_TECHNIQUE',
-    'Administration technique',
-    "Configure l'application, les utilisateurs et les droits.",
-  ],
-  ['COORDINATION_GENERALE', 'Coordination générale', "Pilote l'ensemble du rassemblement."],
-  ['SANTE_SECOURS', 'Santé et secours', 'Suit les dossiers santé et les incidents.'],
-  ['RESTAURATION', 'Restauration', 'Prépare les repas : effectifs, régimes, fournisseurs.'],
-  [
-    'HEBERGEMENT_FAMILLES',
-    "Hébergement et familles d'accueil",
-    'Gère les familles, les hébergements collectifs et le placement.',
-  ],
-  ['LOGISTIQUE_TRANSPORTS', 'Logistique et transports', 'Matériel, cars, missions de terrain.'],
-  ['ACCUEIL_BADGES', 'Accueil et badges', 'Imprime et attribue les badges, suit les accès.'],
-  ['SCANNERS', 'Scanners', 'Scanne les badges sur le terrain.'],
+  ['ACCUEIL', 'Accueil et badges', 'Accueil des participants, remise et suivi des badges.'],
+  ['SECURITE', 'Sécurité', "Sécurité des sites et des événements, circulation, service d'ordre."],
+  ['RESTAURATION', 'Restauration', 'Préparation et service des repas.'],
   [
     'ANIMATION_PROGRAMME',
     'Animation et programme',
-    'Construit le programme, répartit les jeunes dans les équipes de rassemblement.',
+    'Animation, célébrations et déroulé du programme.',
   ],
-  ['RESPONSABLE_EQUIPE', "Responsable d'équipe bénévole", 'Pilote une équipe bénévole.'],
-  ['BENEVOLE', 'Bénévole', "Membre d'une équipe bénévole."],
-  ['CONSULTATION', 'Consultation', 'Lecture seule.'],
+  [
+    'LOGISTIQUE_TRANSPORTS',
+    'Logistique et transports',
+    'Matériel, installation, cars et missions de terrain.',
+  ],
+  ['SANTE_SECOURS', 'Santé et secours', 'Premiers secours et suivi des situations de santé.'],
+  [
+    'HEBERGEMENT_FAMILLES',
+    "Hébergement et familles d'accueil",
+    "Familles d'accueil, hébergements collectifs et placement.",
+  ],
+  ['SCANNERS', "Contrôle d'accès (scanners)", 'Scan des badges sur le terrain.'],
+  ['COORDINATION', 'Coordination', 'Coordination générale et liaison entre les équipes.'],
 ];

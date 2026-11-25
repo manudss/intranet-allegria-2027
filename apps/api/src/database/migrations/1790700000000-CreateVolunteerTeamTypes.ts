@@ -3,7 +3,7 @@ import { PROPOSED_VOLUNTEER_TEAM_TYPES } from '../volunteer-team-types.data';
 
 /**
  * Types d'équipes opérationnelles (champ optionnel sur volunteer_teams).
- * Liste de départ = types PROPOSÉS dans la note « Droits Alegria » (25 nov. 2026),
+ * Liste de départ = types opérationnels PROPOSÉS (fonctions de terrain, sans profils de droits),
  * non validés : l'admin peut les renommer, désactiver ou en ajouter.
  * Aucune équipe existante n'est rattachée automatiquement, aucun droit n'en découle.
  */

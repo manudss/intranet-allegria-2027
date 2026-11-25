@@ -87,7 +87,27 @@
   <ul class="team-list" data-testid="types-list">
     @for (type of types(); track type.id) {
     <li [class.team-inactive]="!type.isActive">
-      {{ type.label }} @if (!type.isActive) { — inactif }
+      @if (editingTypeId() === type.id) {
+      <tui-textfield class="type-edit-field">
+        <label [for]="'type-edit-' + type.id" tuiLabel>Nom du type</label>
+        <input
+          tuiInput
+          class="type-edit"
+          [id]="'type-edit-' + type.id"
+          [ngModel]="editingTypeLabel()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="editingTypeLabel.set($event)"
+          (keydown.enter)="saveRenameType(type)"
+        />
+      </tui-textfield>
+      <button tuiButton size="s" type="button" (click)="saveRenameType(type)">Enregistrer</button>
+      <button tuiButton size="s" appearance="flat" type="button" (click)="cancelRenameType()">
+        Annuler
+      </button>
+      } @else { {{ type.label }} @if (!type.isActive) { — inactif }
+      <button tuiButton size="s" appearance="flat" type="button" (click)="startRenameType(type)">
+        Renommer
+      </button>
       <button tuiButton size="s" appearance="flat" type="button" (click)="toggleType(type)">
         {{ type.isActive ? 'Désactiver' : 'Réactiver' }}
       </button>
@@ -100,6 +120,7 @@
       >
         Supprimer
       </button>
+      }
     </li>
     }
   </ul>

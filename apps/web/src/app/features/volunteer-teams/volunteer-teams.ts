@@ -138,6 +138,8 @@ export class VolunteerTeamsPage implements OnInit {
   typesOpened = signal(false);
   typeError = signal<string | null>(null);
   newTypeLabel = signal('');
+  editingTypeId = signal<number | null>(null);
+  editingTypeLabel = signal('');
   readonly isAdmin = computed(() => this.auth.hasAnyRole(['ADMIN']));
   readonly typeOptions = computed<SelectOption<number>[]>(() => [
     { value: NO_TYPE, label: 'Sans type' },
@@ -195,6 +197,34 @@ export class VolunteerTeamsPage implements OnInit {
         },
         error: (e) => this.typeError.set(e?.error?.message ?? 'Création impossible.'),
       });
+  }
+
+  startRenameType(type: VolunteerTeamType): void {
+    this.editingTypeId.set(type.id);
+    this.editingTypeLabel.set(type.label);
+    this.typeError.set(null);
+  }
+
+  cancelRenameType(): void {
+    this.editingTypeId.set(null);
+  }
+
+  /** Renomme (libellé seulement) : le code et les rattachements des équipes ne changent pas. */
+  saveRenameType(type: VolunteerTeamType): void {
+    const label = this.editingTypeLabel().trim();
+    if (!label) {
+      this.typeError.set('Le nom du type est obligatoire.');
+      return;
+    }
+    this.typesApi.update(type.id, { label }).subscribe({
+      next: () => {
+        this.editingTypeId.set(null);
+        this.typeError.set(null);
+        this.loadTypes();
+        this.api.list().subscribe((items) => this.items.set(items));
+      },
+      error: (e) => this.typeError.set(e?.error?.message ?? 'Renommage impossible.'),
+    });
   }
 
   toggleType(type: VolunteerTeamType): void {

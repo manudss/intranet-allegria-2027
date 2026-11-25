@@ -25,6 +25,7 @@ export type AccessScopeInfo = { all: true } | { all: false; groupIds: number[] }
 export const AccessScope = createParamDecorator(
   (_: unknown, ctx: ExecutionContext): AccessScopeInfo => {
     const request = ctx.switchToHttp().getRequest();
-    return request.accessScope ?? { all: true };
+    // Échec fermé : sans portée posée par la garde, aucune donnée de groupe n'est visible.
+    return request.accessScope ?? { all: false, groupIds: [] };
   },
 );

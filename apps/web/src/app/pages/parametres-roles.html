@@ -116,8 +116,14 @@
     </table>
   </div>
   <p class="hint">
+    Attention : le module « Administration » (utilisateurs et rôles) donne tous les pouvoirs. Qui y a
+    « Gérer » peut s’attribuer n’importe quel droit. La modification de cette matrice reste réservée
+    au rôle ADMIN fixe. Les exceptions par personne ne font qu’ajouter des droits, elles n’en retirent
+    pas. Un retrait de rôle s’applique à la prochaine connexion de la personne.
+  </p>
+  <p class="hint">
     Portées : « Groupes autorisés » est filtrée par le serveur sur les participants, les groupes, les
-    équipes de rassemblement et les dossiers santé. « Mon équipe » et « Mes données » ne sont pas encore appliquées : elles refusent l’accès. Ailleurs, une portée limitée refuse l’accès (sécurité par défaut) tant que
+    équipes de rassemblement, les dossiers santé, les badges (participants uniquement), les affectations d’hébergement et les dossiers d’inscription famille. « Mon équipe » et « Mes données » ne sont pas encore appliquées : elles refusent l’accès. Ailleurs, une portée limitée refuse l’accès (sécurité par défaut) tant que
     le filtrage n’y est pas branché.
   </p>
   } @if (tab() === 'user') {

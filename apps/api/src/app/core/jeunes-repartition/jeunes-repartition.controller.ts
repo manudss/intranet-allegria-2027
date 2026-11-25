@@ -69,6 +69,7 @@ export class JeunesRepartitionController {
       'Aucune écriture : renvoie les affectations proposées et les violations de critères.',
   })
   @AccessModule('GATHERING_TEAMS')
+  @AccessLevelRequired('VIEW')
   @Post('propose')
   propose(@Body() dto: ProposeRepartitionDto) {
     return this.service.propose(dto);

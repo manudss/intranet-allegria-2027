@@ -333,7 +333,8 @@ export class FamilyRegistrationController {
 @Controller('family-registrations')
 @UseGuards(RoleGuard)
 @AccessModule('PARTICIPANTS')
-@AccessLevelRequired('EDIT')
+// Validation des dossiers, pièces justificatives : niveau Gérer (parité avec ADMIN et COORDINATOR).
+@AccessLevelRequired('MANAGE')
 @GroupScopeAware()
 export class FamilyRegistrationStaffController {
   constructor(

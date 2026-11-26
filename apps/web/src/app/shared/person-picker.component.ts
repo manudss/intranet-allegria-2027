@@ -24,12 +24,53 @@ export interface PersonSummary {
   roles: string[];
   teams: string[];
   teamTypes: string[];
+  /** Type de fiche (participants : JEUNE, ANIMATEUR, BENEVOLE…). */
+  type?: string;
+}
+
+export type PersonSource = 'users' | 'participants' | 'volunteers';
+
+const ENDPOINT: Record<PersonSource, string> = {
+  users: '/api/users/search',
+  participants: '/api/participants/search',
+  volunteers: '/api/volunteers/search',
+};
+
+interface RawItem {
+  id: number;
+  email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  isActive?: boolean;
+  type?: string;
+  team?: string | null;
+  group?: { name?: string } | null;
+  roles?: string[];
+  teams?: string[];
+  teamTypes?: string[];
+}
+
+function toSummary(r: RawItem, source: PersonSource): PersonSummary {
+  if (source === 'users') return r as unknown as PersonSummary;
+  return {
+    id: r.id,
+    email: r.email ?? '',
+    firstName: r.firstName ?? null,
+    lastName: r.lastName ?? null,
+    isActive: true,
+    roles: [],
+    teams: [r.team, r.group?.name].filter((x): x is string => Boolean(x)),
+    teamTypes: r.type ? [r.type] : [],
+    type: r.type,
+  };
 }
 
 interface PersonSearchPage {
-  items: PersonSummary[];
+  items: RawItem[];
   total: number;
-  hasMore: boolean;
+  hasMore?: boolean;
+  limit?: number;
+  offset?: number;
 }
 
 type FilterOpt = { code: string; label: string };
@@ -48,7 +89,10 @@ export function personLabel(p: Pick<PersonSummary, 'email' | 'firstName' | 'last
  * Sélecteur de personne (compte) avec recherche côté serveur : rien n'est chargé à l'ouverture,
  * 10 résultats à la fois, filtres optionnels (rôle, type d'équipe, équipe, groupe) dans le même
  * composant. Remplace les listes déroulantes qui chargent tous les comptes.
- * Route : GET /api/users/search (administrateurs et gestionnaires de badges).
+ * Source `users` (défaut) : GET /api/users/search (administrateurs et gestionnaires de badges).
+ * Source `participants` : GET /api/participants/search, `volunteers` : GET /api/volunteers/search.
+ * Ces deux routes appliquent côté serveur le périmètre de l'utilisateur connecté ; `exclude`
+ * masque côté écran les personnes déjà prises (membres, bénévoles déjà affectés…).
  */
 @Component({
   selector: 'app-person-picker',
@@ -61,7 +105,7 @@ export function personLabel(p: Pick<PersonSummary, 'email' | 'firstName' | 'last
         <span class="chip">
           <span class="chip-text">
             <strong>{{ labelOf(p) }}</strong>
-            @if (hasName(p)) {
+            @if (hasName(p) && p.email) {
               <small>{{ p.email }}</small>
             }
           </span>
@@ -96,7 +140,7 @@ export function personLabel(p: Pick<PersonSummary, 'email' | 'firstName' | 'last
             (keydown)="onKey($event)"
           />
         </tui-textfield>
-        @if (filters()) {
+        @if (filters() && source() === 'users') {
           <button
             type="button"
             class="filters-toggle"
@@ -140,6 +184,10 @@ export function personLabel(p: Pick<PersonSummary, 'email' | 'firstName' | 'last
               [value]="groupId()"
               (valueChange)="setFilter('groupId', $event)"
             />
+            <small class="note">
+              Les comptes sans fiche bénévole liée n'ont pas d'équipe : ils ne sont pas trouvés par
+              les filtres équipe et type d'équipe.
+            </small>
             @if (activeCount() > 0) {
               <button type="button" class="link" (click)="resetFilters()">
                 Effacer les filtres
@@ -169,7 +217,7 @@ export function personLabel(p: Pick<PersonSummary, 'email' | 'firstName' | 'last
                 >
                   <span class="who">
                     <strong>{{ labelOf(p) }}</strong>
-                    @if (hasName(p)) {
+                    @if (hasName(p) && p.email) {
                       <small>{{ p.email }}</small>
                     }
                   </span>
@@ -181,7 +229,7 @@ export function personLabel(p: Pick<PersonSummary, 'email' | 'firstName' | 'last
                 </button>
               }
               <div class="foot" role="status">
-                {{ items().length }} sur {{ total() }}
+                {{ items().length }} affichés sur {{ total() }}
                 @if (hasMore()) {
                   ·
                   <button type="button" class="link" data-testid="person-more" (click)="more()">
@@ -328,6 +376,9 @@ export class PersonPickerComponent {
   readonly testId = input<string | null>('person-picker');
   /** Affiche le bouton « Filtres » (type d'équipe, équipe, rôle, groupe). */
   readonly filters = input(true);
+  readonly source = input<PersonSource>('users');
+  /** Retire des résultats les personnes pour lesquelles la fonction renvoie vrai. */
+  readonly exclude = input<(p: PersonSummary) => boolean>(() => false);
   readonly value = input<PersonSummary | null>(null);
   readonly valueChange = output<PersonSummary | null>();
 
@@ -354,6 +405,8 @@ export class PersonPickerComponent {
   private readonly teams = signal<{ id: number; name: string }[]>([]);
   private readonly groups = signal<{ id: number; name: string }[]>([]);
   private optionsLoaded = false;
+  /** Nombre de lignes déjà reçues du serveur (avant exclusions), base de la pagination. */
+  private fetched = 0;
 
   private readonly search$ = new Subject<{ offset: number }>();
 
@@ -394,12 +447,16 @@ export class PersonPickerComponent {
             return EMPTY;
           }
           return this.http
-            .get<PersonSearchPage>('/api/users/search', { params: this.params(offset) })
+            .get<PersonSearchPage>(ENDPOINT[this.source()], { params: this.params(offset) })
             .pipe(
               tap((page) => {
-                this.items.update((cur) => (offset === 0 ? page.items : [...cur, ...page.items]));
+                const src = this.source();
+                const skip = this.exclude();
+                const got = page.items.map((r) => toSummary(r, src)).filter((p) => !skip(p));
+                this.fetched = offset + page.items.length;
+                this.items.update((cur) => (offset === 0 ? got : [...cur, ...got]));
                 this.total.set(page.total);
-                this.hasMore.set(page.hasMore);
+                this.hasMore.set(page.hasMore ?? this.fetched < page.total);
                 if (offset === 0) this.active.set(0);
                 this.loading.set(false);
               }),
@@ -458,7 +515,7 @@ export class PersonPickerComponent {
   }
 
   protected more(): void {
-    this.run(this.items().length);
+    this.run(this.fetched);
   }
 
   protected choose(p: PersonSummary): void {
@@ -491,7 +548,10 @@ export class PersonPickerComponent {
   }
 
   private canSearch(): boolean {
-    return this.query().trim().length >= MIN_CHARS || this.activeCount() > 0;
+    return (
+      this.query().trim().length >= MIN_CHARS ||
+      (this.source() === 'users' && this.activeCount() > 0)
+    );
   }
 
   private refresh(): void {
@@ -515,10 +575,12 @@ export class PersonPickerComponent {
     const add = (k: string, v: string | number | null) => {
       if (v !== ALL && v !== null) p = p.set(k, String(v));
     };
-    add('teamType', this.teamType());
-    add('teamId', this.teamId());
-    add('role', this.role());
-    add('groupId', this.groupId());
+    if (this.source() === 'users') {
+      add('teamType', this.teamType());
+      add('teamId', this.teamId());
+      add('role', this.role());
+      add('groupId', this.groupId());
+    }
     return p;
   }
 

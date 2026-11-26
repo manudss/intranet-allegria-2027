@@ -13,18 +13,30 @@ import {
 } from '../../models/models';
 import {
   GroupsApiService,
-  ParticipantsApiService,
   TeamBenevolesApiService,
   TeamParticipantsApiService,
   TeamsApiService,
-  VolunteersApiService,
 } from '../../services/api.services';
+import { PersonPickerComponent, PersonSummary } from '../../shared/person-picker.component';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { DataTableColumn } from '../../shared/data-table';
 
 function volunteerName(v: Volunteer | null): string {
   return v ? `${v.lastName} ${v.firstName}` : '—';
 }
+const toPick = (v: Volunteer | null): PersonSummary | null =>
+  v
+    ? {
+        id: v.id,
+        email: v.email ?? '',
+        firstName: v.firstName,
+        lastName: v.lastName,
+        isActive: true,
+        roles: [],
+        teams: [],
+        teamTypes: [],
+      }
+    : null;
 const blank = (): TeamPayload => ({
   name: '',
   groupId: null,
@@ -36,7 +48,7 @@ const blank = (): TeamPayload => ({
 @Component({
   selector: 'app-teams',
   standalone: true,
-  imports: [...SHARED_IMPORTS],
+  imports: [...SHARED_IMPORTS, PersonPickerComponent],
   templateUrl: './teams.html',
   styleUrls: ['../../shared/crud.scss', './teams.scss'],
 })
@@ -100,14 +112,9 @@ export class TeamsPage implements OnInit {
   private membersApi = inject(TeamParticipantsApiService);
   private benevolesApi = inject(TeamBenevolesApiService);
   private groupsApi = inject(GroupsApiService);
-  private volunteersApi = inject(VolunteersApiService);
-  private participantsApi = inject(ParticipantsApiService);
   items = signal<Team[]>([]);
   groups = signal<Group[]>([]);
-  volunteers = signal<Volunteer[]>([]);
-  participants = signal<Participant[]>([]);
   groupIds = computed(() => this.groups().map(({ id }) => id));
-  volunteerIds = computed(() => this.volunteers().map(({ id }) => id));
   members = signal<Participant[]>([]);
   benevoles = signal<BenevoleAssignment[]>([]);
   /** Bénévoles déjà affectés à une équipe (toutes équipes) : exclus du sélecteur. */
@@ -115,10 +122,15 @@ export class TeamsPage implements OnInit {
   query = signal('');
   groupFilter = signal<number | null>(null);
   groupFilterForm = form(this.groupFilter);
-  candidateId = signal<number | null>(null);
-  candidateForm = form(this.candidateId);
-  benevoleCandidateId = signal<number | null>(null);
-  benevoleCandidateForm = form(this.benevoleCandidateId);
+  /** Personnes choisies dans les sélecteurs à recherche serveur (rien n'est chargé à l'ouverture). */
+  candidate = signal<PersonSummary | null>(null);
+  benevoleCandidate = signal<PersonSummary | null>(null);
+  primaryAnimator = signal<PersonSummary | null>(null);
+  secondaryAnimator = signal<PersonSummary | null>(null);
+  /** Les fiches BENEVOLE sont gérées dans le bloc dédié, jamais ici ; on masque les membres actuels. */
+  excludeParticipant = (p: PersonSummary) =>
+    p.type === 'BENEVOLE' || this.members().some((m) => m.id === p.id);
+  excludeBenevole = (p: PersonSummary) => this.assignedVolunteerIds().has(p.id);
   loading = signal(true);
   opened = signal(false);
   mode = signal<'detail' | 'create' | 'edit'>('detail');
@@ -136,43 +148,16 @@ export class TeamsPage implements OnInit {
         (!g || x.group?.id === g) && `${x.name} ${x.group?.name ?? ''}`.toLowerCase().includes(q),
     );
   });
-  availableParticipants = computed(() => {
-    const ids = new Set(this.members().map((x) => x.id));
-    // Les fiches BENEVOLE sont des projections gérées dans le bloc dédié, jamais ici.
-    return this.participants().filter((x) => !ids.has(x.id) && x.type !== 'BENEVOLE');
-  });
-  availableParticipantIds = computed(() => this.availableParticipants().map(({ id }) => id));
   jeunesCount = computed(() => this.members().filter((x) => x.type === 'JEUNE').length);
   adultesCount = computed(() => this.members().length - this.jeunesCount());
-  availableBenevoles = computed(() => {
-    const assigned = this.assignedVolunteerIds();
-    return this.volunteers().filter((x) => !assigned.has(x.id));
-  });
-  availableBenevoleIds = computed(() => this.availableBenevoles().map(({ id }) => id));
   stringifyGroup = (id: number) => this.groups().find((group) => group.id === id)?.name ?? '';
-  stringifyVolunteer = (id: number) => {
-    const volunteer = this.volunteers().find((item) => item.id === id);
-    return volunteer ? `${volunteer.lastName} ${volunteer.firstName}` : '';
-  };
-  stringifyParticipant = (id: number) => {
-    const participant = this.participants().find((item) => item.id === id);
-    return participant ? `${participant.lastName} ${participant.firstName}` : '';
-  };
-  stringifyBenevole = (id: number) => {
-    const volunteer = this.availableBenevoles().find((item) => item.id === id);
-    return volunteer ? `${volunteer.lastName} ${volunteer.firstName}` : '';
-  };
   ngOnInit() {
     forkJoin({
       items: this.api.list(),
       groups: this.groupsApi.list(),
-      volunteers: this.volunteersApi.list(),
-      participants: this.participantsApi.list(),
     }).subscribe((x) => {
       this.items.set(x.items);
       this.groups.set(x.groups);
-      this.volunteers.set(x.volunteers);
-      this.participants.set(x.participants);
       this.loading.set(false);
     });
   }
@@ -195,11 +180,15 @@ export class TeamsPage implements OnInit {
   }
   create() {
     this.model.set(blank());
+    this.primaryAnimator.set(null);
+    this.secondaryAnimator.set(null);
     this.mode.set('create');
     this.opened.set(true);
   }
   edit() {
     const x = this.requireSelectedTeam();
+    this.primaryAnimator.set(toPick(x.primaryAnimator));
+    this.secondaryAnimator.set(toPick(x.secondaryAnimator));
     this.model.set({
       name: x.name,
       groupId: x.group?.id ?? null,
@@ -235,13 +224,12 @@ export class TeamsPage implements OnInit {
     });
   }
   addMember() {
-    const id = this.candidateId();
+    const id = this.candidate()?.id;
     const team = this.selected();
     if (id && team)
       this.membersApi.add(team.id, id).subscribe(() => {
-        const p = this.participants().find((x) => x.id === id);
-        if (p) this.members.update((a) => [...a, p]);
-        this.candidateId.set(null);
+        this.candidate.set(null);
+        this.api.getParticipants(team.id).subscribe((v) => this.members.set(v));
       });
   }
   removeMember(id: number) {
@@ -252,12 +240,12 @@ export class TeamsPage implements OnInit {
         .subscribe(() => this.members.update((a) => a.filter((x) => x.id !== id)));
   }
   addBenevole() {
-    const id = this.benevoleCandidateId();
+    const id = this.benevoleCandidate()?.id;
     const team = this.selected();
     if (!id || !team) return;
     this.benevolesApi.assign(team.id, id).subscribe({
       next: () => {
-        this.benevoleCandidateId.set(null);
+        this.benevoleCandidate.set(null);
         this.refreshBenevoles(team.id);
         this.api.getParticipants(team.id).subscribe((v) => this.members.set(v));
       },
@@ -274,6 +262,14 @@ export class TeamsPage implements OnInit {
       },
       error: (e) => alert(e?.error?.message ?? 'Le retrait du bénévole a échoué.'),
     });
+  }
+  setAnimator(
+    key: 'primaryAnimatorId' | 'secondaryAnimatorId',
+    holder: { set(v: PersonSummary | null): void },
+    p: PersonSummary | null,
+  ) {
+    holder.set(p);
+    this.model.update((m) => ({ ...m, [key]: p?.id ?? null }));
   }
   private requireSelectedTeam(): Team {
     const team = this.selected();

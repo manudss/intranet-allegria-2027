@@ -23,6 +23,8 @@ describe('GET /users/search passe par les vraies gardes HTTP', () => {
             effective: async (_id: number, roles: string[]) => {
               // Cas matrice : droit personnalisé sans rôle littéral, droit révoqué malgré le rôle, portée partielle.
               if (roles.includes('CUSTOM'))
+                return { BADGES: { pairs: [{ level: 'EDIT', scope: 'ALL' }] } } as never;
+              if (roles.includes('READONLY'))
                 return { BADGES: { pairs: [{ level: 'VIEW', scope: 'ALL' }] } } as never;
               if (roles.includes('REVOKED')) return {} as never;
               if (roles.includes('PARTIAL'))
@@ -37,7 +39,15 @@ describe('GET /users/search passe par les vraies gardes HTTP', () => {
           provide: AuthService,
           useValue: {
             resolveToken: async (token: string) =>
-              ['ADMIN', 'BADGE_MANAGER', 'VIEWER', 'CUSTOM', 'REVOKED', 'PARTIAL'].includes(token)
+              [
+                'ADMIN',
+                'BADGE_MANAGER',
+                'VIEWER',
+                'CUSTOM',
+                'REVOKED',
+                'PARTIAL',
+                'READONLY',
+              ].includes(token)
                 ? { id: 1, email: 'fiction@example.test', roles: [token] }
                 : null,
           },
@@ -49,6 +59,7 @@ describe('GET /users/search passe par les vraies gardes HTTP', () => {
               calls.push(p);
               return { items: [], total: 0, hasMore: false };
             },
+            searchFilters: async () => ({ roles: [], teamTypes: [], teams: [], groups: [] }),
             findOne: () => ({ id: 1, passwordHash: 'hidden' }),
           },
         },
@@ -65,7 +76,7 @@ describe('GET /users/search passe par les vraies gardes HTTP', () => {
       expect(viewer.status).toBe(403);
       expect(calls).toHaveLength(0);
       // Droit révoqué dans la matrice (rôle conservé) et portée partielle : refusés.
-      for (const token of ['REVOKED', 'PARTIAL']) {
+      for (const token of ['REVOKED', 'PARTIAL', 'READONLY']) {
         const res = await fetch(`${url}/users/search?q=mar`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -80,6 +91,21 @@ describe('GET /users/search passe par les vraies gardes HTTP', () => {
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({ items: [], total: 0, hasMore: false });
       }
+      // Même autorité pour les listes de filtres.
+      for (const [token, status] of [
+        ['CUSTOM', 200],
+        ['ADMIN', 200],
+        ['REVOKED', 403],
+        ['READONLY', 403],
+        ['PARTIAL', 403],
+        ['VIEWER', 403],
+      ] as const) {
+        const res = await fetch(`${url}/users/search/filters`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        expect(res.status).toBe(status);
+      }
+      expect((await fetch(`${url}/users/search/filters`)).status).toBe(401);
       expect(calls[0]).toEqual({
         q: 'mar',
         role: 'ADMIN',

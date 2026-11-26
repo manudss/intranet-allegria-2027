@@ -59,6 +59,27 @@ export class UsersService {
    * bénévole liée au compte. Équipes et types : affectations en cours, équipes et types actifs
    * (même règle que les droits par type d'équipe).
    */
+  /** Listes de filtres du sélecteur : actifs seulement, noms et codes (aucune donnée de personne). */
+  async searchFilters(): Promise<{
+    roles: { code: string; label: string }[];
+    teamTypes: { code: string; label: string }[];
+    teams: { id: number; name: string }[];
+    groups: { id: number; name: string }[];
+  }> {
+    const q = <T>(sql: string): Promise<T[]> => this.usersRepository.query(sql);
+    const [roles, teamTypes, teams, groups] = await Promise.all([
+      q<{ code: string; label: string }>('SELECT code, label FROM roles ORDER BY label'),
+      q<{ code: string; label: string }>(
+        'SELECT code, label FROM volunteer_team_types WHERE "isActive" = true ORDER BY label',
+      ),
+      q<{ id: number; name: string }>(
+        'SELECT id, name FROM volunteer_teams WHERE "isActive" = true ORDER BY name',
+      ),
+      q<{ id: number; name: string }>('SELECT id, name FROM groups ORDER BY name'),
+    ]);
+    return { roles, teamTypes, teams, groups };
+  }
+
   async search(params: UserSearchParams): Promise<UserSearchResult> {
     const q = (params.q ?? '').trim();
     const hasFilter = Boolean(params.role || params.teamType || params.teamId || params.groupId);

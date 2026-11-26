@@ -2,7 +2,13 @@ import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthTokenGuard } from '../auth/auth-token.guard';
 import { RoleGuard } from '../auth/role.guard';
-import { AccessModule, AccessLevelRequired } from '../auth/access-module.decorator';
+import {
+  AccessModule,
+  AccessLevelRequired,
+  AccessScope,
+  AccessScopeInfo,
+  GroupScopeAware,
+} from '../auth/access-module.decorator';
 import { JeunesRepartitionService } from './jeunes-repartition.service';
 import {
   ApplyJeunesRepartitionDto,
@@ -27,9 +33,10 @@ export class JeunesRepartitionController {
       'Répartition jeunes : listes de valeurs des filtres (groupes, villes, diocèses, tranches)',
   })
   @AccessModule('GATHERING_TEAMS')
+  @GroupScopeAware()
   @Get('filters')
-  filters() {
-    return this.service.repartitionFilters();
+  filters(@AccessScope() scope: AccessScopeInfo) {
+    return this.service.repartitionFilters(scope);
   }
 
   @ApiOperation({
@@ -38,9 +45,13 @@ export class JeunesRepartitionController {
       'Confidentialité mineurs : le nom des jeunes n est jamais renvoyé.',
   })
   @AccessModule('GATHERING_TEAMS')
+  @GroupScopeAware()
   @Get('participants')
-  participants(@Query() query: RepartitionParticipantsQueryDto) {
-    return this.service.searchParticipants(query);
+  participants(
+    @Query() query: RepartitionParticipantsQueryDto,
+    @AccessScope() scope: AccessScopeInfo,
+  ) {
+    return this.service.searchParticipants(query, scope);
   }
 
   @ApiOperation({
@@ -48,9 +59,10 @@ export class JeunesRepartitionController {
       'Étape 2 : équipes de rassemblement avec remplissage (recherche, groupe, places libres)',
   })
   @AccessModule('GATHERING_TEAMS')
+  @GroupScopeAware()
   @Get('teams')
-  teams(@Query() query: RepartitionJeunesTeamsQueryDto) {
-    return this.service.searchTeams(query);
+  teams(@Query() query: RepartitionJeunesTeamsQueryDto, @AccessScope() scope: AccessScopeInfo) {
+    return this.service.searchTeams(query, scope);
   }
 
   @ApiOperation({
@@ -70,9 +82,10 @@ export class JeunesRepartitionController {
   })
   @AccessModule('GATHERING_TEAMS')
   @AccessLevelRequired('VIEW')
+  @GroupScopeAware()
   @Post('propose')
-  propose(@Body() dto: ProposeRepartitionDto) {
-    return this.service.propose(dto);
+  propose(@Body() dto: ProposeRepartitionDto, @AccessScope() scope: AccessScopeInfo) {
+    return this.service.propose(dto, scope);
   }
 
   @ApiOperation({
@@ -80,8 +93,9 @@ export class JeunesRepartitionController {
   })
   @AccessModule('GATHERING_TEAMS')
   @AccessLevelRequired('EDIT')
+  @GroupScopeAware()
   @Post('apply')
-  apply(@Body() dto: ApplyJeunesRepartitionDto) {
-    return this.service.apply(dto);
+  apply(@Body() dto: ApplyJeunesRepartitionDto, @AccessScope() scope: AccessScopeInfo) {
+    return this.service.apply(dto, scope);
   }
 }

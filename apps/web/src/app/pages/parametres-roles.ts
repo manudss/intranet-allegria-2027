@@ -69,6 +69,7 @@ const ACTION_LABELS: Record<string, string> = {
 export class ParametresRoles implements OnInit {
   private readonly http = inject(HttpClient);
 
+  protected readonly showGlobal = signal(false);
   protected readonly tab = signal<'matrix' | 'user' | 'logs'>('matrix');
   protected readonly catalog = signal<Catalog | null>(null);
   protected readonly rules = signal<Rule[]>([]);
@@ -120,6 +121,9 @@ export class ParametresRoles implements OnInit {
         this.loadRules();
       },
       error: () => this.fail('Chargement du catalogue impossible (droits administrateur requis).'),
+    });
+    this.http.get<Record<string, boolean>>('/api/access/options').subscribe({
+      next: (o) => this.showGlobal.set(o['GROUP_SCOPE_SHOW_GLOBAL_TOTALS'] === true),
     });
     this.http.get<UserRow[]>('/api/users').subscribe({ next: (u) => this.users.set(u) });
     this.http.get<GroupRow[]>('/api/groups').subscribe({ next: (g) => this.groups.set(g) });
@@ -212,6 +216,21 @@ export class ParametresRoles implements OnInit {
       },
       error: (e) => this.fail(e?.error?.message ?? 'Enregistrement refusé.'),
     });
+  }
+
+  protected toggleGlobal(enabled: boolean) {
+    this.http
+      .put<Record<string, boolean>>('/api/access/options', {
+        key: 'GROUP_SCOPE_SHOW_GLOBAL_TOTALS',
+        enabled,
+      })
+      .subscribe({
+        next: (o) => {
+          this.showGlobal.set(o['GROUP_SCOPE_SHOW_GLOBAL_TOTALS'] === true);
+          this.ok('Option enregistrée.');
+        },
+        error: (e) => this.fail(e?.error?.message ?? 'Enregistrement refusé.'),
+      });
   }
 
   protected resetMatrix() {

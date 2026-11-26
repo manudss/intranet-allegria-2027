@@ -743,6 +743,7 @@ async function run(): Promise<void> {
           "volunteer_team_types",
           "access_rules",
           "access_overrides",
+          "access_options",
           "user_group_scopes",
           "access_rule_logs",
           "user_roles",

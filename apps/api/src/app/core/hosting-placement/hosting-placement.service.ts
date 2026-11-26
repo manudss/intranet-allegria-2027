@@ -324,6 +324,8 @@ export class HostingPlacementService {
     const teamGroup = new Map(teams.map((t) => [t.id, t.hostingGroup?.id ?? null]));
     const familyGroup = new Map(families.map((f) => [f.id, f.hostingGroup?.id ?? null]));
 
+    const showGlobal =
+      scope.all || (await this.accessRights.getOption('GROUP_SCOPE_SHOW_GLOBAL_TOTALS'));
     const visible = await this.accessRights.participantIdsInScope(
       scope,
       memberships.map((m) => m.participant.id),
@@ -360,9 +362,20 @@ export class HostingPlacementService {
     const memberCount = new Map<number, number>();
     for (const m of allMembers) memberCount.set(m.teamId, (memberCount.get(m.teamId) ?? 0) + 1);
 
+    // Hors option « effectifs globaux » : seules les équipes des groupes du compte sont listées,
+    // les familles d'accueil (identité, adresse, capacité) et les groupes d'hébergement sont masqués.
+    const visibleTeams = showGlobal
+      ? teams
+      : teams.filter((t) => scope.all || scope.groupIds.includes(t.group?.id ?? -1));
+    const visibleFamilies = showGlobal ? families : [];
+    const usedHostingGroups = new Set(visibleTeams.map((t) => t.hostingGroup?.id));
+    const visibleHostingGroups = showGlobal
+      ? hostingGroups
+      : hostingGroups.filter((g) => usedHostingGroups.has(g.id));
+
     return {
-      hostingGroups: hostingGroups.map((g) => ({ id: g.id, name: g.name, notes: g.notes, kind: g.kind, color: g.color })),
-      teams: teams.map((t) => ({
+      hostingGroups: visibleHostingGroups.map((g) => ({ id: g.id, name: g.name, notes: g.notes, kind: g.kind, color: g.color })),
+      teams: visibleTeams.map((t) => ({
         id: t.id,
         name: t.name,
         groupName: t.group?.name ?? null,
@@ -370,7 +383,7 @@ export class HostingPlacementService {
         memberCount: memberCount.get(t.id) ?? 0,
       })),
       members,
-      families: families.map((f) => ({
+      families: visibleFamilies.map((f) => ({
         id: f.id,
         familyName: f.familyName,
         city: f.city,

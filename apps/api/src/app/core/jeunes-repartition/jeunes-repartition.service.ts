@@ -1,5 +1,6 @@
 import type { AccessScopeInfo } from '../auth/access-module.decorator';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { AccessRightsService } from '../access-rights/access-rights.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import {
@@ -59,6 +60,7 @@ export class JeunesRepartitionService {
     private readonly teamParticipantsRepository: Repository<TeamParticipant>,
     @InjectRepository(Group)
     private readonly groupsRepository: Repository<Group>,
+      private readonly accessRights?: AccessRightsService,
   ) {}
 
   // ── Étape 1 : participants ────────────────────────────────────────────────
@@ -168,11 +170,22 @@ export class JeunesRepartitionService {
 
   // ── Étape 2 : équipes ──────────────────────────────────────────────────────
 
-  async searchTeams(query: RepartitionJeunesTeamsQueryDto): Promise<RepartitionTeamRow[]> {
-    const teams = await this.teamsRepository.find({
-      relations: { group: true, members: { participant: true } },
-      order: { name: 'ASC' },
-    });
+  /**
+   * Compte limité à des groupes : seules les équipes de ses groupes sont listées, sauf si
+   * l'administrateur a activé l'option « effectifs globaux » (GROUP_SCOPE_SHOW_GLOBAL_TOTALS).
+   */
+  async searchTeams(
+    query: RepartitionJeunesTeamsQueryDto,
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<RepartitionTeamRow[]> {
+    const showGlobal =
+      scope.all || (this.accessRights ? await this.accessRights.getOption('GROUP_SCOPE_SHOW_GLOBAL_TOTALS') : false);
+    const teams = (
+      await this.teamsRepository.find({
+        relations: { group: true, members: { participant: true } },
+        order: { name: 'ASC' },
+      })
+    ).filter((t) => showGlobal || scope.groupIds.includes(t.group?.id ?? -1));
 
     const search = query.search?.trim().toLowerCase();
     const rows = teams.map((team): RepartitionTeamRow => {
@@ -227,10 +240,41 @@ export class JeunesRepartitionService {
 
   // ── Étape 3 : proposition automatique ─────────────────────────────────────
 
-  async propose(dto: ProposeRepartitionDto): Promise<ProposeRepartitionResult> {
+  /** Compte limité à des groupes : jeunes ET équipes visés doivent être dans ses groupes. */
+  private async assertInScope(scope: AccessScopeInfo, participantIds: number[], teamIds: number[]) {
+    if (scope.all) return;
+    if (!scope.groupIds.length) throw new ForbiddenException('Hors de votre portée.');
+    const ps = participantIds.length
+      ? await this.participantsRepository.find({
+          where: { id: In(participantIds) },
+          relations: { group: true },
+        })
+      : [];
+    if (
+      ps.length !== new Set(participantIds).size ||
+      ps.some((p) => !scope.groupIds.includes(p.group?.id ?? -1))
+    ) {
+      throw new ForbiddenException('Un participant est hors de votre portée.');
+    }
+    const ts = teamIds.length
+      ? await this.teamsRepository.find({ where: { id: In(teamIds) }, relations: { group: true } })
+      : [];
+    if (
+      ts.length !== new Set(teamIds).size ||
+      ts.some((t) => !scope.groupIds.includes(t.group?.id ?? -1))
+    ) {
+      throw new ForbiddenException('Une équipe est hors de votre portée.');
+    }
+  }
+
+  async propose(
+    dto: ProposeRepartitionDto,
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<ProposeRepartitionResult> {
     if (!dto.participantIds?.length)
       throw new BadRequestException('Aucun participant selectionne.');
     if (!dto.teamIds?.length) throw new BadRequestException('Aucune equipe selectionnee.');
+    await this.assertInScope(scope, dto.participantIds, dto.teamIds);
 
     const params = normalizeParams(dto.params);
     const granularity = dto.params?.geoGranularity ?? 'group';
@@ -291,13 +335,17 @@ export class JeunesRepartitionService {
 
   // ── Étape 3 : application ──────────────────────────────────────────────────
 
-  async apply(dto: ApplyJeunesRepartitionDto): Promise<ApplyJeunesRepartitionResult> {
+  async apply(
+    dto: ApplyJeunesRepartitionDto,
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<ApplyJeunesRepartitionResult> {
     if (!dto.assignments?.length) return { applied: 0 };
 
     const participantIds = [...new Set(dto.assignments.map((a) => a.participantId))];
     const teamIds = [
       ...new Set(dto.assignments.map((a) => a.teamId).filter((id): id is number => id !== null)),
     ];
+    await this.assertInScope(scope, participantIds, teamIds);
 
     return this.participantsRepository.manager.transaction(async (manager) => {
       const participants = await manager.find(Participant, {

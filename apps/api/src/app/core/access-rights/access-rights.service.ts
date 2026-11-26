@@ -399,6 +399,36 @@ export class AccessRightsService {
     );
   }
 
+  /** Interrupteurs d'administration. Inconnu ou absent = désactivé (refus par défaut). */
+  static readonly OPTION_KEYS = ['GROUP_SCOPE_SHOW_GLOBAL_TOTALS'] as const;
+
+  async getOption(key: string): Promise<boolean> {
+    const rows: { enabled: boolean }[] = await this.dataSource.query(
+      `SELECT enabled FROM access_options WHERE key = $1`,
+      [key],
+    );
+    return rows[0]?.enabled === true;
+  }
+
+  async listOptions(): Promise<Record<string, boolean>> {
+    const out: Record<string, boolean> = {};
+    for (const key of AccessRightsService.OPTION_KEYS) out[key] = await this.getOption(key);
+    return out;
+  }
+
+  async setOption(key: string, enabled: boolean, actor: Actor) {
+    if (!(AccessRightsService.OPTION_KEYS as readonly string[]).includes(key)) {
+      throw new BadRequestException('Option inconnue');
+    }
+    await this.dataSource.query(
+      `INSERT INTO access_options (key, enabled, "updatedAt") VALUES ($1, $2, now())
+       ON CONFLICT (key) DO UPDATE SET enabled = EXCLUDED.enabled, "updatedAt" = now()`,
+      [key, enabled === true],
+    );
+    await this.log(actor, 'OPTION_UPDATED', { key, enabled: enabled === true });
+    return this.listOptions();
+  }
+
   private async log(actor: Actor, action: string, detail: unknown) {
     await this.dataSource.query(
       `INSERT INTO access_rule_logs (actor_user_id, actor_email, action, detail) VALUES ($1, $2, $3, $4)`,

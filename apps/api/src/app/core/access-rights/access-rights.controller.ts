@@ -73,6 +73,20 @@ export class AccessRightsController {
     return this.service.saveRules(body?.rules, req.user);
   }
 
+  @ApiOperation({ summary: "Options d'administration des droits (oui/non, journalisées)" })
+  @Roles('ADMIN')
+  @Get('options')
+  options() {
+    return this.service.listOptions();
+  }
+
+  @ApiOperation({ summary: 'Activer ou désactiver une option (ADMIN, journalisé)' })
+  @Roles('ADMIN')
+  @Put('options')
+  setOption(@Body() body: { key: string; enabled: boolean }, @Req() req: Req_) {
+    return this.service.setOption(body?.key, body?.enabled === true, req.user);
+  }
+
   @ApiOperation({ summary: 'Voir comme : droits effectifs d’une personne' })
   @Roles('ADMIN')
   @Get('users/:id/effective')

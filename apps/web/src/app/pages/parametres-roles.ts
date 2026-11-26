@@ -1,6 +1,7 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
+import { PersonPickerComponent, PersonSummary } from '../shared/person-picker.component';
 
 type Opt = { code: string; label: string };
 type Catalog = {
@@ -49,7 +50,6 @@ type LogRow = {
   createdAt: string;
 };
 type Cell = { level: string; scope: string };
-type UserRow = { id: number; email: string; firstName?: string; lastName?: string };
 type GroupRow = { id: number; name: string };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -62,7 +62,7 @@ const ACTION_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-parametres-roles',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, PersonPickerComponent],
   templateUrl: './parametres-roles.html',
   styleUrl: './parametres-roles.scss',
 })
@@ -82,7 +82,7 @@ export class ParametresRoles implements OnInit {
   protected readonly dirty = signal(false);
 
   // Voir comme
-  protected readonly users = signal<UserRow[]>([]);
+  protected readonly picked = signal<PersonSummary | null>(null);
   protected readonly groups = signal<GroupRow[]>([]);
   protected readonly userId = signal<number | null>(null);
   protected readonly described = signal<Described | null>(null);
@@ -127,7 +127,6 @@ export class ParametresRoles implements OnInit {
         this.showGlobal.set(o['GROUP_SCOPE_SHOW_OTHER_TEAMS'] === true);
       },
     });
-    this.http.get<UserRow[]>('/api/users').subscribe({ next: (u) => this.users.set(u) });
     this.http.get<GroupRow[]>('/api/groups').subscribe({ next: (g) => this.groups.set(g) });
   }
 
@@ -152,10 +151,6 @@ export class ParametresRoles implements OnInit {
   }
   protected detailText(d: unknown): string {
     return typeof d === 'string' ? d : JSON.stringify(d);
-  }
-  protected userLabel(u: UserRow): string {
-    const name = [u.firstName, u.lastName].filter(Boolean).join(' ');
-    return name ? `${name} (${u.email})` : u.email;
   }
   protected groupName(id: number): string {
     return this.groups().find((g) => g.id === id)?.name ?? `#${id}`;
@@ -220,10 +215,7 @@ export class ParametresRoles implements OnInit {
     });
   }
 
-  protected toggleOption(
-    key: 'GROUP_SCOPE_SHOW_OTHER_TEAMS',
-    enabled: boolean,
-  ) {
+  protected toggleOption(key: 'GROUP_SCOPE_SHOW_OTHER_TEAMS', enabled: boolean) {
     this.http.put<Record<string, boolean>>('/api/access/options', { key, enabled }).subscribe({
       next: (o) => {
         this.showGlobal.set(o['GROUP_SCOPE_SHOW_OTHER_TEAMS'] === true);
@@ -238,6 +230,11 @@ export class ParametresRoles implements OnInit {
   }
 
   // ---- Voir comme ----
+  protected onPick(person: PersonSummary | null) {
+    this.picked.set(person);
+    this.pickUser(person ? String(person.id) : '');
+  }
+
   protected pickUser(value: string) {
     const id = value ? Number(value) : null;
     this.userId.set(id);

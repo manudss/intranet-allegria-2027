@@ -1,12 +1,12 @@
-import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { PersonPickerComponent, PersonSummary } from '../../shared/person-picker.component';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { AccessControlApiService, ScannerGrant, ZoneItem } from './access-control-api.service';
 
 @Component({
   selector: 'app-scanner-grants',
   standalone: true,
-  imports: [...SHARED_IMPORTS],
+  imports: [...SHARED_IMPORTS, PersonPickerComponent],
   template: `
     <main class="page">
       <header class="head"><h1>Habilitations scan</h1></header>
@@ -14,7 +14,7 @@ import { AccessControlApiService, ScannerGrant, ZoneItem } from './access-contro
         <h2>Nouvelle habilitation</h2>
         <p class="hint">Donne le droit de scanner à un utilisateur, pour une zone précise ou toutes les zones, avec une fin de validité.</p>
         <div class="grid">
-          <select [(ngModel)]="userId"><option [ngValue]="null">Choisir un utilisateur</option>@for (u of users(); track u.id) { <option [ngValue]="u.id">{{ u.email }}</option> }</select>
+          <app-person-picker label="Utilisateur" testId="scanner-person-picker" [value]="picked" (valueChange)="onPick($event)" />
           <select [(ngModel)]="zoneId">
             <option [ngValue]="null">Toutes les zones</option>
             @for (z of zones(); track z.id) { <option [ngValue]="z.id">{{ z.name }}</option> }
@@ -69,22 +69,25 @@ import { AccessControlApiService, ScannerGrant, ZoneItem } from './access-contro
 export class ScannerGrantsPage implements OnInit {
   private readonly api = inject(AccessControlApiService);
 
-  private readonly http = inject(HttpClient);
-  readonly users = signal<{id:number; firstName:string; lastName:string; email:string}[]>([]);
   readonly items = signal<ScannerGrant[]>([]);
   readonly zones = signal<ZoneItem[]>([]);
   readonly loading = signal(true);
   readonly msg = signal<string | null>(null);
 
   userId: number | null = null;
+  picked: PersonSummary | null = null;
   zoneId: number | null = null;
   startsAt = '';
   endsAt = '';
 
   ngOnInit(): void {
     this.reload();
-    this.http.get<{id:number; firstName:string; lastName:string; email:string}[]>('/api/users').subscribe({next: u => this.users.set(u), error: () => this.msg.set('Chargement utilisateurs impossible.')});
     this.api.listZones().subscribe({ next: (z) => this.zones.set(z), error: () => undefined });
+  }
+
+  onPick(person: PersonSummary | null): void {
+    this.picked = person;
+    this.userId = person?.id ?? null;
   }
 
   isActive(g: ScannerGrant): boolean {
@@ -116,6 +119,7 @@ export class ScannerGrantsPage implements OnInit {
         next: () => {
           this.msg.set('Habilitation créée.');
           this.userId = null;
+          this.picked = null;
           this.reload();
         },
         error: (err) => this.msg.set(err?.error?.message ?? 'Échec de création.'),

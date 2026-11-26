@@ -139,19 +139,12 @@
   </p>
   } @if (tab() === 'user') {
   <div class="bar">
-    <label>
-      Personne
-      <select
-        [value]="userId() ?? ''"
-        (change)="pickUser($any($event.target).value)"
-        aria-label="Personne"
-      >
-        <option value="">Choisir…</option>
-        @for (u of users(); track u.id) {
-        <option [value]="u.id">{{ userLabel(u) }}</option>
-        }
-      </select>
-    </label>
+    <app-person-picker
+      label="Personne"
+      testId="person-picker"
+      [value]="picked()"
+      (valueChange)="onPick($event)"
+    />
   </div>
 
   @if (described(); as d) {

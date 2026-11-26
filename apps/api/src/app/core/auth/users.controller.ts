@@ -3,11 +3,13 @@ import { RoleGuard } from './role.guard';
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Param,
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -15,12 +17,37 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthTokenGuard } from './auth-token.guard';
 import { CreateUserDto, UpdateUserDto } from './auth.types';
 import { UsersService } from './users.service';
+import { LEVEL_RANK } from '../access-rights/access-modules';
+import { AccessRightsService } from '../access-rights/access-rights.service';
+
+/** Modules dont la matrice de droits ouvre la recherche de comptes : écrans qui l'utilisent. */
+const SEARCH_MODULES = ['ADMIN', 'BADGES'];
 
 @ApiTags('Users')
 @UseGuards(RoleGuard)
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly accessRights: AccessRightsService,
+  ) {}
+
+  /**
+   * Autorité = matrice de droits (droits effectifs : rôles, types d'équipe, dérogations).
+   * Module ADMIN ou BADGES, niveau EDIT minimum, portée « tout » (la recherche porte sur tous les
+   * comptes). Un droit retiré dans la matrice retire la recherche, même avec un ancien rôle ;
+   * un simple droit de lecture (VIEW) ne suffit pas à lister tous les comptes.
+   */
+  private async assertSearchAuthority(user?: { id: number; roles: string[] }): Promise<void> {
+    if (!user) throw new ForbiddenException('Utilisateur non authentifie');
+    const grants = await this.accessRights.effective(user.id, user.roles);
+    const allowed = SEARCH_MODULES.some((m) =>
+      (grants[m]?.pairs ?? []).some(
+        (p) => p.scope === 'ALL' && LEVEL_RANK[p.level] >= LEVEL_RANK.EDIT,
+      ),
+    );
+    if (!allowed) throw new ForbiddenException('Droits insuffisants pour rechercher des comptes');
+  }
 
   private withoutPasswordHash<T extends { passwordHash?: string }>(
     user: T,
@@ -51,6 +78,44 @@ export class UsersController {
   async findAll() {
     const users = await this.usersService.findAll();
     return users.map((user) => this.withoutPasswordHash(user));
+  }
+
+  @ApiOperation({
+    summary: 'Rechercher des utilisateurs (selecteur de personne, resultats limites)',
+  })
+  @ApiBearerAuth('bearer')
+  @Get('search')
+  async search(
+    @Req() request: { user?: { id: number; roles: string[] } },
+    @Query('q') q?: string,
+    @Query('role') role?: string,
+    @Query('teamType') teamType?: string,
+    @Query('teamId') teamId?: string,
+    @Query('groupId') groupId?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    await this.assertSearchAuthority(request.user);
+    const int = (v?: string) => (v && /^\d+$/.test(v) ? Number(v) : undefined);
+    return this.usersService.search({
+      q: q?.slice(0, 80),
+      role: role?.slice(0, 80),
+      teamType: teamType?.slice(0, 80),
+      teamId: int(teamId),
+      groupId: int(groupId),
+      limit: int(limit),
+      offset: int(offset),
+    });
+  }
+
+  @ApiOperation({
+    summary: 'Listes de filtres du selecteur de personne (meme autorite que la recherche)',
+  })
+  @ApiBearerAuth('bearer')
+  @Get('search/filters')
+  async searchFilters(@Req() request: { user?: { id: number; roles: string[] } }) {
+    await this.assertSearchAuthority(request.user);
+    return this.usersService.searchFilters();
   }
 
   @ApiOperation({ summary: 'Recuperer un utilisateur par id' })

@@ -213,7 +213,20 @@ export class JeunesRepartitionService {
     });
   }
 
-  async bulkCreateTeams(dto: BulkCreateTeamsDto): Promise<BulkCreateTeamsResult> {
+  async bulkCreateTeams(
+    dto: BulkCreateTeamsDto,
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<BulkCreateTeamsResult> {
+    // Compte limité à des groupes : les équipes créées sont rattachées à un de ses groupes.
+    // Sans groupe, une équipe sortirait de toute portée de groupe.
+    const groupId =
+      dto.groupId === undefined || dto.groupId === null ? null : Math.floor(Number(dto.groupId));
+    if (!scope.all && (groupId === null || !scope.groupIds.includes(groupId))) {
+      throw new ForbiddenException('Précisez un de vos groupes pour créer des équipes.');
+    }
+    if (groupId !== null && !Number.isInteger(groupId)) {
+      throw new BadRequestException('Groupe invalide.');
+    }
     const count = Math.floor(Number(dto.count));
     if (!Number.isFinite(count) || count < 1 || count > 100) {
       throw new BadRequestException('Le nombre d equipes doit etre compris entre 1 et 100.');
@@ -231,7 +244,11 @@ export class JeunesRepartitionService {
     const created: { id: number; name: string; maxSize: number }[] = [];
     for (let i = 0; i < count; i += 1) {
       const team = await this.teamsRepository.save(
-        this.teamsRepository.create({ name: `${baseName} ${nextIndex + i}`, maxSize }),
+        this.teamsRepository.create({
+          name: `${baseName} ${nextIndex + i}`,
+          maxSize,
+          ...(groupId !== null ? { group: { id: groupId } as Team['group'] } : {}),
+        }),
       );
       created.push({ id: team.id, name: team.name, maxSize: team.maxSize });
     }

@@ -184,9 +184,10 @@ export class AccessRightsService {
         `SELECT DISTINCT m2.volunteer_id
            FROM volunteer_team_memberships m1
            JOIN volunteer_teams vt ON vt.id = m1.volunteer_team_id AND vt."isActive" = true
-           JOIN volunteer_team_types t ON t.id = vt.type_id AND t."isActive" = true
+           LEFT JOIN volunteer_team_types t ON t.id = vt.type_id
            JOIN volunteer_team_memberships m2 ON m2.volunteer_team_id = m1.volunteer_team_id
           WHERE m1.volunteer_id = ANY($1::int[])
+            AND (t.id IS NULL OR t."isActive" = true)
             AND (m1."startAt" IS NULL OR m1."startAt" <= CURRENT_DATE)
             AND (m1."endAt" IS NULL OR m1."endAt" >= CURRENT_DATE)
             AND (m2."startAt" IS NULL OR m2."startAt" <= CURRENT_DATE)
@@ -196,6 +197,31 @@ export class AccessRightsService {
       for (const r of mates) ids.add(r.volunteer_id);
     }
     return [...ids].sort((a, b) => a - b);
+  }
+
+  /**
+   * Fiches bénévoles du compte et équipes opérationnelles où il est membre aujourd'hui
+   * (équipe et type actifs, affectation en cours, fin incluse : mêmes bornes que les droits par type d'équipe).
+   */
+  async ownTeamContext(userId: number): Promise<{ volunteerIds: number[]; teamIds: number[] }> {
+    const own: { id: number }[] = await this.dataSource.query(
+      `SELECT id FROM volunteers WHERE user_id = $1`,
+      [userId],
+    );
+    const volunteerIds = own.map((r) => r.id);
+    if (!volunteerIds.length) return { volunteerIds, teamIds: [] };
+    const rows: { id: number }[] = await this.dataSource.query(
+      `SELECT DISTINCT vt.id
+         FROM volunteer_team_memberships m
+         JOIN volunteer_teams vt ON vt.id = m.volunteer_team_id AND vt."isActive" = true
+         LEFT JOIN volunteer_team_types t ON t.id = vt.type_id
+        WHERE m.volunteer_id = ANY($1::int[])
+          AND (t.id IS NULL OR t."isActive" = true)
+          AND (m."startAt" IS NULL OR m."startAt" <= CURRENT_DATE)
+          AND (m."endAt" IS NULL OR m."endAt" >= CURRENT_DATE)`,
+      [volunteerIds],
+    );
+    return { volunteerIds, teamIds: rows.map((r) => r.id).sort((a, b) => a - b) };
   }
 
   async groupIdsForUser(userId: number): Promise<number[]> {

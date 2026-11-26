@@ -40,6 +40,7 @@ function run(opts: {
     effective: async () => Object.fromEntries(opts.grants.map((g) => [g.module, g])),
     groupIdsForUser: async () => opts.groupIds ?? [],
     volunteerIdsForScopes: async () => opts.volunteerIds ?? [],
+    ownTeamContext: async () => ({ volunteerIds: opts.volunteerIds ?? [], teamIds: [] }),
   } as unknown as AccessRightsService;
   const request: Record<string, unknown> = {
     method: opts.method,

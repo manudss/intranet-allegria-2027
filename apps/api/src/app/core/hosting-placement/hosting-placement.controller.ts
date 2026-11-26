@@ -128,17 +128,22 @@ export class HostingPlacementController {
   })
   @AccessModule('HOUSING')
   @AccessLevelRequired('EDIT')
+  @GroupScopeAware()
   @Post('placements')
-  place(@Body() dto: PlaceParticipantDto) {
-    return this.service.place(dto);
+  place(@Body() dto: PlaceParticipantDto, @AccessScope() scope: AccessScopeInfo) {
+    return this.service.place(dto, scope);
   }
 
   @ApiOperation({ summary: "Retirer un participant de sa famille d'accueil" })
   @AccessModule('HOUSING')
   @AccessLevelRequired('EDIT')
+  @GroupScopeAware()
   @Delete('placements/:participantId')
-  unplace(@Param('participantId', ParseIntPipe) participantId: number) {
-    return this.service.unplace(participantId);
+  unplace(
+    @Param('participantId', ParseIntPipe) participantId: number,
+    @AccessScope() scope: AccessScopeInfo,
+  ) {
+    return this.service.unplace(participantId, scope);
   }
 
   @ApiOperation({
@@ -146,8 +151,13 @@ export class HostingPlacementController {
   })
   @AccessModule('HOUSING')
   @AccessLevelRequired('EDIT')
+  @GroupScopeAware()
   @Post('groups/:id/auto-place')
-  autoPlace(@Param('id', ParseIntPipe) id: number, @Body() dto: AutoPlaceDto) {
-    return this.service.autoPlace(id, dto);
+  autoPlace(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AutoPlaceDto,
+    @AccessScope() scope: AccessScopeInfo,
+  ) {
+    return this.service.autoPlace(id, dto, scope);
   }
 }

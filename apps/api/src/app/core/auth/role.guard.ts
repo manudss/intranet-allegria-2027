@@ -116,6 +116,9 @@ export class RoleGuard implements CanActivate {
         user.id,
         own.map((p) => p.scope as 'OWN_TEAM' | 'SELF'),
       );
+      const ctxOwn = await this.accessRights.ownTeamContext(user.id);
+      request.ownVolunteerIds = ctxOwn.volunteerIds;
+      request.ownTeamIds = ctxOwn.teamIds;
       request.accessScope = { all: false, groupIds: [] };
       return true;
     }

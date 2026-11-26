@@ -70,9 +70,10 @@ export class JeunesRepartitionController {
   })
   @AccessModule('GATHERING_TEAMS')
   @AccessLevelRequired('EDIT')
+  @GroupScopeAware()
   @Post('teams/bulk-create')
-  bulkCreateTeams(@Body() dto: BulkCreateTeamsDto) {
-    return this.service.bulkCreateTeams(dto);
+  bulkCreateTeams(@Body() dto: BulkCreateTeamsDto, @AccessScope() scope: AccessScopeInfo) {
+    return this.service.bulkCreateTeams(dto, scope);
   }
 
   @ApiOperation({

@@ -97,6 +97,12 @@ export class BulkCreateTeamsDto {
 
   @ApiPropertyOptional({ example: 12, minimum: 1, default: 12 })
   maxSize?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Groupe des équipes créées. Obligatoire et limité à vos groupes pour un compte à portée « groupes ».',
+  })
+  groupId?: number;
 }
 
 export interface BulkCreateTeamsResult {

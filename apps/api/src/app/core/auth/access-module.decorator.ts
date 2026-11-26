@@ -45,3 +45,21 @@ export const VolunteerScope = createParamDecorator(
     return request.volunteerScopeIds ?? [];
   },
 );
+
+/** Fiches bénévoles du compte (null = portée « tout »). Utile aux routes marquées VolunteerScopeAware. */
+export const OwnVolunteerIds = createParamDecorator(
+  (_: unknown, ctx: ExecutionContext): number[] | null => {
+    const request = ctx.switchToHttp().getRequest();
+    if (request.accessScope?.all === true) return null;
+    return request.ownVolunteerIds ?? [];
+  },
+);
+
+/** Équipes opérationnelles actives du compte aujourd'hui (null = portée « tout »). */
+export const OwnTeamIds = createParamDecorator(
+  (_: unknown, ctx: ExecutionContext): number[] | null => {
+    const request = ctx.switchToHttp().getRequest();
+    if (request.accessScope?.all === true) return null;
+    return request.ownTeamIds ?? [];
+  },
+);

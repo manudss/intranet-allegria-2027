@@ -12,7 +12,13 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthTokenGuard } from '../auth/auth-token.guard';
 import { RoleGuard } from '../auth/role.guard';
-import { AccessModule, AccessLevelRequired } from '../auth/access-module.decorator';
+import {
+  AccessModule,
+  AccessLevelRequired,
+  OwnTeamIds,
+  OwnVolunteerIds,
+  VolunteerScopeAware,
+} from '../auth/access-module.decorator';
 import {
   CreateVolunteerTeamDto,
   CreateVolunteerTeamMembershipDto,
@@ -72,16 +78,18 @@ export class VolunteerTeamsController {
 
   @ApiOperation({ summary: 'Lister les equipes operationnelles' })
   @AccessModule('OPERATIONAL_TEAMS')
+  @VolunteerScopeAware()
   @Get('volunteer-teams')
-  findAllTeams() {
-    return this.volunteerTeamsService.findAllTeams();
+  findAllTeams(@OwnTeamIds() teamIds: number[] | null) {
+    return this.volunteerTeamsService.findAllTeams(teamIds);
   }
 
   @ApiOperation({ summary: 'Recuperer une equipe operationnelle par id' })
   @AccessModule('OPERATIONAL_TEAMS')
+  @VolunteerScopeAware()
   @Get('volunteer-teams/:id')
-  findTeam(@Param('id', ParseIntPipe) id: number) {
-    return this.volunteerTeamsService.findTeam(id);
+  findTeam(@Param('id', ParseIntPipe) id: number, @OwnTeamIds() teamIds: number[] | null) {
+    return this.volunteerTeamsService.findVisibleTeam(id, teamIds);
   }
 
   @ApiOperation({ summary: 'Mettre a jour une equipe operationnelle' })
@@ -103,9 +111,13 @@ export class VolunteerTeamsController {
 
   @ApiOperation({ summary: 'Lister les rattachements d un benevole' })
   @AccessModule('OPERATIONAL_TEAMS')
+  @VolunteerScopeAware()
   @Get('volunteers/:volunteerId/team-memberships')
-  listVolunteerMemberships(@Param('volunteerId', ParseIntPipe) volunteerId: number) {
-    return this.volunteerTeamsService.listVolunteerMemberships(volunteerId);
+  listVolunteerMemberships(
+    @Param('volunteerId', ParseIntPipe) volunteerId: number,
+    @OwnVolunteerIds() ownVolunteerIds: number[] | null,
+  ) {
+    return this.volunteerTeamsService.listVolunteerMemberships(volunteerId, ownVolunteerIds);
   }
 
   @ApiOperation({ summary: 'Creer un rattachement d un benevole a une equipe operationnelle' })

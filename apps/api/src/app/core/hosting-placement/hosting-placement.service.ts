@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -456,7 +457,7 @@ export class HostingPlacementService {
     };
   }
 
-  async place(dto: PlaceParticipantDto) {
+  async place(dto: PlaceParticipantDto, scope: AccessScopeInfo = { all: true }) {
     return this.teams.manager.transaction(async (manager) => {
       const participant = await manager.getRepository(Participant).findOne({
         where: { id: dto.participantId },
@@ -482,10 +483,20 @@ export class HostingPlacementService {
 
       const memberships = await manager.getRepository(TeamParticipant).find({
         where: { participant: { id: participant.id } },
-        relations: { team: { hostingGroup: true } },
+        relations: { team: { hostingGroup: true, group: true } },
       });
       const team = memberships.find((m) => m.team.hostingGroup)?.team ?? memberships[0]?.team;
       if (!team) throw new ConflictException("Ce participant n'est dans aucune équipe de rassemblement");
+      // Compte limité à des groupes : le jeune ET son équipe doivent être dans la portée.
+      if (!scope.all) {
+        const groupIds = scope.groupIds ?? [];
+        if (
+          !groupIds.includes(participant.group?.id ?? -1) ||
+          !groupIds.includes(team.group?.id ?? -1)
+        ) {
+          throw new ForbiddenException('Ce participant ou son équipe est hors de votre portée.');
+        }
+      }
       if (!team.hostingGroup) {
         throw new ConflictException(`L'équipe ${team.name} n'a pas de groupe d'hébergement`);
       }
@@ -561,7 +572,11 @@ export class HostingPlacementService {
     });
   }
 
-  async unplace(participantId: number): Promise<{ removed: number }> {
+  async unplace(
+    participantId: number,
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<{ removed: number }> {
+    await this.accessRights.assertParticipantInScope(scope, participantId);
     const rows = await this.assignments.find({
       where: { participant: { id: participantId } },
     });
@@ -572,7 +587,11 @@ export class HostingPlacementService {
   }
 
   /** Aperçu (apply=false) ou enregistrement (apply=true) du placement automatique d'un groupe. */
-  async autoPlace(hostingGroupId: number, dto: AutoPlaceDto): Promise<AutoPlaceResponse> {
+  async autoPlace(
+    hostingGroupId: number,
+    dto: AutoPlaceDto,
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<AutoPlaceResponse> {
     assertStay(dto.arrivalDate, dto.departureDate);
     if (
       dto.apply &&
@@ -589,9 +608,19 @@ export class HostingPlacementService {
     return this.teams.manager.transaction(async (manager) => {
       const teams = await manager.getRepository(Team).find({
         where: { hostingGroup: { id: hostingGroupId } },
+        relations: { group: true },
       });
-      const teamIds = teams.map((t) => t.id).filter((id) => !dto.teamIds || dto.teamIds.includes(id));
+      const selectedTeams = teams.filter((t) => !dto.teamIds || dto.teamIds.includes(t.id));
+      const teamIds = selectedTeams.map((t) => t.id);
       if (teamIds.length === 0) return { applied: false, proposals: [], unplaced: [] };
+      // Compte limité à des groupes : toutes les équipes visées doivent être dans la portée
+      // (restreindre avec teamIds sinon). Les jeunes sont contrôlés plus bas.
+      if (!scope.all) {
+        const groupIds = scope.groupIds ?? [];
+        if (selectedTeams.some((t) => !groupIds.includes(t.group?.id ?? -1))) {
+          throw new ForbiddenException('Une équipe de ce groupe est hors de votre portée.');
+        }
+      }
 
       const familiesQb = manager
         .getRepository(HostFamily)
@@ -631,6 +660,15 @@ export class HostingPlacementService {
             : false,
           sex: m.participant.sex ?? '',
         });
+      }
+
+      if (!scope.all) {
+        const groupIds = scope.groupIds ?? [];
+        for (const person of participants.values()) {
+          if (!groupIds.includes(person.group?.id ?? -1)) {
+            throw new ForbiddenException('Un participant est hors de votre portée.');
+          }
+        }
       }
 
       const planFamilies: PlacementFamily[] = [];

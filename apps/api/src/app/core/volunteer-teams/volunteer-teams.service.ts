@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Volunteer, VolunteerTeam, VolunteerTeamMembership, VolunteerTeamType } from '../entities';
 import {
   CreateVolunteerTeamDto,
@@ -44,11 +44,22 @@ export class VolunteerTeamsService {
     return this.findTeam(saved.id);
   }
 
-  findAllTeams(): Promise<VolunteerTeam[]> {
+  /** teamIds : équipes visibles pour un compte à portée « son équipe » / « soi » (null = toutes). */
+  findAllTeams(teamIds: number[] | null = null): Promise<VolunteerTeam[]> {
+    if (teamIds !== null && teamIds.length === 0) return Promise.resolve([]);
     return this.volunteerTeamsRepository.find({
+      ...(teamIds !== null ? { where: { id: In(teamIds) } } : {}),
       relations: { type: true },
       order: { isActive: 'DESC', name: 'ASC', code: 'ASC' },
     });
+  }
+
+  /** Lecture d'une équipe : 404 si hors des équipes du compte (rien n'est révélé). */
+  async findVisibleTeam(id: number, teamIds: number[] | null): Promise<VolunteerTeam> {
+    if (teamIds !== null && !teamIds.includes(id)) {
+      throw new NotFoundException(`Equipe operationnelle ${id} introuvable`);
+    }
+    return this.findTeam(id);
   }
 
   async findTeam(id: number): Promise<VolunteerTeam> {
@@ -204,7 +215,14 @@ export class VolunteerTeamsService {
     return teammates.filter((teammate) => teammate.volunteerId !== volunteerId);
   }
 
-  async listVolunteerMemberships(volunteerId: number): Promise<VolunteerTeamMembership[]> {
+  async listVolunteerMemberships(
+    volunteerId: number,
+    ownVolunteerIds: number[] | null = null,
+  ): Promise<VolunteerTeamMembership[]> {
+    // Compte à portée « son équipe » / « soi » : seulement ses propres rattachements.
+    if (ownVolunteerIds !== null && !ownVolunteerIds.includes(volunteerId)) {
+      throw new NotFoundException(`Bénévole ${volunteerId} introuvable`);
+    }
     await this.findVolunteer(volunteerId);
 
     return this.membershipsRepository.find({

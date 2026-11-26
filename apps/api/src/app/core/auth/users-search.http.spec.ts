@@ -11,7 +11,7 @@ import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 
 describe('GET /users/search passe par les vraies gardes HTTP', () => {
-  it('réserve la recherche à ADMIN et BADGE_MANAGER et transmet des paramètres bornés', async () => {
+  it('suit la matrice de droits (ADMIN ou BADGES, portée tout) : custom accepté, révoqué refusé et transmet des paramètres bornés', async () => {
     const calls: unknown[] = [];
     const module = await Test.createTestingModule({
       controllers: [UsersController],
@@ -20,7 +20,15 @@ describe('GET /users/search passe par les vraies gardes HTTP', () => {
         {
           provide: AccessRightsService,
           useValue: {
-            effective: async (_id: number, roles: string[]) => defaultEffectiveForRoles(roles),
+            effective: async (_id: number, roles: string[]) => {
+              // Cas matrice : droit personnalisé sans rôle littéral, droit révoqué malgré le rôle, portée partielle.
+              if (roles.includes('CUSTOM'))
+                return { BADGES: { pairs: [{ level: 'VIEW', scope: 'ALL' }] } } as never;
+              if (roles.includes('REVOKED')) return {} as never;
+              if (roles.includes('PARTIAL'))
+                return { BADGES: { pairs: [{ level: 'VIEW', scope: 'GROUPS' }] } } as never;
+              return defaultEffectiveForRoles(roles);
+            },
           },
         },
         AuthTokenGuard,
@@ -29,7 +37,7 @@ describe('GET /users/search passe par les vraies gardes HTTP', () => {
           provide: AuthService,
           useValue: {
             resolveToken: async (token: string) =>
-              ['ADMIN', 'BADGE_MANAGER', 'VIEWER'].includes(token)
+              ['ADMIN', 'BADGE_MANAGER', 'VIEWER', 'CUSTOM', 'REVOKED', 'PARTIAL'].includes(token)
                 ? { id: 1, email: 'fiction@example.test', roles: [token] }
                 : null,
           },
@@ -56,7 +64,15 @@ describe('GET /users/search passe par les vraies gardes HTTP', () => {
       });
       expect(viewer.status).toBe(403);
       expect(calls).toHaveLength(0);
-      for (const token of ['ADMIN', 'BADGE_MANAGER']) {
+      // Droit révoqué dans la matrice (rôle conservé) et portée partielle : refusés.
+      for (const token of ['REVOKED', 'PARTIAL']) {
+        const res = await fetch(`${url}/users/search?q=mar`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        expect(res.status).toBe(403);
+      }
+      expect(calls).toHaveLength(0);
+      for (const token of ['ADMIN', 'BADGE_MANAGER', 'CUSTOM']) {
         const res = await fetch(
           `${url}/users/search?q=mar&role=ADMIN&teamId=12&groupId=x&limit=5&offset=10`,
           { headers: { Authorization: `Bearer ${token}` } },

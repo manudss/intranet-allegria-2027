@@ -3,6 +3,7 @@ import { RoleGuard } from './role.guard';
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Param,
   ParseIntPipe,
@@ -13,16 +14,22 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Roles } from './roles.decorator';
 import { AuthTokenGuard } from './auth-token.guard';
 import { CreateUserDto, UpdateUserDto } from './auth.types';
 import { UsersService } from './users.service';
+import { AccessRightsService } from '../access-rights/access-rights.service';
+
+/** Modules dont la matrice de droits ouvre la recherche de comptes : écrans qui l'utilisent. */
+const SEARCH_MODULES = ['ADMIN', 'BADGES'];
 
 @ApiTags('Users')
 @UseGuards(RoleGuard)
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly accessRights: AccessRightsService,
+  ) {}
 
   private withoutPasswordHash<T extends { passwordHash?: string }>(
     user: T,
@@ -58,9 +65,10 @@ export class UsersController {
   @ApiOperation({
     summary: 'Rechercher des utilisateurs (selecteur de personne, resultats limites)',
   })
-  @Roles('ADMIN', 'BADGE_MANAGER')
+  @ApiBearerAuth('bearer')
   @Get('search')
   async search(
+    @Req() request: { user?: { id: number; roles: string[] } },
     @Query('q') q?: string,
     @Query('role') role?: string,
     @Query('teamType') teamType?: string,
@@ -69,6 +77,16 @@ export class UsersController {
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
+    // Autorité = matrice de droits (droits effectifs : rôles, types d'équipe, dérogations).
+    // Un compte dont les droits ADMIN/BADGES sont retirés perd la recherche, même avec un ancien rôle.
+    // Portée « tout » exigée : la recherche porte sur tous les comptes.
+    const user = request.user;
+    if (!user) throw new ForbiddenException('Utilisateur non authentifie');
+    const grants = await this.accessRights.effective(user.id, user.roles);
+    const allowed = SEARCH_MODULES.some((m) =>
+      (grants[m]?.pairs ?? []).some((p) => p.scope === 'ALL'),
+    );
+    if (!allowed) throw new ForbiddenException('Droits insuffisants pour rechercher des comptes');
     const int = (v?: string) => (v && /^\d+$/.test(v) ? Number(v) : undefined);
     return this.usersService.search({
       q: q?.slice(0, 80),

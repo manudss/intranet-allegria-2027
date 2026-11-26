@@ -13,6 +13,11 @@ import { hashPassword } from '../../app/core/auth/password.util';
 import { randomBytes } from 'crypto';
 import {
   AccessBadge,
+  GatheringGroup,
+  GatheringGroupCategory,
+  GatheringGroupManager,
+  GatheringGroupTeam,
+  GatheringRepartition,
   AccessBadgeAssignment,
   AccessBadgeStatus,
   AccessControlMeta,
@@ -36,6 +41,8 @@ import {
   ParticipantSex,
   PersonSource,
   PersonType,
+  ProgramSequence,
+  ProgramSequenceTrack,
   Role,
   Team,
   TeamParticipant,
@@ -1260,6 +1267,13 @@ async function run(): Promise<void> {
           secondaryAnimator: secondary,
           maxSize,
           hostingGroup: hostingGroupFor(globalTeamIndex),
+          // Piste de demonstration : un tiers TA, un tiers ES, un tiers a renseigner.
+          track:
+            globalTeamIndex % 3 === 0
+              ? ProgramSequenceTrack.TA
+              : globalTeamIndex % 3 === 1
+                ? ProgramSequenceTrack.ES
+                : ProgramSequenceTrack.COMMON,
           notes: chance(0.07) ? 'Equipe repere pour accueil familles.' : null,
         });
 
@@ -1273,6 +1287,105 @@ async function run(): Promise<void> {
     }
 
     const teams = await teamRepository.save(teamsToCreate, { chunk: 1000 });
+
+    // Groupes de rassemblement de demonstration : une repartition liee au premier
+    // temps commun du programme et une repartition autonome.
+    {
+      const repartitionRepository = dataSource.getRepository(GatheringRepartition);
+      const gatheringGroupRepository = dataSource.getRepository(GatheringGroup);
+      const gatheringGroupTeamRepository = dataSource.getRepository(GatheringGroupTeam);
+      const gatheringGroupManagerRepository = dataSource.getRepository(GatheringGroupManager);
+      const firstCommonSequence = await dataSource.getRepository(ProgramSequence).findOne({
+        where: { track: ProgramSequenceTrack.COMMON },
+        order: { eventDate: 'ASC', startTime: 'ASC' },
+      });
+      const adminUser = await dataSource.getRepository(User).findOne({
+        where: {},
+        order: { id: 'ASC' },
+      });
+
+      const jeuRepartition = await repartitionRepository.save(
+        repartitionRepository.create({
+          name: 'Grand jeu du samedi apres-midi',
+          programSequenceId: firstCommonSequence?.id ?? null,
+          allowOverflow: false,
+          countAnimators: true,
+          notes: 'Exemple : trois groupes par piste pour le grand jeu.',
+        }),
+      );
+      const jeuGroups = await gatheringGroupRepository.save([
+        gatheringGroupRepository.create({
+          repartitionId: jeuRepartition.id,
+          name: 'Vikings',
+          category: GatheringGroupCategory.TA,
+          capacityPersons: 60,
+          location: 'Grand terrain',
+        }),
+        gatheringGroupRepository.create({
+          repartitionId: jeuRepartition.id,
+          name: 'Explorateurs',
+          category: GatheringGroupCategory.ES,
+          capacityPersons: 60,
+          location: 'Foret',
+        }),
+        gatheringGroupRepository.create({
+          repartitionId: jeuRepartition.id,
+          name: 'Pionniers',
+          category: GatheringGroupCategory.MIXTE,
+          capacityPersons: 40,
+          location: 'Place du village',
+        }),
+      ]);
+      // Quelques equipes placees a la main pour illustrer les jauges.
+      const demoAssignments: GatheringGroupTeam[] = [];
+      for (const team of teams.slice(0, 9)) {
+        const target =
+          team.track === ProgramSequenceTrack.TA
+            ? jeuGroups[0]
+            : team.track === ProgramSequenceTrack.ES
+              ? jeuGroups[1]
+              : jeuGroups[2];
+        demoAssignments.push(
+          gatheringGroupTeamRepository.create({
+            repartitionId: jeuRepartition.id,
+            groupId: target.id,
+            teamId: team.id,
+          }),
+        );
+      }
+      await gatheringGroupTeamRepository.save(demoAssignments);
+      if (adminUser) {
+        await gatheringGroupManagerRepository.save(
+          gatheringGroupManagerRepository.create({ groupId: jeuGroups[0].id, userId: adminUser.id }),
+        );
+      }
+
+      const repasRepartition = await repartitionRepository.save(
+        repartitionRepository.create({
+          name: 'Repas du soir (par lieux)',
+          programSequenceId: null,
+          allowOverflow: false,
+          countAnimators: true,
+          notes: 'Exemple autonome : deux lieux de repas, sans evenement rattache.',
+        }),
+      );
+      await gatheringGroupRepository.save([
+        gatheringGroupRepository.create({
+          repartitionId: repasRepartition.id,
+          name: 'Refectoire A',
+          category: GatheringGroupCategory.MIXTE,
+          capacityPersons: 120,
+          location: 'Refectoire A',
+        }),
+        gatheringGroupRepository.create({
+          repartitionId: repasRepartition.id,
+          name: 'Refectoire B',
+          category: GatheringGroupCategory.MIXTE,
+          capacityPersons: 120,
+          location: 'Refectoire B',
+        }),
+      ]);
+    }
 
     const teamsByGroupSaved = new Map<number, Team[]>();
     let teamSaveCursor = 0;

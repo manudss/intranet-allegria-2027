@@ -64,6 +64,7 @@ function flushInitialLoad(
   ]);
   http.expectOne('/api/volunteer-teams').flush([{ id: 3, name: 'Animation' }]);
   http.expectOne(`/api/program/days/${DAY}`).flush({ date: DAY, sequences: daySequences });
+  http.expectOne('/api/gathering/sequences/1/repartitions').flush([]);
 }
 
 describe('FicheEvenementPage', () => {

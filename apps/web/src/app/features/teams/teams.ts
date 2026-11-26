@@ -7,10 +7,12 @@ import {
   BenevoleAssignment,
   Group,
   Participant,
+  ProgramSequenceTrack,
   Team,
   TeamPayload,
   Volunteer,
 } from '../../models/models';
+import { TRACK_COLORS, TRACK_LABELS } from '../gathering-groups/gathering-groups.models';
 import {
   GroupsApiService,
   TeamBenevolesApiService,
@@ -44,6 +46,7 @@ const blank = (): TeamPayload => ({
   secondaryAnimatorId: null,
   maxSize: 10,
   notes: '',
+  track: ProgramSequenceTrack.COMMON,
 });
 @Component({
   selector: 'app-teams',
@@ -86,6 +89,18 @@ export class TeamsPage implements OnInit {
       hidden: true,
       presentation: { type: 'person', subtitle: (x) => x.secondaryAnimator?.email || '—' },
       size: 'large',
+    },
+    {
+      key: 'track',
+      label: 'Piste',
+      type: 'list',
+      value: (x) => TRACK_LABELS[x.track],
+      presentation: {
+        type: 'icon',
+        icon: () => '@tui.flag',
+        iconColor: (x) => TRACK_COLORS[x.track],
+      },
+      size: 'xsmall',
     },
     {
       key: 'maxSize',
@@ -151,6 +166,13 @@ export class TeamsPage implements OnInit {
   jeunesCount = computed(() => this.members().filter((x) => x.type === 'JEUNE').length);
   adultesCount = computed(() => this.members().length - this.jeunesCount());
   stringifyGroup = (id: number) => this.groups().find((group) => group.id === id)?.name ?? '';
+  protected readonly trackValues = [
+    ProgramSequenceTrack.COMMON,
+    ProgramSequenceTrack.TA,
+    ProgramSequenceTrack.ES,
+  ];
+  protected readonly trackLabels = TRACK_LABELS;
+  stringifyTrack = (track: ProgramSequenceTrack) => TRACK_LABELS[track];
   ngOnInit() {
     forkJoin({
       items: this.api.list(),
@@ -196,6 +218,7 @@ export class TeamsPage implements OnInit {
       secondaryAnimatorId: x.secondaryAnimator?.id ?? null,
       maxSize: x.maxSize,
       notes: x.notes ?? '',
+      track: x.track,
     });
     this.mode.set('edit');
   }

@@ -69,7 +69,11 @@
               <img class="track-logo" [src]="logo" [alt]="trackLabel(sequence.track)" />
               } {{ trackLabel(sequence.track) }}
             </span>
-            {{ sequence.title }} @if (sequence.status === ProgramSequenceStatus.FROZEN) {
+            {{ sequence.title }} @if (sequence.gatheringRepartitionIds?.length) {
+            <span tuiBadge appearance="neutral" title="Répartition en groupes de rassemblement"
+              >Groupes ×{{ sequence.gatheringRepartitionIds?.length }}</span
+            >
+            } @if (sequence.status === ProgramSequenceStatus.FROZEN) {
             <span tuiBadge appearance="warning">Figé</span>
             }
           </li>
@@ -352,6 +356,11 @@
         >
           <header>
             <strong>{{ sequence.startTime }} – {{ sequence.endTime }} · {{ sequence.title }}</strong>
+            @if (sequence.gatheringRepartitionIds?.length) {
+            <span tuiBadge appearance="neutral" title="Répartition en groupes de rassemblement"
+              >Groupes ×{{ sequence.gatheringRepartitionIds?.length }}</span
+            >
+            }
           </header>
           <span class="track-meta">{{ trackLabel(sequence.track) }} · {{ sequence.location }}</span>
         </button>

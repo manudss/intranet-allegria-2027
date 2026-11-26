@@ -29,6 +29,8 @@ import {
   VolunteerTeamsApiService,
 } from '../../../services/api.services';
 import { SHARED_IMPORTS } from '../../../shared/shared-imports';
+import { GatheringGroupsApiService } from '../../gathering-groups/gathering-groups.api';
+import { GatheringRepartition } from '../../gathering-groups/gathering-groups.models';
 import { minutesToTime, timeToMinutes } from '../schedule-time.util';
 
 const TRACK_LABELS: Record<ProgramSequenceTrack, string> = {
@@ -116,6 +118,7 @@ export class FicheEvenementPage {
   private readonly missionsApi = inject(VolunteerMissionsApiService);
   private readonly teamsApi = inject(VolunteerTeamsApiService);
   private readonly auth = inject(AuthService);
+  private readonly gatheringApi = inject(GatheringGroupsApiService);
 
   readonly ProgramSequenceStatus = ProgramSequenceStatus;
   readonly ProgramSequenceTrack = ProgramSequenceTrack;
@@ -132,6 +135,8 @@ export class FicheEvenementPage {
   readonly sequence = signal<ProgramSequenceDetail | null>(null);
   readonly tasks = signal<EventPreparationTask[]>([]);
   readonly groups = signal<Group[]>([]);
+  /** Répartitions de groupes de rassemblement rattachées à ce créneau. */
+  readonly gatheringRepartitions = signal<GatheringRepartition[]>([]);
   readonly missions = signal<VolunteerMission[]>([]);
   readonly teams = signal<VolunteerTeam[]>([]);
   readonly daySequences = signal<ProgramSequence[]>([]);
@@ -269,6 +274,10 @@ export class FicheEvenementPage {
         this.api.getDay(sequence.eventDate).subscribe({
           next: (day) => this.daySequences.set(day.sequences),
           error: () => this.daySequences.set([]),
+        });
+        this.gatheringApi.forSequence(id).subscribe({
+          next: (repartitions) => this.gatheringRepartitions.set(repartitions),
+          error: () => this.gatheringRepartitions.set([]),
         });
       },
       error: () => {

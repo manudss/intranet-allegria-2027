@@ -134,6 +134,15 @@
         id="groupe-3"
       ></select>
     </tui-textfield>
+    <tui-textfield iconStart="@tui.flag" tuiChevron [stringify]="stringifyTrack">
+      <label for="piste-de-l-equipe" tuiLabel>Piste</label
+      ><select
+        tuiSelect
+        [items]="trackValues"
+        [formField]="teamForm.track"
+        id="piste-de-l-equipe"
+      ></select>
+    </tui-textfield>
     <app-person-picker
       label="Animateur"
       placeholder="Nom du bénévole"

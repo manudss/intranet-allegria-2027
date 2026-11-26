@@ -499,6 +499,25 @@
           <li class="empty-state">Aucun groupe lié à ce créneau.</li>
           }
         </ul>
+        <h3 class="subhead">Répartitions en groupes de rassemblement</h3>
+        <ul class="item-list">
+          @for (r of gatheringRepartitions(); track r.id) {
+          <li>
+            <span>
+              {{ r.name }} <small>— {{ r.groups.length }} groupe{{ r.groups.length > 1 ? 's' : '' }}</small>
+            </span>
+            <a
+              tuiButton
+              appearance="flat"
+              size="xs"
+              [routerLink]="['/groupes-rassemblement', 'repartitions', r.id]"
+              >Dispatch</a
+            >
+          </li>
+          } @empty {
+          <li class="empty-state">Aucune répartition en groupes de rassemblement pour ce créneau.</li>
+          }
+        </ul>
         @if (canEdit()) {
         <div class="add-row">
           <select

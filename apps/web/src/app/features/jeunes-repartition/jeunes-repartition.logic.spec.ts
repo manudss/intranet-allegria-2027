@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_PARAMS,
   buildApplyEntries,
+  bulkCreatePayload,
   displayName,
   isPending,
   originLabel,
@@ -63,5 +64,21 @@ describe('jeunes-repartition logic', () => {
     expect(originLabel(row, 'group')).toBe('MEJ Roanne');
     expect(originLabel(row, 'city')).toBe('Roanne');
     expect(originLabel(row, 'diocese')).toBe('Lyon');
+  });
+});
+
+describe('bulkCreatePayload', () => {
+  it('envoie le groupe choisi', () => {
+    expect(bulkCreatePayload({ count: 3, baseName: 'Équipe', maxSize: 10, groupId: 5 })).toEqual({
+      count: 3,
+      baseName: 'Équipe',
+      maxSize: 10,
+      groupId: 5,
+    });
+  });
+  it('sans groupe, pas de champ groupId ; places par défaut 12', () => {
+    const p = bulkCreatePayload({ count: 2, baseName: 'A', maxSize: 0, groupId: 0 });
+    expect(p).toEqual({ count: 2, baseName: 'A', maxSize: 12 });
+    expect('groupId' in p).toBe(false);
   });
 });

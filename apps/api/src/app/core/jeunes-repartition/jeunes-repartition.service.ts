@@ -219,20 +219,28 @@ export class JeunesRepartitionService {
   ): Promise<BulkCreateTeamsResult> {
     // Compte limité à des groupes : les équipes créées sont rattachées à un de ses groupes.
     // Sans groupe, une équipe sortirait de toute portée de groupe.
-    const groupId =
-      dto.groupId === undefined || dto.groupId === null ? null : Math.floor(Number(dto.groupId));
+    const rawGroupId = dto.groupId === undefined || dto.groupId === null ? null : Number(dto.groupId);
+    if (rawGroupId !== null && !Number.isInteger(rawGroupId)) {
+      throw new BadRequestException('Groupe invalide.');
+    }
+    const groupId = rawGroupId;
     if (!scope.all && (groupId === null || !scope.groupIds.includes(groupId))) {
       throw new ForbiddenException('Précisez un de vos groupes pour créer des équipes.');
     }
-    if (groupId !== null && !Number.isInteger(groupId)) {
-      throw new BadRequestException('Groupe invalide.');
+    // Portée « tout » : un groupe inexistant est une erreur de saisie (400), pas une erreur serveur.
+    if (groupId !== null && !(await this.groupsRepository.findOne({ where: { id: groupId } }))) {
+      throw new BadRequestException('Groupe inconnu.');
     }
-    const count = Math.floor(Number(dto.count));
-    if (!Number.isFinite(count) || count < 1 || count > 100) {
+    const count = Number(dto.count);
+    if (!Number.isInteger(count) || count < 1 || count > 100) {
       throw new BadRequestException('Le nombre d equipes doit etre compris entre 1 et 100.');
     }
     const baseName = (dto.baseName ?? 'Équipe').trim() || 'Équipe';
-    const maxSize = Math.max(1, Math.floor(Number(dto.maxSize) || 12));
+    const rawMax = dto.maxSize === undefined || dto.maxSize === null ? 12 : Number(dto.maxSize);
+    if (!Number.isInteger(rawMax) || rawMax < 1) {
+      throw new BadRequestException('Le nombre de places par equipe doit etre un entier superieur ou egal a 1.');
+    }
+    const maxSize = rawMax;
 
     const existing = await this.teamsRepository.find();
     let nextIndex = 1;

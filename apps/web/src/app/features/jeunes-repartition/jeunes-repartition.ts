@@ -19,6 +19,7 @@ import { JeunesRepartitionApiService } from '../../services/api.services';
 import {
   DEFAULT_PARAMS,
   buildApplyEntries,
+  bulkCreatePayload,
   displayName,
   isPending,
   originLabel,
@@ -77,6 +78,8 @@ export class JeunesRepartitionPage implements OnInit {
   protected readonly createCount = signal(8);
   protected readonly createBaseName = signal('Équipe');
   protected readonly createMaxSize = signal(12);
+  /** Groupe des équipes créées (0 = aucun). Obligatoire pour un compte limité à des groupes. */
+  protected readonly createGroupId = signal(0);
 
   // ── Étape 3 : critères + board ────────────────────────────────────────────
   protected readonly jeunesPerTeam = signal(DEFAULT_PARAMS.jeunesPerTeam);
@@ -277,11 +280,14 @@ export class JeunesRepartitionPage implements OnInit {
       return;
     }
     this.run(
-      this.api.bulkCreateTeams({
-        count,
-        baseName: this.createBaseName(),
-        maxSize: Math.floor(this.createMaxSize()) || 12,
-      }),
+      this.api.bulkCreateTeams(
+        bulkCreatePayload({
+          count,
+          baseName: this.createBaseName(),
+          maxSize: this.createMaxSize(),
+          groupId: this.createGroupId(),
+        }),
+      ),
       (result) => {
         this.notice.set({
           kind: 'info',
@@ -493,6 +499,10 @@ export class JeunesRepartitionPage implements OnInit {
 
   protected readonly groupOptions = computed<SelectOption<number>[]>(() => [
     { value: 0, label: 'Tous' },
+    ...(this.filters()?.groups ?? []).map((g) => ({ value: g.id, label: g.name })),
+  ]);
+  protected readonly createGroupOptions = computed<SelectOption<number>[]>(() => [
+    { value: 0, label: 'Aucun groupe' },
     ...(this.filters()?.groups ?? []).map((g) => ({ value: g.id, label: g.name })),
   ]);
   protected readonly cityOptions = computed<SelectOption<string>[]>(() => [

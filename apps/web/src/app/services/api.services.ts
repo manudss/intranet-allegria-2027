@@ -545,6 +545,7 @@ export class JeunesRepartitionApiService {
     count: number;
     baseName?: string;
     maxSize?: number;
+    groupId?: number;
   }): Observable<BulkCreateTeamsResult> {
     return this.http.post<BulkCreateTeamsResult>(
       '/api/jeunes/repartition/teams/bulk-create',

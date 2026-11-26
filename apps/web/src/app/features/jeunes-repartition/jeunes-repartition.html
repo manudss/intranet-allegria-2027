@@ -311,13 +311,19 @@
                   (ngModelChange)="createMaxSize.set($event)"
                 />
               </tui-textfield>
+              <app-select-field
+                label="Groupe"
+                [options]="createGroupOptions()"
+                [value]="createGroupId()"
+                (valueChange)="createGroupId.set($event || 0)"
+              />
             </div>
             <div>
               <button tuiButton type="button" size="s" [disabled]="busy()" (click)="createTeams()">
                 Créer {{ createCount() }} équipe(s) vide(s)
               </button>
             </div>
-            <small class="hint compact">Nommage automatique : « {{ createBaseName() }} 1 », « {{ createBaseName() }} 2 »… à la suite des existantes.</small>
+            <small class="hint compact">Un compte limité à des groupes doit choisir un de ses groupes. Nommage automatique : « {{ createBaseName() }} 1 », « {{ createBaseName() }} 2 »… à la suite des existantes.</small>
           </div>
 
           <div

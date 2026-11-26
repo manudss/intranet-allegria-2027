@@ -94,7 +94,7 @@ describe('répartition jeunes : création en masse en portée groupes', () => {
       { find: async () => [] },
       { find: async () => [], create: (x: any) => x, save: async (x: any) => ({ id: saved.push(x), ...x }) },
       { find: async () => [] },
-      { find: async () => [] },
+      { find: async () => [], findOne: async ({ where }: any) => (where.id === 5 ? { id: 5 } : null) },
       { getOption: async () => false },
     ) as JeunesRepartitionService;
   it('refuse sans groupe ou avec un groupe hors portée', async () => {

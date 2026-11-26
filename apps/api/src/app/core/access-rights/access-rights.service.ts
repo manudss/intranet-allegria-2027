@@ -167,7 +167,8 @@ export class AccessRightsService {
    * par e-mail ou par nom. Sans lien, la personne ne voit rien.
    * « Son équipe » = sa fiche + les bénévoles des équipes bénévoles ACTIVES dont sa fiche est
    * membre aujourd'hui (début vide ou passé, fin vide ou pas encore dépassée, fin incluse), pour
-   * sa fiche comme pour les coéquipiers : mêmes bornes que teamTypeCodesForUser.
+   * sa fiche comme pour les coéquipiers. Une équipe SANS type est valide et visible ; seul un type
+   * ARCHIVÉ l'exclut (teamTypeCodesForUser, lui, ne liste que des types existants).
    */
   async volunteerIdsForScopes(
     userId: number,
@@ -201,7 +202,8 @@ export class AccessRightsService {
 
   /**
    * Fiches bénévoles du compte et équipes opérationnelles où il est membre aujourd'hui
-   * (équipe et type actifs, affectation en cours, fin incluse : mêmes bornes que les droits par type d'équipe).
+   * (équipe active, affectation en cours, fin incluse). Une équipe SANS type est une équipe valide et reste
+   * visible ; seul un type ARCHIVÉ l'exclut (même règle que volunteerIdsForScopes).
    */
   async ownTeamContext(userId: number): Promise<{ volunteerIds: number[]; teamIds: number[] }> {
     const own: { id: number }[] = await this.dataSource.query(

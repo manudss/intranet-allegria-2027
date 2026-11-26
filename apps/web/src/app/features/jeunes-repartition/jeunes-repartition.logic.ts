@@ -102,3 +102,18 @@ export function originLabel(
   if (granularity === 'diocese') return row.diocese ?? 'Diocèse inconnu';
   return row.groupName ?? 'Sans groupe';
 }
+
+/** Corps de la création d'équipes en masse : le groupe n'est envoyé que s'il est choisi (> 0). */
+export function bulkCreatePayload(input: {
+  count: number;
+  baseName: string;
+  maxSize: number;
+  groupId: number;
+}): { count: number; baseName: string; maxSize: number; groupId?: number } {
+  return {
+    count: Math.floor(input.count),
+    baseName: input.baseName,
+    maxSize: Math.floor(input.maxSize) || 12,
+    ...(input.groupId > 0 ? { groupId: input.groupId } : {}),
+  };
+}

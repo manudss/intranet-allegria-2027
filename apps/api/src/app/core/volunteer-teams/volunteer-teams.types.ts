@@ -12,6 +12,9 @@ export class CreateVolunteerTeamDto {
 
   @ApiPropertyOptional({ example: true })
   isActive?: boolean;
+
+  @ApiPropertyOptional({ example: 2, nullable: true, description: "Type d'equipe (optionnel)" })
+  typeId?: number | null;
 }
 
 export class UpdateVolunteerTeamDto extends PartialType(CreateVolunteerTeamDto) {}
@@ -33,3 +36,22 @@ export class CreateVolunteerTeamMembershipDto {
 export class UpdateVolunteerTeamMembershipDto extends PartialType(
   CreateVolunteerTeamMembershipDto,
 ) {}
+
+export class CreateVolunteerTeamTypeDto {
+  @ApiProperty({ example: 'SECURITE' })
+  code!: string;
+
+  @ApiProperty({ example: 'Sécurité' })
+  label!: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  description?: string | null;
+
+  @ApiPropertyOptional({ example: 10 })
+  sortOrder?: number;
+
+  @ApiPropertyOptional({ example: true })
+  isActive?: boolean;
+}
+
+export class UpdateVolunteerTeamTypeDto extends PartialType(CreateVolunteerTeamTypeDto) {}

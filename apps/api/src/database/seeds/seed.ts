@@ -1,3 +1,4 @@
+import { PROPOSED_VOLUNTEER_TEAM_TYPES } from '../volunteer-team-types.data';
 import { buildFamilyDemo } from './family-demo-seed';
 import { registrationPdf } from '../../app/core/family-registration/registration-pdf';
 import { digest } from '../../app/core/family-registration/family-registration.service';
@@ -55,6 +56,7 @@ import {
   VolunteerTeamMembership,
 } from '../../app/core/entities';
 import { insertProgramDemoDay, PROGRAM_SEED_DAYS } from '../../app/core/program/program-demo-seed';
+import { insertDocumentLibraryDemo } from './document-library-demo-seed';
 import dataSource from '../typeorm.config';
 import { computeTeamMaxSize, hasSecondaryAnimator } from './team-fill';
 
@@ -707,6 +709,9 @@ async function run(): Promise<void> {
     try {
       await queryRunner.query(`
         TRUNCATE TABLE
+          "document_link_teams",
+          "document_links",
+          "document_categories",
           "registration_families",
           "registration_settings",
           "registration_challenges",
@@ -734,6 +739,7 @@ async function run(): Promise<void> {
           "volunteer_skills",
           "volunteer_team_memberships",
           "volunteer_teams",
+          "volunteer_team_types",
           "user_roles",
           "participant_health",
           "participant_host_family_assignments",
@@ -767,6 +773,13 @@ async function run(): Promise<void> {
     const hostingGroupRepository = dataSource.getRepository(HostingGroup);
     const teamParticipantRepository = dataSource.getRepository(TeamParticipant);
     const volunteerTeamRepository = dataSource.getRepository(VolunteerTeam);
+    // La table des types est vidée avec le reste : on remet la liste de départ (aucun rattachement).
+    for (const [index, [code, label, description]] of PROPOSED_VOLUNTEER_TEAM_TYPES.entries()) {
+      await dataSource.query(
+        `INSERT INTO "volunteer_team_types" ("code", "label", "description", "sortOrder") VALUES ($1, $2, $3, $4)`,
+        [code, label, description, (index + 1) * 10],
+      );
+    }
     const volunteerTeamMembershipRepository = dataSource.getRepository(VolunteerTeamMembership);
     const volunteerSkillRepository = dataSource.getRepository(VolunteerSkill);
     const volunteerTagRepository = dataSource.getRepository(VolunteerTag);
@@ -1770,6 +1783,8 @@ async function run(): Promise<void> {
 
     await seedAccessTestkit(dataSource, adminUser, demoPasswordHash);
 
+    const documentLibrary = await insertDocumentLibraryDemo(dataSource);
+
     console.log('Seed termine.');
     console.log(`Profil: ${profileName}`);
     console.log(`Users: ${users.length}`);
@@ -1790,6 +1805,9 @@ async function run(): Promise<void> {
     console.log(`Host families: ${hostFamilies.length}`);
     console.log(`Assignments: ${assignmentsToCreate.length}`);
     console.log(`Health records: ${participantHealthToCreate.length}`);
+    console.log(
+      `Document library: ${documentLibrary.linksCreated} fiches inserees, ${documentLibrary.linksSkipped} conservees, ${documentLibrary.linksOmittedMissingTeam.length} omises (equipe introuvable), ${documentLibrary.categoriesCreated} categories creees`,
+    );
     console.log(
       `Access control: ${accessControlSeed.badges} badges (lot L2027-A), ${accessControlSeed.assignments} attributions`,
     );

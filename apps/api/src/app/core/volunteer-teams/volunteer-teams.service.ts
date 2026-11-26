@@ -6,11 +6,13 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Volunteer, VolunteerTeam, VolunteerTeamMembership } from '../entities';
+import { Volunteer, VolunteerTeam, VolunteerTeamMembership, VolunteerTeamType } from '../entities';
 import {
   CreateVolunteerTeamDto,
   CreateVolunteerTeamMembershipDto,
+  CreateVolunteerTeamTypeDto,
   UpdateVolunteerTeamDto,
+  UpdateVolunteerTeamTypeDto,
   UpdateVolunteerTeamMembershipDto,
 } from './volunteer-teams.types';
 
@@ -25,6 +27,8 @@ export class VolunteerTeamsService {
     private readonly membershipsRepository: Repository<VolunteerTeamMembership>,
     @InjectRepository(Volunteer)
     private readonly volunteersRepository: Repository<Volunteer>,
+    @InjectRepository(VolunteerTeamType)
+    private readonly teamTypesRepository: Repository<VolunteerTeamType>,
   ) {}
 
   async createTeam(dto: CreateVolunteerTeamDto): Promise<VolunteerTeam> {
@@ -33,19 +37,25 @@ export class VolunteerTeamsService {
       code: this.requireTrimmedText(dto.code, 'code', 80),
       description: this.normalizeOptionalText(dto.description),
       isActive: dto.isActive ?? true,
+      typeId: await this.normalizeTypeId(dto.typeId),
     });
 
-    return this.volunteerTeamsRepository.save(team);
+    const saved = await this.volunteerTeamsRepository.save(team);
+    return this.findTeam(saved.id);
   }
 
   findAllTeams(): Promise<VolunteerTeam[]> {
     return this.volunteerTeamsRepository.find({
+      relations: { type: true },
       order: { isActive: 'DESC', name: 'ASC', code: 'ASC' },
     });
   }
 
   async findTeam(id: number): Promise<VolunteerTeam> {
-    const team = await this.volunteerTeamsRepository.findOneBy({ id });
+    const team = await this.volunteerTeamsRepository.findOne({
+      where: { id },
+      relations: { type: true },
+    });
 
     if (!team) {
       throw new NotFoundException(`Equipe operationnelle ${id} introuvable`);
@@ -73,7 +83,96 @@ export class VolunteerTeamsService {
       team.isActive = dto.isActive ?? false;
     }
 
-    return this.volunteerTeamsRepository.save(team);
+    if (Object.prototype.hasOwnProperty.call(dto, 'typeId')) {
+      team.typeId = await this.normalizeTypeId(dto.typeId);
+      // La relation chargee prendrait le pas sur typeId a l'enregistrement : on l'ecarte.
+      team.type = undefined as never;
+    }
+
+    await this.volunteerTeamsRepository.save(team);
+    return this.findTeam(id);
+  }
+
+  findAllTeamTypes(): Promise<VolunteerTeamType[]> {
+    return this.teamTypesRepository.find({
+      order: { isActive: 'DESC', sortOrder: 'ASC', label: 'ASC' },
+    });
+  }
+
+  async createTeamType(dto: CreateVolunteerTeamTypeDto): Promise<VolunteerTeamType> {
+    const code = this.normalizeTypeCode(dto.code);
+    if (await this.teamTypesRepository.existsBy({ code })) {
+      throw new ConflictException(`Un type d'equipe avec le code ${code} existe deja`);
+    }
+    return this.teamTypesRepository.save(
+      this.teamTypesRepository.create({
+        code,
+        label: this.requireTrimmedText(dto.label, 'label', 120),
+        description: this.normalizeOptionalText(dto.description),
+        sortOrder: Number.isInteger(dto.sortOrder) ? (dto.sortOrder as number) : 0,
+        isActive: dto.isActive ?? true,
+      }),
+    );
+  }
+
+  async updateTeamType(id: number, dto: UpdateVolunteerTeamTypeDto): Promise<VolunteerTeamType> {
+    const type = await this.teamTypesRepository.findOneBy({ id });
+    if (!type) {
+      throw new NotFoundException(`Type d'equipe ${id} introuvable`);
+    }
+    if (Object.prototype.hasOwnProperty.call(dto, 'code')) {
+      const code = this.normalizeTypeCode(dto.code);
+      if (code !== type.code && (await this.teamTypesRepository.existsBy({ code }))) {
+        throw new ConflictException(`Un type d'equipe avec le code ${code} existe deja`);
+      }
+      type.code = code;
+    }
+    if (Object.prototype.hasOwnProperty.call(dto, 'label')) {
+      type.label = this.requireTrimmedText(dto.label, 'label', 120);
+    }
+    if (Object.prototype.hasOwnProperty.call(dto, 'description')) {
+      type.description = this.normalizeOptionalText(dto.description);
+    }
+    if (Object.prototype.hasOwnProperty.call(dto, 'sortOrder') && Number.isInteger(dto.sortOrder)) {
+      type.sortOrder = dto.sortOrder as number;
+    }
+    if (Object.prototype.hasOwnProperty.call(dto, 'isActive')) {
+      type.isActive = dto.isActive ?? false;
+    }
+    return this.teamTypesRepository.save(type);
+  }
+
+  /** Les equipes rattachees perdent leur type (SET NULL) : pas de droit ni d'effet en cascade. */
+  async removeTeamType(id: number): Promise<void> {
+    const type = await this.teamTypesRepository.findOneBy({ id });
+    if (!type) {
+      throw new NotFoundException(`Type d'equipe ${id} introuvable`);
+    }
+    await this.teamTypesRepository.remove(type);
+  }
+
+  private async normalizeTypeId(typeId: number | null | undefined): Promise<number | null> {
+    if (typeId === null || typeId === undefined) {
+      return null;
+    }
+    const id = Number(typeId);
+    if (!Number.isInteger(id) || !(await this.teamTypesRepository.existsBy({ id }))) {
+      throw new BadRequestException(`Type d'equipe ${typeId} introuvable`);
+    }
+    return id;
+  }
+
+  private normalizeTypeCode(code: string | null | undefined): string {
+    const normalized = String(code ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    if (!normalized) {
+      throw new BadRequestException('code est obligatoire');
+    }
+    return normalized.slice(0, 80);
   }
 
   async removeTeam(id: number): Promise<void> {
@@ -81,7 +180,10 @@ export class VolunteerTeamsService {
     await this.volunteerTeamsRepository.remove(team);
   }
 
-  async listTeammates(volunteerId: number, membershipId: number): Promise<VolunteerTeamMembership[]> {
+  async listTeammates(
+    volunteerId: number,
+    membershipId: number,
+  ): Promise<VolunteerTeamMembership[]> {
     await this.findVolunteer(volunteerId);
 
     const membership = await this.membershipsRepository.findOne({

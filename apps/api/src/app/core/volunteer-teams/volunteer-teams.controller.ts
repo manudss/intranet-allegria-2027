@@ -16,7 +16,9 @@ import { Roles } from '../auth/roles.decorator';
 import {
   CreateVolunteerTeamDto,
   CreateVolunteerTeamMembershipDto,
+  CreateVolunteerTeamTypeDto,
   UpdateVolunteerTeamDto,
+  UpdateVolunteerTeamTypeDto,
   UpdateVolunteerTeamMembershipDto,
 } from './volunteer-teams.types';
 import { VolunteerTeamsService } from './volunteer-teams.service';
@@ -30,6 +32,35 @@ const WRITE_ROLES = ['ADMIN', 'COORDINATOR'];
 @Controller()
 export class VolunteerTeamsController {
   constructor(private readonly volunteerTeamsService: VolunteerTeamsService) {}
+
+  @ApiOperation({ summary: "Lister les types d'equipes operationnelles" })
+  @Roles(...READ_ROLES)
+  @Get('volunteer-team-types')
+  findAllTeamTypes() {
+    return this.volunteerTeamsService.findAllTeamTypes();
+  }
+
+  @ApiOperation({ summary: "Creer un type d'equipe operationnelle (admin)" })
+  @Roles('ADMIN')
+  @Post('volunteer-team-types')
+  createTeamType(@Body() dto: CreateVolunteerTeamTypeDto) {
+    return this.volunteerTeamsService.createTeamType(dto);
+  }
+
+  @ApiOperation({ summary: "Modifier un type d'equipe operationnelle (admin)" })
+  @Roles('ADMIN')
+  @Patch('volunteer-team-types/:id')
+  updateTeamType(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateVolunteerTeamTypeDto) {
+    return this.volunteerTeamsService.updateTeamType(id, dto);
+  }
+
+  @ApiOperation({ summary: "Supprimer un type d'equipe operationnelle (admin)" })
+  @Roles('ADMIN')
+  @Delete('volunteer-team-types/:id')
+  async removeTeamType(@Param('id', ParseIntPipe) id: number) {
+    await this.volunteerTeamsService.removeTeamType(id);
+    return { deleted: true };
+  }
 
   @ApiOperation({ summary: 'Creer une equipe operationnelle' })
   @Roles(...WRITE_ROLES)

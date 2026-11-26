@@ -23,6 +23,7 @@ export { VolunteerShift } from './volunteer-shift.entity';
 export { VolunteerShiftAssignmentStatus } from './volunteer-shift-assignment-status.enum';
 export { VolunteerShiftAssignment } from './volunteer-shift-assignment.entity';
 export { VolunteerTeam } from './volunteer-team.entity';
+export { VolunteerTeamType } from './volunteer-team-type.entity';
 export { VolunteerSkillType } from './volunteer-skill-type.enum';
 export { VolunteerSkill } from './volunteer-skill.entity';
 export { VolunteerTag } from './volunteer-tag.entity';
@@ -63,5 +64,10 @@ export { AccessScanEvent } from './access-scan-event.entity';
 export { AccessScannerGrant } from './access-scanner-grant.entity';
 export { AccessAuditLog } from './access-audit-log.entity';
 export { AccessControlMeta } from './access-control-meta.entity';
+export { DocumentLinkVisibility } from './document-link-visibility.enum';
+export { DocumentFileType } from './document-file-type.enum';
+export { DocumentCategory } from './document-category.entity';
+export { DocumentLink } from './document-link.entity';
+export { DocumentLinkTeam } from './document-link-team.entity';
 
 export * from './registration-family.entity';

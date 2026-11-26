@@ -3,8 +3,12 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { form, required, submit } from '@angular/forms/signals';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
-import { VolunteerTeam, VolunteerTeamPayload } from '../../models/models';
-import { VolunteerTeamsApiService } from '../../services/api.services';
+import { VolunteerTeam, VolunteerTeamPayload, VolunteerTeamType } from '../../models/models';
+import {
+  VolunteerTeamsApiService,
+  VolunteerTeamTypesApiService,
+} from '../../services/api.services';
+import { SelectFieldComponent, SelectOption } from '../../shared/select-field.component';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { DataTableColumn } from '../../shared/data-table';
 
@@ -12,11 +16,15 @@ function formatDateTime(datetimeStr: string | undefined): string {
   if (!datetimeStr) return '—';
   const date = new Date(datetimeStr);
   if (isNaN(date.getTime())) return '—';
-  return date.toLocaleDateString('fr-FR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }) + ' ' + date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  return (
+    date.toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }) +
+    ' ' +
+    date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  );
 }
 
 const blank = (): VolunteerTeamPayload => ({
@@ -24,12 +32,15 @@ const blank = (): VolunteerTeamPayload => ({
   code: '',
   description: '',
   isActive: true,
+  typeId: null,
 });
+
+const NO_TYPE = 0;
 
 @Component({
   selector: 'app-volunteer-teams',
   standalone: true,
-  imports: [...SHARED_IMPORTS],
+  imports: [...SHARED_IMPORTS, SelectFieldComponent],
   templateUrl: './volunteer-teams.html',
   styleUrls: ['../../shared/crud.scss'],
 })
@@ -52,6 +63,14 @@ export class VolunteerTeamsPage implements OnInit {
       size: 'xsmall',
     },
     {
+      key: 'type',
+      label: 'Type',
+      type: 'list',
+      value: (team) => team.type?.label ?? '—',
+      presentation: { type: 'chip', autoColor: true, icon: () => '@tui.tag' },
+      size: 'medium',
+    },
+    {
       key: 'isActive',
       label: 'Actif',
       type: 'list',
@@ -72,12 +91,18 @@ export class VolunteerTeamsPage implements OnInit {
       key: 'memberships',
       label: 'Membres',
       type: 'text',
-      value: (team) => (team.memberships ? team.memberships.map((m) => `${m.volunteer.lastName} ${m.volunteer.firstName}`).join(', ') : '—'),
+      value: (team) =>
+        team.memberships
+          ? team.memberships
+              .map((m) => `${m.volunteer.lastName} ${m.volunteer.firstName}`)
+              .join(', ')
+          : '—',
       hidden: true,
       presentation: {
         type: 'chips',
         autoColor: true,
-        values: (team) => team.memberships?.map((m) => `${m.volunteer.lastName} ${m.volunteer.firstName}`) || [],
+        values: (team) =>
+          team.memberships?.map((m) => `${m.volunteer.lastName} ${m.volunteer.firstName}`) || [],
       },
       size: 'xlarge',
     },
@@ -104,10 +129,24 @@ export class VolunteerTeamsPage implements OnInit {
   ];
 
   private readonly api = inject(VolunteerTeamsApiService);
+  private readonly typesApi = inject(VolunteerTeamTypesApiService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly auth = inject(AuthService);
 
   items = signal<VolunteerTeam[]>([]);
+  types = signal<VolunteerTeamType[]>([]);
+  typesOpened = signal(false);
+  typeError = signal<string | null>(null);
+  newTypeLabel = signal('');
+  editingTypeId = signal<number | null>(null);
+  editingTypeLabel = signal('');
+  readonly isAdmin = computed(() => this.auth.hasAnyRole(['ADMIN']));
+  readonly typeOptions = computed<SelectOption<number>[]>(() => [
+    { value: NO_TYPE, label: 'Sans type' },
+    ...this.types()
+      .filter((type) => type.isActive || type.id === this.model().typeId)
+      .map((type) => ({ value: type.id, label: type.label })),
+  ]);
   query = signal('');
   loading = signal(true);
   opened = signal(false);
@@ -133,6 +172,73 @@ export class VolunteerTeamsPage implements OnInit {
       .list()
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe((items) => this.items.set(items));
+    this.loadTypes();
+  }
+
+  private loadTypes(): void {
+    this.typesApi.list().subscribe((types) => this.types.set(types));
+  }
+
+  setType(id: number): void {
+    this.model.update((m) => ({ ...m, typeId: id === NO_TYPE ? null : id }));
+  }
+
+  addType(): void {
+    const label = this.newTypeLabel().trim();
+    if (!label) return;
+    const sortOrder = Math.max(0, ...this.types().map((t) => t.sortOrder)) + 10;
+    this.typesApi
+      .create({ code: label, label, description: null, sortOrder, isActive: true })
+      .subscribe({
+        next: () => {
+          this.newTypeLabel.set('');
+          this.typeError.set(null);
+          this.loadTypes();
+        },
+        error: (e) => this.typeError.set(e?.error?.message ?? 'Création impossible.'),
+      });
+  }
+
+  startRenameType(type: VolunteerTeamType): void {
+    this.editingTypeId.set(type.id);
+    this.editingTypeLabel.set(type.label);
+    this.typeError.set(null);
+  }
+
+  cancelRenameType(): void {
+    this.editingTypeId.set(null);
+  }
+
+  /** Renomme (libellé seulement) : le code et les rattachements des équipes ne changent pas. */
+  saveRenameType(type: VolunteerTeamType): void {
+    const label = this.editingTypeLabel().trim();
+    if (!label) {
+      this.typeError.set('Le nom du type est obligatoire.');
+      return;
+    }
+    this.typesApi.update(type.id, { label }).subscribe({
+      next: () => {
+        this.editingTypeId.set(null);
+        this.typeError.set(null);
+        this.loadTypes();
+        this.api.list().subscribe((items) => this.items.set(items));
+      },
+      error: (e) => this.typeError.set(e?.error?.message ?? 'Renommage impossible.'),
+    });
+  }
+
+  toggleType(type: VolunteerTeamType): void {
+    this.typesApi.update(type.id, { isActive: !type.isActive }).subscribe(() => this.loadTypes());
+  }
+
+  removeType(type: VolunteerTeamType): void {
+    this.confirmDialog.askDelete(type.label).subscribe((ok) => {
+      if (!ok) return;
+      this.typesApi.delete(type.id).subscribe(() => {
+        this.loadTypes();
+        this.api.list().subscribe((items) => this.items.set(items));
+      });
+    });
   }
 
   open(team: VolunteerTeam): void {
@@ -155,6 +261,7 @@ export class VolunteerTeamsPage implements OnInit {
       code: team.code,
       description: team.description ?? '',
       isActive: team.isActive,
+      typeId: team.typeId ?? null,
     });
     this.mode.set('edit');
   }

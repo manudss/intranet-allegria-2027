@@ -1,0 +1,232 @@
+<app-page-layout
+  title="Gestion du catalogue"
+  description="Fiches « Consignes & documents » : ajout, modification, audience"
+>
+  @if (canWrite()) {
+  <button actions tuiButton (click)="create()">Ajouter un document</button>
+  }
+  <tui-textfield iconStart="@tui.search">
+    <label for="rechercher-une-fiche" tuiLabel>Rechercher une fiche</label>
+    <input
+      tuiInput
+      placeholder="Titre, description, catégorie…"
+      [value]="query()"
+      (input)="query.set($any($event.target).value)"
+      id="rechercher-une-fiche"
+    />
+  </tui-textfield>
+  @if (loading()) {
+  <app-loading-skeleton variant="table" />
+  } @else {
+  <app-data-table [rows]="filtered()" [columns]="tableColumns" (rowSelected)="open($event)" />
+  }
+</app-page-layout>
+
+@if (opened()) {
+<tui-drawer direction="end">
+  <header>
+    <h2>{{ mode() === 'create' ? 'Ajouter un document' : (selected()?.title ?? 'Fiche') }}</h2>
+  </header>
+
+  <div class="notice">Cette fiche ne modifie ni le fichier ni son partage dans SharePoint.</div>
+
+  @if (mode() === 'detail') {
+  <dl>
+    <dt>Titre</dt>
+    <dd>{{ selected()?.title }}</dd>
+    <dt>Catégorie</dt>
+    <dd>{{ selected()?.category?.label ?? '—' }}</dd>
+    <dt>Type de fichier</dt>
+    <dd>{{ selected()?.fileType }}</dd>
+    <dt>Lien</dt>
+    <dd class="url">{{ selected()?.url }}</dd>
+    <dt>Audience Allegria</dt>
+    <dd>
+      @if (selected()?.visibility === 'ALL') { Tous les utilisateurs connectés } @else { Équipes :
+      {{ teamNames(selected()) }} }
+    </dd>
+    <dt>Ouverture du fichier</dt>
+    <dd>Compte Microsoft autorisé requis (géré par SharePoint, indépendant d'Allegria)</dd>
+  </dl>
+  } @else {
+  <form class="drawer-form">
+    <tui-textfield iconStart="@tui.file-text">
+      <label for="titre-fiche" tuiLabel>Titre</label
+      ><input tuiInput [formField]="docForm.title" id="titre-fiche" />
+    </tui-textfield>
+
+    <app-select-field
+      label="Catégorie"
+      icon="@tui.tag"
+      testId="categorie-fiche"
+      [options]="categoryOptions()"
+      [value]="model().categoryId ?? 0"
+      (valueChange)="setCategory($event)"
+    />
+
+    <app-select-field
+      label="Type de fichier"
+      icon="@tui.file"
+      testId="type-fiche"
+      [options]="fileTypeOptions"
+      [value]="model().fileType"
+      (valueChange)="$event && setFileType($event)"
+    />
+
+    <tui-textfield iconStart="@tui.link" class="wide">
+      <label for="lien-fiche" tuiLabel>Lien du document</label
+      ><input
+        tuiInput
+        [formField]="docForm.url"
+        placeholder="Lien SharePoint du fichier"
+        id="lien-fiche"
+      />
+    </tui-textfield>
+    <p class="hint">
+      Le lien doit être vérifié avec un compte Microsoft autorisé. Aucun lien public créé ici.
+    </p>
+
+    <div class="wide description-field">
+      <label for="description-fiche" class="field-label">Description</label>
+      <tui-textfield [tuiTextfieldCleaner]="false">
+        <textarea
+          tuiTextarea
+          rows="3"
+          [formField]="$any(docForm.description)"
+          id="description-fiche"
+        ></textarea>
+      </tui-textfield>
+    </div>
+
+    <fieldset class="audience">
+      <legend>1 · Qui voit la fiche dans Allegria ?</legend>
+      <app-select-field
+        label="Audience"
+        icon="@tui.users"
+        testId="audience-fiche"
+        [options]="audienceOptions"
+        [value]="model().visibility"
+        (valueChange)="$event && setVisibility($event)"
+      />
+      @if (model().visibility === 'TEAMS') {
+      <div class="team-picker">
+        <tui-textfield iconStart="@tui.search">
+          <label for="recherche-equipe" tuiLabel>Rechercher une équipe</label>
+          <input
+            tuiInput
+            id="recherche-equipe"
+            placeholder="Nom ou code…"
+            [ngModel]="teamSearch()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="teamSearch.set($event)"
+          />
+        </tui-textfield>
+        <div class="type-filters" role="group" aria-label="Filtrer les équipes">
+          @for (filter of teamStatusFilters; track filter.id) {
+          <button
+            tuiChip
+            type="button"
+            size="s"
+            [appearance]="teamStatusFilter() === filter.id ? 'primary' : 'neutral'"
+            [attr.aria-pressed]="teamStatusFilter() === filter.id"
+            (click)="setTeamStatusFilter(filter.id)"
+          >
+            {{ filter.label }}
+          </button>
+          }
+        </div>
+        @if (usedTeamTypes().length) {
+        <div class="type-filters" role="group" aria-label="Filtrer par type d'équipe">
+          <button
+            tuiChip
+            type="button"
+            size="s"
+            [appearance]="teamTypeFilter() === null ? 'primary' : 'neutral'"
+            [attr.aria-pressed]="teamTypeFilter() === null"
+            (click)="setTeamTypeFilter(null)"
+          >
+            Tous les types
+          </button>
+          @for (type of usedTeamTypes(); track type.id) {
+          <button
+            tuiChip
+            type="button"
+            size="s"
+            [appearance]="teamTypeFilter() === type.id ? 'primary' : 'neutral'"
+            [attr.aria-pressed]="teamTypeFilter() === type.id"
+            (click)="setTeamTypeFilter(type.id)"
+          >
+            {{ type.label }}
+          </button>
+          }
+        </div>
+        }
+        <div class="picker-actions">
+          <button
+            tuiButton
+            type="button"
+            size="s"
+            appearance="flat"
+            (click)="selectFilteredTeams()"
+          >
+            Tout sélectionner ({{ filteredTeams().length }})
+          </button>
+          <button tuiButton type="button" size="s" appearance="flat" (click)="clearTeams()">
+            Tout désélectionner
+          </button>
+        </div>
+        <ul class="team-list">
+          @for (team of filteredTeams(); track team.id) {
+          <li [class.team-inactive]="!team.isActive">
+            <label>
+              <input
+                tuiCheckbox
+                type="checkbox"
+                size="s"
+                [ngModel]="isTeamSelected(team.id)"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="toggleTeam(team.id, $event)"
+                [attr.aria-label]="team.name"
+              />
+              {{ team.name }} ({{ team.code }}) @if (team.type) { · {{ team.type.label }} } @if
+              (!team.isActive) { — inactive }
+            </label>
+          </li>
+          } @empty {
+          <li class="hint">Aucune équipe ne correspond.</li>
+          }
+        </ul>
+        <p class="hint">
+          {{ selectedTeams().length }} équipe(s) sélectionnée(s). Appartenir à au moins une équipe
+          suffit. Une équipe inactive ne donne pas accès.
+        </p>
+      </div>
+      }
+    </fieldset>
+
+    <fieldset class="audience">
+      <legend>2 · Qui peut ouvrir le fichier ?</legend>
+      <p class="hint">
+        Compte Microsoft autorisé requis. Le partage Microsoft reste indépendant des équipes
+        Allegria.
+      </p>
+    </fieldset>
+    @if (saveError()) {
+    <p class="notice" role="alert">{{ saveError() }}</p>
+    }
+  </form>
+  }
+
+  <footer>
+    <button tuiButton appearance="flat" (click)="opened.set(false)">
+      {{ mode() === 'detail' ? 'Fermer' : 'Annuler' }}
+    </button>
+    @if (mode() === 'detail') { @if (canWrite()) {
+    <button tuiButton (click)="edit()">Modifier</button>
+    <button tuiButton appearance="secondary-destructive" (click)="remove()">Supprimer</button>
+    } } @else {
+    <button tuiButton (click)="save()">Enregistrer la fiche</button>
+    }
+  </footer>
+</tui-drawer>
+}

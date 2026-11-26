@@ -96,6 +96,16 @@ jobs:
           npm run migration:run
           npm run seed:api:small
 
+      # Rejoue de bout en bout le chemin /preview de la PR39 : le wrapper
+      # n'accepte que la combinaison exacte branche/service, prouve la base
+      # fictive, exécute le seed documentaire réel et compte les fiches.
+      - name: Seed documentaire demo (chemin /preview simule)
+        run: npm run seed:preview-demo
+        env:
+          RENDER: 'true'
+          RENDER_GIT_BRANCH: feature/consignes-docs
+          RENDER_SERVICE_NAME: al-pr39-api
+
       - name: Start API and check authentication
         run: |
           node dist/apps/api/main.js > api.log 2>&1 &

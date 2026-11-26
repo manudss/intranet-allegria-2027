@@ -86,10 +86,16 @@ import {
   VolunteerTag,
   VolunteerTagPayload,
   VolunteerTeam,
+  VolunteerTeamType,
+  VolunteerTeamTypePayload,
   VolunteerTeamMembership,
   VolunteerTeamMembershipPayload,
   VolunteerTeamPayload,
   VolunteerPayload,
+  DocumentCategory,
+  DocumentCategoryPayload,
+  DocumentLink,
+  DocumentLinkPayload,
 } from '../models/models';
 
 @Injectable()
@@ -210,6 +216,13 @@ export class VolunteerTagsApiService {
 @Injectable({ providedIn: 'root' })
 export class VolunteerTeamsApiService extends CrudApi<VolunteerTeam, VolunteerTeamPayload> {
   protected readonly path = '/api/volunteer-teams';
+}
+@Injectable({ providedIn: 'root' })
+export class VolunteerTeamTypesApiService extends CrudApi<
+  VolunteerTeamType,
+  VolunteerTeamTypePayload
+> {
+  protected readonly path = '/api/volunteer-team-types';
 }
 @Injectable({ providedIn: 'root' })
 export class VolunteerTeamMembershipsApiService {
@@ -892,12 +905,54 @@ export class ProgramApiService {
   }
 }
 
-@Injectable({providedIn:'root'})
+// --- Consignes & documents ---
+
+@Injectable({ providedIn: 'root' })
+export class DocumentLinksApiService extends CrudApi<DocumentLink, DocumentLinkPayload> {
+  protected readonly path = '/api/document-links';
+
+  /** Catalogue filtré côté serveur selon les droits de l'utilisateur connecté. */
+  listCatalog(filters?: {
+    search?: string;
+    categoryId?: number | null;
+  }): Observable<DocumentLink[]> {
+    let params = new HttpParams();
+    if (filters?.search) params = params.set('search', filters.search);
+    if (filters?.categoryId != null) params = params.set('categoryId', String(filters.categoryId));
+    return this.http.get<DocumentLink[]>(this.path, { params });
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class DocumentCategoriesApiService extends CrudApi<
+  DocumentCategory,
+  DocumentCategoryPayload
+> {
+  protected readonly path = '/api/document-categories';
+}
+
+@Injectable({ providedIn: 'root' })
 export class FamilyRegistrationsApiService {
- private http=inject(HttpClient);
- list(){return this.http.get<import('../models/models').FamilySpace[]>('/api/family-registrations');}
- rules(){return this.http.get<import('../models/models').FamilyRules>('/api/family-registrations/rules');}
- configure(rules:import('../models/models').FamilyRules){return this.http.patch<import('../models/models').FamilyRules>('/api/family-registrations/rules',rules);}
- review(family:string,youth:string,revision:number,state:string,reason:string){return this.http.post<import('../models/models').FamilySpace>('/api/family-registrations/'+family+'/youths/'+youth+'/review',{revision,state,reason});}
- catering(){return this.http.get<import('../models/models').CateringNeeds>('/api/catering-needs');}
+  private http = inject(HttpClient);
+  list() {
+    return this.http.get<import('../models/models').FamilySpace[]>('/api/family-registrations');
+  }
+  rules() {
+    return this.http.get<import('../models/models').FamilyRules>('/api/family-registrations/rules');
+  }
+  configure(rules: import('../models/models').FamilyRules) {
+    return this.http.patch<import('../models/models').FamilyRules>(
+      '/api/family-registrations/rules',
+      rules,
+    );
+  }
+  review(family: string, youth: string, revision: number, state: string, reason: string) {
+    return this.http.post<import('../models/models').FamilySpace>(
+      '/api/family-registrations/' + family + '/youths/' + youth + '/review',
+      { revision, state, reason },
+    );
+  }
+  catering() {
+    return this.http.get<import('../models/models').CateringNeeds>('/api/catering-needs');
+  }
 }

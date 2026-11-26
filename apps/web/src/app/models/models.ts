@@ -119,8 +119,25 @@ export interface Volunteer {
   skills?: VolunteerSkill[];
   tags?: VolunteerTag[];
 }
+export interface VolunteerTeamType {
+  id: number;
+  code: string;
+  label: string;
+  description: string | null;
+  sortOrder: number;
+  isActive: boolean;
+}
+export type VolunteerTeamTypePayload = {
+  code: string;
+  label: string;
+  description: string | null;
+  sortOrder: number;
+  isActive: boolean;
+};
 export interface VolunteerTeam {
   id: number;
+  typeId?: number | null;
+  type?: VolunteerTeamType | null;
   name: string;
   code: string;
   description: string | null;
@@ -313,6 +330,7 @@ export type VolunteerPayload = Pick<Volunteer, 'firstName' | 'lastName' | 'isGro
 };
 export type VolunteerTeamPayload = Pick<VolunteerTeam, 'name' | 'code' | 'isActive'> & {
   description: string;
+  typeId: number | null;
 };
 export type VolunteerTeamMembershipPayload = {
   volunteerTeamId: number | null;
@@ -878,6 +896,61 @@ export interface ApplyJeunesRepartitionResult {
   applied: number;
 }
 
+// --- Consignes & documents ---
+
+export type DocumentFileType = 'PDF' | 'DOCX' | 'XLSX' | 'PPTX' | 'OTHER';
+
+export type DocumentVisibility = 'ALL' | 'TEAMS';
+
+export interface DocumentCategory {
+  id: number;
+  code: string;
+  label: string;
+  parentId: number | null;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface DocumentLinkTeamRef {
+  id: number;
+  name: string;
+  code: string;
+  isActive: boolean;
+}
+
+export interface DocumentLink {
+  id: number;
+  title: string;
+  description: string | null;
+  url: string;
+  fileType: DocumentFileType;
+  visibility: DocumentVisibility;
+  categoryId: number | null;
+  category: { id: number; code: string; label: string } | null;
+  teams: DocumentLinkTeamRef[];
+  createdByUserId: number | null;
+  updatedByUserId: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DocumentLinkPayload {
+  title: string;
+  description?: string | null;
+  url: string;
+  fileType?: DocumentFileType;
+  categoryId?: number | null;
+  visibility: DocumentVisibility;
+  teamIds?: number[];
+}
+
+export interface DocumentCategoryPayload {
+  code: string;
+  label: string;
+  parentId?: number | null;
+  sortOrder?: number;
+  isActive?: boolean;
+}
 export type EventMissionPhase = 'BEFORE' | 'DURING' | 'AFTER';
 export interface EventShiftBindingDraft {
   shiftId: number;
@@ -910,4 +983,7 @@ export interface EventBindingPreview {
 }
 
 export type { FamilySpace, FamilyRules, YouthDossier } from '@mej-allegria/shared';
-export interface CateringNeeds { notice:string; items:{allergen:string;range:string}[] }
+export interface CateringNeeds {
+  notice: string;
+  items: { allergen: string; range: string }[];
+}

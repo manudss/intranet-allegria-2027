@@ -2,11 +2,14 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   Unique,
   UpdateDateColumn,
 } from 'typeorm';
+import { VolunteerTeamType } from './volunteer-team-type.entity';
 import { VolunteerMission } from './volunteer-mission.entity';
 import { VolunteerTeamMembership } from './volunteer-team-membership.entity';
 
@@ -27,6 +30,13 @@ export class VolunteerTeam {
 
   @Column({ type: 'boolean', default: true })
   isActive!: boolean;
+
+  @Column({ name: 'type_id', type: 'int', nullable: true })
+  typeId!: number | null;
+
+  @ManyToOne(() => VolunteerTeamType, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'type_id' })
+  type!: VolunteerTeamType | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;

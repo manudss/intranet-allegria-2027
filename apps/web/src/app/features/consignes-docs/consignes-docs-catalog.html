@@ -1,0 +1,79 @@
+<app-page-layout
+  title="Consignes & documents"
+  description="Les ressources du rassemblement, au même endroit."
+>
+  @if (canManage()) {
+  <button actions tuiButton appearance="secondary" routerLink="/consignes-docs/gestion">
+    Gérer le catalogue
+  </button>
+  }
+
+  <div class="notice">
+    <strong>Compte Microsoft requis</strong>
+    <p>
+      Les fichiers restent dans le SharePoint MEJ. Leur ouverture dépend des droits de votre compte
+      Microsoft, indépendamment des droits Allegria.
+    </p>
+  </div>
+
+  <tui-textfield iconStart="@tui.search">
+    <label for="rechercher-un-document" tuiLabel>Rechercher un document</label>
+    <input
+      tuiInput
+      placeholder="Titre, description, catégorie…"
+      [value]="query()"
+      (input)="query.set($any($event.target).value)"
+      id="rechercher-un-document"
+    />
+  </tui-textfield>
+
+  @if (activeCategories().length) {
+  <div class="chips">
+    <button
+      tuiBadge
+      class="chip"
+      [class.chip-active]="selectedCategoryId() === null"
+      (click)="selectCategory(null)"
+    >
+      Toutes
+    </button>
+    @for (category of activeCategories(); track category.id) {
+    <button
+      tuiBadge
+      class="chip"
+      [class.chip-active]="selectedCategoryId() === category.id"
+      (click)="selectCategory(category.id)"
+    >
+      {{ category.label }}
+    </button>
+    }
+  </div>
+  } @if (loading()) {
+  <app-loading-skeleton variant="cards" />
+  } @else if (!filtered().length) {
+  <p class="empty">Aucune fiche ne correspond à cette recherche.</p>
+  } @else {
+  <ul class="cards">
+    @for (link of filtered(); track link.id) {
+    <li class="card">
+      <span class="file-badge">{{ link.fileType }}</span>
+      <div class="card-body">
+        <h3>{{ link.title }}</h3>
+        <p class="card-meta">
+          {{ link.category?.label ?? 'Sans catégorie' }} @if (link.description) { · {{
+          link.description }} }
+        </p>
+      </div>
+      <span class="ms-chip">Compte Microsoft</span>
+      <button tuiButton appearance="flat" (click)="openInSharePoint(link)">
+        Ouvrir dans SharePoint
+      </button>
+    </li>
+    }
+  </ul>
+  <p class="footnote">
+    Affichage des fiches selon les droits Allegria. Les droits sur le fichier restent gérés par
+    Microsoft.
+  </p>
+  }
+</app-page-layout>

@@ -204,7 +204,8 @@ export function personLabel(p: Pick<PersonSummary, 'email' | 'firstName' | 'last
     :host {
       display: block;
       position: relative;
-      min-inline-size: 16rem;
+      inline-size: 100%;
+      max-inline-size: 36rem;
     }
     .field {
       position: relative;
@@ -229,16 +230,12 @@ export function personLabel(p: Pick<PersonSummary, 'email' | 'firstName' | 'last
       gap: 0.5rem;
     }
     .list {
-      position: absolute;
-      inset-inline: 0;
-      inset-block-start: 3.25rem;
-      z-index: 10;
-      max-block-size: 22rem;
+      max-block-size: 20rem;
       overflow: auto;
       background: var(--tui-background-elevation-1, #fff);
       border: 1px solid var(--tui-border-normal, #ccc);
       border-radius: 0.75rem;
-      box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 20%);
+      overflow-x: hidden;
     }
     .row {
       display: flex;
@@ -278,7 +275,9 @@ export function personLabel(p: Pick<PersonSummary, 'email' | 'firstName' | 'last
       font-size: 0.6875rem;
       padding: 0.125rem 0.5rem;
       border-radius: 99px;
-      background: var(--tui-background-neutral-1, #eee);
+      background: var(--tui-background-base, #fff);
+      border: 1px solid var(--tui-border-normal, #ccc);
+      white-space: nowrap;
     }
     .state,
     .foot {

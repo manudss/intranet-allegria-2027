@@ -34,8 +34,9 @@
 .new-group { display: flex; flex-wrap: wrap; gap: .75rem; align-items: end; background: var(--appearance-raised); border-radius: .6rem; padding: .6rem; margin-bottom: .6rem; }
 .new-group tui-textfield { flex: 1 1 12rem; }
 
-.group-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
-.group-card { background: var(--appearance-raised); border-radius: .7rem; padding: .55rem .7rem; }
+.group-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; min-inline-size: 0; }
+.group-card { background: var(--appearance-raised); border-radius: .7rem; padding: .55rem .7rem; box-sizing: border-box; inline-size: 100%; min-inline-size: 0; }
+.group-card header { flex-wrap: wrap; }
 .group-card.target { outline: 2px dashed var(--appearance-border); outline-offset: 2px; }
 .group-card.overflow { box-shadow: inset 3px 0 0 #c62828; }
 .group-card.almost { box-shadow: inset 3px 0 0 #f5a623; }
@@ -77,4 +78,10 @@
 
   .board.panel-teams .column.groups { display: none; }
   .board.panel-groups .column.teams { display: none; }
+
+  /* Carte équipe : nom sur sa ligne, effectif puis délégation en dessous. */
+  .team-card { display: grid; grid-template-columns: auto 1fr; column-gap: .5rem; row-gap: .1rem; }
+  .team-card .dot { grid-row: 1 / span 3; align-self: start; margin-block-start: .35rem; }
+  .team-card .team-name { grid-column: 2; }
+  .team-card .muted { grid-column: 2; margin-inline-start: 0; }
 }

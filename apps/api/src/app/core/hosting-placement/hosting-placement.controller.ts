@@ -13,7 +13,13 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthTokenGuard } from '../auth/auth-token.guard';
 import { RoleGuard } from '../auth/role.guard';
-import { AccessModule, AccessLevelRequired } from '../auth/access-module.decorator';
+import {
+  AccessModule,
+  AccessLevelRequired,
+  AccessScope,
+  AccessScopeInfo,
+  GroupScopeAware,
+} from '../auth/access-module.decorator';
 import { HostingPlacementService } from './hosting-placement.service';
 import {
   AssignToGroupDto,
@@ -36,9 +42,10 @@ export class HostingPlacementController {
 
   @ApiOperation({ summary: 'Vue complète pour le placement : groupes, équipes, familles, jeunes' })
   @AccessModule('HOUSING')
+  @GroupScopeAware()
   @Get('board')
-  board() {
-    return this.service.board();
+  board(@AccessScope() scope: AccessScopeInfo) {
+    return this.service.board(scope);
   }
 
   @ApiOperation({ summary: "Liste légère des groupes d'hébergement avec familles et places" })

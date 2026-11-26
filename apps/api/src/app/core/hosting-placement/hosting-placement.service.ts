@@ -5,6 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import type { AccessScopeInfo } from '../auth/access-module.decorator';
+import { AccessRightsService } from '../access-rights/access-rights.service';
 import { EntityManager, In, IsNull, Not, Repository } from 'typeorm';
 import {
   AssignmentStatus,
@@ -88,6 +90,7 @@ export class HostingPlacementService {
     private readonly teamParticipants: Repository<TeamParticipant>,
     @InjectRepository(ParticipantHostFamilyAssignment)
     private readonly assignments: Repository<ParticipantHostFamilyAssignment>,
+    private readonly accessRights: AccessRightsService,
   ) {}
 
   // ── Groupes d'hébergement ──────────────────────────────────────────────────
@@ -298,7 +301,12 @@ export class HostingPlacementService {
 
   // ── Vue d'ensemble pour l'interface ────────────────────────────────────────
 
-  async board(): Promise<BoardResponse> {
+  /**
+   * Vue placement. Les données nominatives (jeunes, conflits) sont filtrées par groupe ;
+   * les effectifs d'équipe et les familles restent globaux (comptages sans identité),
+   * car la capacité d'une famille dépend de tous les jeunes placés.
+   */
+  async board(scope: AccessScopeInfo = { all: false, groupIds: [] }): Promise<BoardResponse> {
     const [hostingGroups, teams, memberships, families, assignments] = await Promise.all([
       this.groups.find({ order: { name: 'ASC' } }),
       this.teams.find({ relations: { group: true, hostingGroup: true }, order: { name: 'ASC' } }),
@@ -316,7 +324,11 @@ export class HostingPlacementService {
     const teamGroup = new Map(teams.map((t) => [t.id, t.hostingGroup?.id ?? null]));
     const familyGroup = new Map(families.map((f) => [f.id, f.hostingGroup?.id ?? null]));
 
-    const members: BoardMember[] = memberships.map((m) => {
+    const visible = await this.accessRights.participantIdsInScope(
+      scope,
+      memberships.map((m) => m.participant.id),
+    );
+    const allMembers: BoardMember[] = memberships.map((m) => {
       const a = active.get(m.participant.id);
       return {
         participantId: m.participant.id,
@@ -332,6 +344,7 @@ export class HostingPlacementService {
       };
     });
 
+    const members = allMembers.filter((m) => visible.has(m.participantId));
     const conflicts: BoardResponse['conflicts'] = [];
     for (const m of members) {
       if (m.hostFamilyId === null) continue;
@@ -345,7 +358,7 @@ export class HostingPlacementService {
     }
 
     const memberCount = new Map<number, number>();
-    for (const m of members) memberCount.set(m.teamId, (memberCount.get(m.teamId) ?? 0) + 1);
+    for (const m of allMembers) memberCount.set(m.teamId, (memberCount.get(m.teamId) ?? 0) + 1);
 
     return {
       hostingGroups: hostingGroups.map((g) => ({ id: g.id, name: g.name, notes: g.notes, kind: g.kind, color: g.color })),

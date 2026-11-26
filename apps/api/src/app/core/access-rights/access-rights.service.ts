@@ -184,6 +184,7 @@ export class AccessRightsService {
         `SELECT DISTINCT m2.volunteer_id
            FROM volunteer_team_memberships m1
            JOIN volunteer_teams vt ON vt.id = m1.volunteer_team_id AND vt."isActive" = true
+           JOIN volunteer_team_types t ON t.id = vt.type_id AND t."isActive" = true
            JOIN volunteer_team_memberships m2 ON m2.volunteer_team_id = m1.volunteer_team_id
           WHERE m1.volunteer_id = ANY($1::int[])
             AND (m1."startAt" IS NULL OR m1."startAt" <= CURRENT_DATE)

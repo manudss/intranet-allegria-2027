@@ -141,6 +141,42 @@ describe('PersonPickerComponent', () => {
     expect(el.querySelector('[role="alert"]')?.textContent).toContain('Recherche impossible');
   });
 
+  it('source participants : route serveur dédiée, exclusion locale, sans filtres', async () => {
+    const { fixture, el, input, type } = await setup(true);
+    fixture.componentRef.setInput('source', 'participants');
+    fixture.componentRef.setInput('exclude', (p: PersonSummary) => p.type === 'BENEVOLE');
+    await fixture.whenStable();
+    expect(el.querySelector('[data-testid="person-filters-toggle"]')).toBeNull();
+    await type('mar');
+    await wait(450);
+    const req = http.expectOne((r) => r.url === '/api/participants/search');
+    expect(req.request.params.get('q')).toBe('mar');
+    expect(req.request.params.get('limit')).toBe('10');
+    req.flush({
+      items: [
+        { id: 5, firstName: 'Léa', lastName: 'Martin', type: 'JEUNE', group: { name: 'G1' } },
+        { id: 6, firstName: 'Marc', lastName: 'Benoit', type: 'BENEVOLE' },
+      ],
+      total: 2,
+      limit: 10,
+      offset: 0,
+    });
+    await fixture.whenStable();
+    const rows = el.querySelectorAll('[data-testid="person-option"]');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].textContent).toContain('Léa Martin');
+    void input;
+  });
+
+  it('source volunteers : route bénévoles', async () => {
+    const { fixture, type } = await setup(false);
+    fixture.componentRef.setInput('source', 'volunteers');
+    await fixture.whenStable();
+    await type('mar');
+    await wait(450);
+    http.expectOne((r) => r.url === '/api/volunteers/search').flush({ items: [], total: 0 });
+  });
+
   it("personLabel retombe sur l'email sans fiche bénévole", () => {
     expect(personLabel(marie)).toBe('Marie Dupont');
     expect(personLabel({ email: 'a@b.test', firstName: null, lastName: null })).toBe('a@b.test');

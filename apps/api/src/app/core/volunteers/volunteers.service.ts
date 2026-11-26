@@ -50,6 +50,53 @@ export class VolunteersService {
     return qb.getMany();
   }
 
+  /**
+   * Recherche paginée pour les sélecteurs de bénévole (texte 2 lettres minimum, sinon liste vide).
+   * Respecte les bénévoles visibles de la requête (visible = null : tous).
+   */
+  async search(
+    params: { q?: string; limit?: number; offset?: number },
+    visible: number[] | null = null,
+  ): Promise<{
+    items: {
+      id: number;
+      firstName: string;
+      lastName: string;
+      email: string | null;
+      team: string | null;
+    }[];
+    total: number;
+    hasMore: boolean;
+  }> {
+    const q = (params.q ?? '').trim();
+    const limit = Math.min(Math.max(Math.trunc(params.limit ?? 10) || 10, 1), 20);
+    const offset = Math.max(Math.trunc(params.offset ?? 0) || 0, 0);
+    if (q.length < 2) return { items: [], total: 0, hasMore: false };
+    const like = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+    const rows: {
+      id: number;
+      firstName: string;
+      lastName: string;
+      email: string | null;
+      team: string | null;
+      total: string;
+    }[] = await this.volunteersRepository.query(
+      `SELECT v.id, v."firstName", v."lastName", v.email, v.team, COUNT(*) OVER () AS total
+         FROM volunteers v
+        WHERE ($2::int[] IS NULL OR v.id = ANY($2::int[]))
+          AND (v."firstName" ILIKE $1 ESCAPE '\\' OR v."lastName" ILIKE $1 ESCAPE '\\'
+               OR (v."firstName" || ' ' || v."lastName") ILIKE $1 ESCAPE '\\'
+               OR (v."lastName" || ' ' || v."firstName") ILIKE $1 ESCAPE '\\'
+               OR v.email ILIKE $1 ESCAPE '\\')
+        ORDER BY lower(v."lastName"), lower(v."firstName"), v.id
+        LIMIT $3 OFFSET $4`,
+      [like, visible === null ? null : visible, limit, offset],
+    );
+    const total = rows.length > 0 ? Number(rows[0].total) : 0;
+    const items = rows.map(({ total: _t, ...r }) => ({ ...r, id: Number(r.id) }));
+    return { items, total, hasMore: offset + items.length < total };
+  }
+
   findByUserId(userId: number): Promise<Volunteer | null> {
     return this.volunteersRepository.findOne({
       where: { user: { id: userId } },

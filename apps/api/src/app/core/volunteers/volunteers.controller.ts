@@ -49,6 +49,23 @@ export class VolunteersController {
     return this.volunteersService.findAll(query, visible);
   }
 
+  @ApiOperation({ summary: 'Rechercher des benevoles (selecteur, resultats limites)' })
+  @AccessModule('VOLUNTEER_DIRECTORY')
+  @VolunteerScopeAware()
+  @Get('search')
+  search(
+    @VolunteerScope() visible: number[] | null,
+    @Query('q') q?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const int = (v?: string) => (v && /^\d+$/.test(v) ? Number(v) : undefined);
+    return this.volunteersService.search(
+      { q: q?.slice(0, 80), limit: int(limit), offset: int(offset) },
+      visible,
+    );
+  }
+
   @ApiOperation({ summary: 'Recuperer un benevole par id' })
   @AccessModule('VOLUNTEER_DIRECTORY')
   @VolunteerScopeAware()

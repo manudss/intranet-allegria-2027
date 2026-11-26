@@ -84,9 +84,16 @@ export class ParticipantsService {
     if (filters.type) query.andWhere('participant.type = :type', { type: filters.type });
     if (filters.teamId) query.andWhere('team.id = :teamId', { teamId: Number(filters.teamId) });
     if (filters.q?.trim()) {
-      query.andWhere("concat_ws(' ', participant.firstName, participant.lastName) ILIKE :q", {
-        q: `%${filters.q.trim()}%`,
-      });
+      // Jokers LIKE échappés : « % » ou « _ » saisis ne ratissent pas toute la liste.
+      query.andWhere(
+        "concat_ws(' ', participant.firstName, participant.lastName) ILIKE :q ESCAPE '\\'",
+        {
+          q: `%${filters.q
+            .trim()
+            .slice(0, 80)
+            .replace(/[\\%_]/g, (c) => `\\${c}`)}%`,
+        },
+      );
     }
     if (filters.unassignedOnly === true || filters.unassignedOnly === 'true') {
       // En l'absence de dates d'événement configurées, toute affectation non annulée est considérée active.

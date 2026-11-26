@@ -1,188 +1,175 @@
 <app-page-layout title="Équipes & missions" description="Composition et animateurs"
-      ><button actions tuiButton (click)="create()">Nouvelle équipe</button>
-      <div class="filters">
-        <tui-textfield iconStart="@tui.search">
-          <label for="rechercher-une-equipe" tuiLabel>Rechercher une équipe</label
-          ><input
-            tuiInput
-            placeholder="Nom d'équipe…"
-            [value]="query()"
-            (input)="query.set($any($event.target).value)"
-            id="rechercher-une-equipe"
-          />
-        </tui-textfield>
-        <tui-textfield iconStart="@tui.filter" tuiChevron [stringify]="stringifyGroup">
-          <label for="groupe-2" tuiLabel>Groupe</label
-          ><select
-            tuiSelect
-            placeholder="Tous les groupes"
-            [items]="groupIds()"
-            [formField]="groupFilterForm"
-            id="groupe-2"
-          ></select>
-        </tui-textfield>
-      </div>
-      @if (loading()) {
-        <app-loading-skeleton />
-      } @else {
-        <app-data-table [rows]="filtered()" [columns]="tableColumns" (rowSelected)="open($event)" />
-      }
-    </app-page-layout>
-    @if (opened()) {
-      <tui-drawer direction="end"
-        ><header>
-          <h2>{{ mode() === 'create' ? 'Nouvelle équipe' : selected()?.name }}</h2>
-        </header>
-        @if (mode() === 'detail') {
-          <dl>
-            <dt>Groupe</dt>
-            <dd>{{ selected()?.group?.name || '—' }}</dd>
-            <dt>Animateur</dt>
-            <dd>
-              {{ selected()?.primaryAnimator?.firstName }}
-              {{ selected()?.primaryAnimator?.lastName }}
-            </dd>
-            <dt>Co-animateur</dt>
-            <dd>
-              {{ selected()?.secondaryAnimator?.firstName || '—' }}
-              {{ selected()?.secondaryAnimator?.lastName }}
-            </dd>
-            <dt>Effectif</dt>
-            <dd>
-              <span tuiBadge [class.over]="members().length > (selected()?.maxSize || 10)"
-                >{{ jeunesCount() }} jeunes + {{ adultesCount() }} adultes / {{ selected()?.maxSize }}</span
-              >
-            </dd>
-          </dl>
-          <h3>Membres</h3>
-          <div class="member-add">
-            <tui-textfield iconStart="@tui.user-plus" tuiChevron [stringify]="stringifyParticipant">
-              <label for="ajouter-un-participant" tuiLabel>Ajouter un participant</label
-              ><select
-                tuiSelect
-                placeholder="Sélectionner…"
-                [items]="availableParticipantIds()"
-                [formField]="candidateForm"
-                id="ajouter-un-participant"
-              ></select>
-            </tui-textfield>
-            <button tuiButton size="s" [disabled]="!candidateId()" (click)="addMember()">
-              Ajouter
-            </button>
-          </div>
-          <ul>
-            @for (p of members(); track p.id) {
-              <li>
-                {{ p.lastName }} {{ p.firstName }}
-                <button
-                  tuiButton
-                  size="xs"
-                  appearance="flat-destructive"
-                  (click)="removeMember(p.id)"
-                >
-                  Retirer
-                </button>
-              </li>
-            }
-          </ul>
-          <h3>Bénévoles (adultes)</h3>
-          <div class="member-add">
-            <tui-textfield iconStart="@tui.user-plus" tuiChevron [stringify]="stringifyBenevole">
-              <label for="ajouter-un-benevole" tuiLabel>Ajouter un bénévole</label
-              ><select
-                tuiSelect
-                placeholder="Sélectionner…"
-                [items]="availableBenevoleIds()"
-                [formField]="benevoleCandidateForm"
-                id="ajouter-un-benevole"
-              ></select>
-            </tui-textfield>
-            <button tuiButton size="s" [disabled]="!benevoleCandidateId()" (click)="addBenevole()">
-              Ajouter
-            </button>
-          </div>
-          <ul>
-            @for (b of benevoles(); track b.volunteerId) {
-              <li>
-                <span
-                  >{{ b.lastName }} {{ b.firstName
-                  }}@if (b.mission) {
-                    <small class="muted"> · {{ b.mission }}</small>
-                  }</span
-                >
-                <button
-                  tuiButton
-                  size="xs"
-                  appearance="flat-destructive"
-                  (click)="removeBenevole(b.volunteerId)"
-                >
-                  Retirer
-                </button>
-              </li>
-            } @empty {
-              <li class="muted">Aucun bénévole rattaché.</li>
-            }
-          </ul>
-          <p class="hint">
-            Un bénévole ajouté dort avec l'équipe et compte comme un adulte dans la répartition
-            des logements.
-          </p>
-        } @else {
-          <form class="drawer-form">
-            <tui-textfield iconStart="@tui.briefcase">
-              <label for="nom-de-l-equipe" tuiLabel>Nom de l'équipe</label
-              ><input tuiInput [formField]="teamForm.name" id="nom-de-l-equipe" />
-            </tui-textfield>
-            <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyGroup">
-              <label for="groupe-3" tuiLabel>Groupe</label
-              ><select
-                tuiSelect
-                placeholder="Sans groupe"
-                [items]="groupIds()"
-                [formField]="teamForm.groupId"
-                id="groupe-3"
-              ></select>
-            </tui-textfield>
-            <tui-textfield iconStart="@tui.user-check" tuiChevron [stringify]="stringifyVolunteer">
-              <label for="animateur-2" tuiLabel>Animateur</label
-              ><select
-                tuiSelect
-                placeholder="Aucun"
-                [items]="volunteerIds()"
-                [formField]="teamForm.primaryAnimatorId"
-                id="animateur-2"
-              ></select>
-            </tui-textfield>
-            <tui-textfield iconStart="@tui.user" tuiChevron [stringify]="stringifyVolunteer">
-              <label for="co-animateur" tuiLabel>Co-animateur</label
-              ><select
-                tuiSelect
-                placeholder="Aucun"
-                [items]="volunteerIds()"
-                [formField]="teamForm.secondaryAnimatorId"
-                id="co-animateur"
-              ></select>
-            </tui-textfield>
-            <tui-textfield iconStart="@tui.hash">
-              <label for="taille-maximale" tuiLabel>Taille maximale</label
-              ><input tuiInput type="number" [formField]="teamForm.maxSize" id="taille-maximale" />
-            </tui-textfield>
-            <tui-textfield iconStart="@tui.file-text" class="wide">
-              <label for="notes-2" tuiLabel>Notes</label
-              ><textarea tuiTextarea [formField]="$any(teamForm.notes)" id="notes-2"></textarea>
-            </tui-textfield>
-          </form>
-        }
-        <footer>
-          <button tuiButton appearance="flat" (click)="opened.set(false)">Fermer</button>
-          @if (mode() === 'detail') {
-            <button tuiButton (click)="edit()">Modifier</button
-            ><button tuiButton appearance="secondary-destructive" (click)="remove()">
-              Supprimer
-            </button>
-          } @else {
-            <button tuiButton (click)="save()">Enregistrer</button>
-          }
-        </footer></tui-drawer
+  ><button actions tuiButton (click)="create()">Nouvelle équipe</button>
+  <div class="filters">
+    <tui-textfield iconStart="@tui.search">
+      <label for="rechercher-une-equipe" tuiLabel>Rechercher une équipe</label
+      ><input
+        tuiInput
+        placeholder="Nom d'équipe…"
+        [value]="query()"
+        (input)="query.set($any($event.target).value)"
+        id="rechercher-une-equipe"
+      />
+    </tui-textfield>
+    <tui-textfield iconStart="@tui.filter" tuiChevron [stringify]="stringifyGroup">
+      <label for="groupe-2" tuiLabel>Groupe</label
+      ><select
+        tuiSelect
+        placeholder="Tous les groupes"
+        [items]="groupIds()"
+        [formField]="groupFilterForm"
+        id="groupe-2"
+      ></select>
+    </tui-textfield>
+  </div>
+  @if (loading()) {
+  <app-loading-skeleton />
+  } @else {
+  <app-data-table [rows]="filtered()" [columns]="tableColumns" (rowSelected)="open($event)" />
+  }
+</app-page-layout>
+@if (opened()) {
+<tui-drawer direction="end"
+  ><header>
+    <h2>{{ mode() === 'create' ? 'Nouvelle équipe' : selected()?.name }}</h2>
+  </header>
+  @if (mode() === 'detail') {
+  <dl>
+    <dt>Groupe</dt>
+    <dd>{{ selected()?.group?.name || '—' }}</dd>
+    <dt>Animateur</dt>
+    <dd>
+      {{ selected()?.primaryAnimator?.firstName }} {{ selected()?.primaryAnimator?.lastName }}
+    </dd>
+    <dt>Co-animateur</dt>
+    <dd>
+      {{ selected()?.secondaryAnimator?.firstName || '—' }} {{
+      selected()?.secondaryAnimator?.lastName }}
+    </dd>
+    <dt>Effectif</dt>
+    <dd>
+      <span tuiBadge [class.over]="members().length > (selected()?.maxSize || 10)"
+        >{{ jeunesCount() }} jeunes + {{ adultesCount() }} adultes / {{ selected()?.maxSize }}</span
       >
+    </dd>
+  </dl>
+  <h3>Membres</h3>
+  <div class="member-add">
+    <app-person-picker
+      label="Ajouter un participant"
+      placeholder="Nom du participant"
+      testId="team-add-participant"
+      source="participants"
+      [filters]="false"
+      [exclude]="excludeParticipant"
+      [value]="candidate()"
+      (valueChange)="candidate.set($event)"
+    />
+    <button tuiButton size="s" [disabled]="!candidate()" (click)="addMember()">Ajouter</button>
+  </div>
+  <ul>
+    @for (p of members(); track p.id) {
+    <li>
+      {{ p.lastName }} {{ p.firstName }}
+      <button tuiButton size="xs" appearance="flat-destructive" (click)="removeMember(p.id)">
+        Retirer
+      </button>
+    </li>
     }
+  </ul>
+  <h3>Bénévoles (adultes)</h3>
+  <div class="member-add">
+    <app-person-picker
+      label="Ajouter un bénévole"
+      placeholder="Nom du bénévole"
+      testId="team-add-benevole"
+      source="volunteers"
+      [filters]="false"
+      [exclude]="excludeBenevole"
+      [value]="benevoleCandidate()"
+      (valueChange)="benevoleCandidate.set($event)"
+    />
+    <button tuiButton size="s" [disabled]="!benevoleCandidate()" (click)="addBenevole()">
+      Ajouter
+    </button>
+  </div>
+  <ul>
+    @for (b of benevoles(); track b.volunteerId) {
+    <li>
+      <span
+        >{{ b.lastName }} {{ b.firstName }}@if (b.mission) {
+        <small class="muted"> · {{ b.mission }}</small>
+        }</span
+      >
+      <button
+        tuiButton
+        size="xs"
+        appearance="flat-destructive"
+        (click)="removeBenevole(b.volunteerId)"
+      >
+        Retirer
+      </button>
+    </li>
+    } @empty {
+    <li class="muted">Aucun bénévole rattaché.</li>
+    }
+  </ul>
+  <p class="hint">
+    Un bénévole ajouté dort avec l'équipe et compte comme un adulte dans la répartition des
+    logements.
+  </p>
+  } @else {
+  <form class="drawer-form">
+    <tui-textfield iconStart="@tui.briefcase">
+      <label for="nom-de-l-equipe" tuiLabel>Nom de l'équipe</label
+      ><input tuiInput [formField]="teamForm.name" id="nom-de-l-equipe" />
+    </tui-textfield>
+    <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyGroup">
+      <label for="groupe-3" tuiLabel>Groupe</label
+      ><select
+        tuiSelect
+        placeholder="Sans groupe"
+        [items]="groupIds()"
+        [formField]="teamForm.groupId"
+        id="groupe-3"
+      ></select>
+    </tui-textfield>
+    <app-person-picker
+      label="Animateur"
+      placeholder="Nom du bénévole"
+      testId="team-primary-animator"
+      source="volunteers"
+      [filters]="false"
+      [value]="primaryAnimator()"
+      (valueChange)="setAnimator('primaryAnimatorId', primaryAnimator, $event)"
+    />
+    <app-person-picker
+      label="Co-animateur"
+      placeholder="Nom du bénévole"
+      testId="team-secondary-animator"
+      source="volunteers"
+      [filters]="false"
+      [value]="secondaryAnimator()"
+      (valueChange)="setAnimator('secondaryAnimatorId', secondaryAnimator, $event)"
+    />
+    <tui-textfield iconStart="@tui.hash">
+      <label for="taille-maximale" tuiLabel>Taille maximale</label
+      ><input tuiInput type="number" [formField]="teamForm.maxSize" id="taille-maximale" />
+    </tui-textfield>
+    <tui-textfield iconStart="@tui.file-text" class="wide">
+      <label for="notes-2" tuiLabel>Notes</label
+      ><textarea tuiTextarea [formField]="$any(teamForm.notes)" id="notes-2"></textarea>
+    </tui-textfield>
+  </form>
+  }
+  <footer>
+    <button tuiButton appearance="flat" (click)="opened.set(false)">Fermer</button>
+    @if (mode() === 'detail') {
+    <button tuiButton (click)="edit()">Modifier</button
+    ><button tuiButton appearance="secondary-destructive" (click)="remove()">Supprimer</button>
+    } @else {
+    <button tuiButton (click)="save()">Enregistrer</button>
+    }
+  </footer></tui-drawer
+>
+}

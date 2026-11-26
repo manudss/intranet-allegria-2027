@@ -12,7 +12,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthTokenGuard } from '../auth/auth-token.guard';
 import { RoleGuard } from '../auth/role.guard';
-import { Roles } from '../auth/roles.decorator';
+import { AccessModule, AccessLevelRequired } from '../auth/access-module.decorator';
 import { TeamBenevolesService } from './team-benevoles.service';
 import {
   ApplyRepartitionDto,
@@ -32,42 +32,51 @@ export class TeamBenevolesController {
   constructor(private readonly service: TeamBenevolesService) {}
 
   @ApiOperation({ summary: 'Toutes les affectations bénévoles aux équipes (board de placement)' })
-  @Roles(...READ_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
   @Get('benevoles/assignments')
   listAssignments() {
     return this.service.listAssignments();
   }
 
-  @ApiOperation({ summary: 'Répartition : listes de valeurs des filtres (zones, groupes, pôles, étiquettes, compétences)' })
-  @Roles(...READ_ROLES)
+  @ApiOperation({
+    summary:
+      'Répartition : listes de valeurs des filtres (zones, groupes, pôles, étiquettes, compétences)',
+  })
+  @AccessModule('OPERATIONAL_TEAMS')
   @Get('benevoles/repartition/filters')
   repartitionFilters() {
     return this.service.repartitionFilters();
   }
 
   @ApiOperation({ summary: 'Répartition étape 1 : équipes de rassemblement avec remplissage' })
-  @Roles(...READ_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
   @Get('benevoles/repartition/teams')
   repartitionTeams(@Query() query: RepartitionTeamsQueryDto) {
     return this.service.searchRepartitionTeams(query);
   }
 
-  @ApiOperation({ summary: 'Répartition étape 2 : bénévoles filtrés (recherche, pôle, compétence, étiquette, affectation)' })
-  @Roles(...READ_ROLES)
+  @ApiOperation({
+    summary:
+      'Répartition étape 2 : bénévoles filtrés (recherche, pôle, compétence, étiquette, affectation)',
+  })
+  @AccessModule('OPERATIONAL_TEAMS')
   @Get('benevoles/repartition/volunteers')
   repartitionVolunteers(@Query() query: RepartitionVolunteersQueryDto) {
     return this.service.searchRepartitionVolunteers(query);
   }
 
-  @ApiOperation({ summary: 'Répartition étape 3 : application groupée des affectations (une transaction)' })
-  @Roles(...WRITE_ROLES)
+  @ApiOperation({
+    summary: 'Répartition étape 3 : application groupée des affectations (une transaction)',
+  })
+  @AccessModule('OPERATIONAL_TEAMS')
+  @AccessLevelRequired('MANAGE')
   @Post('benevoles/repartition/apply')
   repartitionApply(@Body() dto: ApplyRepartitionDto) {
     return this.service.applyRepartition(dto);
   }
 
   @ApiOperation({ summary: 'Bénévoles (adultes) affectés à une équipe' })
-  @Roles(...READ_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
   @Get('teams/:id/benevoles')
   listForTeam(@Param('id', ParseIntPipe) id: number) {
     return this.service.listForTeam(id);
@@ -77,14 +86,16 @@ export class TeamBenevolesController {
     summary:
       'Affecter un bénévole à une équipe en tant qu adulte (compte dans la capacité et le quota adultes)',
   })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
+  @AccessLevelRequired('MANAGE')
   @Post('teams/:id/benevoles')
   assign(@Param('id', ParseIntPipe) id: number, @Body() dto: AssignBenevoleDto) {
     return this.service.assign(id, dto);
   }
 
   @ApiOperation({ summary: 'Retirer un bénévole d une équipe (refusé s il est placé en famille)' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('OPERATIONAL_TEAMS')
+  @AccessLevelRequired('MANAGE')
   @Delete('teams/:id/benevoles/:volunteerId')
   async unassign(
     @Param('id', ParseIntPipe) id: number,

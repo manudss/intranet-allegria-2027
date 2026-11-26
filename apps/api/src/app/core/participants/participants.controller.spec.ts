@@ -15,7 +15,7 @@ describe('ParticipantsController', () => {
       limit: '10',
     };
 
-    await expect(controller.search(query)).resolves.toEqual(result);
-    expect(service.search).toHaveBeenCalledWith(query);
+    await expect(controller.search(query, { all: true })).resolves.toEqual(result);
+    expect(service.search).toHaveBeenCalledWith(query, { all: true });
   });
 });

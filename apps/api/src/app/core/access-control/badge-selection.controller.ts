@@ -1,9 +1,22 @@
-import { Controller, Get, Query, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
+import {
+  Controller,
+  ForbiddenException,
+  Get,
+  Query,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { Type } from 'class-transformer';
 import { IsEnum, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { AuthTokenGuard } from '../auth/auth-token.guard';
 import { RoleGuard } from '../auth/role.guard';
-import { Roles } from '../auth/roles.decorator';
+import {
+  AccessModule,
+  AccessScope,
+  AccessScopeInfo,
+  GroupScopeAware,
+} from '../auth/access-module.decorator';
 import { MejAgeGroup, ParticipantSex, VolunteerSkillType } from '../entities';
 import { JeunesRepartitionService } from '../jeunes-repartition/jeunes-repartition.service';
 import { TeamBenevolesService } from '../team-benevoles/team-benevoles.service';
@@ -31,24 +44,37 @@ export class SelectPrintVolunteersQuery extends SelectionPageQuery {
 /** Reuse the assignment selectors, including their minor privacy rules. Read-only: no badge or projection is created here. */
 @Controller('access-control/printing/selection')
 @UseGuards(AuthTokenGuard, RoleGuard)
-@Roles('ADMIN', 'BADGE_MANAGER')
+@AccessModule('BADGES')
+@GroupScopeAware()
 @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
 export class BadgeSelectionController {
   constructor(
     private readonly jeunes: JeunesRepartitionService,
     private readonly volunteers: TeamBenevolesService,
   ) {}
-  @Get('participants/filters') participantFilters() {
-    return this.jeunes.repartitionFilters();
+  /** Volunteers have no group: a group-limited account cannot list them. */
+  private refuseVolunteers(scope: AccessScopeInfo) {
+    if (!scope.all) throw new ForbiddenException('Les bénévoles ne sont pas rattachés à un groupe');
   }
-  @Get('participants') participants(@Query() query: SelectPrintParticipantsQuery) {
-    return this.jeunes.searchParticipants(query);
+  @Get('participants/filters') participantFilters(@AccessScope() scope: AccessScopeInfo) {
+    return this.jeunes.repartitionFilters(scope);
   }
-  @Get('volunteers/filters') async volunteerFilters() {
+  @Get('participants') participants(
+    @Query() query: SelectPrintParticipantsQuery,
+    @AccessScope() scope: AccessScopeInfo,
+  ) {
+    return this.jeunes.searchParticipants(query, scope);
+  }
+  @Get('volunteers/filters') async volunteerFilters(@AccessScope() scope: AccessScopeInfo) {
+    this.refuseVolunteers(scope);
     const { poles, skills, tags } = await this.volunteers.repartitionFilters();
     return { poles, skills, tags };
   }
-  @Get('volunteers') volunteerRows(@Query() query: SelectPrintVolunteersQuery) {
+  @Get('volunteers') volunteerRows(
+    @Query() query: SelectPrintVolunteersQuery,
+    @AccessScope() scope: AccessScopeInfo,
+  ) {
+    this.refuseVolunteers(scope);
     return this.volunteers.searchRepartitionVolunteers(query);
   }
 }

@@ -1,4 +1,4 @@
-import { Roles } from './roles.decorator';
+import { AccessModule } from './access-module.decorator';
 import { RoleGuard } from './role.guard';
 import {
   Body,
@@ -39,7 +39,7 @@ export class UsersController {
   }
 
   @ApiOperation({ summary: 'Creer un utilisateur' })
-  @Roles('ADMIN')
+  @AccessModule('ADMIN')
   @Post()
   async create(@Body() dto: CreateUserDto) {
     const user = await this.usersService.create(dto);
@@ -61,7 +61,7 @@ export class UsersController {
   }
 
   @ApiOperation({ summary: 'Mettre a jour un utilisateur' })
-  @Roles('ADMIN')
+  @AccessModule('ADMIN')
   @Patch(':id')
   async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateUserDto) {
     const user = await this.usersService.update(id, dto);

@@ -1,4 +1,4 @@
-import { Roles } from './roles.decorator';
+import { AccessModule } from './access-module.decorator';
 import { RoleGuard } from './role.guard';
 import {
   Body,
@@ -21,7 +21,7 @@ export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @ApiOperation({ summary: 'Creer un role' })
-  @Roles('ADMIN')
+  @AccessModule('ADMIN')
   @Post()
   create(@Body() dto: CreateRoleDto) {
     return this.rolesService.create(dto);
@@ -34,7 +34,7 @@ export class RolesController {
   }
 
   @ApiOperation({ summary: 'Affecter un role a un utilisateur' })
-  @Roles('ADMIN')
+  @AccessModule('ADMIN')
   @Post('users/:userId/:roleId')
   assignRole(
     @Param('userId', ParseIntPipe) userId: number,
@@ -44,7 +44,7 @@ export class RolesController {
   }
 
   @ApiOperation({ summary: 'Retirer un role a un utilisateur' })
-  @Roles('ADMIN')
+  @AccessModule('ADMIN')
   @Delete('users/:userId/:roleId')
   async unassignRole(
     @Param('userId', ParseIntPipe) userId: number,

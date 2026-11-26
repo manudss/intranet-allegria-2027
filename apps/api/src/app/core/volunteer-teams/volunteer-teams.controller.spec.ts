@@ -22,7 +22,7 @@ describe('VolunteerTeamsController', () => {
     } as unknown as VolunteerTeamsService;
     const controller = new VolunteerTeamsController(service);
 
-    await expect(controller.listVolunteerMemberships(12)).resolves.toEqual(memberships);
-    expect(service.listVolunteerMemberships).toHaveBeenCalledWith(12);
+    await expect(controller.listVolunteerMemberships(12, null)).resolves.toEqual(memberships);
+    expect(service.listVolunteerMemberships).toHaveBeenCalledWith(12, null);
   });
 });

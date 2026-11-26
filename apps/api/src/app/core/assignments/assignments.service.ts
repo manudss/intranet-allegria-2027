@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import type { AccessScopeInfo } from '../auth/access-module.decorator';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import {
   AssignmentStatus,
   HostFamily,
@@ -20,7 +21,26 @@ export class AssignmentsService {
     private readonly hostFamiliesRepository: Repository<HostFamily>,
   ) {}
 
-  async create(dto: CreateAssignmentDto): Promise<ParticipantHostFamilyAssignment> {
+  private inScope(scope: AccessScopeInfo, groupId?: number | null) {
+    return scope.all || (groupId != null && scope.groupIds.includes(groupId));
+  }
+
+  private async assertParticipant(scope: AccessScopeInfo, participantId: number) {
+    if (scope.all) return;
+    const p = await this.participantsRepository.findOne({
+      where: { id: participantId },
+      relations: { group: true },
+    });
+    if (!p || !this.inScope(scope, p.group?.id)) {
+      throw new NotFoundException(`Participant ${participantId} introuvable`);
+    }
+  }
+
+  async create(
+    dto: CreateAssignmentDto,
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<ParticipantHostFamilyAssignment> {
+    await this.assertParticipant(scope, dto.participantId);
     const participant = await this.participantsRepository.findOneBy({ id: dto.participantId });
     const hostFamily = await this.hostFamiliesRepository.findOneBy({ id: dto.hostFamilyId });
 
@@ -47,36 +67,53 @@ export class AssignmentsService {
     return this.assignmentsRepository.save(assignment);
   }
 
-  findAll(): Promise<ParticipantHostFamilyAssignment[]> {
+  findAll(scope: AccessScopeInfo = { all: true }): Promise<ParticipantHostFamilyAssignment[]> {
+    if (!scope.all && !scope.groupIds.length) return Promise.resolve([]);
     return this.assignmentsRepository.find({
+      where: scope.all ? undefined : { participant: { group: { id: In(scope.groupIds) } } },
       relations: { participant: true, hostFamily: true },
       order: { id: 'DESC' },
     });
   }
 
-  findByHostFamily(hostFamilyId: number): Promise<ParticipantHostFamilyAssignment[]> {
+  findByHostFamily(
+    hostFamilyId: number,
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<ParticipantHostFamilyAssignment[]> {
+    if (!scope.all && !scope.groupIds.length) return Promise.resolve([]);
     return this.assignmentsRepository.find({
-      where: { hostFamily: { id: hostFamilyId } },
+      where: {
+        hostFamily: { id: hostFamilyId },
+        ...(scope.all ? {} : { participant: { group: { id: In(scope.groupIds) } } }),
+      },
       relations: { participant: { group: true }, hostFamily: true },
       order: { arrivalDate: 'ASC', id: 'ASC' },
     });
   }
 
-  async findOne(id: number): Promise<ParticipantHostFamilyAssignment> {
+  async findOne(
+    id: number,
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<ParticipantHostFamilyAssignment> {
     const assignment = await this.assignmentsRepository.findOne({
       where: { id },
-      relations: { participant: true, hostFamily: true },
+      relations: { participant: { group: true }, hostFamily: true },
     });
 
-    if (!assignment) {
+    if (!assignment || !this.inScope(scope, assignment.participant?.group?.id)) {
       throw new NotFoundException(`Affectation ${id} introuvable`);
     }
 
     return assignment;
   }
 
-  async update(id: number, dto: UpdateAssignmentDto): Promise<ParticipantHostFamilyAssignment> {
-    const assignment = await this.findOne(id);
+  async update(
+    id: number,
+    dto: UpdateAssignmentDto,
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<ParticipantHostFamilyAssignment> {
+    const assignment = await this.findOne(id, scope);
+    if (dto.participantId) await this.assertParticipant(scope, dto.participantId);
 
     if (Object.prototype.hasOwnProperty.call(dto, 'participantId')) {
       if (dto.participantId) {
@@ -117,8 +154,8 @@ export class AssignmentsService {
     return this.assignmentsRepository.save(assignment);
   }
 
-  async remove(id: number): Promise<void> {
-    const assignment = await this.findOne(id);
+  async remove(id: number, scope: AccessScopeInfo = { all: true }): Promise<void> {
+    const assignment = await this.findOne(id, scope);
     await this.assignmentsRepository.remove(assignment);
   }
 }

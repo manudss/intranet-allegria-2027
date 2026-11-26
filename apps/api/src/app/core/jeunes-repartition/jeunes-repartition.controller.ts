@@ -2,7 +2,13 @@ import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthTokenGuard } from '../auth/auth-token.guard';
 import { RoleGuard } from '../auth/role.guard';
-import { Roles } from '../auth/roles.decorator';
+import {
+  AccessModule,
+  AccessLevelRequired,
+  AccessScope,
+  AccessScopeInfo,
+  GroupScopeAware,
+} from '../auth/access-module.decorator';
 import { JeunesRepartitionService } from './jeunes-repartition.service';
 import {
   ApplyJeunesRepartitionDto,
@@ -22,11 +28,15 @@ const WRITE_ROLES = ['ADMIN', 'COORDINATOR', 'ANIMATOR'];
 export class JeunesRepartitionController {
   constructor(private readonly service: JeunesRepartitionService) {}
 
-  @ApiOperation({ summary: 'Répartition jeunes : listes de valeurs des filtres (groupes, villes, diocèses, tranches)' })
-  @Roles(...READ_ROLES)
+  @ApiOperation({
+    summary:
+      'Répartition jeunes : listes de valeurs des filtres (groupes, villes, diocèses, tranches)',
+  })
+  @AccessModule('GATHERING_TEAMS')
+  @GroupScopeAware()
   @Get('filters')
-  filters() {
-    return this.service.repartitionFilters();
+  filters(@AccessScope() scope: AccessScopeInfo) {
+    return this.service.repartitionFilters(scope);
   }
 
   @ApiOperation({
@@ -34,24 +44,36 @@ export class JeunesRepartitionController {
       'Étape 1 : jeunes et animateurs filtrés (recherche, type, âge, sexe, origine, affectation). ' +
       'Confidentialité mineurs : le nom des jeunes n est jamais renvoyé.',
   })
-  @Roles(...READ_ROLES)
+  @AccessModule('GATHERING_TEAMS')
+  @GroupScopeAware()
   @Get('participants')
-  participants(@Query() query: RepartitionParticipantsQueryDto) {
-    return this.service.searchParticipants(query);
+  participants(
+    @Query() query: RepartitionParticipantsQueryDto,
+    @AccessScope() scope: AccessScopeInfo,
+  ) {
+    return this.service.searchParticipants(query, scope);
   }
 
-  @ApiOperation({ summary: 'Étape 2 : équipes de rassemblement avec remplissage (recherche, groupe, places libres)' })
-  @Roles(...READ_ROLES)
+  @ApiOperation({
+    summary:
+      'Étape 2 : équipes de rassemblement avec remplissage (recherche, groupe, places libres)',
+  })
+  @AccessModule('GATHERING_TEAMS')
+  @GroupScopeAware()
   @Get('teams')
-  teams(@Query() query: RepartitionJeunesTeamsQueryDto) {
-    return this.service.searchTeams(query);
+  teams(@Query() query: RepartitionJeunesTeamsQueryDto, @AccessScope() scope: AccessScopeInfo) {
+    return this.service.searchTeams(query, scope);
   }
 
-  @ApiOperation({ summary: 'Étape 2 : créer X équipes vides numérotées (ex. « Équipe 1 » … « Équipe 8 »)' })
-  @Roles(...WRITE_ROLES)
+  @ApiOperation({
+    summary: 'Étape 2 : créer X équipes vides numérotées (ex. « Équipe 1 » … « Équipe 8 »)',
+  })
+  @AccessModule('GATHERING_TEAMS')
+  @AccessLevelRequired('EDIT')
+  @GroupScopeAware()
   @Post('teams/bulk-create')
-  bulkCreateTeams(@Body() dto: BulkCreateTeamsDto) {
-    return this.service.bulkCreateTeams(dto);
+  bulkCreateTeams(@Body() dto: BulkCreateTeamsDto, @AccessScope() scope: AccessScopeInfo) {
+    return this.service.bulkCreateTeams(dto, scope);
   }
 
   @ApiOperation({
@@ -59,16 +81,22 @@ export class JeunesRepartitionController {
       'Étape 3 : proposition automatique de répartition (taille cible, adultes, âge, mixité, origine). ' +
       'Aucune écriture : renvoie les affectations proposées et les violations de critères.',
   })
-  @Roles(...READ_ROLES)
+  @AccessModule('GATHERING_TEAMS')
+  @AccessLevelRequired('VIEW')
+  @GroupScopeAware()
   @Post('propose')
-  propose(@Body() dto: ProposeRepartitionDto) {
-    return this.service.propose(dto);
+  propose(@Body() dto: ProposeRepartitionDto, @AccessScope() scope: AccessScopeInfo) {
+    return this.service.propose(dto, scope);
   }
 
-  @ApiOperation({ summary: 'Étape 3 : appliquer la répartition validée (une transaction ; teamId null = retirer)' })
-  @Roles(...WRITE_ROLES)
+  @ApiOperation({
+    summary: 'Étape 3 : appliquer la répartition validée (une transaction ; teamId null = retirer)',
+  })
+  @AccessModule('GATHERING_TEAMS')
+  @AccessLevelRequired('EDIT')
+  @GroupScopeAware()
   @Post('apply')
-  apply(@Body() dto: ApplyJeunesRepartitionDto) {
-    return this.service.apply(dto);
+  apply(@Body() dto: ApplyJeunesRepartitionDto, @AccessScope() scope: AccessScopeInfo) {
+    return this.service.apply(dto, scope);
   }
 }

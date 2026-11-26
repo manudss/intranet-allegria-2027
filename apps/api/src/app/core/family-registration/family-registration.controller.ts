@@ -22,11 +22,18 @@ import {
 } from '@nestjs/common';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { Public } from '../auth/public.decorator';
-import { Roles } from '../auth/roles.decorator';
+import {
+  AccessLevelRequired,
+  AccessModule,
+  AccessScope,
+  AccessScopeInfo,
+  GroupScopeAware,
+} from '../auth/access-module.decorator';
+import { AccessRightsService } from '../access-rights/access-rights.service';
 import { RoleGuard } from '../auth/role.guard';
 import { FamilyRegistrationService, plainObject } from './family-registration.service';
 import type { Request, Response } from 'express';
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 const token = (r: Request) =>
   String(r.headers.cookie || '')
     .split(';')
@@ -325,28 +332,56 @@ export class FamilyRegistrationController {
 @UseInterceptors(PrivateResponseInterceptor)
 @Controller('family-registrations')
 @UseGuards(RoleGuard)
-@Roles('ADMIN', 'COORDINATOR')
+@AccessModule('PARTICIPANTS')
+// Validation des dossiers, pièces justificatives : niveau Gérer (parité avec ADMIN et COORDINATOR).
+@AccessLevelRequired('MANAGE')
+@GroupScopeAware()
 export class FamilyRegistrationStaffController {
   constructor(
     private readonly service: FamilyRegistrationService,
     private readonly documents: RegistrationDocumentsService,
+    private readonly accessRights: AccessRightsService,
   ) {}
-  @Get() list() {
-    return this.service.list();
+  /** Un dossier jeune sans participant rattaché n'appartient à aucun groupe : hors portée limitée. */
+  private async assertYouth(scope: AccessScopeInfo, family: string, youth: string) {
+    if (scope.all) return;
+    const y = this.service.youth(await this.service.get(family), youth);
+    const ok = await this.accessRights.participantIdsInScope(scope, [y.participantId]);
+    if (!ok.size) throw new NotFoundException('Dossier introuvable');
   }
-  @Get(':family/youths/:youth/documents') documentsList(
+  @Get() async list(@AccessScope() scope: AccessScopeInfo) {
+    const families = await this.service.list();
+    if (scope.all) return families;
+    const ok = await this.accessRights.participantIdsInScope(
+      scope,
+      families.flatMap((f: { youths: { participantId?: number }[] }) =>
+        f.youths.map((y) => y.participantId),
+      ),
+    );
+    return families
+      .map((f: { youths: { participantId?: number }[] }) => ({
+        ...f,
+        youths: f.youths.filter((y) => y.participantId != null && ok.has(y.participantId)),
+      }))
+      .filter((f: { youths: unknown[] }) => f.youths.length > 0);
+  }
+  @Get(':family/youths/:youth/documents') async documentsList(
     @Param('family') family: string,
     @Param('youth') youth: string,
+    @AccessScope() scope: AccessScopeInfo,
   ) {
+    await this.assertYouth(scope, family, youth);
     return this.documents.list(family, youth);
   }
-  @Patch(':family/youths/:youth/documents/:document') reviewDocument(
+  @Patch(':family/youths/:youth/documents/:document') async reviewDocument(
     @Param('family') family: string,
     @Param('youth') youth: string,
     @Param('document') document: string,
     @Body() raw: unknown,
     @Req() r: Request & { user: { email: string } },
+    @AccessScope() scope: AccessScopeInfo,
   ) {
+    await this.assertYouth(scope, family, youth);
     const p = plainObject(raw);
     return this.documents.staffReview(family, youth, document, p.status, p.reason, r.user.email);
   }
@@ -356,7 +391,9 @@ export class FamilyRegistrationStaffController {
     @Param('document') document: string,
     @Req() r: Request & { user: { email: string } },
     @Res() res: Response,
+    @AccessScope() scope: AccessScopeInfo,
   ) {
+    await this.assertYouth(scope, family, youth);
     const d = await this.documents.staffDownload(family, youth, document, r.user.email);
     res.setHeader('Content-Type', d.mime);
     res.setHeader('Content-Disposition', 'attachment; filename="piece-administrative"');
@@ -367,15 +404,17 @@ export class FamilyRegistrationStaffController {
   @Get('rules') rules() {
     return this.service.rules();
   }
-  @Patch('rules') @Roles('ADMIN') configure(@Body() p: unknown) {
+  @Patch('rules') @AccessModule('ADMIN') configure(@Body() p: unknown) {
     return this.service.configure(p);
   }
-  @Post(':id/youths/:youthId/review') review(
+  @Post(':id/youths/:youthId/review') async review(
     @Param('id') id: string,
     @Param('youthId') youthId: string,
     @Body() raw: unknown,
     @Req() req: Request & { user: { email: string } },
+    @AccessScope() scope: AccessScopeInfo,
   ) {
+    await this.assertYouth(scope, id, youthId);
     const p = plainObject(raw);
     return this.service.review(id, youthId, revision(p), p.state, p.reason, req.user.email);
   }
@@ -383,7 +422,7 @@ export class FamilyRegistrationStaffController {
 
 @Controller('catering-needs')
 @UseGuards(RoleGuard)
-@Roles('CATERING')
+@AccessModule('CATERING')
 export class CateringNeedsController {
   constructor(private readonly health: RegistrationHealthService) {}
   @Get() async list(@Res({ passthrough: true }) res: Response) {
@@ -394,21 +433,39 @@ export class CateringNeedsController {
 
 @UseInterceptors(PrivateResponseInterceptor)
 @UseGuards(RoleGuard)
-@Roles('HEALTH')
+@AccessModule('HEALTH')
+@GroupScopeAware()
 @Controller('family-health')
 export class FamilyHealthStaffController {
   constructor(
     private readonly health: RegistrationHealthService,
     private readonly families: FamilyRegistrationService,
+    private readonly accessRights: AccessRightsService,
   ) {}
-  @Get() list() {
-    return this.health.staffList();
+  private async assertYouth(scope: AccessScopeInfo, family: string, youth: string) {
+    if (scope.all) return;
+    const y = this.families.youth(await this.families.get(family), youth);
+    const ok = await this.accessRights.participantIdsInScope(scope, [y.participantId]);
+    if (!ok.size) throw new NotFoundException('Dossier introuvable');
   }
-  @Get(':family/youths/:youth') read(
+  @Get() async list(@AccessScope() scope: AccessScopeInfo) {
+    const rows = await this.health.staffList();
+    if (scope.all) return rows;
+    const ok = await this.accessRights.participantIdsInScope(
+      scope,
+      rows.map((r: { participantId?: number }) => r.participantId),
+    );
+    return rows.filter(
+      (r: { participantId?: number }) => r.participantId != null && ok.has(r.participantId),
+    );
+  }
+  @Get(':family/youths/:youth') async read(
     @Param('family') family: string,
     @Param('youth') youth: string,
     @Req() r: Request & { user: { email: string } },
+    @AccessScope() scope: AccessScopeInfo,
   ) {
+    await this.assertYouth(scope, family, youth);
     return this.health.staffRead(family, youth, r.user.email);
   }
   @Get(':family/youths/:youth/pdf') async pdf(
@@ -416,7 +473,9 @@ export class FamilyHealthStaffController {
     @Param('youth') youth: string,
     @Req() r: Request & { user: { email: string } },
     @Res() res: Response,
+    @AccessScope() scope: AccessScopeInfo,
   ) {
+    await this.assertYouth(scope, family, youth);
     const data = await this.health.staffRead(family, youth, r.user.email);
     const f = await this.families.get(family);
     const bytes = await healthPdf(

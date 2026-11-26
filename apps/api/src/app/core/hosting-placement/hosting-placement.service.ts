@@ -1,10 +1,13 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import type { AccessScopeInfo } from '../auth/access-module.decorator';
+import { AccessRightsService } from '../access-rights/access-rights.service';
 import { EntityManager, In, IsNull, Not, Repository } from 'typeorm';
 import {
   AssignmentStatus,
@@ -88,6 +91,7 @@ export class HostingPlacementService {
     private readonly teamParticipants: Repository<TeamParticipant>,
     @InjectRepository(ParticipantHostFamilyAssignment)
     private readonly assignments: Repository<ParticipantHostFamilyAssignment>,
+    private readonly accessRights: AccessRightsService,
   ) {}
 
   // ── Groupes d'hébergement ──────────────────────────────────────────────────
@@ -298,7 +302,12 @@ export class HostingPlacementService {
 
   // ── Vue d'ensemble pour l'interface ────────────────────────────────────────
 
-  async board(): Promise<BoardResponse> {
+  /**
+   * Vue placement. Les données nominatives (jeunes, conflits) sont filtrées par groupe ;
+   * les effectifs d'équipe et les familles restent globaux (comptages sans identité),
+   * car la capacité d'une famille dépend de tous les jeunes placés.
+   */
+  async board(scope: AccessScopeInfo = { all: false, groupIds: [] }): Promise<BoardResponse> {
     const [hostingGroups, teams, memberships, families, assignments] = await Promise.all([
       this.groups.find({ order: { name: 'ASC' } }),
       this.teams.find({ relations: { group: true, hostingGroup: true }, order: { name: 'ASC' } }),
@@ -316,7 +325,13 @@ export class HostingPlacementService {
     const teamGroup = new Map(teams.map((t) => [t.id, t.hostingGroup?.id ?? null]));
     const familyGroup = new Map(families.map((f) => [f.id, f.hostingGroup?.id ?? null]));
 
-    const members: BoardMember[] = memberships.map((m) => {
+    const showOtherTeams =
+      scope.all || (await this.accessRights.getOption('GROUP_SCOPE_SHOW_OTHER_TEAMS'));
+    const visible = await this.accessRights.participantIdsInScope(
+      scope,
+      memberships.map((m) => m.participant.id),
+    );
+    const allMembers: BoardMember[] = memberships.map((m) => {
       const a = active.get(m.participant.id);
       return {
         participantId: m.participant.id,
@@ -332,6 +347,7 @@ export class HostingPlacementService {
       };
     });
 
+    const members = allMembers.filter((m) => visible.has(m.participantId));
     const conflicts: BoardResponse['conflicts'] = [];
     for (const m of members) {
       if (m.hostFamilyId === null) continue;
@@ -345,11 +361,23 @@ export class HostingPlacementService {
     }
 
     const memberCount = new Map<number, number>();
-    for (const m of members) memberCount.set(m.teamId, (memberCount.get(m.teamId) ?? 0) + 1);
+    for (const m of allMembers) memberCount.set(m.teamId, (memberCount.get(m.teamId) ?? 0) + 1);
+
+    // Hors option « autres équipes » : seules les équipes des groupes du compte (et leurs groupes
+    // d'hébergement) sont listées. L'option n'ouvre que les noms et effectifs d'équipes.
+    const visibleTeams = showOtherTeams
+      ? teams
+      : teams.filter((t) => scope.all || scope.groupIds.includes(t.group?.id ?? -1));
+    // Les familles (identité, adresse, coordonnées) ne sont JAMAIS renvoyées à un compte limité à des groupes.
+    const visibleFamilies = scope.all ? families : [];
+    const usedHostingGroups = new Set(visibleTeams.map((t) => t.hostingGroup?.id));
+    const visibleHostingGroups = showOtherTeams
+      ? hostingGroups
+      : hostingGroups.filter((g) => usedHostingGroups.has(g.id));
 
     return {
-      hostingGroups: hostingGroups.map((g) => ({ id: g.id, name: g.name, notes: g.notes, kind: g.kind, color: g.color })),
-      teams: teams.map((t) => ({
+      hostingGroups: visibleHostingGroups.map((g) => ({ id: g.id, name: g.name, notes: g.notes, kind: g.kind, color: g.color })),
+      teams: visibleTeams.map((t) => ({
         id: t.id,
         name: t.name,
         groupName: t.group?.name ?? null,
@@ -357,7 +385,7 @@ export class HostingPlacementService {
         memberCount: memberCount.get(t.id) ?? 0,
       })),
       members,
-      families: families.map((f) => ({
+      families: visibleFamilies.map((f) => ({
         id: f.id,
         familyName: f.familyName,
         city: f.city,
@@ -429,7 +457,7 @@ export class HostingPlacementService {
     };
   }
 
-  async place(dto: PlaceParticipantDto) {
+  async place(dto: PlaceParticipantDto, scope: AccessScopeInfo = { all: true }) {
     return this.teams.manager.transaction(async (manager) => {
       const participant = await manager.getRepository(Participant).findOne({
         where: { id: dto.participantId },
@@ -455,10 +483,20 @@ export class HostingPlacementService {
 
       const memberships = await manager.getRepository(TeamParticipant).find({
         where: { participant: { id: participant.id } },
-        relations: { team: { hostingGroup: true } },
+        relations: { team: { hostingGroup: true, group: true } },
       });
       const team = memberships.find((m) => m.team.hostingGroup)?.team ?? memberships[0]?.team;
       if (!team) throw new ConflictException("Ce participant n'est dans aucune équipe de rassemblement");
+      // Compte limité à des groupes : le jeune ET son équipe doivent être dans la portée.
+      if (!scope.all) {
+        const groupIds = scope.groupIds ?? [];
+        if (
+          !groupIds.includes(participant.group?.id ?? -1) ||
+          !groupIds.includes(team.group?.id ?? -1)
+        ) {
+          throw new ForbiddenException('Ce participant ou son équipe est hors de votre portée.');
+        }
+      }
       if (!team.hostingGroup) {
         throw new ConflictException(`L'équipe ${team.name} n'a pas de groupe d'hébergement`);
       }
@@ -534,7 +572,11 @@ export class HostingPlacementService {
     });
   }
 
-  async unplace(participantId: number): Promise<{ removed: number }> {
+  async unplace(
+    participantId: number,
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<{ removed: number }> {
+    await this.accessRights.assertParticipantInScope(scope, participantId);
     const rows = await this.assignments.find({
       where: { participant: { id: participantId } },
     });
@@ -545,7 +587,11 @@ export class HostingPlacementService {
   }
 
   /** Aperçu (apply=false) ou enregistrement (apply=true) du placement automatique d'un groupe. */
-  async autoPlace(hostingGroupId: number, dto: AutoPlaceDto): Promise<AutoPlaceResponse> {
+  async autoPlace(
+    hostingGroupId: number,
+    dto: AutoPlaceDto,
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<AutoPlaceResponse> {
     assertStay(dto.arrivalDate, dto.departureDate);
     if (
       dto.apply &&
@@ -562,9 +608,19 @@ export class HostingPlacementService {
     return this.teams.manager.transaction(async (manager) => {
       const teams = await manager.getRepository(Team).find({
         where: { hostingGroup: { id: hostingGroupId } },
+        relations: { group: true },
       });
-      const teamIds = teams.map((t) => t.id).filter((id) => !dto.teamIds || dto.teamIds.includes(id));
+      const selectedTeams = teams.filter((t) => !dto.teamIds || dto.teamIds.includes(t.id));
+      const teamIds = selectedTeams.map((t) => t.id);
       if (teamIds.length === 0) return { applied: false, proposals: [], unplaced: [] };
+      // Compte limité à des groupes : toutes les équipes visées doivent être dans la portée
+      // (restreindre avec teamIds sinon). Les jeunes sont contrôlés plus bas.
+      if (!scope.all) {
+        const groupIds = scope.groupIds ?? [];
+        if (selectedTeams.some((t) => !groupIds.includes(t.group?.id ?? -1))) {
+          throw new ForbiddenException('Une équipe de ce groupe est hors de votre portée.');
+        }
+      }
 
       const familiesQb = manager
         .getRepository(HostFamily)
@@ -604,6 +660,15 @@ export class HostingPlacementService {
             : false,
           sex: m.participant.sex ?? '',
         });
+      }
+
+      if (!scope.all) {
+        const groupIds = scope.groupIds ?? [];
+        for (const person of participants.values()) {
+          if (!groupIds.includes(person.group?.id ?? -1)) {
+            throw new ForbiddenException('Un participant est hors de votre portée.');
+          }
+        }
       }
 
       const planFamilies: PlacementFamily[] = [];

@@ -62,7 +62,10 @@ const build = (data: { participants?: unknown[]; teams?: unknown[] } = {}) => {
       save: vi.fn(async (payload: { name: string }) => ({ id: 900, ...payload })),
     },
     teamParticipants: {},
-    groups: { find: vi.fn().mockResolvedValue([]) },
+    groups: {
+      find: vi.fn().mockResolvedValue([]),
+      findOne: vi.fn(async ({ where }: { where: { id: number } }) => (where.id === 5 ? { id: 5 } : null)),
+    },
   };
   const service = new JeunesRepartitionService(
     repos.participants as never,
@@ -175,6 +178,25 @@ describe('JeunesRepartitionService', () => {
       const { service } = build({});
       await expect(service.bulkCreateTeams({ count: 0 })).rejects.toBeInstanceOf(BadRequestException);
       await expect(service.bulkCreateTeams({ count: 101 })).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.bulkCreateTeams({ count: 1.5 })).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.bulkCreateTeams({ count: Number.NaN })).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejette des places par équipe invalides (au lieu de les corriger en silence)', async () => {
+      const { service } = build({});
+      for (const maxSize of [0, -3, 2.5, Number.NaN]) {
+        await expect(service.bulkCreateTeams({ count: 1, maxSize })).rejects.toBeInstanceOf(BadRequestException);
+      }
+    });
+
+    it('portée « tout » : groupe inexistant ou non entier = 400, pas d erreur serveur', async () => {
+      const { service, repos } = build({});
+      await expect(service.bulkCreateTeams({ count: 1, groupId: 999 })).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.bulkCreateTeams({ count: 1, groupId: Number.NaN })).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.bulkCreateTeams({ count: 1, groupId: 5.5 })).rejects.toBeInstanceOf(BadRequestException);
+      expect(repos.teams.save).not.toHaveBeenCalled();
+      const ok = await service.bulkCreateTeams({ count: 1, groupId: 5 });
+      expect(ok.created).toHaveLength(1);
     });
   });
 

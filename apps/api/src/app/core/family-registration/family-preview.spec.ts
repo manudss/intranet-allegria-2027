@@ -104,17 +104,27 @@ describe('PR49 test-phase gates', () => {
   });
   it('refuses a Git-branch service, other PRs, look-alike hosts and production', () => {
     expect(familyPreviewEnabled(config({ ...pr49, RENDER_GIT_BRANCH: 'main' }))).toBe(false);
-    expect(familyPreviewEnabled(config({ ...pr49, RENDER_SERVICE_NAME: 'al-pr50-api-qkcc' }))).toBe(false);
+    expect(familyPreviewEnabled(config({ ...pr49, RENDER_SERVICE_NAME: 'al-pr50-api-qkcc' }))).toBe(
+      false,
+    );
     expect(
-      familyPreviewEnabled(config({ ...pr49, RENDER_EXTERNAL_HOSTNAME: 'al-pr49-api-qkcc.onrender.com.evil.test' })),
+      familyPreviewEnabled(
+        config({ ...pr49, RENDER_EXTERNAL_HOSTNAME: 'al-pr49-api-qkcc.onrender.com.evil.test' }),
+      ),
     ).toBe(false);
-    expect(familyPreviewEnabled(config({ ...pr49, FAMILY_PREVIEW_DEMO_ENABLED: 'pr42-fictional-only' }))).toBe(false);
+    expect(
+      familyPreviewEnabled(config({ ...pr49, FAMILY_PREVIEW_DEMO_ENABLED: 'pr42-fictional-only' })),
+    ).toBe(false);
   });
   it('keeps mail owner-only: the generic opt-in is still required', () => {
     expect(familyPreviewMailEnabled(config(pr49))).toBe(false);
     expect(
       familyPreviewMailEnabled(
-        config({ ...pr49, FAMILY_PREVIEW_MAIL_ENABLED: 'owner-only-test', FAMILY_PREVIEW_MAIL_TO: 'emmanueldesaintsteban@gmail.com' }),
+        config({
+          ...pr49,
+          FAMILY_PREVIEW_MAIL_ENABLED: 'owner-only-test',
+          FAMILY_PREVIEW_MAIL_TO: 'emmanueldesaintsteban@gmail.com',
+        }),
       ),
     ).toBe(true);
   });

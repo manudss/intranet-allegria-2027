@@ -7,15 +7,14 @@ import {
 } from './badge-selection.controller';
 import { PreparePrintDto } from './badge-print.controller';
 
+const ALL = { all: true } as const;
 describe('Printing selection reuses assignment semantics without writes', () => {
   it('passes the real youth/animator filters to the existing privacy-safe selector', async () => {
     const jeunes = {
-      searchParticipants: vi
-        .fn()
-        .mockResolvedValue({
-          total: 1,
-          participants: [{ id: 1, firstName: 'Ada', lastName: null }],
-        }),
+      searchParticipants: vi.fn().mockResolvedValue({
+        total: 1,
+        participants: [{ id: 1, firstName: 'Ada', lastName: null }],
+      }),
       repartitionFilters: vi.fn().mockResolvedValue({ groups: [] }),
     };
     const controller = new BadgeSelectionController(jeunes as never, {} as never);
@@ -29,31 +28,27 @@ describe('Printing selection reuses assignment semantics without writes', () => 
       limit: 100,
       offset: 0,
     } as SelectPrintParticipantsQuery;
-    expect(await controller.participants(query)).toEqual({
+    expect(await controller.participants(query, ALL)).toEqual({
       total: 1,
       participants: [{ id: 1, firstName: 'Ada', lastName: null }],
     });
-    expect(jeunes.searchParticipants).toHaveBeenCalledWith(query);
-    await controller.participantFilters();
+    expect(jeunes.searchParticipants).toHaveBeenCalledWith(query, ALL);
+    await controller.participantFilters(ALL);
     expect(jeunes.repartitionFilters).toHaveBeenCalledOnce();
   });
   it('includes volunteers without participant projections and limits filter metadata to the relevant fields', async () => {
     const volunteers = {
-      searchRepartitionVolunteers: vi
-        .fn()
-        .mockResolvedValue({
-          total: 1,
-          volunteers: [{ id: 50, firstName: 'Emma', lastName: 'Test', teamId: null }],
-        }),
-      repartitionFilters: vi
-        .fn()
-        .mockResolvedValue({
-          poles: [{ id: 2, name: 'Accueil' }],
-          skills: [],
-          tags: [],
-          hostingGroups: [{ secret: 'not needed' }],
-          groups: [],
-        }),
+      searchRepartitionVolunteers: vi.fn().mockResolvedValue({
+        total: 1,
+        volunteers: [{ id: 50, firstName: 'Emma', lastName: 'Test', teamId: null }],
+      }),
+      repartitionFilters: vi.fn().mockResolvedValue({
+        poles: [{ id: 2, name: 'Accueil' }],
+        skills: [],
+        tags: [],
+        hostingGroups: [{ secret: 'not needed' }],
+        groups: [],
+      }),
     };
     const controller = new BadgeSelectionController({} as never, volunteers as never);
     const query = {
@@ -63,9 +58,9 @@ describe('Printing selection reuses assignment semantics without writes', () => 
       limit: 100,
       offset: 0,
     } as SelectPrintVolunteersQuery;
-    expect((await controller.volunteerRows(query)).volunteers[0].id).toBe(50);
+    expect((await controller.volunteerRows(query, ALL)).volunteers[0].id).toBe(50);
     expect(volunteers.searchRepartitionVolunteers).toHaveBeenCalledWith(query);
-    expect(await controller.volunteerFilters()).toEqual({
+    expect(await controller.volunteerFilters(ALL)).toEqual({
       poles: [{ id: 2, name: 'Accueil' }],
       skills: [],
       tags: [],

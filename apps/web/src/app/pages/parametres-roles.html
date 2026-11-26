@@ -1,4 +1,338 @@
-<section class="page">
+<section class="page rights">
   <h1>Paramètres et rôles</h1>
-  <p>Administration des droits et profils (à implémenter).</p>
+  <p class="intro">
+    Les droits se règlent ici : pour chaque rôle ou type d’équipe, un niveau (Voir, Modifier, Gérer)
+    et une portée par module. Quand une personne cumule plusieurs profils, chaque couple niveau et
+    portée est conservé tel quel : Voir sur tout et Modifier sur ses groupes ne donnent jamais
+    Modifier sur tout. Un module sans niveau n’est pas accessible.
+  </p>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button
+      type="button"
+      role="tab"
+      [class.active]="tab() === 'matrix'"
+      [attr.aria-selected]="tab() === 'matrix'"
+      (click)="setTab('matrix')"
+    >
+      Matrice des droits
+    </button>
+    <button
+      type="button"
+      role="tab"
+      [class.active]="tab() === 'user'"
+      [attr.aria-selected]="tab() === 'user'"
+      (click)="setTab('user')"
+    >
+      Voir comme, groupes et exceptions
+    </button>
+    <button
+      type="button"
+      role="tab"
+      [class.active]="tab() === 'logs'"
+      [attr.aria-selected]="tab() === 'logs'"
+      (click)="setTab('logs')"
+    >
+      Journal des changements
+    </button>
+  </nav>
+
+  @if (message(); as m) {
+  <p class="msg" [class.error]="m.kind === 'error'" role="status">{{ m.text }}</p>
+  } @if (tab() === 'matrix') {
+  <div class="bar">
+    <label>
+      Profil à régler
+      <select
+        [value]="subject()"
+        (change)="pickSubject($any($event.target).value)"
+        aria-label="Profil à régler"
+      >
+        <optgroup label="Rôles (profils de droits)">
+          @for (r of subjectOptions().roles; track r.code) {
+          <option [value]="'ROLE:' + r.code">{{ r.label || r.code }}</option>
+          }
+        </optgroup>
+        <optgroup label="Types d’équipe (fonctions opérationnelles)">
+          @for (t of subjectOptions().types; track t.code) {
+          <option [value]="'TEAM_TYPE:' + t.code">{{ t.label }}</option>
+          }
+        </optgroup>
+      </select>
+    </label>
+    <div class="actions">
+      <button type="button" class="secondary" [disabled]="!dirty()" (click)="resetMatrix()">
+        Annuler
+      </button>
+      <button type="button" class="primary" [disabled]="!dirty() || busy()" (click)="saveMatrix()">
+        Enregistrer
+      </button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <caption class="sr-only">
+        Droits de {{ subjectLabel() }} par module
+      </caption>
+      <thead>
+        <tr>
+          <th>Module</th>
+          <th>Niveau</th>
+          <th>Portée</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (m of catalog()?.modules ?? []; track m.code) {
+        <tr>
+          <td data-label="Module" class="mod">{{ m.label }}</td>
+          <td data-label="Niveau">
+            <select
+              [value]="cell(m.code).level"
+              (change)="setCell(m.code, 'level', $any($event.target).value)"
+              [attr.aria-label]="'Niveau ' + m.label"
+            >
+              <option value="">Aucun accès</option>
+              @for (l of catalog()?.levels ?? []; track l.code) {
+              <option [value]="l.code">{{ l.label }}</option>
+              }
+            </select>
+          </td>
+          <td data-label="Portée">
+            <select
+              [value]="cell(m.code).scope"
+              [disabled]="!cell(m.code).level"
+              (change)="setCell(m.code, 'scope', $any($event.target).value)"
+              [attr.aria-label]="'Portée ' + m.label"
+            >
+              @for (s of catalog()?.scopes ?? []; track s.code) {
+              <option [value]="s.code">{{ s.label }}</option>
+              }
+            </select>
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <p class="hint">
+    Attention : le module « Administration » (utilisateurs et rôles) donne tous les pouvoirs. Qui y a
+    « Gérer » peut s’attribuer n’importe quel droit. La modification de cette matrice reste réservée
+    au rôle ADMIN fixe. Les exceptions par personne ne font qu’ajouter des droits, elles n’en retirent
+    pas. Un retrait de rôle s’applique à la prochaine connexion de la personne.
+  </p>
+  <label class="hint">
+    <input
+      type="checkbox"
+      [checked]="showGlobal()"
+      (change)="toggleOption('GROUP_SCOPE_SHOW_OTHER_TEAMS', $any($event.target).checked)"
+    />
+    Un compte limité à des groupes voit aussi les noms et les effectifs des équipes et des groupes
+    d’hébergement des autres groupes (placement et répartition des jeunes). Désactivé par défaut. Ce
+    que cette case n’ouvre jamais : les jeunes nommés hors de ses groupes, et les familles d’accueil
+    (identité, adresse), qui restent masquées pour tout compte limité à des groupes.
+  </label>
+  <p class="hint">
+    Portées : « Groupes autorisés » est filtrée par le serveur sur les participants, les groupes, les
+    équipes de rassemblement, les dossiers santé, les badges (participants uniquement), les affectations d’hébergement, le tableau de placement (lecture), le placement des jeunes en famille et la répartition des jeunes (écritures dans le périmètre uniquement) et les dossiers d’inscription famille. « Mon équipe » et « Mes données » ne sont appliquées que sur la lecture de l’annuaire des bénévoles et des équipes opérationnelles (ses propres équipes et ses propres rattachements), et seulement si le compte est relié à une fiche bénévole (lien posé à la main, jamais deviné) ; « Mon équipe » ne compte que les équipes actives et les affectations en cours aujourd’hui (date de fin incluse) ; sans lien, la personne ne voit rien. Ailleurs elles refusent l’accès. Ailleurs, une portée limitée refuse l’accès (sécurité par défaut) tant que
+    le filtrage n’y est pas branché.
+  </p>
+  } @if (tab() === 'user') {
+  <div class="bar">
+    <label>
+      Personne
+      <select
+        [value]="userId() ?? ''"
+        (change)="pickUser($any($event.target).value)"
+        aria-label="Personne"
+      >
+        <option value="">Choisir…</option>
+        @for (u of users(); track u.id) {
+        <option [value]="u.id">{{ userLabel(u) }}</option>
+        }
+      </select>
+    </label>
+  </div>
+
+  @if (described(); as d) {
+  <h2>Droits effectifs de {{ d.user.email }}</h2>
+  <p class="chips">
+    @for (r of d.roles; track r) { <span class="chip">Rôle : {{ r }}</span> } @for (t of
+    d.teamTypes; track t) { <span class="chip">Équipe : {{ t }}</span> } @if (d.roles.length === 0
+    && d.teamTypes.length === 0) { <span class="chip">Aucun profil</span> }
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Module</th>
+          <th>Niveau</th>
+          <th>Portée</th>
+          <th>Origine</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (g of d.grants; track g.module) { @for (pair of g.pairs; track pair.level + pair.scope)
+        {
+        <tr>
+          <td data-label="Module">{{ moduleLabel(g.module) }}</td>
+          <td data-label="Niveau">{{ levelLabel(pair.level) }}</td>
+          <td data-label="Portée">{{ scopeLabel(pair.scope) }}</td>
+          <td data-label="Origine" class="muted">{{ g.sources.join(', ') }}</td>
+        </tr>
+        } } @empty {
+        <tr>
+          <td colspan="4" class="muted">Aucun accès.</td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Groupes autorisés</h2>
+  <p class="hint">
+    Utilisés quand une portée « Groupes autorisés » s’applique à cette personne. Aucun groupe coché
+    = aucun accès aux données concernées.
+  </p>
+  <div class="checks">
+    @for (g of groups(); track g.id) {
+    <label
+      ><input
+        type="checkbox"
+        [checked]="groupDraft().includes(g.id)"
+        (change)="toggleGroup(g.id, $any($event.target).checked)"
+      />
+      {{ g.name }}</label
+    >
+    }
+  </div>
+  <button type="button" class="primary" [disabled]="busy()" (click)="saveGroups()">
+    Enregistrer les groupes
+  </button>
+
+  <h2>Exceptions individuelles</h2>
+  <p class="hint">
+    Un droit ajouté pour une personne, avec un motif obligatoire et une date de fin conseillée.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Module</th>
+          <th>Niveau</th>
+          <th>Portée</th>
+          <th>Motif</th>
+          <th>Fin</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (o of userOverrides(); track o.id) {
+        <tr>
+          <td data-label="Module">{{ moduleLabel(o.module) }}</td>
+          <td data-label="Niveau">{{ levelLabel(o.level) }}</td>
+          <td data-label="Portée">{{ scopeLabel(o.scope) }}</td>
+          <td data-label="Motif">{{ o.reason }}</td>
+          <td>{{ o.expiresAt ? (o.expiresAt | date: 'dd/MM/yyyy HH:mm') : 'Sans fin' }}</td>
+          <td>
+            <button type="button" class="secondary" (click)="removeOverride(o)">Supprimer</button>
+          </td>
+        </tr>
+        } @empty {
+        <tr>
+          <td colspan="6" class="muted">Aucune exception.</td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="ov-form">
+    <label
+      >Module
+      <select
+        [value]="ovForm().module"
+        (change)="setOv('module', $any($event.target).value)"
+        aria-label="Module de l’exception"
+      >
+        @for (m of catalog()?.modules ?? []; track m.code) {
+        <option [value]="m.code">{{ m.label }}</option>
+        }
+      </select>
+    </label>
+    <label
+      >Niveau
+      <select
+        [value]="ovForm().level"
+        (change)="setOv('level', $any($event.target).value)"
+        aria-label="Niveau de l’exception"
+      >
+        @for (l of catalog()?.levels ?? []; track l.code) {
+        <option [value]="l.code">{{ l.label }}</option>
+        }
+      </select>
+    </label>
+    <label
+      >Portée
+      <select
+        [value]="ovForm().scope"
+        (change)="setOv('scope', $any($event.target).value)"
+        aria-label="Portée de l’exception"
+      >
+        @for (s of catalog()?.scopes ?? []; track s.code) {
+        <option [value]="s.code">{{ s.label }}</option>
+        }
+      </select>
+    </label>
+    <label
+      >Motif
+      <input
+        type="text"
+        [value]="ovForm().reason"
+        (input)="setOv('reason', $any($event.target).value)"
+        aria-label="Motif de l’exception"
+      />
+    </label>
+    <label
+      >Fin
+      <input
+        type="date"
+        [value]="ovForm().expiresAt"
+        (input)="setOv('expiresAt', $any($event.target).value)"
+        aria-label="Date de fin de l’exception"
+      />
+    </label>
+    <button type="button" class="primary" [disabled]="busy()" (click)="addOverride()">
+      Ajouter l’exception
+    </button>
+  </div>
+  } @else {
+  <p class="muted">Choisissez une personne pour voir ses droits effectifs et leur origine.</p>
+  } } @if (tab() === 'logs') {
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Par</th>
+          <th>Action</th>
+          <th>Détail</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (l of logs(); track l.id) {
+        <tr>
+          <td>{{ l.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+          <td>{{ l.actorEmail }}</td>
+          <td>{{ actionLabel(l.action) }}</td>
+          <td class="muted detail">{{ detailText(l.detail) }}</td>
+        </tr>
+        } @empty {
+        <tr>
+          <td colspan="4" class="muted">Aucun changement enregistré.</td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  }
 </section>

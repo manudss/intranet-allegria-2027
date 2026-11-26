@@ -1,4 +1,6 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import type { AccessScopeInfo } from '../auth/access-module.decorator';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { AccessRightsService } from '../access-rights/access-rights.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import {
@@ -58,18 +60,23 @@ export class JeunesRepartitionService {
     private readonly teamParticipantsRepository: Repository<TeamParticipant>,
     @InjectRepository(Group)
     private readonly groupsRepository: Repository<Group>,
+      private readonly accessRights?: AccessRightsService,
   ) {}
 
   // ── Étape 1 : participants ────────────────────────────────────────────────
 
-  async repartitionFilters(): Promise<JeunesRepartitionFilters> {
-    const participants = await this.participantsRepository.find({
-      where: [
-        { type: PersonType.JEUNE, status: ParticipantRegistrationStatus.CONFIRMED },
-        { type: PersonType.ANIMATEUR, status: ParticipantRegistrationStatus.CONFIRMED },
-      ],
-      relations: { group: true },
-    });
+  async repartitionFilters(
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<JeunesRepartitionFilters> {
+    const participants = (
+      await this.participantsRepository.find({
+        where: [
+          { type: PersonType.JEUNE, status: ParticipantRegistrationStatus.CONFIRMED },
+          { type: PersonType.ANIMATEUR, status: ParticipantRegistrationStatus.CONFIRMED },
+        ],
+        relations: { group: true },
+      })
+    ).filter((p) => scope.all || scope.groupIds.includes(p.group?.id ?? -1));
 
     const groups = new Map<number, string>();
     const cities = new Set<string>();
@@ -94,14 +101,19 @@ export class JeunesRepartitionService {
     };
   }
 
-  async searchParticipants(query: RepartitionParticipantsQueryDto): Promise<RepartitionParticipantsResult> {
-    const participants = await this.participantsRepository.find({
-      where: [
-        { type: PersonType.JEUNE, status: ParticipantRegistrationStatus.CONFIRMED },
-        { type: PersonType.ANIMATEUR, status: ParticipantRegistrationStatus.CONFIRMED },
-      ],
-      relations: { group: true, teamMemberships: { team: true } },
-    });
+  async searchParticipants(
+    query: RepartitionParticipantsQueryDto,
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<RepartitionParticipantsResult> {
+    const participants = (
+      await this.participantsRepository.find({
+        where: [
+          { type: PersonType.JEUNE, status: ParticipantRegistrationStatus.CONFIRMED },
+          { type: PersonType.ANIMATEUR, status: ParticipantRegistrationStatus.CONFIRMED },
+        ],
+        relations: { group: true, teamMemberships: { team: true } },
+      })
+    ).filter((p) => scope.all || scope.groupIds.includes(p.group?.id ?? -1));
 
     const search = query.search?.trim().toLowerCase();
     const assignment = query.assignment ?? 'all';
@@ -158,11 +170,22 @@ export class JeunesRepartitionService {
 
   // ── Étape 2 : équipes ──────────────────────────────────────────────────────
 
-  async searchTeams(query: RepartitionJeunesTeamsQueryDto): Promise<RepartitionTeamRow[]> {
-    const teams = await this.teamsRepository.find({
-      relations: { group: true, members: { participant: true } },
-      order: { name: 'ASC' },
-    });
+  /**
+   * Compte limité à des groupes : seules les équipes de ses groupes sont listées, sauf si
+   * l'administrateur a activé l'option « voir les autres équipes » (GROUP_SCOPE_SHOW_OTHER_TEAMS).
+   */
+  async searchTeams(
+    query: RepartitionJeunesTeamsQueryDto,
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<RepartitionTeamRow[]> {
+    const showOtherTeams =
+      scope.all || (this.accessRights ? await this.accessRights.getOption('GROUP_SCOPE_SHOW_OTHER_TEAMS') : false);
+    const teams = (
+      await this.teamsRepository.find({
+        relations: { group: true, members: { participant: true } },
+        order: { name: 'ASC' },
+      })
+    ).filter((t) => showOtherTeams || scope.groupIds.includes(t.group?.id ?? -1));
 
     const search = query.search?.trim().toLowerCase();
     const rows = teams.map((team): RepartitionTeamRow => {
@@ -190,13 +213,34 @@ export class JeunesRepartitionService {
     });
   }
 
-  async bulkCreateTeams(dto: BulkCreateTeamsDto): Promise<BulkCreateTeamsResult> {
-    const count = Math.floor(Number(dto.count));
-    if (!Number.isFinite(count) || count < 1 || count > 100) {
+  async bulkCreateTeams(
+    dto: BulkCreateTeamsDto,
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<BulkCreateTeamsResult> {
+    // Compte limité à des groupes : les équipes créées sont rattachées à un de ses groupes.
+    // Sans groupe, une équipe sortirait de toute portée de groupe.
+    const rawGroupId = dto.groupId === undefined || dto.groupId === null ? null : Number(dto.groupId);
+    if (rawGroupId !== null && !Number.isInteger(rawGroupId)) {
+      throw new BadRequestException('Groupe invalide.');
+    }
+    const groupId = rawGroupId;
+    if (!scope.all && (groupId === null || !scope.groupIds.includes(groupId))) {
+      throw new ForbiddenException('Précisez un de vos groupes pour créer des équipes.');
+    }
+    // Portée « tout » : un groupe inexistant est une erreur de saisie (400), pas une erreur serveur.
+    if (groupId !== null && !(await this.groupsRepository.findOne({ where: { id: groupId } }))) {
+      throw new BadRequestException('Groupe inconnu.');
+    }
+    const count = Number(dto.count);
+    if (!Number.isInteger(count) || count < 1 || count > 100) {
       throw new BadRequestException('Le nombre d equipes doit etre compris entre 1 et 100.');
     }
     const baseName = (dto.baseName ?? 'Équipe').trim() || 'Équipe';
-    const maxSize = Math.max(1, Math.floor(Number(dto.maxSize) || 12));
+    const rawMax = dto.maxSize === undefined || dto.maxSize === null ? 12 : Number(dto.maxSize);
+    if (!Number.isInteger(rawMax) || rawMax < 1) {
+      throw new BadRequestException('Le nombre de places par equipe doit etre un entier superieur ou egal a 1.');
+    }
+    const maxSize = rawMax;
 
     const existing = await this.teamsRepository.find();
     let nextIndex = 1;
@@ -208,7 +252,11 @@ export class JeunesRepartitionService {
     const created: { id: number; name: string; maxSize: number }[] = [];
     for (let i = 0; i < count; i += 1) {
       const team = await this.teamsRepository.save(
-        this.teamsRepository.create({ name: `${baseName} ${nextIndex + i}`, maxSize }),
+        this.teamsRepository.create({
+          name: `${baseName} ${nextIndex + i}`,
+          maxSize,
+          ...(groupId !== null ? { group: { id: groupId } as Team['group'] } : {}),
+        }),
       );
       created.push({ id: team.id, name: team.name, maxSize: team.maxSize });
     }
@@ -217,9 +265,41 @@ export class JeunesRepartitionService {
 
   // ── Étape 3 : proposition automatique ─────────────────────────────────────
 
-  async propose(dto: ProposeRepartitionDto): Promise<ProposeRepartitionResult> {
-    if (!dto.participantIds?.length) throw new BadRequestException('Aucun participant selectionne.');
+  /** Compte limité à des groupes : jeunes ET équipes visés doivent être dans ses groupes. */
+  private async assertInScope(scope: AccessScopeInfo, participantIds: number[], teamIds: number[]) {
+    if (scope.all) return;
+    if (!scope.groupIds.length) throw new ForbiddenException('Hors de votre portée.');
+    const ps = participantIds.length
+      ? await this.participantsRepository.find({
+          where: { id: In(participantIds) },
+          relations: { group: true },
+        })
+      : [];
+    if (
+      ps.length !== new Set(participantIds).size ||
+      ps.some((p) => !scope.groupIds.includes(p.group?.id ?? -1))
+    ) {
+      throw new ForbiddenException('Un participant est hors de votre portée.');
+    }
+    const ts = teamIds.length
+      ? await this.teamsRepository.find({ where: { id: In(teamIds) }, relations: { group: true } })
+      : [];
+    if (
+      ts.length !== new Set(teamIds).size ||
+      ts.some((t) => !scope.groupIds.includes(t.group?.id ?? -1))
+    ) {
+      throw new ForbiddenException('Une équipe est hors de votre portée.');
+    }
+  }
+
+  async propose(
+    dto: ProposeRepartitionDto,
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<ProposeRepartitionResult> {
+    if (!dto.participantIds?.length)
+      throw new BadRequestException('Aucun participant selectionne.');
     if (!dto.teamIds?.length) throw new BadRequestException('Aucune equipe selectionnee.');
+    await this.assertInScope(scope, dto.participantIds, dto.teamIds);
 
     const params = normalizeParams(dto.params);
     const granularity = dto.params?.geoGranularity ?? 'group';
@@ -280,11 +360,17 @@ export class JeunesRepartitionService {
 
   // ── Étape 3 : application ──────────────────────────────────────────────────
 
-  async apply(dto: ApplyJeunesRepartitionDto): Promise<ApplyJeunesRepartitionResult> {
+  async apply(
+    dto: ApplyJeunesRepartitionDto,
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<ApplyJeunesRepartitionResult> {
     if (!dto.assignments?.length) return { applied: 0 };
 
     const participantIds = [...new Set(dto.assignments.map((a) => a.participantId))];
-    const teamIds = [...new Set(dto.assignments.map((a) => a.teamId).filter((id): id is number => id !== null))];
+    const teamIds = [
+      ...new Set(dto.assignments.map((a) => a.teamId).filter((id): id is number => id !== null)),
+    ];
+    await this.assertInScope(scope, participantIds, teamIds);
 
     return this.participantsRepository.manager.transaction(async (manager) => {
       const participants = await manager.find(Participant, {

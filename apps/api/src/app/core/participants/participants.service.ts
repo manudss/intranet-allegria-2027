@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import type { AccessScopeInfo } from '../auth/access-module.decorator';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Group, Participant } from '../entities';
 import {
   CreateParticipantDto,
@@ -17,7 +18,11 @@ export class ParticipantsService {
     private readonly groupsRepository: Repository<Group>,
   ) {}
 
-  async create(dto: CreateParticipantDto): Promise<Participant> {
+  async create(
+    dto: CreateParticipantDto,
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<Participant> {
+    this.assertGroupAllowed(scope, dto.groupId);
     const participant = this.participantsRepository.create({
       ...dto,
       group: dto.groupId ? await this.groupsRepository.findOneBy({ id: dto.groupId }) : null,
@@ -26,13 +31,32 @@ export class ParticipantsService {
     return this.participantsRepository.save(participant);
   }
 
-  async findAll(groupId?: number, diocese?: string): Promise<Participant[]> {
+  private assertGroupAllowed(scope: AccessScopeInfo, groupId?: number | null) {
+    if (scope.all) return;
+    if (groupId == null || !scope.groupIds.includes(Number(groupId))) {
+      throw new ForbiddenException('Groupe hors de votre périmètre');
+    }
+  }
+
+  private restrict(query: SelectQueryBuilder<Participant>, scope: AccessScopeInfo) {
+    if (!scope.all) {
+      if (scope.groupIds.length === 0) query.andWhere('1 = 0');
+      else query.andWhere('group.id IN (:...scopeGroupIds)', { scopeGroupIds: scope.groupIds });
+    }
+  }
+
+  async findAll(
+    groupId?: number,
+    diocese?: string,
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<Participant[]> {
     const query = this.participantsRepository
       .createQueryBuilder('participant')
       .leftJoinAndSelect('participant.group', 'group')
       .orderBy('participant.lastName', 'ASC')
       .addOrderBy('participant.firstName', 'ASC');
 
+    this.restrict(query, scope);
     if (groupId) {
       query.andWhere('group.id = :groupId', { groupId });
     }
@@ -44,7 +68,7 @@ export class ParticipantsService {
     return query.getMany();
   }
 
-  async search(filters: SearchParticipantsQuery) {
+  async search(filters: SearchParticipantsQuery, scope: AccessScopeInfo = { all: true }) {
     const limit = Math.min(Math.max(Number(filters.limit) || 20, 1), 100);
     const offset = Math.max(Number(filters.offset) || 0, 0);
     const query = this.participantsRepository
@@ -56,6 +80,7 @@ export class ParticipantsService {
       .orderBy('participant.lastName', 'ASC')
       .addOrderBy('participant.firstName', 'ASC');
 
+    this.restrict(query, scope);
     if (filters.type) query.andWhere('participant.type = :type', { type: filters.type });
     if (filters.teamId) query.andWhere('team.id = :teamId', { teamId: Number(filters.teamId) });
     if (filters.q?.trim()) {
@@ -83,21 +108,27 @@ export class ParticipantsService {
     return { items, total, limit, offset };
   }
 
-  async findOne(id: number): Promise<Participant> {
+  async findOne(id: number, scope: AccessScopeInfo = { all: true }): Promise<Participant> {
     const participant = await this.participantsRepository.findOne({
       where: { id },
       relations: { group: true },
     });
 
-    if (!participant) {
+    if (!participant || (!scope.all && !scope.groupIds.includes(participant.group?.id ?? -1))) {
       throw new NotFoundException(`Participant ${id} introuvable`);
     }
 
     return participant;
   }
 
-  async update(id: number, dto: UpdateParticipantDto): Promise<Participant> {
-    const participant = await this.findOne(id);
+  async update(
+    id: number,
+    dto: UpdateParticipantDto,
+    scope: AccessScopeInfo = { all: true },
+  ): Promise<Participant> {
+    const participant = await this.findOne(id, scope);
+    if (Object.prototype.hasOwnProperty.call(dto, 'groupId'))
+      this.assertGroupAllowed(scope, dto.groupId);
 
     if (Object.prototype.hasOwnProperty.call(dto, 'groupId')) {
       participant.group = dto.groupId
@@ -110,8 +141,8 @@ export class ParticipantsService {
     return this.participantsRepository.save(participant);
   }
 
-  async remove(id: number): Promise<void> {
-    const participant = await this.findOne(id);
+  async remove(id: number, scope: AccessScopeInfo = { all: true }): Promise<void> {
+    const participant = await this.findOne(id, scope);
     await this.participantsRepository.remove(participant);
   }
 }

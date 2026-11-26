@@ -14,7 +14,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthTokenGuard } from '../auth/auth-token.guard';
 import { RoleGuard } from '../auth/role.guard';
-import { Roles } from '../auth/roles.decorator';
+import { AccessModule, AccessLevelRequired } from '../auth/access-module.decorator';
 import { DocumentLibraryService } from './document-library.service';
 import {
   CreateDocumentCategoryDto,
@@ -61,14 +61,16 @@ export class DocumentLibraryController {
   }
 
   @ApiOperation({ summary: 'Créer une fiche document (ADMIN/COORDINATOR)' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('DOCUMENTS')
+  @AccessLevelRequired('EDIT')
   @Post('document-links')
   createLink(@Req() req: UserRequest, @Body() dto: CreateDocumentLinkDto) {
     return this.documentLibraryService.createLink(req.user, dto);
   }
 
   @ApiOperation({ summary: 'Mettre à jour une fiche document (ADMIN/COORDINATOR)' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('DOCUMENTS')
+  @AccessLevelRequired('EDIT')
   @Patch('document-links/:id')
   updateLink(
     @Req() req: UserRequest,
@@ -79,7 +81,8 @@ export class DocumentLibraryController {
   }
 
   @ApiOperation({ summary: 'Supprimer une fiche document (ADMIN/COORDINATOR)' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('DOCUMENTS')
+  @AccessLevelRequired('EDIT')
   @Delete('document-links/:id')
   async removeLink(@Param('id', ParseIntPipe) id: number) {
     await this.documentLibraryService.removeLink(id);
@@ -93,21 +96,24 @@ export class DocumentLibraryController {
   }
 
   @ApiOperation({ summary: 'Créer une catégorie (ADMIN/COORDINATOR)' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('DOCUMENTS')
+  @AccessLevelRequired('EDIT')
   @Post('document-categories')
   createCategory(@Body() dto: CreateDocumentCategoryDto) {
     return this.documentLibraryService.createCategory(dto);
   }
 
   @ApiOperation({ summary: 'Mettre à jour une catégorie (ADMIN/COORDINATOR)' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('DOCUMENTS')
+  @AccessLevelRequired('EDIT')
   @Patch('document-categories/:id')
   updateCategory(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateDocumentCategoryDto) {
     return this.documentLibraryService.updateCategory(id, dto);
   }
 
   @ApiOperation({ summary: 'Supprimer une catégorie (ADMIN/COORDINATOR)' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('DOCUMENTS')
+  @AccessLevelRequired('EDIT')
   @Delete('document-categories/:id')
   async removeCategory(@Param('id', ParseIntPipe) id: number) {
     await this.documentLibraryService.removeCategory(id);

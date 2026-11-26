@@ -10,7 +10,7 @@ describe('HostFamilyAssignmentsController', () => {
     } as unknown as AssignmentsService;
     const controller = new HostFamilyAssignmentsController(service);
 
-    await expect(controller.findByHostFamily(42)).resolves.toEqual(assignments);
-    expect(service.findByHostFamily).toHaveBeenCalledWith(42);
+    await expect(controller.findByHostFamily(42, { all: true })).resolves.toEqual(assignments);
+    expect(service.findByHostFamily).toHaveBeenCalledWith(42, { all: true });
   });
 });

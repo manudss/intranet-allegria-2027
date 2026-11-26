@@ -9,6 +9,7 @@ import { ParticipantHealthModule } from './participant-health/participant-health
 import { ParticipantsModule } from './participants/participants.module';
 import { VolunteerSkillsModule } from './volunteer-skills/volunteer-skills.module';
 import { VolunteerTeamsModule } from './volunteer-teams/volunteer-teams.module';
+import { AccessRightsModule } from './access-rights/access-rights.module';
 import { TeamParticipantsModule } from './team-participants/team-participants.module';
 import { TeamBenevolesModule } from './team-benevoles/team-benevoles.module';
 import { TeamsModule } from './teams/teams.module';
@@ -36,6 +37,7 @@ import { DocumentLibraryModule } from './document-library/document-library.modul
     TeamBenevolesModule,
     VolunteersModule,
     VolunteerTeamsModule,
+    AccessRightsModule,
     VolunteerMissionsModule,
     VolunteerShiftAssignmentsModule,
     VolunteerAuditLogsModule,

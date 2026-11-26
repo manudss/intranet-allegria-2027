@@ -28,10 +28,13 @@ export class VolunteersService {
     return this.volunteersRepository.save(volunteer);
   }
 
-  findAll(query?: FindVolunteersQueryDto): Promise<Volunteer[]> {
+  findAll(query?: FindVolunteersQueryDto, visible: number[] | null = null): Promise<Volunteer[]> {
     const qb = this.volunteersRepository
       .createQueryBuilder('volunteer')
       .leftJoinAndSelect('volunteer.user', 'user')
+      .where(visible === null ? '1=1' : 'volunteer.id IN (:...visibleIds)', {
+        visibleIds: visible?.length ? visible : [-1],
+      })
       .orderBy('volunteer.lastName', 'ASC')
       .addOrderBy('volunteer.firstName', 'ASC');
 
@@ -54,13 +57,13 @@ export class VolunteersService {
     });
   }
 
-  async findOne(id: number): Promise<Volunteer> {
+  async findOne(id: number, visible: number[] | null = null): Promise<Volunteer> {
     const volunteer = await this.volunteersRepository.findOne({
       where: { id },
       relations: { user: true },
     });
 
-    if (!volunteer) {
+    if (!volunteer || (visible !== null && !visible.includes(id))) {
       throw new NotFoundException(`Benevole ${id} introuvable`);
     }
 

@@ -25,7 +25,12 @@ import {
 } from 'class-validator';
 import { AuthTokenGuard } from '../auth/auth-token.guard';
 import { RoleGuard } from '../auth/role.guard';
-import { Roles } from '../auth/roles.decorator';
+import {
+  AccessModule,
+  AccessScope,
+  AccessScopeInfo,
+  GroupScopeAware,
+} from '../auth/access-module.decorator';
 import { PersonType } from '../entities';
 import { BadgePrintService } from './badge-print.service';
 export class PrintPeopleQuery {
@@ -54,20 +59,25 @@ export class PreparePrintDto {
 }
 @Controller('access-control/printing')
 @UseGuards(AuthTokenGuard, RoleGuard)
-@Roles('ADMIN', 'BADGE_MANAGER')
+@AccessModule('BADGES')
+@GroupScopeAware()
 @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
 export class BadgePrintController {
   constructor(private readonly service: BadgePrintService) {}
-  @Get('participants') people(@Query() q: PrintPeopleQuery) {
-    return this.service.people(q);
+  @Get('participants') people(@Query() q: PrintPeopleQuery, @AccessScope() scope: AccessScopeInfo) {
+    return this.service.people(q, scope);
   }
-  @Post('participants/preview') preview(@Body() dto: PreparePrintDto) {
-    return this.service.preview(dto.participantIds, dto.volunteerIds);
+  @Post('participants/preview') preview(
+    @Body() dto: PreparePrintDto,
+    @AccessScope() scope: AccessScopeInfo,
+  ) {
+    return this.service.preview(dto.participantIds, dto.volunteerIds, scope);
   }
   @Post('participants/prepare') prepare(
     @Body() dto: PreparePrintDto,
     @Req() req: { user: { id: number } },
+    @AccessScope() scope: AccessScopeInfo,
   ) {
-    return this.service.prepare(dto.participantIds, req.user.id, dto.volunteerIds);
+    return this.service.prepare(dto.participantIds, req.user.id, dto.volunteerIds, scope);
   }
 }

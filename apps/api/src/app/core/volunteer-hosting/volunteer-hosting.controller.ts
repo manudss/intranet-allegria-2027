@@ -14,7 +14,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthTokenGuard } from '../auth/auth-token.guard';
 import { RoleGuard } from '../auth/role.guard';
-import { Roles } from '../auth/roles.decorator';
+import { AccessModule, AccessLevelRequired } from '../auth/access-module.decorator';
 import { VolunteerHostingService } from './volunteer-hosting.service';
 import { CreateVolunteerHostingDto, UpdateVolunteerHostingDto } from './volunteer-hosting.types';
 
@@ -29,28 +29,31 @@ export class VolunteerHostingController {
   constructor(private readonly hostingService: VolunteerHostingService) {}
 
   @ApiOperation({ summary: 'Lister les hébergements bénévoles (filtre volunteerId possible)' })
-  @Roles(...READ_ROLES)
+  @AccessModule('HOUSING')
   @Get()
   findAll(@Query('volunteerId') volunteerId?: string) {
     return this.hostingService.findAll(volunteerId ? Number(volunteerId) : undefined);
   }
 
   @ApiOperation({ summary: 'Créer l hébergement d un bénévole' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('HOUSING')
+  @AccessLevelRequired('EDIT')
   @Post()
   create(@Body() dto: CreateVolunteerHostingDto) {
     return this.hostingService.create(dto);
   }
 
   @ApiOperation({ summary: 'Mettre à jour l hébergement d un bénévole' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('HOUSING')
+  @AccessLevelRequired('EDIT')
   @Patch(':id')
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateVolunteerHostingDto) {
     return this.hostingService.update(id, dto);
   }
 
   @ApiOperation({ summary: 'Supprimer l hébergement d un bénévole' })
-  @Roles(...WRITE_ROLES)
+  @AccessModule('HOUSING')
+  @AccessLevelRequired('EDIT')
   @Delete(':id')
   @HttpCode(204)
   remove(@Param('id', ParseIntPipe) id: number) {

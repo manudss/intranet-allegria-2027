@@ -400,7 +400,7 @@ export class AccessRightsService {
   }
 
   /** Interrupteurs d'administration. Inconnu ou absent = désactivé (refus par défaut). */
-  static readonly OPTION_KEYS = ['GROUP_SCOPE_SHOW_GLOBAL_TOTALS'] as const;
+  static readonly OPTION_KEYS = ['GROUP_SCOPE_SHOW_OTHER_TEAMS'] as const;
 
   async getOption(key: string): Promise<boolean> {
     const rows: { enabled: boolean }[] = await this.dataSource.query(

@@ -123,7 +123,7 @@ export class ParametresRoles implements OnInit {
       error: () => this.fail('Chargement du catalogue impossible (droits administrateur requis).'),
     });
     this.http.get<Record<string, boolean>>('/api/access/options').subscribe({
-      next: (o) => this.showGlobal.set(o['GROUP_SCOPE_SHOW_GLOBAL_TOTALS'] === true),
+      next: (o) => this.showGlobal.set(o['GROUP_SCOPE_SHOW_OTHER_TEAMS'] === true),
     });
     this.http.get<UserRow[]>('/api/users').subscribe({ next: (u) => this.users.set(u) });
     this.http.get<GroupRow[]>('/api/groups').subscribe({ next: (g) => this.groups.set(g) });
@@ -221,12 +221,12 @@ export class ParametresRoles implements OnInit {
   protected toggleGlobal(enabled: boolean) {
     this.http
       .put<Record<string, boolean>>('/api/access/options', {
-        key: 'GROUP_SCOPE_SHOW_GLOBAL_TOTALS',
+        key: 'GROUP_SCOPE_SHOW_OTHER_TEAMS',
         enabled,
       })
       .subscribe({
         next: (o) => {
-          this.showGlobal.set(o['GROUP_SCOPE_SHOW_GLOBAL_TOTALS'] === true);
+          this.showGlobal.set(o['GROUP_SCOPE_SHOW_OTHER_TEAMS'] === true);
           this.ok('Option enregistrée.');
         },
         error: (e) => this.fail(e?.error?.message ?? 'Enregistrement refusé.'),

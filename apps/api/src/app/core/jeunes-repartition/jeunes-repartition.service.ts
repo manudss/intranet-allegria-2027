@@ -172,20 +172,20 @@ export class JeunesRepartitionService {
 
   /**
    * Compte limité à des groupes : seules les équipes de ses groupes sont listées, sauf si
-   * l'administrateur a activé l'option « effectifs globaux » (GROUP_SCOPE_SHOW_GLOBAL_TOTALS).
+   * l'administrateur a activé l'option « voir les autres équipes » (GROUP_SCOPE_SHOW_OTHER_TEAMS).
    */
   async searchTeams(
     query: RepartitionJeunesTeamsQueryDto,
     scope: AccessScopeInfo = { all: true },
   ): Promise<RepartitionTeamRow[]> {
-    const showGlobal =
-      scope.all || (this.accessRights ? await this.accessRights.getOption('GROUP_SCOPE_SHOW_GLOBAL_TOTALS') : false);
+    const showOtherTeams =
+      scope.all || (this.accessRights ? await this.accessRights.getOption('GROUP_SCOPE_SHOW_OTHER_TEAMS') : false);
     const teams = (
       await this.teamsRepository.find({
         relations: { group: true, members: { participant: true } },
         order: { name: 'ASC' },
       })
-    ).filter((t) => showGlobal || scope.groupIds.includes(t.group?.id ?? -1));
+    ).filter((t) => showOtherTeams || scope.groupIds.includes(t.group?.id ?? -1));
 
     const search = query.search?.trim().toLowerCase();
     const rows = teams.map((team): RepartitionTeamRow => {

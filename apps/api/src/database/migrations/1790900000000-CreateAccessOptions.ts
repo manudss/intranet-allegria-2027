@@ -2,8 +2,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 
 /**
  * Options d'administration des droits (interrupteurs oui/non, tous à « non » au départ).
- * Option actuelle : un compte limité à des groupes voit-il les effectifs globaux
- * (équipes hors de ses groupes) dans le placement et la répartition des jeunes ?
+ * Option actuelle : un compte limité à des groupes voit-il les noms et effectifs des équipes
+ * des autres groupes dans le placement et la répartition des jeunes ?
  */
 export class CreateAccessOptions1790900000000 implements MigrationInterface {
   name = 'CreateAccessOptions1790900000000';

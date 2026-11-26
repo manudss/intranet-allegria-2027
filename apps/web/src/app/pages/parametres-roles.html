@@ -127,9 +127,10 @@
       [checked]="showGlobal()"
       (change)="toggleGlobal($any($event.target).checked)"
     />
-    Un compte limité à des groupes voit aussi les équipes, groupes d’hébergement et familles
-    d’accueil des autres groupes (placement et répartition des jeunes). Désactivé par défaut : il ne
-    voit que ses propres groupes. Les jeunes nommés restent toujours limités à ses groupes.
+    Un compte limité à des groupes voit aussi les noms et les effectifs des équipes et des groupes
+    d’hébergement des autres groupes (placement et répartition des jeunes). Désactivé par défaut. Ce
+    que cette case n’ouvre jamais : les jeunes nommés hors de ses groupes, et les familles d’accueil
+    (identité, adresse), qui restent masquées pour tout compte limité à des groupes.
   </label>
   <p class="hint">
     Portées : « Groupes autorisés » est filtrée par le serveur sur les participants, les groupes, les

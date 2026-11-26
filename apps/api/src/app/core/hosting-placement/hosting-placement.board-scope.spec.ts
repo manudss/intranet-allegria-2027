@@ -46,10 +46,11 @@ describe('board par portée de groupe', () => {
     expect(b.families).toEqual([]);
     expect(JSON.stringify(b)).not.toContain('Secret');
   });
-  it('option admin activée : équipes, groupes d’hébergement et familles globaux, jeunes toujours filtrés', async () => {
+  it('option « autres équipes » : équipes et groupes d’hébergement globaux, jamais les familles ni les jeunes hors portée', async () => {
     const b = await build(true).board({ all: false, groupIds: [5] });
     expect(b.teams).toHaveLength(2);
-    expect(b.families).toHaveLength(2);
+    expect(b.families).toEqual([]);
+    expect(JSON.stringify(b)).not.toContain('Secret');
     expect(b.members.map((m) => m.participantId)).toEqual([1]);
   });
   it('sans portée posée : rien de nominatif ni de famille', async () => {

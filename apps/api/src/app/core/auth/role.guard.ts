@@ -5,6 +5,7 @@ import { AccessLevel, LEVEL_RANK } from '../access-rights/access-modules';
 import {
   ACCESS_LEVEL_KEY,
   ACCESS_MODULE_KEY,
+  GATHERING_SCOPE_AWARE_KEY,
   GROUP_SCOPE_AWARE_KEY,
   VOLUNTEER_SCOPE_AWARE_KEY,
 } from './access-module.decorator';
@@ -91,6 +92,7 @@ export class RoleGuard implements CanActivate {
     }
     if (usable.some((p) => p.scope === 'ALL')) {
       request.accessScope = { all: true };
+      request.gatheringScope = { all: true };
       return true;
     }
     const aware = this.reflector.getAllAndOverride<boolean | undefined>(GROUP_SCOPE_AWARE_KEY, [
@@ -102,6 +104,19 @@ export class RoleGuard implements CanActivate {
       request.accessScope = {
         all: false,
         groupIds: await this.accessRights.groupIdsForUser(user.id),
+      };
+      return true;
+    }
+    const gatheringAware = this.reflector.getAllAndOverride<boolean | undefined>(
+      GATHERING_SCOPE_AWARE_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    if (gatheringAware && usable.some((p) => p.scope === 'GROUPS')) {
+      // Portée « ses groupes » : les groupes de rassemblement dont le compte est responsable
+      // (vide = aucun accès). La route filtre ses données avec cette liste.
+      request.gatheringScope = {
+        all: false,
+        gatheringGroupIds: await this.accessRights.gatheringGroupIdsForUser(user.id),
       };
       return true;
     }

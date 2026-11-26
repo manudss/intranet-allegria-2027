@@ -97,6 +97,7 @@ function createFakeDataSource() {
   };
 
   const dataSource = {
+    query: async () => [],
     manager,
     transaction: async (work: (m: typeof manager) => Promise<unknown>) => work(manager),
   } as unknown as DataSource;

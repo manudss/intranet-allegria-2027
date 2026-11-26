@@ -128,7 +128,7 @@ export class Layout {
       icon: '@tui.layout-dashboard',
       items: [
         { label: 'Accueil', path: '/accueil', icon: '@tui.house' },
-        { label: 'Rassemblement', path: '/rassemblement', icon: '@tui.calendar' },
+        { label: 'Délégations', path: '/rassemblement', icon: '@tui.calendar' },
         { label: 'Glossaire', path: '/glossaire', icon: '@tui.book-open' },
       ],
     },
@@ -162,6 +162,7 @@ export class Layout {
       icon: '@tui.activity',
       items: [
         { label: 'Agenda et ordonnancement', path: '/programme', icon: '@tui.calendar-clock' },
+        { label: 'Groupes de rassemblement', path: '/groupes-rassemblement', icon: '@tui.layers' },
         { label: 'Suivi des accès', path: '/acces/suivi', icon: '@tui.scan-line' },
         { label: 'Tableau de bord Jour J', path: '/jour-j', icon: '@tui.activity' },
         { label: 'Incidents et demandes', path: '/incidents', icon: '@tui.triangle-alert' },

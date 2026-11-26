@@ -226,6 +226,15 @@ export class AccessRightsService {
     return { volunteerIds, teamIds: rows.map((r) => r.id).sort((a, b) => a - b) };
   }
 
+  /** Ids des groupes de rassemblement dont le compte est responsable (portée « ses groupes »). */
+  async gatheringGroupIdsForUser(userId: number): Promise<number[]> {
+    const rows: { group_id: number }[] = await this.dataSource.query(
+      `SELECT group_id FROM gathering_group_managers WHERE user_id = $1 ORDER BY group_id`,
+      [userId],
+    );
+    return rows.map((r) => r.group_id);
+  }
+
   async groupIdsForUser(userId: number): Promise<number[]> {
     const rows: { group_id: number }[] = await this.dataSource.query(
       `SELECT group_id FROM user_group_scopes WHERE user_id = $1 ORDER BY group_id`,

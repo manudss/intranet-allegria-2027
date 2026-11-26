@@ -1,0 +1,176 @@
+<app-page-layout [title]="fiche()?.name ?? 'Fiche groupe'">
+  <p class="back">
+    @if (fiche(); as f0) {
+      <a [routerLink]="['/groupes-rassemblement', 'repartitions', f0.repartition.id]">← {{ f0.repartition.name }}</a>
+    } @else {
+      <a routerLink="/groupes-rassemblement">← Toutes les répartitions</a>
+    }
+  </p>
+
+  @if (notice(); as n) {
+    <div class="notice" [class.error]="n.kind === 'error'" role="status">
+      <span>{{ n.text }}</span>
+      <button type="button" class="link" (click)="notice.set(null)" aria-label="Fermer">✕</button>
+    </div>
+  }
+
+  @if (loading()) {
+    <app-loading-skeleton />
+  } @else if (fiche(); as f) {
+    @for (alert of f.alerts; track $index) {
+      <p class="alert" role="alert">{{ alert.message }}</p>
+    }
+
+    <section class="card head-card">
+      <div class="head-main">
+        <span class="cat" [class]="'cat cat-' + f.category | lowercase">{{ categoryLabels[f.category] }}</span>
+        @if (f.location) { <span class="muted">{{ f.location }}</span> }
+        @if (f.sequence; as sequence) {
+          <span class="muted">{{ sequence.eventDate | date: 'dd/MM/yyyy' }} · {{ sequence.startTime }}–{{ sequence.endTime }} · {{ sequence.title }}</span>
+        } @else {
+          <span class="muted">Répartition autonome</span>
+        }
+      </div>
+      <div class="gauge-line">
+        <span class="gauge" [class.overflow]="f.overflow" [class.almost]="f.almostFull">
+          <span class="bar" [style.width.%]="gaugeRatio() * 100"></span>
+        </span>
+        <span class="count" [class.over]="f.overflow">
+          {{ f.persons }}<span class="muted">/{{ f.capacity ?? '∞' }}</span>
+        </span>
+        <span class="muted">{{ f.teamCount }} équipe{{ f.teamCount > 1 ? 's' : '' }}</span>
+      </div>
+      @if (f.hostingGroup) {
+        <p class="muted">Hébergement lié : {{ f.hostingGroup.name }}</p>
+      }
+      @if (f.documentLink) {
+        <p class="muted">Document : <a [href]="f.documentLink.url" target="_blank" rel="noopener">{{ f.documentLink.title }}</a></p>
+      }
+      <div class="head-actions">
+        <button type="button" tuiButton appearance="secondary" size="s" (click)="startEdit()">Modifier</button>
+      </div>
+    </section>
+
+    @if (editing()) {
+      <section class="card" aria-labelledby="edit-title">
+        <h2 id="edit-title">Modifier le groupe</h2>
+        <form class="edit-form" (ngSubmit)="saveEdit()">
+          <tui-textfield>
+            <label tuiLabel for="f-name">Nom</label>
+            <input id="f-name" tuiInput type="text" [ngModel]="editName()" (ngModelChange)="editName.set($event)" name="f-name" />
+          </tui-textfield>
+          <app-select-field label="Catégorie" [options]="categoryOptions" [value]="editCategory()" (valueChange)="editCategory.set($event)" />
+          <tui-textfield>
+            <label tuiLabel for="f-cap">Capacité (personnes, vide = sans limite)</label>
+            <input id="f-cap" tuiInput type="number" min="1" [ngModel]="editCapacity()" (ngModelChange)="editCapacity.set($event)" name="f-cap" />
+          </tui-textfield>
+          <tui-textfield>
+            <label tuiLabel for="f-loc">Lieu</label>
+            <input id="f-loc" tuiInput type="text" [ngModel]="editLocation()" (ngModelChange)="editLocation.set($event)" name="f-loc" />
+          </tui-textfield>
+          <tui-textfield>
+            <label tuiLabel for="f-notes">Notes</label>
+            <textarea id="f-notes" tuiTextarea [ngModel]="editNotes()" (ngModelChange)="editNotes.set($event)" name="f-notes"></textarea>
+          </tui-textfield>
+          <div class="form-actions">
+            <button type="submit" tuiButton appearance="primary" [disabled]="busy() || !editName().trim()">Enregistrer</button>
+            <button type="button" tuiButton appearance="flat" (click)="editing.set(false)">Annuler</button>
+          </div>
+        </form>
+      </section>
+    }
+
+    <section class="card" aria-labelledby="teams-title">
+      <h2 id="teams-title">Équipes ({{ f.teams.length }})</h2>
+      @if (f.teams.length === 0) {
+        <p class="empty-state">Aucune équipe placée : passez par le dispatch de la répartition.</p>
+      }
+      <ul class="team-list">
+        @for (t of f.teams; track t.id) {
+          <li>
+            <span class="dot" [style.background]="trackColors[t.track]"></span>
+            <strong>{{ t.name }}</strong>
+            @if (t.delegation) { <span class="muted">{{ t.delegation }}</span> }
+            <span class="muted counts">{{ t.jeunes }} jeunes · {{ t.animateurs }} animateur{{ t.animateurs > 1 ? 's' : '' }}</span>
+          </li>
+        }
+      </ul>
+    </section>
+
+    <section class="card" aria-labelledby="people-title">
+      <h2 id="people-title">Personnes ({{ f.people.length }})</h2>
+      <p class="muted">Prénoms seulement, par mesure de protection des mineurs.</p>
+      <p class="chips">
+        @for (p of f.people; track p.id) {
+          <span class="chip-item">{{ p.firstName }}</span>
+        }
+      </p>
+      @if (f.animators.length) {
+        <h3>Animateurs ({{ f.animators.length }})</h3>
+        <p class="chips">
+          @for (a of f.animators; track a.id) {
+            <span class="chip-item animator">{{ a.displayName }}</span>
+          }
+        </p>
+      }
+    </section>
+
+    <section class="card" aria-labelledby="volunteer-title">
+      <h2 id="volunteer-title">Équipes bénévoles opérationnelles ({{ f.volunteerTeams.length }})</h2>
+      <ul class="volunteer-list">
+        @for (v of f.volunteerTeams; track v.id) {
+          <li>
+            <strong>{{ v.name }}</strong>
+            @if (v.typeLabel) { <span class="muted">{{ v.typeLabel }}</span> }
+            <span class="muted">{{ v.memberCount }} membre{{ v.memberCount > 1 ? 's' : '' }}</span>
+            <button type="button" class="link" (click)="detachVolunteerTeam(v.id, v.name)">Retirer</button>
+          </li>
+        } @empty {
+          <li class="empty-state">Aucune équipe opérationnelle rattachée (cuisine, logistique…).</li>
+        }
+      </ul>
+      @if (addableVolunteerTeams().length) {
+        <div class="add-line">
+          <app-select-field
+            label="Rattacher une équipe"
+            [options]="addableVolunteerTeams()"
+            [value]="volunteerTeamToAdd()"
+            (valueChange)="volunteerTeamToAdd.set($event)"
+          />
+          <button type="button" tuiButton appearance="primary" size="s" [disabled]="busy() || !volunteerTeamToAdd()" (click)="attachVolunteerTeam()">
+            Rattacher
+          </button>
+        </div>
+      }
+    </section>
+
+    <section class="card" aria-labelledby="managers-title">
+      <h2 id="managers-title">Responsables du groupe ({{ f.managers.length }})</h2>
+      <p class="muted">
+        La nomination fixe le périmètre de chaque responsable ; le niveau (Consulter, Modifier, Gérer)
+        se règle dans la matrice des droits.
+      </p>
+      <ul class="manager-list">
+        @for (m of f.managers; track m.userId) {
+          <li>
+            <strong>{{ m.displayName ?? m.email }}</strong>
+            @if (m.displayName) { <span class="muted">{{ m.email }}</span> }
+            <button type="button" class="link" (click)="removeManager(m.userId)">Retirer</button>
+          </li>
+        } @empty {
+          <li class="empty-state">Aucun responsable nommé.</li>
+        }
+      </ul>
+      <div class="add-line">
+        <app-person-picker
+          label="Nommer un responsable"
+          [value]="managerToAdd()"
+          (valueChange)="managerToAdd.set($event)"
+        />
+        <button type="button" tuiButton appearance="primary" size="s" [disabled]="busy() || !managerToAdd()" (click)="addManager()">
+          Nommer
+        </button>
+      </div>
+    </section>
+  }
+</app-page-layout>

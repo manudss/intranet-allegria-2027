@@ -185,6 +185,8 @@ export interface ProgramSequenceDetailView extends ProgramSequenceView {
 /** Ligne de la vue jour : la séquence et ses groupes de rassemblement liés. */
 export interface ProgramSequenceDayView extends ProgramSequenceView {
   groupIds: number[];
+  /** Répartitions de groupes de rassemblement rattachées à ce créneau. */
+  gatheringRepartitionIds?: number[];
 }
 
 export interface ProgramSequenceView {

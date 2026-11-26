@@ -1,0 +1,169 @@
+<app-page-layout [title]="board()?.repartition?.name ? 'Dispatch · ' + board()!.repartition.name : 'Dispatch'">
+  <p class="back"><a routerLink="/groupes-rassemblement">← Toutes les répartitions</a></p>
+
+  @if (notice(); as n) {
+    <div class="notice" [class.error]="n.kind === 'error'" role="status">
+      <span>{{ n.text }}</span>
+      <button type="button" class="link" (click)="notice.set(null)" aria-label="Fermer">✕</button>
+    </div>
+  }
+
+  @if (loading()) {
+    <app-loading-skeleton />
+  } @else if (board(); as b) {
+    <div class="toolbar">
+      <button type="button" tuiButton appearance="primary" [disabled]="busy() || proposalBusy()" (click)="propose()">
+        Proposition automatique
+      </button>
+      <button type="button" tuiButton appearance="flat" (click)="toggleOverflow()">
+        {{ b.repartition.allowOverflow ? 'Bloquer les dépassements' : 'Dérogation dépassement…' }}
+      </button>
+      @if (b.repartition.allowOverflow) {
+        <span class="badge-derogation">Dérogation active</span>
+      }
+      <span class="muted">{{ b.unplacedTeams.length }} équipe{{ b.unplacedTeams.length > 1 ? 's' : '' }} à placer</span>
+    </div>
+
+    @if (proposal(); as p) {
+      <section class="proposal" aria-labelledby="proposal-title">
+        <h2 id="proposal-title">Proposition automatique</h2>
+        @if (p.assignments.length === 0) {
+          <p class="empty-state">Aucune équipe ne peut être placée automatiquement.</p>
+        } @else {
+          <ul>
+            @for (a of p.assignments; track a.teamId) {
+              <li><strong>{{ teamName(a.teamId) }}</strong> → {{ a.groupName }}</li>
+            }
+          </ul>
+        }
+        @for (u of p.unplaced; track u.teamId) {
+          <p class="unplaced-reason">{{ u.teamName }} : {{ u.reason }}.</p>
+        }
+        <div class="proposal-actions">
+          <button
+            type="button"
+            tuiButton
+            appearance="primary"
+            [disabled]="busy() || p.assignments.length === 0"
+            (click)="applyProposal()"
+          >
+            Appliquer
+          </button>
+          <button type="button" tuiButton appearance="flat" (click)="proposal.set(null)">Fermer</button>
+        </div>
+      </section>
+    }
+
+    <div class="board">
+      <section class="column teams" aria-labelledby="teams-title">
+        <h2 id="teams-title">Équipes à placer</h2>
+        <tui-textfield>
+          <label tuiLabel for="team-filter">Filtrer</label>
+          <input
+            id="team-filter"
+            tuiInput
+            type="text"
+            placeholder="Nom d'équipe ou de délégation…"
+            [ngModel]="filter()"
+            (ngModelChange)="filter.set($event)"
+          />
+        </tui-textfield>
+        @if (filteredTeams().length === 0) {
+          <p class="empty-state">
+            {{ filter() ? 'Aucune équipe ne correspond au filtre.' : 'Toutes les équipes sont placées.' }}
+          </p>
+        }
+        <ul class="team-list">
+          @for (team of filteredTeams(); track team.id) {
+            <li>
+              <button
+                type="button"
+                class="team-card"
+                [class.selected]="selectedTeamId() === team.id"
+                (click)="toggleTeam(team)"
+              >
+                <span class="dot" [style.background]="trackColors[team.track]"></span>
+                <span class="team-name">{{ team.name }}</span>
+                <span class="muted">{{ team.persons }} pers.</span>
+                @if (team.delegation) { <span class="muted deleg">{{ team.delegation }}</span> }
+              </button>
+            </li>
+          }
+        </ul>
+      </section>
+
+      <section class="column groups" aria-labelledby="groups-title">
+        <div class="groups-head">
+          <h2 id="groups-title">Groupes</h2>
+          <button type="button" tuiButton appearance="secondary" size="s" (click)="creating.set(!creating())">
+            {{ creating() ? 'Annuler' : 'Nouveau groupe' }}
+          </button>
+        </div>
+
+        @if (creating()) {
+          <form class="new-group" (ngSubmit)="createGroup()">
+            <tui-textfield>
+              <label tuiLabel for="ng-name">Nom</label>
+              <input id="ng-name" tuiInput type="text" [ngModel]="newGroupName()" (ngModelChange)="newGroupName.set($event)" name="ng-name" />
+            </tui-textfield>
+            <app-select-field
+              label="Catégorie"
+              [options]="categoryOptions"
+              [value]="newGroupCategory()"
+              (valueChange)="newGroupCategory.set($event)"
+            />
+            <tui-textfield>
+              <label tuiLabel for="ng-cap">Capacité (personnes, vide = sans limite)</label>
+              <input id="ng-cap" tuiInput type="number" min="1" [ngModel]="newGroupCapacity()" (ngModelChange)="newGroupCapacity.set($event)" name="ng-cap" />
+            </tui-textfield>
+            <tui-textfield>
+              <label tuiLabel for="ng-loc">Lieu (optionnel)</label>
+              <input id="ng-loc" tuiInput type="text" [ngModel]="newGroupLocation()" (ngModelChange)="newGroupLocation.set($event)" name="ng-loc" />
+            </tui-textfield>
+            <button type="submit" tuiButton appearance="primary" [disabled]="busy() || !newGroupName().trim()">Créer</button>
+          </form>
+        }
+
+        @if (b.groups.length === 0) {
+          <p class="empty-state">Aucun groupe : créez le premier pour commencer le dispatch.</p>
+        }
+        <ul class="group-list">
+          @for (group of b.groups; track group.id) {
+            <li
+              class="group-card"
+              [class.target]="selectedTeamId() !== null"
+              [class.overflow]="group.overflow"
+              [class.almost]="group.almostFull"
+            >
+              <header>
+                <button type="button" class="group-hit" (click)="selectGroup(group)" [disabled]="selectedTeamId() === null">
+                  <span class="cat" [class]="'cat cat-' + group.category | lowercase">{{ categoryLabels[group.category] }}</span>
+                  <strong>{{ group.name }}</strong>
+                  @if (group.location) { <span class="muted">{{ group.location }}</span> }
+                </button>
+                <span class="group-actions">
+                  <a tuiButton appearance="flat" size="s" [routerLink]="['/groupes-rassemblement', 'groupes', group.id]">Fiche</a>
+                  <button type="button" tuiButton appearance="flat" size="s" (click)="removeGroup(group)">Suppr.</button>
+                </span>
+              </header>
+              <div class="gauge-line">
+                <span class="gauge"><span class="bar" [style.width.%]="gaugeRatio(group) * 100"></span></span>
+                <span class="count">{{ group.persons }}<span class="muted">/{{ group.capacity ?? '∞' }}</span></span>
+              </div>
+              <ul class="placed">
+                @for (t of group.teams ?? []; track t.id) {
+                  <li>
+                    <span class="dot" [style.background]="trackColors[t.track]"></span>
+                    <span class="team-name">{{ t.name }}</span>
+                    <span class="muted">{{ t.persons }} pers.</span>
+                    <button type="button" class="link" (click)="unassign(group, t.id)" [attr.aria-label]="'Retirer ' + t.name">✕</button>
+                  </li>
+                }
+              </ul>
+            </li>
+          }
+        </ul>
+      </section>
+    </div>
+  }
+</app-page-layout>

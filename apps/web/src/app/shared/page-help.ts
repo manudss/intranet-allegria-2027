@@ -11,7 +11,11 @@ export interface PageHelp {
 
 export const PAGE_HELP: Readonly<Record<string, PageHelp>> = {
   accueil: { purpose: "Vue d'ensemble de votre rôle et raccourcis vers vos pages.", shell: true },
-  rassemblement: { purpose: 'Les groupes diocésains, leurs arrivées et leurs départs.' },
+  rassemblement: { purpose: 'Les délégations, leurs arrivées et leurs départs.' },
+  'groupes-rassemblement': {
+    purpose:
+      'Dispatch des équipes entières dans des groupes de rassemblement par moment (jeu, repas, veillée), avec capacités en personnes.',
+  },
   participants: { purpose: 'Rechercher un participant et consulter ou modifier sa fiche.' },
   'inscriptions-familles': { purpose: "Suivre et relire les dossiers d'inscription des familles, sans donnée de santé." },
   'dossiers-sanitaires': { purpose: 'Consulter les fiches de santé des jeunes. Réservé au rôle Santé.' },

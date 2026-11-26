@@ -6,6 +6,7 @@ import {
   ACCESS_LEVEL_KEY,
   ACCESS_MODULE_KEY,
   GROUP_SCOPE_AWARE_KEY,
+  VOLUNTEER_SCOPE_AWARE_KEY,
 } from './access-module.decorator';
 import { ROLES_KEY } from './roles.decorator';
 
@@ -102,6 +103,20 @@ export class RoleGuard implements CanActivate {
         all: false,
         groupIds: await this.accessRights.groupIdsForUser(user.id),
       };
+      return true;
+    }
+    const volunteerAware = this.reflector.getAllAndOverride<boolean | undefined>(
+      VOLUNTEER_SCOPE_AWARE_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    const own = usable.filter((p) => p.scope === 'OWN_TEAM' || p.scope === 'SELF');
+    if (volunteerAware && own.length && own.length === usable.length) {
+      // Portée « son équipe » / « soi-même » : liens compte-bénévole posés à la main en admin.
+      request.volunteerScopeIds = await this.accessRights.volunteerIdsForScopes(
+        user.id,
+        own.map((p) => p.scope as 'OWN_TEAM' | 'SELF'),
+      );
+      request.accessScope = { all: false, groupIds: [] };
       return true;
     }
     throw new ForbiddenException('Portée de droits non prise en charge par cette route');

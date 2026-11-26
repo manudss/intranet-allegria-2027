@@ -6,6 +6,7 @@ import {
   ACCESS_LEVEL_KEY,
   ACCESS_MODULE_KEY,
   GROUP_SCOPE_AWARE_KEY,
+  VOLUNTEER_SCOPE_AWARE_KEY,
 } from './access-module.decorator';
 import { RoleGuard } from './role.guard';
 
@@ -21,6 +22,8 @@ function run(opts: {
   method: string;
   grants: Grant[];
   aware?: boolean;
+  volunteerAware?: boolean;
+  volunteerIds?: number[];
   level?: string;
   module?: string | null;
   groupIds?: number[];
@@ -30,11 +33,13 @@ function run(opts: {
     [ACCESS_MODULE_KEY]: opts.module === null ? undefined : (opts.module ?? 'PARTICIPANTS'),
     [ACCESS_LEVEL_KEY]: opts.level,
     [GROUP_SCOPE_AWARE_KEY]: opts.aware,
+    [VOLUNTEER_SCOPE_AWARE_KEY]: opts.volunteerAware,
   };
   const reflector = { getAllAndOverride: (key: string) => meta[key] } as unknown as Reflector;
   const rights = {
     effective: async () => Object.fromEntries(opts.grants.map((g) => [g.module, g])),
     groupIdsForUser: async () => opts.groupIds ?? [],
+    volunteerIdsForScopes: async () => opts.volunteerIds ?? [],
   } as unknown as AccessRightsService;
   const request: Record<string, unknown> = {
     method: opts.method,
@@ -120,6 +125,42 @@ describe('RoleGuard avec la matrice de droits', () => {
     await expect(
       run({ method: 'GET', aware: true, grants: [g('VIEW', 'OWN_TEAM')] }).result,
     ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+  it('portée « son équipe » ou « soi-même » : acceptée seulement sur une route qui filtre les bénévoles', async () => {
+    for (const scope of ['OWN_TEAM', 'SELF']) {
+      const ok = run({
+        method: 'GET',
+        volunteerAware: true,
+        volunteerIds: [5, 9],
+        grants: [g('VIEW', scope)],
+      });
+      await expect(ok.result).resolves.toBe(true);
+      expect(ok.request['volunteerScopeIds']).toEqual([5, 9]);
+      expect(ok.request['accessScope']).toEqual({ all: false, groupIds: [] });
+      await expect(run({ method: 'GET', grants: [g('VIEW', scope)] }).result).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+    }
+  });
+  it('portée « son équipe » sans lien compte-bénévole : liste vide, jamais « tout »', async () => {
+    const r = run({ method: 'GET', volunteerAware: true, volunteerIds: [], grants: [g('VIEW', 'OWN_TEAM')] });
+    await r.result;
+    expect(r.request['volunteerScopeIds']).toEqual([]);
+  });
+  it('un couple groupes + son équipe sur une route bénévoles seule reste refusé', async () => {
+    const grant: Grant = {
+      module: 'PARTICIPANTS',
+      level: 'VIEW',
+      scope: 'GROUPS',
+      pairs: [
+        { level: 'VIEW', scope: 'GROUPS' },
+        { level: 'VIEW', scope: 'OWN_TEAM' },
+      ],
+      sources: ['ROLE:X'],
+    };
+    await expect(run({ method: 'GET', volunteerAware: true, grants: [grant] }).result).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
   });
   it('ne croise pas niveau et portée : Voir/Tout + Modifier/Groupes ne donne pas Modifier/Tout', async () => {
     await expect(run({ method: 'GET', aware: true, grants: [mixed()] }).result).resolves.toBe(true);

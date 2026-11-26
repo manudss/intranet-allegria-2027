@@ -13,7 +13,12 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthTokenGuard } from '../auth/auth-token.guard';
 import { RoleGuard } from '../auth/role.guard';
-import { AccessModule, AccessLevelRequired } from '../auth/access-module.decorator';
+import {
+  AccessModule,
+  AccessLevelRequired,
+  VolunteerScope,
+  VolunteerScopeAware,
+} from '../auth/access-module.decorator';
 import { CreateVolunteerDto, UpdateVolunteerDto } from './volunteers.types';
 import { VolunteersService } from './volunteers.service';
 import { FindVolunteersQueryDto } from '../volunteer-skills/volunteer-skills.types';
@@ -38,16 +43,18 @@ export class VolunteersController {
 
   @ApiOperation({ summary: 'Lister les benevoles' })
   @AccessModule('VOLUNTEER_DIRECTORY')
+  @VolunteerScopeAware()
   @Get()
-  findAll(@Query() query: FindVolunteersQueryDto) {
-    return this.volunteersService.findAll(query);
+  findAll(@Query() query: FindVolunteersQueryDto, @VolunteerScope() visible: number[] | null) {
+    return this.volunteersService.findAll(query, visible);
   }
 
   @ApiOperation({ summary: 'Recuperer un benevole par id' })
   @AccessModule('VOLUNTEER_DIRECTORY')
+  @VolunteerScopeAware()
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.volunteersService.findOne(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @VolunteerScope() visible: number[] | null) {
+    return this.volunteersService.findOne(id, visible);
   }
 
   @ApiOperation({ summary: 'Mettre a jour un benevole' })

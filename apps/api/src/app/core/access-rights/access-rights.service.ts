@@ -161,6 +161,36 @@ export class AccessRightsService {
     return new Set(rows.map((r) => r.id));
   }
 
+  /**
+   * Bénévoles visibles pour les portées « soi-même » et « son équipe ».
+   * Seul le lien volunteers.user_id posé à la main en admin est utilisé : aucun rapprochement
+   * par e-mail ou par nom. Sans lien, la personne ne voit rien.
+   * « Son équipe » = sa fiche + les bénévoles des équipes bénévoles dont sa fiche est membre
+   * (dates de début et de fin des affectations non prises en compte).
+   */
+  async volunteerIdsForScopes(
+    userId: number,
+    scopes: ('SELF' | 'OWN_TEAM')[],
+  ): Promise<number[]> {
+    const own: { id: number }[] = await this.dataSource.query(
+      `SELECT id FROM volunteers WHERE user_id = $1`,
+      [userId],
+    );
+    const ownIds = own.map((r) => r.id);
+    const ids = new Set<number>(ownIds);
+    if (scopes.includes('OWN_TEAM') && ownIds.length) {
+      const mates: { volunteer_id: number }[] = await this.dataSource.query(
+        `SELECT DISTINCT m2.volunteer_id
+           FROM volunteer_team_memberships m1
+           JOIN volunteer_team_memberships m2 ON m2.volunteer_team_id = m1.volunteer_team_id
+          WHERE m1.volunteer_id = ANY($1::int[])`,
+        [ownIds],
+      );
+      for (const r of mates) ids.add(r.volunteer_id);
+    }
+    return [...ids].sort((a, b) => a - b);
+  }
+
   async groupIdsForUser(userId: number): Promise<number[]> {
     const rows: { group_id: number }[] = await this.dataSource.query(
       `SELECT group_id FROM user_group_scopes WHERE user_id = $1 ORDER BY group_id`,

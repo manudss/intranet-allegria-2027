@@ -29,3 +29,19 @@ export const AccessScope = createParamDecorator(
     return request.accessScope ?? { all: false, groupIds: [] };
   },
 );
+
+export const VOLUNTEER_SCOPE_AWARE_KEY = 'access_volunteer_scope_aware';
+/**
+ * Déclare que la route filtre elle-même ses données par bénévoles visibles (portées « son équipe »
+ * et « soi-même »). Sans cette marque, ces portées sont refusées (fermé par défaut).
+ */
+export const VolunteerScopeAware = () => SetMetadata(VOLUNTEER_SCOPE_AWARE_KEY, true);
+
+/** Bénévoles visibles pour la requête : null = tous (portée « tout »), sinon la liste (vide = aucun). */
+export const VolunteerScope = createParamDecorator(
+  (_: unknown, ctx: ExecutionContext): number[] | null => {
+    const request = ctx.switchToHttp().getRequest();
+    if (request.accessScope?.all === true) return null;
+    return request.volunteerScopeIds ?? [];
+  },
+);

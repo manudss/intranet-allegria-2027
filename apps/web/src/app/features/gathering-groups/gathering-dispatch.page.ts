@@ -61,6 +61,9 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
   protected readonly selectedTeamId = signal<number | null>(null);
   protected readonly filter = signal('');
 
+  /** Panneau visible sur écran étroit : les deux colonnes ne sont pas empilées mais permutées. */
+  protected readonly panel = signal<'teams' | 'groups'>('teams');
+
   protected readonly proposal = signal<GatheringProposal | null>(null);
   protected readonly proposalBusy = signal(false);
 
@@ -122,7 +125,15 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
   }
 
   protected toggleTeam(team: GatheringBoardTeam): void {
+    const selecting = this.selectedTeamId() !== team.id;
     this.selectedTeamId.update((id) => (id === team.id ? null : team.id));
+    // Sur écran étroit, une équipe sélectionnée amène directement sur les groupes cibles.
+    if (selecting && this.isNarrow()) this.panel.set('groups');
+  }
+
+  protected selectedTeamName(): string {
+    const id = this.selectedTeamId();
+    return id === null ? '' : this.teamName(id);
   }
 
   protected selectGroup(group: GatheringGroupSummary): void {
@@ -133,6 +144,7 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
       next: () => {
         this.selectedTeamId.set(null);
         this.busy.set(false);
+        this.panel.set('teams');
         this.reload();
       },
       error: (err) => {
@@ -284,6 +296,10 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
   protected gaugeRatio(group: { persons: number; capacity: number | null }): number {
     if (!group.capacity) return 0;
     return Math.min(1, group.persons / group.capacity);
+  }
+
+  private isNarrow(): boolean {
+    return typeof window !== 'undefined' && window.matchMedia('(max-width: 60rem)').matches;
   }
 
   private readError(err: unknown, fallback: string): string {

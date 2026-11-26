@@ -6,6 +6,7 @@
 .notice .link, .link { border: 0; background: none; cursor: pointer; color: inherit; }
 
 .toolbar { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-bottom: .75rem; }
+.toolbar button { white-space: normal; }
 .badge-derogation { background: #fdf0dc; color: #8a6d1a; border-radius: 1rem; padding: .1rem .6rem; font-size: .75rem; }
 .muted { color: var(--appearance-muted); font-size: .85rem; }
 
@@ -16,13 +17,15 @@
 .proposal-actions { display: flex; gap: .5rem; margin-top: .6rem; }
 
 .board { display: grid; grid-template-columns: minmax(16rem, 1fr) 2fr; gap: .75rem; align-items: start; }
+.board > .column { min-inline-size: 0; }
 .column { background: var(--appearance-surface); box-shadow: var(--card-shadow); border-radius: .8rem; padding: .75rem .9rem; }
 .column h2 { margin: 0 0 .5rem; font-size: 1rem; }
 
 .team-list { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; gap: .35rem; }
-.team-card { display: flex; gap: .5rem; align-items: center; inline-size: 100%; text-align: start; padding: .45rem .6rem; border-radius: .6rem; border: 1px solid var(--appearance-border); background: var(--appearance-raised); font: inherit; cursor: pointer; }
+.team-card { display: flex; gap: .5rem; align-items: center; inline-size: 100%; min-inline-size: 0; text-align: start; padding: .45rem .6rem; border-radius: .6rem; border: 1px solid var(--appearance-border); background: var(--appearance-raised); font: inherit; cursor: pointer; }
+.team-card > span { min-inline-size: 0; }
 .team-card.selected { border-color: var(--allegria-primary); box-shadow: inset 0 0 0 1px var(--allegria-primary); }
-.team-name { font-weight: 600; }
+.team-name { font-weight: 600; overflow-wrap: anywhere; }
 .deleg { margin-left: auto; }
 
 .dot { inline-size: .65rem; block-size: .65rem; border-radius: 50%; flex: none; }
@@ -58,6 +61,20 @@
 
 .empty-state { color: var(--appearance-muted); }
 
+.placing-hint { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: 0 0 .5rem; padding: .45rem .6rem; border-radius: .6rem; background: #fdf0dc; font-size: .9rem; }
+.placing-hint .link { text-decoration: underline; }
+
+.panel-switch { display: none; }
+
 @media (max-width: 60rem) {
   .board { grid-template-columns: 1fr; }
+
+  /* Écran étroit : un seul panneau à la fois, permuté par le sélecteur, plutôt
+     qu'une longue pile équipes + groupes. */
+  .panel-switch { display: flex; gap: .25rem; margin-bottom: .6rem; background: var(--appearance-surface); box-shadow: var(--card-shadow); border-radius: .8rem; padding: .25rem; }
+  .panel-switch .seg-btn { flex: 1; border: 0; background: none; font: inherit; padding: .45rem .5rem; border-radius: .6rem; cursor: pointer; color: var(--appearance-muted); }
+  .panel-switch .seg-btn.on { background: var(--allegria-primary); color: #fff; font-weight: 600; }
+
+  .board.panel-teams .column.groups { display: none; }
+  .board.panel-groups .column.teams { display: none; }
 }

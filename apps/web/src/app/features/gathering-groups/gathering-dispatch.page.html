@@ -16,7 +16,7 @@
         Proposition automatique
       </button>
       <button type="button" tuiButton appearance="flat" (click)="toggleOverflow()">
-        {{ b.repartition.allowOverflow ? 'Bloquer les dépassements' : 'Dérogation dépassement…' }}
+        {{ b.repartition.allowOverflow ? 'Bloquer dépassements' : 'Dérogation…' }}
       </button>
       @if (b.repartition.allowOverflow) {
         <span class="badge-derogation">Dérogation active</span>
@@ -54,7 +54,26 @@
       </section>
     }
 
-    <div class="board">
+    <div class="panel-switch" role="group" aria-label="Panneau affiché">
+      <button
+        type="button"
+        class="seg-btn"
+        [class.on]="panel() === 'teams'"
+        (click)="panel.set('teams')"
+      >
+        Équipes à placer ({{ b.unplacedTeams.length }})
+      </button>
+      <button
+        type="button"
+        class="seg-btn"
+        [class.on]="panel() === 'groups'"
+        (click)="panel.set('groups')"
+      >
+        Groupes ({{ b.groups.length }})
+      </button>
+    </div>
+
+    <div class="board" [class.panel-teams]="panel() === 'teams'" [class.panel-groups]="panel() === 'groups'">
       <section class="column teams" aria-labelledby="teams-title">
         <h2 id="teams-title">Équipes à placer</h2>
         <tui-textfield>
@@ -93,6 +112,12 @@
       </section>
 
       <section class="column groups" aria-labelledby="groups-title">
+        @if (selectedTeamId() !== null) {
+          <p class="placing-hint" role="status">
+            Placement de « {{ selectedTeamName() }} » : touchez un groupe pour l'y affecter.
+            <button type="button" class="link" (click)="selectedTeamId.set(null)">Annuler</button>
+          </p>
+        }
         <div class="groups-head">
           <h2 id="groups-title">Groupes</h2>
           <button type="button" tuiButton appearance="secondary" size="s" (click)="creating.set(!creating())">

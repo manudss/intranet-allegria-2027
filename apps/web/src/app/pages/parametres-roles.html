@@ -125,7 +125,7 @@
     <input
       type="checkbox"
       [checked]="showGlobal()"
-      (change)="toggleGlobal($any($event.target).checked)"
+      (change)="toggleOption('GROUP_SCOPE_SHOW_OTHER_TEAMS', $any($event.target).checked)"
     />
     Un compte limité à des groupes voit aussi les noms et les effectifs des équipes et des groupes
     d’hébergement des autres groupes (placement et répartition des jeunes). Désactivé par défaut. Ce
@@ -134,7 +134,7 @@
   </label>
   <p class="hint">
     Portées : « Groupes autorisés » est filtrée par le serveur sur les participants, les groupes, les
-    équipes de rassemblement, les dossiers santé, les badges (participants uniquement), les affectations d’hébergement, le tableau de placement (lecture), la répartition des jeunes et les dossiers d’inscription famille. « Mon équipe » et « Mes données » ne sont appliquées que sur la lecture de l’annuaire des bénévoles, et seulement si le compte est relié à une fiche bénévole (lien posé à la main, jamais deviné) ; sans lien, la personne ne voit rien. Ailleurs elles refusent l’accès. Ailleurs, une portée limitée refuse l’accès (sécurité par défaut) tant que
+    équipes de rassemblement, les dossiers santé, les badges (participants uniquement), les affectations d’hébergement, le tableau de placement (lecture), la répartition des jeunes et les dossiers d’inscription famille. « Mon équipe » et « Mes données » ne sont appliquées que sur la lecture de l’annuaire des bénévoles, et seulement si le compte est relié à une fiche bénévole (lien posé à la main, jamais deviné) ; « Mon équipe » ne compte que les équipes actives et les affectations en cours aujourd’hui (date de fin incluse) ; sans lien, la personne ne voit rien. Ailleurs elles refusent l’accès. Ailleurs, une portée limitée refuse l’accès (sécurité par défaut) tant que
     le filtrage n’y est pas branché.
   </p>
   } @if (tab() === 'user') {

@@ -165,8 +165,9 @@ export class AccessRightsService {
    * Bénévoles visibles pour les portées « soi-même » et « son équipe ».
    * Seul le lien volunteers.user_id posé à la main en admin est utilisé : aucun rapprochement
    * par e-mail ou par nom. Sans lien, la personne ne voit rien.
-   * « Son équipe » = sa fiche + les bénévoles des équipes bénévoles dont sa fiche est membre
-   * (dates de début et de fin des affectations non prises en compte).
+   * « Son équipe » = sa fiche + les bénévoles des équipes bénévoles ACTIVES dont sa fiche est
+   * membre aujourd'hui (début vide ou passé, fin vide ou pas encore dépassée, fin incluse), pour
+   * sa fiche comme pour les coéquipiers : mêmes bornes que teamTypeCodesForUser.
    */
   async volunteerIdsForScopes(
     userId: number,
@@ -182,8 +183,13 @@ export class AccessRightsService {
       const mates: { volunteer_id: number }[] = await this.dataSource.query(
         `SELECT DISTINCT m2.volunteer_id
            FROM volunteer_team_memberships m1
+           JOIN volunteer_teams vt ON vt.id = m1.volunteer_team_id AND vt."isActive" = true
            JOIN volunteer_team_memberships m2 ON m2.volunteer_team_id = m1.volunteer_team_id
-          WHERE m1.volunteer_id = ANY($1::int[])`,
+          WHERE m1.volunteer_id = ANY($1::int[])
+            AND (m1."startAt" IS NULL OR m1."startAt" <= CURRENT_DATE)
+            AND (m1."endAt" IS NULL OR m1."endAt" >= CURRENT_DATE)
+            AND (m2."startAt" IS NULL OR m2."startAt" <= CURRENT_DATE)
+            AND (m2."endAt" IS NULL OR m2."endAt" >= CURRENT_DATE)`,
         [ownIds],
       );
       for (const r of mates) ids.add(r.volunteer_id);

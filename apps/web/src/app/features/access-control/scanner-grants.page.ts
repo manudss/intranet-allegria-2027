@@ -14,7 +14,7 @@ import { AccessControlApiService, ScannerGrant, ZoneItem } from './access-contro
         <h2>Nouvelle habilitation</h2>
         <p class="hint">Donne le droit de scanner à un utilisateur, pour une zone précise ou toutes les zones, avec une fin de validité.</p>
         <div class="grid">
-          <app-person-picker label="Utilisateur" testId="scanner-person-picker" [filters]="false" [value]="picked" (valueChange)="onPick($event)" />
+          <app-person-picker label="Utilisateur" testId="scanner-person-picker" [value]="picked" (valueChange)="onPick($event)" />
           <select [(ngModel)]="zoneId">
             <option [ngValue]="null">Toutes les zones</option>
             @for (z of zones(); track z.id) { <option [ngValue]="z.id">{{ z.name }}</option> }

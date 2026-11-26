@@ -594,15 +594,23 @@ export class PersonPickerComponent {
   private loadOptions(): void {
     if (this.optionsLoaded) return;
     this.optionsLoaded = true;
-    const get = <T>(url: string, set: (v: T[]) => void) =>
-      this.http.get<T[]>(url).subscribe({ next: set, error: () => undefined });
-    get<FilterOpt & { isActive?: boolean }>('/api/volunteer-team-types', (v) =>
-      this.teamTypes.set(v.filter((t) => t.isActive !== false)),
-    );
-    get<FilterOpt>('/api/roles', (v) => this.roles.set(v));
-    get<{ id: number; name: string; isActive?: boolean }>('/api/volunteer-teams', (v) =>
-      this.teams.set(v.filter((t) => t.isActive !== false)),
-    );
-    get<{ id: number; name: string }>('/api/groups', (v) => this.groups.set(v));
+    // Une seule route, même autorité que la recherche (matrice : ADMIN ou BADGES) : pas de
+    // dépendance aux routes /api/roles, /api/groups… réservées à d'autres modules.
+    this.http
+      .get<{
+        roles: FilterOpt[];
+        teamTypes: FilterOpt[];
+        teams: { id: number; name: string }[];
+        groups: { id: number; name: string }[];
+      }>('/api/users/search/filters')
+      .subscribe({
+        next: (f) => {
+          this.roles.set(f.roles);
+          this.teamTypes.set(f.teamTypes);
+          this.teams.set(f.teams);
+          this.groups.set(f.groups);
+        },
+        error: () => undefined,
+      });
   }
 }

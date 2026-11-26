@@ -118,14 +118,15 @@ describe('PersonPickerComponent', () => {
     http.expectNone(() => true);
     (el.querySelector('[data-testid="person-filters-toggle"]') as HTMLButtonElement).click();
     await fixture.whenStable();
-    http
-      .expectOne('/api/volunteer-team-types')
-      .flush([{ code: 'ANIM', label: 'Animation', isActive: true }]);
-    http.expectOne('/api/roles').flush([{ code: 'ADMIN', label: 'Administrateur' }]);
-    http
-      .expectOne('/api/volunteer-teams')
-      .flush([{ id: 100, name: 'Saint-Étienne 2', isActive: true }]);
-    http.expectOne('/api/groups').flush([{ id: 7, name: 'Nord' }]);
+    // Une seule route, même autorité que la recherche : aucune des routes d'autres modules.
+    http.expectNone('/api/roles');
+    http.expectNone('/api/groups');
+    http.expectOne('/api/users/search/filters').flush({
+      roles: [{ code: 'ADMIN', label: 'Administrateur' }],
+      teamTypes: [{ code: 'ANIM', label: 'Animation' }],
+      teams: [{ id: 100, name: 'Saint-Étienne 2' }],
+      groups: [{ id: 7, name: 'Nord' }],
+    });
     expect(el.querySelector('[data-testid="person-filter-panel"]')).not.toBeNull();
   });
 

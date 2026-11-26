@@ -8,10 +8,12 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Roles } from './roles.decorator';
 import { AuthTokenGuard } from './auth-token.guard';
 import { CreateUserDto, UpdateUserDto } from './auth.types';
 import { UsersService } from './users.service';
@@ -51,6 +53,32 @@ export class UsersController {
   async findAll() {
     const users = await this.usersService.findAll();
     return users.map((user) => this.withoutPasswordHash(user));
+  }
+
+  @ApiOperation({
+    summary: 'Rechercher des utilisateurs (selecteur de personne, resultats limites)',
+  })
+  @Roles('ADMIN', 'BADGE_MANAGER')
+  @Get('search')
+  async search(
+    @Query('q') q?: string,
+    @Query('role') role?: string,
+    @Query('teamType') teamType?: string,
+    @Query('teamId') teamId?: string,
+    @Query('groupId') groupId?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const int = (v?: string) => (v && /^\d+$/.test(v) ? Number(v) : undefined);
+    return this.usersService.search({
+      q: q?.slice(0, 80),
+      role: role?.slice(0, 80),
+      teamType: teamType?.slice(0, 80),
+      teamId: int(teamId),
+      groupId: int(groupId),
+      limit: int(limit),
+      offset: int(offset),
+    });
   }
 
   @ApiOperation({ summary: 'Recuperer un utilisateur par id' })

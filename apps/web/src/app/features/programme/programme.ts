@@ -239,7 +239,7 @@ export class ProgrammePage {
       }
       for (const entry of groups) {
         const lane = lanes.get(entry.group.id) ?? { ...entry, sequences: [] };
-        lane.sequences.push(sequence);
+        if (!lane.sequences.includes(sequence)) lane.sequences.push(sequence);
         lanes.set(entry.group.id, lane);
       }
     }

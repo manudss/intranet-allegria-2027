@@ -1150,7 +1150,7 @@ export class GatheringGroupsService {
           otherGroupName: row.other_group_name,
           sequenceTitle: row.title,
           otherSequenceTitle: row.other_title,
-          message: `L'équipe « ${row.team_name} » est aussi dans « ${row.other_group_name} » (${row.other_name}) : « ${row.title} » chevauche « ${row.other_title} ».`,
+          message: `L'équipe « ${row.team_name} » est aussi dans « ${row.other_group_name} » (${row.other_name}) : ${row.title === row.other_title ? `même créneau « ${row.title} »` : `« ${row.title} » chevauche « ${row.other_title} »`}.`,
         });
       }
     }

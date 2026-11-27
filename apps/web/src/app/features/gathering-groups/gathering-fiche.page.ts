@@ -97,7 +97,10 @@ export class GatheringFichePage implements OnInit, OnDestroy {
         kind: 'SEQUENCE_OVERLAP',
         label: 'chevauchement(s) d\'horaire avec un autre groupe',
         severe: false,
-        text: (a) => `${a.teamName} : « ${a.sequenceTitle} » chevauche « ${a.otherSequenceTitle} » (groupe « ${a.otherGroupName} »)`,
+        text: (a) =>
+          a.sequenceTitle === a.otherSequenceTitle
+            ? `${a.teamName} : même créneau « ${a.sequenceTitle} » dans le groupe « ${a.otherGroupName} »`
+            : `${a.teamName} : « ${a.sequenceTitle} » chevauche « ${a.otherSequenceTitle} » (groupe « ${a.otherGroupName} »)`,
       },
     ];
     return defs

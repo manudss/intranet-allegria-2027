@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import type { AccessScopeInfo } from '../auth/access-module.decorator';
 import { AccessRightsService } from '../access-rights/access-rights.service';
+import { isTeamInScope, isTeamWritableInScope } from '../teams/team-scope';
 import { EntityManager, In, IsNull, Not, Repository } from 'typeorm';
 import {
   AssignmentStatus,
@@ -310,7 +311,10 @@ export class HostingPlacementService {
   async board(scope: AccessScopeInfo = { all: false, groupIds: [] }): Promise<BoardResponse> {
     const [hostingGroups, teams, memberships, families, assignments] = await Promise.all([
       this.groups.find({ order: { name: 'ASC' } }),
-      this.teams.find({ relations: { group: true, hostingGroup: true }, order: { name: 'ASC' } }),
+      this.teams.find({
+        relations: { hostingGroup: true, members: { participant: { group: true } } },
+        order: { name: 'ASC' },
+      }),
       this.teamParticipants.find({ relations: { team: true, participant: true } }),
       this.families.find({ relations: { hostingGroup: true }, order: { familyName: 'ASC' } }),
       this.assignments.find({
@@ -367,7 +371,7 @@ export class HostingPlacementService {
     // d'hébergement) sont listées. L'option n'ouvre que les noms et effectifs d'équipes.
     const visibleTeams = showOtherTeams
       ? teams
-      : teams.filter((t) => scope.all || scope.groupIds.includes(t.group?.id ?? -1));
+      : teams.filter((t) => isTeamInScope(t, scope));
     // Les familles (identité, adresse, coordonnées) ne sont JAMAIS renvoyées à un compte limité à des groupes.
     const visibleFamilies = scope.all ? families : [];
     const usedHostingGroups = new Set(visibleTeams.map((t) => t.hostingGroup?.id));
@@ -483,17 +487,17 @@ export class HostingPlacementService {
 
       const memberships = await manager.getRepository(TeamParticipant).find({
         where: { participant: { id: participant.id } },
-        relations: { team: { hostingGroup: true, group: true } },
+        relations: {
+          team: { hostingGroup: true, members: { participant: { group: true } } },
+        },
       });
       const team = memberships.find((m) => m.team.hostingGroup)?.team ?? memberships[0]?.team;
       if (!team) throw new ConflictException("Ce participant n'est dans aucune équipe de rassemblement");
-      // Compte limité à des groupes : le jeune ET son équipe doivent être dans la portée.
+      // Compte limité à des groupes : le jeune doit être dans la portée et l'équipe dans
+      // la portée dérivée de ses membres (team-scope.ts).
       if (!scope.all) {
         const groupIds = scope.groupIds ?? [];
-        if (
-          !groupIds.includes(participant.group?.id ?? -1) ||
-          !groupIds.includes(team.group?.id ?? -1)
-        ) {
+        if (!groupIds.includes(participant.group?.id ?? -1) || !isTeamInScope(team, scope)) {
           throw new ForbiddenException('Ce participant ou son équipe est hors de votre portée.');
         }
       }
@@ -608,16 +612,16 @@ export class HostingPlacementService {
     return this.teams.manager.transaction(async (manager) => {
       const teams = await manager.getRepository(Team).find({
         where: { hostingGroup: { id: hostingGroupId } },
-        relations: { group: true },
+        relations: { members: { participant: { group: true } } },
       });
       const selectedTeams = teams.filter((t) => !dto.teamIds || dto.teamIds.includes(t.id));
       const teamIds = selectedTeams.map((t) => t.id);
       if (teamIds.length === 0) return { applied: false, proposals: [], unplaced: [] };
       // Compte limité à des groupes : toutes les équipes visées doivent être dans la portée
-      // (restreindre avec teamIds sinon). Les jeunes sont contrôlés plus bas.
+      // dérivée de leurs membres, ou vides (restreindre avec teamIds sinon).
+      // Les jeunes sont contrôlés plus bas.
       if (!scope.all) {
-        const groupIds = scope.groupIds ?? [];
-        if (selectedTeams.some((t) => !groupIds.includes(t.group?.id ?? -1))) {
+        if (selectedTeams.some((t) => !isTeamWritableInScope(t, scope))) {
           throw new ForbiddenException('Une équipe de ce groupe est hors de votre portée.');
         }
       }

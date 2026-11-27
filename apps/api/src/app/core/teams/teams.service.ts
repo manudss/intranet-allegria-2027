@@ -1,9 +1,10 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import type { AccessScopeInfo } from '../auth/access-module.decorator';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Group, Participant, Team, TeamParticipant, Volunteer } from '../entities';
 import { CreateTeamDto, UpdateTeamDto } from './teams.types';
+import { isTeamInScope } from './team-scope';
 
 @Injectable()
 export class TeamsService {
@@ -20,15 +21,10 @@ export class TeamsService {
     private readonly teamParticipantsRepository: Repository<TeamParticipant>,
   ) {}
 
-  private assertGroupAllowed(scope: AccessScopeInfo, groupId?: number | null) {
-    if (scope.all) return;
-    if (groupId == null || !scope.groupIds.includes(Number(groupId))) {
-      throw new ForbiddenException('Groupe hors de votre périmètre');
-    }
-  }
-
   async create(dto: CreateTeamDto, scope: AccessScopeInfo = { all: true }): Promise<Team> {
-    this.assertGroupAllowed(scope, dto.groupId);
+    // Le lien équipe→délégation n'est plus exigé ni utilisé pour l'accès : la délégation
+    // d'une équipe se déduit de ses membres (team-scope.ts). groupId reste accepté et
+    // stocké pendant la transition, sans contrôle de périmètre.
     const team = this.teamsRepository.create({
       name: dto.name,
       group: dto.groupId ? await this.groupsRepository.findOneBy({ id: dto.groupId }) : null,
@@ -45,22 +41,32 @@ export class TeamsService {
     return this.teamsRepository.save(team);
   }
 
-  findAll(scope: AccessScopeInfo = { all: true }): Promise<Team[]> {
-    if (!scope.all && scope.groupIds.length === 0) return Promise.resolve([]);
-    return this.teamsRepository.find({
-      where: scope.all ? undefined : { group: { id: In(scope.groupIds) } },
-      relations: { group: true, primaryAnimator: true, secondaryAnimator: true },
+  async findAll(scope: AccessScopeInfo = { all: true }): Promise<Team[]> {
+    if (!scope.all && scope.groupIds.length === 0) return [];
+    const teams = await this.teamsRepository.find({
+      relations: {
+        group: true,
+        primaryAnimator: true,
+        secondaryAnimator: true,
+        members: { participant: { group: true } },
+      },
       order: { name: 'ASC' },
     });
+    return scope.all ? teams : teams.filter((team) => isTeamInScope(team, scope));
   }
 
   async findOne(id: number, scope: AccessScopeInfo = { all: true }): Promise<Team> {
     const team = await this.teamsRepository.findOne({
       where: { id },
-      relations: { group: true, primaryAnimator: true, secondaryAnimator: true },
+      relations: {
+        group: true,
+        primaryAnimator: true,
+        secondaryAnimator: true,
+        members: { participant: { group: true } },
+      },
     });
 
-    if (!team || (!scope.all && !scope.groupIds.includes(team.group?.id ?? -1))) {
+    if (!team || !isTeamInScope(team, scope)) {
       throw new NotFoundException(`Equipe ${id} introuvable`);
     }
 
@@ -73,9 +79,7 @@ export class TeamsService {
     scope: AccessScopeInfo = { all: true },
   ): Promise<Team> {
     const team = await this.findOne(id, scope);
-    if (Object.prototype.hasOwnProperty.call(dto, 'groupId'))
-      this.assertGroupAllowed(scope, dto.groupId);
-
+    // groupId : colonne de transition, écriture acceptée sans contrôle (jamais lue pour l'accès).
     if (Object.prototype.hasOwnProperty.call(dto, 'groupId')) {
       team.group = dto.groupId ? await this.groupsRepository.findOneBy({ id: dto.groupId }) : null;
     }

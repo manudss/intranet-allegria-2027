@@ -275,6 +275,20 @@
             (ngModelChange)="exceptionForm.update((f) => ({ ...f, toDelegationId: $event }))" name="xdeleg">
           </select>
         </tui-textfield>
+        <tui-textfield>
+          <label for="x-note" tuiLabel>Note (facultatif)</label
+          ><textarea
+            tuiTextarea
+            id="x-note"
+            [ngModel]="exceptionForm().note"
+            (ngModelChange)="exceptionForm.update((f) => ({ ...f, note: $event }))"
+            name="xnote"
+          ></textarea>
+        </tui-textfield>
+        <p class="help">
+          Si une note est saisie, elle est créée avec l'exception, signée et datée, et visible dans le
+          suivi des notes. Aucune donnée de santé.
+        </p>
         <button tuiButton type="submit">Créer l'exception ({{ direction() === 'ALLER' ? 'aller' : 'retour' }})</button>
       </form>
     </section>

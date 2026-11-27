@@ -11,6 +11,7 @@ import {
   Query,
   UseGuards,
   ValidationPipe,
+  Req,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
@@ -21,6 +22,8 @@ import {
 } from '../auth/access-module.decorator';
 import { RoleGuard } from '../auth/role.guard';
 import { DelegationsService } from './delegations.service';
+
+type UserRequest = { user: { id: number; email: string; roles: string[] } };
 import {
   AssignTransportDto,
   CreateExceptionDto,
@@ -96,12 +99,18 @@ export class DelegationsController {
 
   @ApiOperation({ summary: 'Créer une exception vers une autre délégation (créable des deux côtés)' })
   @Post(':id/exceptions')
-  createException(
+  async createException(
     @Param('id', ParseIntPipe) id: number,
     @Body(new ValidationPipe({ whitelist: true })) dto: CreateExceptionDto,
+    @Req() req: UserRequest,
     @AccessScope() scope: AccessScopeInfo,
   ) {
-    return this.delegationsService.createException(id, dto, scope);
+    const author = await this.delegationsService.resolveAuthor(
+      req.user.id,
+      req.user.email,
+      req.user.roles,
+    );
+    return this.delegationsService.createException(id, dto, scope, author);
   }
 
   @ApiOperation({ summary: 'Retirer une affectation (retour dans l à placer de la délégation d origine)' })

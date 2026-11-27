@@ -69,6 +69,7 @@ export class DelegationDetailPage implements OnInit {
   protected readonly exceptionForm = signal({
     personKey: '',
     toDelegationId: null as number | null,
+    note: '',
   });
   protected readonly assignTargets = signal<Record<string, number | null>>({});
   protected readonly members = signal<PersonLite[]>([]);
@@ -323,10 +324,11 @@ export class DelegationDetailPage implements OnInit {
         personId,
         direction: this.direction(),
         toDelegationId,
+        note: f.note.trim() || undefined,
       })
       .subscribe({
         next: () => {
-          this.exceptionForm.set({ personKey: '', toDelegationId: null });
+          this.exceptionForm.set({ personKey: '', toDelegationId: null, note: '' });
           this.reload();
         },
         error: () => this.error.set('L’exception n’a pas pu être créée.'),

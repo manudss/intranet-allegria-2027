@@ -346,6 +346,7 @@ export class DelegationsService {
     delegationId: number,
     dto: CreateExceptionDto,
     scope: AccessScopeInfo,
+    author?: NoteAuthor,
   ): Promise<TransportAssignment> {
     await this.findDelegation(delegationId, scope);
     const person = await this.getPerson(dto.personType, dto.personId);
@@ -370,19 +371,52 @@ export class DelegationsService {
         direction: dto.direction,
       },
     });
+    const noteBody = dto.note?.trim();
+    const previous = existing
+      ? { delegation: existing.delegation, transport: existing.transport }
+      : null;
+    let saved: TransportAssignment;
     if (existing) {
       existing.delegation = { id: dto.toDelegationId } as Group;
       existing.transport = null;
-      return this.assignmentsRepository.save(existing);
+      saved = await this.assignmentsRepository.save(existing);
+    } else {
+      const assignment = this.assignmentsRepository.create({
+        personType: dto.personType,
+        personId: dto.personId,
+        direction: dto.direction,
+        delegation: { id: dto.toDelegationId } as Group,
+        transport: null,
+      });
+      saved = await this.assignmentsRepository.save(assignment);
     }
-    const assignment = this.assignmentsRepository.create({
-      personType: dto.personType,
-      personId: dto.personId,
-      direction: dto.direction,
-      delegation: { id: dto.toDelegationId } as Group,
-      transport: null,
-    });
-    return this.assignmentsRepository.save(assignment);
+    if (noteBody && author) {
+      // Exception et note vont ensemble : si la note échoue, l'exception est annulée.
+      try {
+        await this.notesRepository.save(
+          this.notesRepository.create({
+            personType: dto.personType,
+            personId: dto.personId,
+            delegation: { id: person.delegationId } as Group,
+            author: { id: author.userId } as User,
+            authorName: author.name,
+            authorRole: author.role,
+            parent: null,
+            body: `Exception ${dto.direction === TransportDirection.ALLER ? 'aller' : 'retour'} : ${noteBody}`,
+          }),
+        );
+      } catch (error) {
+        if (previous) {
+          saved.delegation = previous.delegation;
+          saved.transport = previous.transport;
+          await this.assignmentsRepository.save(saved);
+        } else {
+          await this.assignmentsRepository.remove(saved);
+        }
+        throw error;
+      }
+    }
+    return saved;
   }
 
   /** Retire une affectation : la personne retourne dans l'« à placer » de sa propre délégation. */

@@ -270,6 +270,54 @@ describe('DelegationsService — exceptions', () => {
   });
 });
 
+describe('DelegationsService — note facultative à la création d une exception', () => {
+  const author = { userId: 9, name: 'S. Vivier', role: 'Coordination' };
+  const dto = (note?: string) => ({
+    personType: AssignmentPersonType.PARTICIPANT,
+    personId: 20,
+    direction: TransportDirection.ALLER,
+    toDelegationId: LYON,
+    note,
+  });
+  const build = () => {
+    const assignments = repo([]);
+    const notes = repo([]);
+    const svc = new DelegationsService(
+      repo() as never,
+      assignments as never,
+      notes as never,
+      repo([group(LYON, 'Lyon'), group(ANNECY, 'Annecy')]) as never,
+      repo([participant(20, ANNECY)]) as never,
+      repo([]) as never,
+      repo([]) as never,
+    );
+    return { svc, assignments, notes };
+  };
+
+  it('avec une note : exception et note signée sont créées ensemble', async () => {
+    const { svc, notes } = build();
+    await svc.createException(LYON, dto('Famille à Lyon ce week-end'), all, author);
+    expect(notes.save).toHaveBeenCalledTimes(1);
+    const saved = notes.save.mock.calls[0][0] as { body: string; authorName: string };
+    expect(saved.body).toContain('Famille à Lyon ce week-end');
+    expect(saved.authorName).toBe('S. Vivier');
+  });
+
+  it('sans note ou note vide : exception seule, aucune note créée', async () => {
+    const { svc, notes } = build();
+    await svc.createException(LYON, dto(), all, author);
+    await svc.createException(LYON, dto('   '), all, author);
+    expect(notes.save).not.toHaveBeenCalled();
+  });
+
+  it('si la note échoue, l exception est annulée', async () => {
+    const { svc, assignments, notes } = build();
+    notes.save.mockRejectedValueOnce(new Error('échec note'));
+    await expect(svc.createException(LYON, dto('x'), all, author)).rejects.toThrow('échec note');
+    expect(assignments.remove).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('DelegationsService — notes', () => {
   const note = (
     id: number,

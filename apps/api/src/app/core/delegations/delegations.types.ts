@@ -78,6 +78,16 @@ export class CreateExceptionDto {
   @ApiProperty({ example: 7, description: 'Délégation d\'accueil (différente de celle de la personne).' })
   @IsInt()
   toDelegationId!: number;
+
+  @ApiPropertyOptional({
+    example: 'Famille à Annecy ce week-end, accord du responsable.',
+    description:
+      'Note facultative : si elle est remplie, elle est créée avec l\'exception (signée, datée) et visible dans le suivi des notes.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  note?: string;
 }
 
 export class AssignTransportDto {

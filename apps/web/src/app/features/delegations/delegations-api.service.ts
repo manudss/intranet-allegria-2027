@@ -198,6 +198,7 @@ export class DelegationsApiService {
       personId: number;
       direction: TransportDirection;
       toDelegationId: number;
+      note?: string;
     },
   ) {
     return this.http.post(`${this.base}/${delegationId}/exceptions`, payload);

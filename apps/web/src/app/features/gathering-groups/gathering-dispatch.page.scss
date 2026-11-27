@@ -104,3 +104,9 @@
   .team-card .team-name { grid-column: 2; }
   .team-card .muted { grid-column: 2; margin-inline-start: 0; }
 }
+
+/* Grand écran : la colonne des groupes reste visible pendant qu'on fait défiler la longue liste d'équipes. */
+@media (min-width: 900px) {
+  .column.groups { position: sticky; top: 3.4rem; max-block-size: calc(100vh - 4.4rem); overflow-y: auto; }
+  .column.groups .placing-bar { top: 0; }
+}

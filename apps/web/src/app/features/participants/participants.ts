@@ -301,11 +301,20 @@ export class ParticipantsPage implements OnInit {
       error: () => this.journeys.set(null),
     });
     if (!this.delegationOptions().length) {
-      this.delegationsApi.listSummaries().subscribe({
-        next: (rows) => this.delegationOptions.set(rows),
-        error: () => undefined,
-      });
+      this.loadDelegationOptions();
     }
+  }
+
+  /** Charge la liste des délégations ; l'échec est visible et réessayable. */
+  protected loadDelegationOptions() {
+    this.delegationOptionsError.set('');
+    this.delegationsApi.listSummaries().subscribe({
+      next: (rows) => this.delegationOptions.set(rows),
+      error: () =>
+        this.delegationOptionsError.set(
+          "La liste des délégations n'a pas pu être chargée. Vérifiez votre connexion puis réessayez.",
+        ),
+    });
   }
 
   // ------------------------------------------------------------ lot 6 : trajets modifiables
@@ -321,6 +330,8 @@ export class ParticipantsPage implements OnInit {
   );
   readonly journeySaving = signal<TransportDirection | null>(null);
   readonly journeyError = signal('');
+  /** Erreur de chargement de la liste des délégations (affichee, reessayable). */
+  readonly delegationOptionsError = signal('');
 
   private initJourneyEdits() {
     const j = this.journeys();
@@ -375,6 +386,14 @@ export class ParticipantsPage implements OnInit {
     const edit = this.journeyEdits()[direction];
     const journey = j?.journeys.find((x) => x.direction === direction);
     if (!j || !edit || !journey) return;
+    // Pas d'enregistrement tant que la liste des délégations n'est pas chargée :
+    // l'écran ne montre pas ce qui serait réellement enregistré.
+    if (!this.delegationOptions().length) {
+      this.journeyError.set(
+        "La liste des délégations n'est pas chargée : enregistrement impossible pour l'instant.",
+      );
+      return;
+    }
     this.journeySaving.set(direction);
     this.journeyError.set('');
     const done = {
@@ -405,7 +424,7 @@ export class ParticipantsPage implements OnInit {
     }
     if (!homeId) {
       this.journeySaving.set(null);
-      this.journeyError.set("La délégation principale de la personne est introuvable.");
+      this.journeyError.set('La délégation principale de la personne est introuvable.');
       return;
     }
     this.delegationsApi

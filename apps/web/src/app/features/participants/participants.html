@@ -100,6 +100,13 @@
   <h3>Sous-délégations</h3>
   @if (journeyError()) {
   <p class="api-error">{{ journeyError() }}</p>
+  } @if (delegationOptionsError()) {
+  <p class="api-error">
+    {{ delegationOptionsError() }}
+    <button tuiButton appearance="flat" size="xs" type="button" (click)="loadDelegationOptions()">
+      Réessayer
+    </button>
+  </p>
   } @for (t of j.journeys; track t.direction) {
   <div class="journey-line">
     <strong>{{ t.direction === 'ALLER' ? 'Aller' : 'Retour' }}</strong>
@@ -141,7 +148,7 @@
         tuiButton
         size="s"
         type="button"
-        [disabled]="journeySaving() === t.direction"
+        [disabled]="journeySaving() === t.direction || !delegationOptions().length"
         (click)="saveJourney(t.direction)"
       >
         {{ journeySaving() === t.direction ? 'Enregistrement…' : 'Enregistrer' }}

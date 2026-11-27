@@ -77,6 +77,8 @@ const build = (data: {
       return [];
     }),
     delete: vi.fn(async () => undefined),
+    // La requête de tailles d'équipes doit passer par la transaction (une seule connexion).
+    query: vi.fn(async (q: string, params: unknown[]) => dataSource.query(q, params)),
     save: vi.fn(async (_e: unknown, payload: unknown) => payload),
     create: vi.fn((_e: unknown, payload: unknown) => payload),
   };

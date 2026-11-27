@@ -2008,6 +2008,7 @@ async function run(): Promise<void> {
       adminUser,
       coordinator: users.find((user) => user.email === 'coordination@allegria.local') ?? null,
       volunteerTeams: savedVolunteerTeams,
+      demoPasswordHash,
     });
     console.log(
       `Groupes de rassemblement: ${gatheringDemo.repartitions} repartitions, ${gatheringDemo.groups} groupes, ${gatheringDemo.placements} equipes placees`,
@@ -2057,6 +2058,7 @@ async function run(): Promise<void> {
     console.log('Comptes de demo utilisables (tous avec ce mot de passe):');
     console.log('- admin@allegria.local (ADMIN)');
     console.log('- sante@allegria.local (sante)');
+    console.log('- groupes.sans-agenda@allegria.local, groupes.responsable@allegria.local (groupes de rassemblement sans droit agenda ; le second limite a ses groupes)');
     console.log('- coordination@allegria.local (coordination)');
     console.log(
       '- animator.1@allegria.local, animator.2@allegria.local, ... (benevoles lies a leur fiche, acces Mon espace)',

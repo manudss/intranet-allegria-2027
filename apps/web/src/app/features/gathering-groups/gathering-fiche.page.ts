@@ -82,6 +82,27 @@ export class GatheringFichePage implements OnInit, OnDestroy {
   // Créneaux de l'agenda liés (plusieurs-à-plusieurs, ajout et retrait indépendants)
   protected readonly allSequences = signal<GatheringSequenceRef[]>([]);
   protected readonly sequenceSearch = signal('');
+  /** Alertes du groupe regroupées par type : compactes, détail déroulable, rien de masqué. */
+  protected readonly alertGroups = computed(() => {
+    const f = this.fiche();
+    if (!f) return [];
+    const defs: { key: string; kind: string; label: string; severe: boolean; text: (a: any) => string }[] = [
+      { key: 'o', kind: 'OVERFLOW', label: 'dépassement de capacité', severe: true, text: (a) => a.message },
+      { key: 'f', kind: 'FULL', label: 'groupe complet', severe: false, text: (a) => a.message },
+      { key: 'a', kind: 'ALMOST_FULL', label: 'groupe presque complet', severe: false, text: (a) => a.message },
+      { key: 't', kind: 'TEAM_WITHOUT_TRACK', label: 'équipe(s) sans piste (TA ou ES)', severe: false, text: (a) => a.teamName },
+      {
+        key: 's',
+        kind: 'SEQUENCE_OVERLAP',
+        label: 'chevauchement(s) d\'horaire avec un autre groupe',
+        severe: false,
+        text: (a) => `${a.teamName} : « ${a.sequenceTitle} » chevauche « ${a.otherSequenceTitle} » (groupe « ${a.otherGroupName} »)`,
+      },
+    ];
+    return defs
+      .map((d) => ({ key: d.key, label: d.label, severe: d.severe, items: f.alerts.filter((a) => a.kind === d.kind).map(d.text) }))
+      .filter((g) => g.items.length);
+  });
   protected readonly addingSequence = signal(false);
   private sequencesLoaded = false;
 

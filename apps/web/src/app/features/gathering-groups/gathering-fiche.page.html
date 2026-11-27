@@ -111,7 +111,7 @@
         <tbody>
           @for (q of f.sequences; track q.id) {
             <tr>
-              <td data-label="<tr><th>Date">{{ q.eventDate | date: 'dd/MM/yyyy' }}</td>
+              <td data-label="Date">{{ q.eventDate | date: 'dd/MM/yyyy' }}</td>
               <td data-label="Horaire">{{ q.startTime }}–{{ q.endTime }}</td>
               <td data-label="Créneau">
                 @if (canOpenAgenda()) {
@@ -129,7 +129,7 @@
               </td>
             </tr>
           } @empty {
-            <tr><td data-label="<tr><th>Date" colspan="6" class="muted">Ce groupe n'est lié à aucun créneau.</td></tr>
+            <tr><td colspan="6" class="muted">Ce groupe n'est lié à aucun créneau.</td></tr>
           }
         </tbody>
       </table>
@@ -172,7 +172,7 @@
           <tbody>
             @for (t of f.teams; track t.id) {
               <tr>
-                <td data-label="<tr><th>Équipe">
+                <td data-label="Équipe">
                   <span class="dot" [style.background]="trackColors[t.track]"></span>
                   @if (canOpenTeams()) {
                     <a [routerLink]="['/equipes']" [queryParams]="{ equipe: t.id }"><strong>{{ t.name }}</strong></a>
@@ -236,7 +236,7 @@
             <tbody>
               @for (p of f.people; track p.id) {
                 <tr>
-                  <td data-label="<tr><th>Prénom">{{ p.lastName }} {{ p.firstName }}</td>
+                  <td data-label="Nom">{{ p.lastName }} {{ p.firstName }}</td>
                   <td data-label="Équipe">
                     @if (canOpenTeams()) {
                       <a [routerLink]="['/equipes']" [queryParams]="{ equipe: p.teamId }">{{ p.teamName }}</a>
@@ -261,7 +261,7 @@
           <tbody>
             @for (a of f.animators; track a.id + '-' + a.teamId) {
               <tr>
-                <td data-label="<tr><th>Nom">{{ a.displayName }}</td>
+                <td data-label="Nom">{{ a.displayName }}</td>
                 <td data-label="Équipe">
                   @if (canOpenTeams()) {
                     <a [routerLink]="['/equipes']" [queryParams]="{ equipe: a.teamId }">{{ a.teamName }}</a>

@@ -140,6 +140,9 @@ export class DelegationsApiService {
   removeTransport(transportId: number) {
     return this.http.delete(`${this.base}/transports/${transportId}`);
   }
+  persons(delegationId: number) {
+    return this.http.get<PersonLite[]>(`${this.base}/${delegationId}/persons`);
+  }
   repartition(delegationId: number, direction: TransportDirection) {
     return this.http.get<Repartition>(`${this.base}/${delegationId}/repartition`, {
       params: new HttpParams().set('direction', direction),

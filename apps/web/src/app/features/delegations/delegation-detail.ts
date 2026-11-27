@@ -5,13 +5,14 @@ import { Group } from '../../models/models';
 import { GroupsApiService } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
+import { SelectFieldComponent, SelectOption } from '../../shared/select-field.component';
 import {
   AssignmentEntry,
   DelegationStats,
   DelegationsApiService,
   PersonLite,
-  PersonType,
   Repartition,
+  RepartitionTransport,
   TransportDirection,
   TransportPayload,
 } from './delegations-api.service';
@@ -43,7 +44,7 @@ function formatDateTime(value: string | null): string {
 @Component({
   selector: 'app-delegation-detail',
   standalone: true,
-  imports: [...SHARED_IMPORTS, RouterLink],
+  imports: [...SHARED_IMPORTS, RouterLink, SelectFieldComponent],
   templateUrl: './delegation-detail.html',
   styleUrl: '../../shared/crud.scss',
 })
@@ -66,15 +67,17 @@ export class DelegationDetailPage implements OnInit {
   protected readonly transportForm = signal<TransportPayload>(this.emptyTransport());
   protected readonly editingTransportId = signal<number | null>(null);
   protected readonly exceptionForm = signal({
-    personType: 'PARTICIPANT' as PersonType,
-    personId: '',
+    personKey: '',
     toDelegationId: null as number | null,
   });
   protected readonly assignTargets = signal<Record<string, number | null>>({});
+  protected readonly members = signal<PersonLite[]>([]);
+  protected readonly toAssignSearch = signal('');
+  protected readonly toAssignShowAll = signal(false);
+  protected readonly expandedTransports = signal<ReadonlySet<number>>(new Set());
 
   // Selects Taiga UI : listes d'identifiants et libellés associés.
   protected readonly transportModes = ['CAR', 'TRAIN', 'VOITURES', 'AUTRE'];
-  protected readonly personTypes: PersonType[] = ['PARTICIPANT', 'VOLUNTEER'];
   protected transportIds(): number[] {
     return this.repartition()?.transports.map((t) => t.id) ?? [];
   }
@@ -86,8 +89,6 @@ export class DelegationDetailPage implements OnInit {
     this.repartition()?.transports.find((x) => x.id === id)?.full ?? false;
   protected stringifyMode = (m: string | null): string =>
     (m ? (MODE_LABELS as Record<string, string>)[m] : '') ?? '';
-  protected stringifyPersonType = (p: PersonType | null): string =>
-    p === 'VOLUNTEER' ? 'Bénévole' : p === 'PARTICIPANT' ? 'Jeune' : '';
   protected otherDelegationIds(): number[] {
     return this.groups()
       .filter((g) => g.id !== this.delegation()?.id)
@@ -106,6 +107,10 @@ export class DelegationDetailPage implements OnInit {
       next: ({ groups }) => {
         this.groups.set(groups);
         this.delegation.set(groups.find((g) => g.id === this.delegationId) ?? null);
+        this.api.persons(this.delegationId).subscribe({
+          next: (members) => this.members.set(members),
+          error: () => this.members.set([]),
+        });
         this.reload();
       },
       error: () => {
@@ -119,7 +124,57 @@ export class DelegationDetailPage implements OnInit {
     this.direction.set(d);
     this.transportForm.set(this.emptyTransport());
     this.editingTransportId.set(null);
+    this.toAssignSearch.set('');
+    this.toAssignShowAll.set(false);
     this.reload();
+  }
+
+  // File « à placer » : recherche et affichage borné (maquette écran 3).
+  private readonly toAssignLimit = 8;
+  protected filteredToAssign(): AssignmentEntry[] {
+    const all = this.repartition()?.toAssign ?? [];
+    const q = this.toAssignSearch().trim().toLowerCase();
+    if (!q) return all;
+    return all.filter((e) => this.personLabel(e.person).toLowerCase().includes(q));
+  }
+  protected visibleToAssign(): AssignmentEntry[] {
+    const f = this.filteredToAssign();
+    if (this.toAssignShowAll() || this.toAssignSearch().trim()) return f;
+    return f.slice(0, this.toAssignLimit);
+  }
+  protected hiddenToAssignCount(): number {
+    return Math.max(0, this.filteredToAssign().length - this.visibleToAssign().length);
+  }
+
+  // Occupants d'un trajet : affichage borné, dépliable.
+  private readonly personsLimit = 8;
+  protected visiblePersons(t: RepartitionTransport): AssignmentEntry[] {
+    if (this.expandedTransports().has(t.id)) return t.persons;
+    return t.persons.slice(0, this.personsLimit);
+  }
+  protected hiddenPersonsCount(t: RepartitionTransport): number {
+    return Math.max(0, t.persons.length - this.visiblePersons(t).length);
+  }
+  protected toggleTransportExpanded(id: number) {
+    this.expandedTransports.update((set) => {
+      const next = new Set(set);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  protected isTransportExpanded(id: number): boolean {
+    return this.expandedTransports().has(id);
+  }
+  protected jaugePercent(t: RepartitionTransport): number {
+    if (!t.capacity) return 0;
+    return Math.min(100, Math.round((t.occupancy / t.capacity) * 100));
+  }
+  protected memberOptions(): SelectOption<string>[] {
+    return this.members().map((m) => ({
+      value: `${m.personType}:${m.id}`,
+      label: this.personLabel(m),
+    }));
   }
 
   protected reload() {
@@ -257,19 +312,21 @@ export class DelegationDetailPage implements OnInit {
 
   protected createException() {
     const f = this.exceptionForm();
-    const personId = Number(f.personId);
+    const [personType, idStr] = f.personKey.split(':');
+    const personId = Number(idStr);
     const toDelegationId = f.toDelegationId;
-    if (!personId || !toDelegationId) return;
+    if ((personType !== 'PARTICIPANT' && personType !== 'VOLUNTEER') || !personId || !toDelegationId)
+      return;
     this.api
       .createException(this.delegationId, {
-        personType: f.personType,
+        personType,
         personId,
         direction: this.direction(),
         toDelegationId,
       })
       .subscribe({
         next: () => {
-          this.exceptionForm.set({ personType: 'PARTICIPANT', personId: '', toDelegationId: null });
+          this.exceptionForm.set({ personKey: '', toDelegationId: null });
           this.reload();
         },
         error: () => this.error.set('L’exception n’a pas pu être créée.'),

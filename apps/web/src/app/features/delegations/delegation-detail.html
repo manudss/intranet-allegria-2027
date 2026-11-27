@@ -44,8 +44,20 @@
       @if (!rep.toAssign.length) {
         <p>Tout le monde est placé sur ce sens.</p>
       }
+      @if (rep.toAssign.length) {
+        <tui-textfield iconStart="@tui.search" class="toassign-search">
+          <label tuiLabel for="toassign-search">Rechercher une personne…</label>
+          <input
+            tuiInput
+            id="toassign-search"
+            [ngModel]="toAssignSearch()"
+            (ngModelChange)="toAssignSearch.set($event)"
+            name="toassign-search"
+          />
+        </tui-textfield>
+      }
       <ul>
-        @for (e of rep.toAssign; track entryKey(e)) {
+        @for (e of visibleToAssign(); track entryKey(e)) {
           <li>
             {{ personLabel(e.person) }}
             @if (e.person && e.person.delegationId !== delegation()?.id) {
@@ -79,6 +91,12 @@
           </li>
         }
       </ul>
+      @if (hiddenToAssignCount() > 0) {
+        <p class="help">
+          + {{ hiddenToAssignCount() }} autres · affinez la recherche ou
+          <button type="button" class="link" (click)="toAssignShowAll.set(true)">tout afficher</button>
+        </p>
+      }
     </section>
 
     <section class="card">
@@ -104,6 +122,15 @@
               Supprimer
             </button>
           </header>
+          @if (t.capacity !== null) {
+            <div
+              class="jauge-bar"
+              role="img"
+              [attr.aria-label]="'Jauge : ' + t.occupancy + ' sur ' + t.capacity"
+            >
+              <div class="jauge-fill" [class.over]="t.full" [style.width.%]="jaugePercent(t)"></div>
+            </div>
+          }
           <dl>
             <dt>Départ</dt>
             <dd>{{ fmt(t.departureDatetime) }}</dd>
@@ -115,7 +142,7 @@
             <dd>{{ t.practicalInfo || '—' }}</dd>
           </dl>
           <ul>
-            @for (p of t.persons; track entryKey(p)) {
+            @for (p of visiblePersons(t); track entryKey(p)) {
               <li>
                 {{ personLabel(p.person) }}
                 @if (p.person && p.person.delegationId !== delegation()?.id) {
@@ -136,6 +163,15 @@
               </li>
             }
           </ul>
+            @if (hiddenPersonsCount(t) > 0) {
+              <button type="button" class="link" (click)="toggleTransportExpanded(t.id)">
+                + {{ hiddenPersonsCount(t) }} autres
+              </button>
+            } @else if (t.persons.length > 8 && isTransportExpanded(t.id)) {
+              <button type="button" class="link" (click)="toggleTransportExpanded(t.id)">
+                Réduire
+              </button>
+            }
         </article>
       }
 
@@ -177,11 +213,16 @@
           ><input tuiInput id="t-cap" type="number" min="1" [ngModel]="transportForm().capacity"
             (ngModelChange)="transportForm.update((f) => ({ ...f, capacity: $event === '' || $event === null ? null : +$event }))" name="tcap" />
         </tui-textfield>
-        <tui-textfield>
-          <label for="t-info" tuiLabel>Infos pratiques pour les parents</label
-          ><textarea tuiTextarea id="t-info" [ngModel]="transportForm().practicalInfo"
-            (ngModelChange)="transportForm.update((f) => ({ ...f, practicalInfo: $event }))" name="tinfo"></textarea>
-        </tui-textfield>
+        <div class="field-block">
+          <label class="field-label" for="t-info">Infos pratiques pour les parents</label>
+          <textarea
+            tuiTextarea
+            id="t-info"
+            [ngModel]="transportForm().practicalInfo"
+            (ngModelChange)="transportForm.update((f) => ({ ...f, practicalInfo: $event }))"
+            name="tinfo"
+          ></textarea>
+        </div>
         <div>
           <button tuiButton type="submit" [disabled]="!transportForm().name">
             {{ editingTransportId() ? 'Enregistrer' : 'Créer le trajet' }}
@@ -218,17 +259,13 @@
       </ul>
       <h3>Créer une exception</h3>
       <form class="drawer-form" (submit)="createException(); $event.preventDefault()">
-        <tui-textfield tuiChevron [stringify]="stringifyPersonType">
-          <label for="x-type" tuiLabel>Type de personne</label
-          ><select tuiSelect id="x-type" [items]="personTypes" [ngModel]="exceptionForm().personType"
-            (ngModelChange)="exceptionForm.update((f) => ({ ...f, personType: $event }))" name="xtype">
-          </select>
-        </tui-textfield>
-        <tui-textfield>
-          <label for="x-person" tuiLabel>Identifiant de la personne</label
-          ><input tuiInput id="x-person" type="number" [ngModel]="exceptionForm().personId"
-            (ngModelChange)="exceptionForm.update((f) => ({ ...f, personId: $event }))" name="xperson" required />
-        </tui-textfield>
+        <app-select-field
+          label="Personne (membre de cette délégation)"
+          [options]="memberOptions()"
+          [value]="exceptionForm().personKey || null"
+          placeholder="Rechercher par nom…"
+          (valueChange)="exceptionForm.update((f) => ({ ...f, personKey: $event ?? '' }))"
+        />
         <tui-textfield tuiChevron [stringify]="stringifyDelegation">
           <label for="x-deleg" tuiLabel>Délégation d'accueil</label
           ><select tuiSelect id="x-deleg" placeholder="Choisir…" [items]="otherDelegationIds()"

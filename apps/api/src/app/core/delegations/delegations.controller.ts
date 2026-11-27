@@ -108,6 +108,12 @@ export class DelegationsController {
     return { deleted: true };
   }
 
+  @ApiOperation({ summary: 'Membres de la délégation (jeunes et bénévoles) pour le sélecteur de personne' })
+  @Get(':id/persons')
+  persons(@Param('id', ParseIntPipe) id: number, @AccessScope() scope: AccessScopeInfo) {
+    return this.delegationsService.persons(id, scope);
+  }
+
   @ApiOperation({ summary: 'Vue répartition : à placer, transports et exceptions pour un sens' })
   @Get(':id/repartition')
   repartition(

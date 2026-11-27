@@ -400,6 +400,12 @@ export class DelegationsService {
     await this.assignmentsRepository.remove(assignment);
   }
 
+  /** Membres de la délégation (jeunes et bénévoles), dans le périmètre de l'appelant. */
+  async persons(delegationId: number, scope: AccessScopeInfo): Promise<PersonLite[]> {
+    await this.findDelegation(delegationId, scope);
+    return this.listMembers(delegationId);
+  }
+
   /**
    * Vue répartition d'une délégation pour un sens : file « à placer » (membres
    * sans affectation + exceptions reçues non placées), transports avec occupants,

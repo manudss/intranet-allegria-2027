@@ -1127,6 +1127,10 @@ async function run(): Promise<void> {
       const groupMembers = faker.helpers.shuffle(groupVolunteers);
 
       for (const volunteer of groupMembers) {
+        // Groupe avec bénévoles mais sans équipe : pas d'affectation possible.
+        if (groupVolunteerTeams.length === 0) {
+          continue;
+        }
         const selectedTeam = pick(groupVolunteerTeams);
         volunteerTeamMembershipsToCreate.push(
           volunteerTeamMembershipRepository.create({
@@ -1725,6 +1729,12 @@ async function run(): Promise<void> {
     const missionBudgetPerGroup = splitEvenly(profile.volunteerMissions, groups.length);
     const volunteerMissionKeys = groups.flatMap((group, groupIndex) => {
       const teams = savedVolunteerTeamsByGroup.get(group.id) ?? [];
+      const groupVolunteers = volunteersByGroupSaved.get(group.id) ?? [];
+      // Groupes vides (petites délégations sans bénévole) : aucune équipe ni
+      // responsable à rattacher, on ne crée pas de mission pour eux.
+      if (teams.length === 0 || groupVolunteers.length === 0) {
+        return [];
+      }
       const missionCount = Math.max(1, missionBudgetPerGroup[groupIndex] ?? 1);
       return Array.from({ length: missionCount }, (_, missionIndex) => ({
         group,

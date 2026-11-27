@@ -251,7 +251,8 @@ export class FamilyRegistrationService {
   }
 
   /**
-   * Trajets aller/retour du jeune, visibles par la famille une fois placée :
+   * Trajets aller/retour du jeune, visibles par la famille : statut (a placer
+   * tant que la delegation n'a pas affecte de transport, puis place),
    * transport, horaires, lieu de rendez-vous, infos pratiques rédigées pour les
    * parents et contact des responsables de la délégation. Aucune donnée de santé.
    */
@@ -290,27 +291,50 @@ export class FamilyRegistrationService {
          ORDER BY u.email`,
         [delegationId],
       )) as { email: string; firstName: string | null; lastName: string | null }[];
+    // Un jeune fraichement envoye n'a pas encore de ligne d'affectation : sa
+    // famille doit quand meme voir le statut « a placer » et les contacts de
+    // SA delegation (son groupe), pour les deux sens.
+    const ownDelegation = (await this.db.query(
+      `SELECT g.id, g.name FROM participants p JOIN groups g ON g.id = p.group_id WHERE p.id=$1`,
+      [y.participantId],
+    )) as { id: number; name: string }[];
     const journeys = [];
-    for (const row of rows) {
-      journeys.push({
-        direction: row.direction,
-        status: row.transport_id ? 'PLACED' : 'TO_ASSIGN',
-        delegation: { id: row.delegation_id, name: row.delegation_name },
-        transport: row.transport_id
-          ? {
-              name: row.name,
-              mode: row.mode,
-              departureDatetime: row.departureDatetime,
-              arrivalDatetime: row.arrivalDatetime,
-              meetingPoint: row.meetingPoint,
-              practicalInfo: row.practicalInfo,
-            }
-          : null,
-        contacts: (await contacts(row.delegation_id)).map((c) => ({
-          name: c.firstName ? `${c.firstName} ${c.lastName ?? ''}`.trim() : c.email,
-          email: c.email,
-        })),
-      });
+    const byDirection = new Map(rows.map((r) => [r.direction, r]));
+    for (const direction of ['ALLER', 'RETOUR'] as const) {
+      const row = byDirection.get(direction);
+      if (row) {
+        journeys.push({
+          direction: row.direction,
+          status: row.transport_id ? 'PLACED' : 'TO_ASSIGN',
+          delegation: { id: row.delegation_id, name: row.delegation_name },
+          transport: row.transport_id
+            ? {
+                name: row.name,
+                mode: row.mode,
+                departureDatetime: row.departureDatetime,
+                arrivalDatetime: row.arrivalDatetime,
+                meetingPoint: row.meetingPoint,
+                practicalInfo: row.practicalInfo,
+              }
+            : null,
+          contacts: (await contacts(row.delegation_id)).map((c) => ({
+            name: c.firstName ? `${c.firstName} ${c.lastName ?? ''}`.trim() : c.email,
+            email: c.email,
+          })),
+        });
+      } else if (ownDelegation.length) {
+        const d = ownDelegation[0];
+        journeys.push({
+          direction,
+          status: 'TO_ASSIGN',
+          delegation: { id: d.id, name: d.name },
+          transport: null,
+          contacts: (await contacts(d.id)).map((c) => ({
+            name: c.firstName ? `${c.firstName} ${c.lastName ?? ''}`.trim() : c.email,
+            email: c.email,
+          })),
+        });
+      }
     }
     return { participantId: y.participantId, journeys };
   }

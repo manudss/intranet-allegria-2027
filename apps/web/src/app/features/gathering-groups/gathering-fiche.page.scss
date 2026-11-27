@@ -76,5 +76,6 @@
   .data-table, .data-table tbody, .data-table tr, .data-table td { display: block; inline-size: 100%; }
   .data-table tr { border-bottom: 1px solid #e5e5e5; padding: .4rem 0; }
   .data-table td { padding: .1rem 0; border: 0; }
+  .data-table td[data-label]:not(:empty)::before { content: attr(data-label) ' : '; color: #777; font-size: .8rem; }
   .gauge-line { flex-wrap: wrap; }
 }

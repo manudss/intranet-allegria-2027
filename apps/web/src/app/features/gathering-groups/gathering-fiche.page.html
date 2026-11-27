@@ -111,17 +111,17 @@
         <tbody>
           @for (q of f.sequences; track q.id) {
             <tr>
-              <td>{{ q.eventDate | date: 'dd/MM/yyyy' }}</td>
-              <td>{{ q.startTime }}–{{ q.endTime }}</td>
-              <td>
+              <td data-label="<tr><th>Date">{{ q.eventDate | date: 'dd/MM/yyyy' }}</td>
+              <td data-label="Horaire">{{ q.startTime }}–{{ q.endTime }}</td>
+              <td data-label="Créneau">
                 @if (canOpenAgenda()) {
                   <a [routerLink]="['/programme/evenements', q.id]"><strong>{{ q.title }}</strong></a>
                 } @else {
                   <strong>{{ q.title }}</strong>
                 }
               </td>
-              <td>{{ trackLabels[q.track] }}</td>
-              <td>{{ q.location ?? '' }}</td>
+              <td data-label="Piste">{{ trackLabels[q.track] }}</td>
+              <td data-label="Lieu">{{ q.location ?? '' }}</td>
               <td>
                 @if (canEditGroups()) {
                   <button type="button" tuiButton appearance="flat" size="xs" (click)="unlinkSequence(q)">Retirer</button>
@@ -129,7 +129,7 @@
               </td>
             </tr>
           } @empty {
-            <tr><td colspan="6" class="muted">Ce groupe n'est lié à aucun créneau.</td></tr>
+            <tr><td data-label="<tr><th>Date" colspan="6" class="muted">Ce groupe n'est lié à aucun créneau.</td></tr>
           }
         </tbody>
       </table>
@@ -172,7 +172,7 @@
           <tbody>
             @for (t of f.teams; track t.id) {
               <tr>
-                <td>
+                <td data-label="<tr><th>Équipe">
                   <span class="dot" [style.background]="trackColors[t.track]"></span>
                   @if (canOpenTeams()) {
                     <a [routerLink]="['/equipes']" [queryParams]="{ equipe: t.id }"><strong>{{ t.name }}</strong></a>
@@ -180,10 +180,10 @@
                     <strong>{{ t.name }}</strong>
                   }
                 </td>
-                <td>{{ trackLabels[t.track] }}</td>
-                <td>{{ t.jeunes }}</td>
-                <td>{{ t.animateurs }}</td>
-                <td>{{ t.persons }}</td>
+                <td data-label="Piste">{{ trackLabels[t.track] }}</td>
+                <td data-label="Jeunes">{{ t.jeunes }}</td>
+                <td data-label="Animateurs">{{ t.animateurs }}</td>
+                <td data-label="Personnes">{{ t.persons }}</td>
                 <td class="row-actions">
                   <a [routerLink]="['/groupes-rassemblement', 'repartitions', f.repartition.id]">Dispatch</a>
                   @if (canOpenTeams()) {
@@ -236,13 +236,13 @@
             <tbody>
               @for (p of f.people; track p.id) {
                 <tr>
-                  <td>{{ p.lastName }} {{ p.firstName }}</td>
-                  <td>
+                  <td data-label="<tr><th>Prénom">{{ p.lastName }} {{ p.firstName }}</td>
+                  <td data-label="Équipe">
                     @if (canOpenTeams()) {
                       <a [routerLink]="['/equipes']" [queryParams]="{ equipe: p.teamId }">{{ p.teamName }}</a>
                     } @else { {{ p.teamName }} }
                   </td>
-                  <td>{{ p.mejAgeGroup ?? '—' }}</td>
+                  <td data-label="Tranche">{{ p.mejAgeGroup ?? '—' }}</td>
                   <td class="row-actions">
                     @if (canOpenPeople()) {
                       <a [routerLink]="['/participants']" [queryParams]="{ participant: p.id }">{{ canEditPeople() ? 'Modifier' : 'Voir' }}</a>
@@ -261,8 +261,8 @@
           <tbody>
             @for (a of f.animators; track a.id + '-' + a.teamId) {
               <tr>
-                <td>{{ a.displayName }}</td>
-                <td>
+                <td data-label="<tr><th>Nom">{{ a.displayName }}</td>
+                <td data-label="Équipe">
                   @if (canOpenTeams()) {
                     <a [routerLink]="['/equipes']" [queryParams]="{ equipe: a.teamId }">{{ a.teamName }}</a>
                   } @else { {{ a.teamName }} }

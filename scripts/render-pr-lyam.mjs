@@ -69,7 +69,15 @@ export async function deploy(e, fetcher = fetch) {
           { key: 'FAMILY_PREVIEW_MAIL_ENABLED', value: 'owner-only-test' },
           { key: 'FAMILY_PREVIEW_MAIL_TO', value: 'emmanueldesaintsteban@gmail.com' },
         ]
-      : []),
+      : e.PR_NUMBER === '56'
+        ? [
+            // PR56 : acces demo famille (famille fictive) pour la qualification visuelle du
+            // bloc trajets de l'espace famille. Pas de sante numerique ni de mail ici :
+            // le circuit sanitaire reste en mode PAPER sur cette preview.
+            { key: 'FAMILY_PREVIEW_DEMO_ENABLED', value: 'pr56-fictional-only' },
+            { key: 'FAMILY_PREVIEW_IMAGE_ENABLED', value: 'pr56-prebuilt-only' },
+          ]
+        : []),
   ];
   // Mail (Resend, sender alegria@dss.name) only when the repo secret exists, and ALWAYS locked to the
   // owner's own address: the API refuses every other recipient before any provider call.

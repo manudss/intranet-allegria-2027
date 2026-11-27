@@ -129,3 +129,48 @@ describe('PR49 test-phase gates', () => {
     ).toBe(true);
   });
 });
+
+describe('PR56 test-phase gates', () => {
+  const pr56 = {
+    FAMILY_PREVIEW_DEMO_ENABLED: 'pr56-fictional-only',
+    FAMILY_PREVIEW_IMAGE_ENABLED: 'pr56-prebuilt-only',
+    PREVIEW_DEPLOYMENT: 'true',
+    RENDER_SERVICE_NAME: 'al-pr56-api',
+    RENDER_EXTERNAL_HOSTNAME: 'al-pr56-api.onrender.com',
+  };
+  it('opens only for the exact PR56 image service with every opt-in', () => {
+    expect(familyPreviewEnabled(config(pr56))).toBe(true);
+    for (const key of Object.keys(pr56)) {
+      const missing: Record<string, string> = { ...pr56 };
+      delete missing[key];
+      expect(familyPreviewEnabled(config(missing))).toBe(false);
+      expect(familyPreviewEnabled(config({ ...pr56, [key]: 'production' }))).toBe(false);
+    }
+  });
+  it('refuses a Git-branch service, other PRs, look-alike hosts and production', () => {
+    expect(familyPreviewEnabled(config({ ...pr56, RENDER_GIT_BRANCH: 'main' }))).toBe(false);
+    expect(
+      familyPreviewEnabled(config({ ...pr56, RENDER_SERVICE_NAME: 'al-pr55-api' })),
+    ).toBe(false);
+    expect(
+      familyPreviewEnabled(
+        config({ ...pr56, RENDER_EXTERNAL_HOSTNAME: 'al-pr56-api.onrender.com.evil.test' }),
+      ),
+    ).toBe(false);
+    expect(
+      familyPreviewEnabled(config({ ...pr56, FAMILY_PREVIEW_DEMO_ENABLED: 'pr49-fictional-only' })),
+    ).toBe(false);
+  });
+  it('keeps mail and health closed on PR56: no opt-in is set for them', () => {
+    expect(familyPreviewMailEnabled(config(pr56))).toBe(false);
+    expect(
+      familyPreviewMailEnabled(
+        config({
+          ...pr56,
+          FAMILY_PREVIEW_MAIL_ENABLED: 'owner-only-test',
+          FAMILY_PREVIEW_MAIL_TO: 'emmanueldesaintsteban@gmail.com',
+        }),
+      ),
+    ).toBe(true);
+  });
+});

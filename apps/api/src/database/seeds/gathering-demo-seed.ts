@@ -49,7 +49,12 @@ function trackFits(category: GatheringGroupCategory, track: ProgramSequenceTrack
 
 export async function seedGatheringDemo(
   dataSource: DataSource,
-  args: { adminUser: User | null; coordinator: User | null; volunteerTeams: VolunteerTeam[] },
+  args: {
+    adminUser: User | null;
+    coordinator: User | null;
+    volunteerTeams: VolunteerTeam[];
+    demoPasswordHash?: string;
+  },
 ): Promise<{ repartitions: number; groups: number; placements: number }> {
   const repartitionRepo = dataSource.getRepository(GatheringRepartition);
   const groupRepo = dataSource.getRepository(GatheringGroup);
@@ -303,6 +308,30 @@ export async function seedGatheringDemo(
     await volunteerLinkRepo.save(
       volunteerLinkRepo.create({ groupId: targets[i].id, volunteerTeamId: volunteerTeams[i].id }),
     );
+  }
+
+  // Scénarios de droits fictifs (mécanisme existant : exceptions individuelles, sans nouvelle
+  // politique). Aucun n'a de rôle : donc aucun droit AGENDA, pour vérifier en conditions réelles
+  // qu'on ne voit pas l'agenda complet depuis les groupes.
+  if (args.demoPasswordHash) {
+    const userRepo = dataSource.getRepository(User);
+    const scenarios: { email: string; scope: 'ALL' | 'GROUPS'; managed: GatheringGroup[] }[] = [
+      { email: 'groupes.sans-agenda@allegria.local', scope: 'ALL', managed: [] },
+      { email: 'groupes.responsable@allegria.local', scope: 'GROUPS', managed: [jeu[0], jeu[2]].filter(Boolean) },
+    ];
+    for (const sc of scenarios) {
+      const u = await userRepo.save(
+        userRepo.create({ email: sc.email, passwordHash: args.demoPasswordHash, isActive: true }),
+      );
+      await dataSource.query(
+        `INSERT INTO access_overrides (user_id, module, level, scope, reason, created_by)
+         VALUES ($1, 'GATHERING_GROUPS', 'EDIT', $2, $3, $4)`,
+        [u.id, sc.scope, 'Scénario de démo : gestion des groupes de rassemblement sans accès à l\'agenda.', args.adminUser?.id ?? null],
+      );
+      if (sc.managed.length) {
+        await managerRepo.save(sc.managed.map((g) => managerRepo.create({ groupId: g.id, userId: u.id })));
+      }
+    }
   }
 
   return { repartitions: repartitionCount, groups: groupCount, placements: placementCount };

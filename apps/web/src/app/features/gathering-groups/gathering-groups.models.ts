@@ -141,13 +141,19 @@ export interface GatheringFiche {
 
 export type GatheringAlert =
   | { kind: 'OVERFLOW'; groupId: number; message: string }
+  | { kind: 'FULL'; groupId: number; message: string }
   | { kind: 'ALMOST_FULL'; groupId: number; message: string }
-  | { kind: 'TEAM_WITHOUT_TRACK'; groupId: number; teamId: number; message: string }
+  | { kind: 'TEAM_WITHOUT_TRACK'; groupId: number; teamId: number; teamName: string; message: string }
   | {
       kind: 'SEQUENCE_OVERLAP';
+      groupId: number;
       teamId: number;
+      teamName: string;
       repartitionId: number;
       otherRepartitionId: number;
+      otherGroupName: string;
+      sequenceTitle: string;
+      otherSequenceTitle: string;
       message: string;
     };
 

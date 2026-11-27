@@ -17,8 +17,17 @@
   @if (loading()) {
     <app-loading-skeleton />
   } @else if (fiche(); as f) {
-    @for (alert of f.alerts; track $index) {
-      <p class="alert" role="alert">{{ alert.message }}</p>
+    @if (alertGroups().length) {
+      <section class="alerts" aria-label="Alertes du groupe">
+        @for (g of alertGroups(); track g.key) {
+          <details class="alert-group" [class.severe]="g.severe" [open]="g.severe">
+            <summary><strong>{{ g.items.length }}</strong> {{ g.label }}</summary>
+            <ul>
+              @for (i of g.items; track $index) { <li>{{ i }}</li> }
+            </ul>
+          </details>
+        }
+      </section>
     }
 
     <section class="card head-card">
@@ -111,10 +120,12 @@
         </div>
       }
       @if (canEditGroups() && canOpenAgenda() && addingSequence()) {
-        <div class="add-row">
-          <input type="search" placeholder="Ajouter un créneau : rechercher (titre, date, lieu)" aria-label="Rechercher un créneau à ajouter"
-                 [value]="sequenceSearch()" (input)="sequenceSearch.set($any($event.target).value)" />
-        </div>
+        <div class="picker">
+          <div class="picker-head">
+            <input class="picker-search" type="search" placeholder="Rechercher un créneau (titre, date, lieu)" aria-label="Rechercher un créneau à ajouter"
+                   [value]="sequenceSearch()" (input)="sequenceSearch.set($any($event.target).value)" />
+            <button type="button" tuiButton appearance="flat" size="s" (click)="addingSequence.set(false)">Fermer</button>
+          </div>
         <ul class="results" aria-label="Créneaux à ajouter">
           @for (x of addableSequences(); track x.id) {
             <li>
@@ -125,6 +136,7 @@
             <li class="muted">Aucun créneau à ajouter.</li>
           }
         </ul>
+        </div>
       }
     </section>
 

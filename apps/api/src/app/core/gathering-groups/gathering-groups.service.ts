@@ -35,13 +35,19 @@ const ALMOST_FULL_RATIO = 0.9;
 
 export type GatheringAlert =
   | { kind: 'OVERFLOW'; groupId: number; message: string }
+  | { kind: 'FULL'; groupId: number; message: string }
   | { kind: 'ALMOST_FULL'; groupId: number; message: string }
-  | { kind: 'TEAM_WITHOUT_TRACK'; groupId: number; teamId: number; message: string }
+  | { kind: 'TEAM_WITHOUT_TRACK'; groupId: number; teamId: number; teamName: string; message: string }
   | {
       kind: 'SEQUENCE_OVERLAP';
+      groupId: number;
       teamId: number;
+      teamName: string;
       repartitionId: number;
       otherRepartitionId: number;
+      otherGroupName: string;
+      sequenceTitle: string;
+      otherSequenceTitle: string;
       message: string;
     };
 
@@ -1046,7 +1052,7 @@ export class GatheringGroupsService {
       animators,
       volunteerTeams,
       managers: await this.listManagers(groupId, scope),
-      alerts: await this.alertsForRepartition(repartition.id),
+      alerts: (await this.alertsForRepartition(repartition.id)).filter((a) => a.groupId === groupId),
     };
   }
 
@@ -1071,6 +1077,12 @@ export class GatheringGroupsService {
           groupId: group.id,
           message: `« ${group.name} » dépasse sa capacité : ${gauge.persons} personnes pour ${gauge.capacity} places.`,
         });
+      } else if (gauge.capacity != null && gauge.persons === gauge.capacity) {
+        alerts.push({
+          kind: 'FULL',
+          groupId: group.id,
+          message: `« ${group.name} » est complet : ${gauge.persons}/${gauge.capacity}.`,
+        });
       } else if (gauge.almostFull) {
         alerts.push({
           kind: 'ALMOST_FULL',
@@ -1091,6 +1103,7 @@ export class GatheringGroupsService {
             kind: 'TEAM_WITHOUT_TRACK',
             groupId: groupId ?? 0,
             teamId: team.id,
+            teamName: team.name,
             message: `L'équipe « ${team.name} » n'a pas de piste renseignée (TA ou ES).`,
           });
         }
@@ -1098,30 +1111,45 @@ export class GatheringGroupsService {
       // Chevauchement : même équipe dans une autre répartition liée à un événement qui
       // chevauche celui de cette répartition (détectable seulement avec un horaire).
       const overlaps: {
+        group_id: number;
         team_id: number;
+        team_name: string;
         other_repartition_id: number;
         other_name: string;
+        other_group_name: string;
+        title: string;
+        other_title: string;
       }[] = await this.dataSource.query(
-        `SELECT DISTINCT l2.team_id, r2.id AS other_repartition_id, r2.name AS other_name
+        `SELECT DISTINCT l1.group_id, l1.team_id, t.name AS team_name,
+                r2.id AS other_repartition_id, r2.name AS other_name, g2.name AS other_group_name,
+                s1.title AS title, s2.title AS other_title
            FROM gathering_group_teams l1
+           JOIN teams t ON t.id = l1.team_id
            JOIN gathering_group_sequences gs1 ON gs1.group_id = l1.group_id
            JOIN program_sequences s1 ON s1.id = gs1.program_sequence_id
            JOIN gathering_group_teams l2 ON l2.team_id = l1.team_id AND l2.repartition_id <> l1.repartition_id
+           JOIN gathering_groups g2 ON g2.id = l2.group_id
            JOIN gathering_group_sequences gs2 ON gs2.group_id = l2.group_id
            JOIN program_sequences s2 ON s2.id = gs2.program_sequence_id
            JOIN gathering_repartitions r2 ON r2.id = l2.repartition_id
           WHERE l1.repartition_id = $1
             AND s2."eventDate" = s1."eventDate"
-            AND s2."startTime" < s1."endTime" AND s1."startTime" < s2."endTime"`,
+            AND s2."startTime" < s1."endTime" AND s1."startTime" < s2."endTime"
+          ORDER BY t.name`,
         [repartitionId],
       );
       for (const row of overlaps) {
         alerts.push({
           kind: 'SEQUENCE_OVERLAP',
+          groupId: row.group_id,
           teamId: row.team_id,
+          teamName: row.team_name,
           repartitionId,
           otherRepartitionId: row.other_repartition_id,
-          message: `Une équipe est aussi dans « ${row.other_name} », dont l'événement chevauche celui-ci.`,
+          otherGroupName: row.other_group_name,
+          sequenceTitle: row.title,
+          otherSequenceTitle: row.other_title,
+          message: `L'équipe « ${row.team_name} » est aussi dans « ${row.other_group_name} » (${row.other_name}) : « ${row.title} » chevauche « ${row.other_title} ».`,
         });
       }
     }

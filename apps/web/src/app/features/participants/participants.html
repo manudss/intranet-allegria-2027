@@ -60,7 +60,9 @@
           ES
         </label>
       </div>
-      <p class="age-legend">TA : Témoins Aujourd'hui, 12 à 15 ans. ES : Équipes Espérance, 15 à 18 ans.</p>
+      <p class="age-legend">
+        TA : Témoins Aujourd'hui, 12 à 15 ans. ES : Équipes Espérance, 15 à 18 ans.
+      </p>
     </div>
   </div>
   @if (loading()) {
@@ -98,8 +100,7 @@
   <h3>Sous-délégations</h3>
   @if (journeyError()) {
   <p class="api-error">{{ journeyError() }}</p>
-  }
-  @for (t of j.journeys; track t.direction) {
+  } @for (t of j.journeys; track t.direction) {
   <div class="journey-line">
     <strong>{{ t.direction === 'ALLER' ? 'Aller' : 'Retour' }}</strong>
     @if (t.exception) {<span class="tui-badge">Exception tracée</span>}
@@ -114,7 +115,7 @@
           [ngModelOptions]="{ standalone: true }"
         >
           @for (d of delegationOptions(); track d.id) {
-          <option [value]="d.id">{{ d.name }}</option>
+          <option [ngValue]="d.id">{{ d.name }}</option>
           }
         </select>
       </tui-textfield>
@@ -123,16 +124,15 @@
         ><select
           tuiSelect
           [id]="'j-tr-' + t.direction"
-          [ngModel]="journeyEdit(t.direction)?.transportId ?? ''"
-          (ngModelChange)="setJourneyTransport(t.direction, $event === '' ? null : $event)"
+          [ngModel]="journeyEdit(t.direction)?.transportId ?? null"
+          (ngModelChange)="setJourneyTransport(t.direction, $event)"
           [ngModelOptions]="{ standalone: true }"
         >
-          <option value="">À placer</option>
+          <option [ngValue]="null">À placer</option>
           @for (tr of journeyTransports()[t.direction] ?? []; track tr.id) {
-          <option [value]="tr.id">
-            {{ tr.name }}@if (tr.departureDatetime) {
-              · départ {{ tr.departureDatetime | date: 'dd/MM/yyyy HH:mm' }}
-            }
+          <option [ngValue]="tr.id">
+            {{ tr.name }}@if (tr.departureDatetime) { · départ {{ tr.departureDatetime | date:
+            'dd/MM/yyyy HH:mm' }} }
           </option>
           }
         </select>
@@ -149,11 +149,9 @@
     </div>
     @if (t.transport) {
     <p class="help">
-      Actuellement : {{ t.transport.name
-      }}@if (t.transport.departureDatetime) {
-        · départ {{ t.transport.departureDatetime | date: 'dd/MM/yyyy HH:mm' }}
-      }@if (t.transport.meetingPoint) { · RDV {{ t.transport.meetingPoint }} } —
-      {{ t.delegation.name }}
+      Actuellement : {{ t.transport.name }}@if (t.transport.departureDatetime) { · départ {{
+      t.transport.departureDatetime | date: 'dd/MM/yyyy HH:mm' }} }@if (t.transport.meetingPoint) {
+      · RDV {{ t.transport.meetingPoint }} } — {{ t.delegation.name }}
     </p>
     } @else {
     <p class="help">Actuellement à placer — {{ t.delegation.name }}</p>
@@ -163,8 +161,7 @@
   <p>
     <a [routerLink]="['/person-notes', j.personType, j.personId]">Notes et suivi transport</a>
   </p>
-  }
-  @if(canSeeAdministrative()){
+  } @if(canSeeAdministrative()){
   <p>
     <a [routerLink]="['/inscriptions-familles']" [queryParams]="{participant:selected()?.id}"
       >Consulter le dossier famille complet</a

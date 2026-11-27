@@ -1022,13 +1022,14 @@ async function run(): Promise<void> {
       volunteerSaveCursor += expectedCount;
     }
 
-    // Perimetres de groupes : chaque benevole rattache a une delegation la
-    // voit dans son intranet et apparait comme contact responsable pour les
-    // familles (bloc trajets de l'espace famille, filtres du suivi des notes).
+    // Perimetres de groupes : les responsables de chaque delegation (chefs de
+    // groupe) la voient dans leur intranet et apparaissent comme contacts pour
+    // les familles (bloc trajets de l'espace famille). On ne scope pas tous
+    // les benevoles : une quarantaine de contacts illisibles s'afficheraient.
     const scopeRows: { userId: number; groupId: number }[] = [];
     for (const [groupId, groupVolunteers] of volunteersByGroupSaved) {
       for (const volunteer of groupVolunteers) {
-        if (volunteer.user?.id != null) {
+        if (volunteer.user?.id != null && volunteer.isGroupLeader) {
           scopeRows.push({ userId: volunteer.user.id, groupId });
         }
       }

@@ -112,37 +112,27 @@
     <strong>{{ t.direction === 'ALLER' ? 'Aller' : 'Retour' }}</strong>
     @if (t.exception) {<span class="tui-badge">Exception tracée</span>}
     <div class="journey-fields">
-      <tui-textfield>
+      <tui-textfield tuiChevron [stringify]="stringifyJourneyDelegation">
         <label [for]="'j-del-' + t.direction" tuiLabel>Délégation</label
         ><select
           tuiSelect
           [id]="'j-del-' + t.direction"
-          [ngModel]="journeyEdit(t.direction)?.delegationId"
+          [items]="delegationIds()"
+          [ngModel]="journeyEdit(t.direction)?.delegationId ?? null"
           (ngModelChange)="setJourneyDelegation(t.direction, $event)"
           [ngModelOptions]="{ standalone: true }"
-        >
-          @for (d of delegationOptions(); track d.id) {
-          <option [ngValue]="d.id">{{ d.name }}</option>
-          }
-        </select>
+        ></select>
       </tui-textfield>
-      <tui-textfield>
+      <tui-textfield tuiChevron [stringify]="stringifyJourneyTransport">
         <label [for]="'j-tr-' + t.direction" tuiLabel>Sous-délégation</label
         ><select
           tuiSelect
           [id]="'j-tr-' + t.direction"
+          [items]="journeyTransportIdsMap()[t.direction]"
           [ngModel]="journeyEdit(t.direction)?.transportId ?? null"
           (ngModelChange)="setJourneyTransport(t.direction, $event)"
           [ngModelOptions]="{ standalone: true }"
-        >
-          <option [ngValue]="null">À placer</option>
-          @for (tr of journeyTransports()[t.direction] ?? []; track tr.id) {
-          <option [ngValue]="tr.id">
-            {{ tr.name }}@if (tr.departureDatetime) { · départ {{ tr.departureDatetime | date:
-            'dd/MM/yyyy HH:mm' }} }
-          </option>
-          }
-        </select>
+        ></select>
       </tui-textfield>
       <button
         tuiButton

@@ -194,13 +194,51 @@ export class ProgramService {
         link.groupId,
       ]);
     }
+    const gatheringIdsBySequence = await this.gatheringRepartitionIdsBySequence(ids);
+    const gatheringGroupIdsBySequence = await this.gatheringGroupIdsBySequence(ids);
     return {
       date,
       sequences: sequences.map((sequence) => ({
         ...toView(sequence),
         groupIds: groupIdsBySequence.get(sequence.id) ?? [],
+        gatheringRepartitionIds: gatheringIdsBySequence.get(sequence.id) ?? [],
+        gatheringGroupIds: gatheringGroupIdsBySequence.get(sequence.id) ?? [],
       })),
     };
+  }
+
+  /** Groupes de rassemblement liés individuellement aux séquences données. */
+  private async gatheringGroupIdsBySequence(sequenceIds: number[]): Promise<Map<number, number[]>> {
+    const out = new Map<number, number[]>();
+    if (!sequenceIds.length) return out;
+    const rows: { program_sequence_id: number; group_id: number }[] = await this.dataSource.query(
+      `SELECT program_sequence_id, group_id FROM gathering_group_sequences
+        WHERE program_sequence_id = ANY($1::int[]) ORDER BY group_id`,
+      [sequenceIds],
+    );
+    for (const row of rows) {
+      out.set(row.program_sequence_id, [...(out.get(row.program_sequence_id) ?? []), row.group_id]);
+    }
+    return out;
+  }
+
+  /** Répartitions de groupes de rassemblement rattachées aux séquences données. */
+  private async gatheringRepartitionIdsBySequence(
+    sequenceIds: number[],
+  ): Promise<Map<number, number[]>> {
+    const out = new Map<number, number[]>();
+    if (!sequenceIds.length) return out;
+    const rows: { program_sequence_id: number; id: number }[] = await this.dataSource.query(
+      `SELECT DISTINCT gs.program_sequence_id, g.repartition_id AS id
+         FROM gathering_group_sequences gs
+         JOIN gathering_groups g ON g.id = gs.group_id
+        WHERE gs.program_sequence_id = ANY($1::int[]) ORDER BY id`,
+      [sequenceIds],
+    );
+    for (const row of rows) {
+      out.set(row.program_sequence_id, [...(out.get(row.program_sequence_id) ?? []), row.id]);
+    }
+    return out;
   }
 
   async previewInsert(

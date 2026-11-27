@@ -1,0 +1,169 @@
+<app-page-layout title="Groupes de rassemblement">
+  @if (notice(); as n) {
+    <div class="notice" [class.error]="n.kind === 'error'" role="status">
+      <span>{{ n.text }}</span>
+      <button type="button" class="link" (click)="notice.set(null)" aria-label="Fermer">✕</button>
+    </div>
+  }
+
+  <nav class="days" aria-label="Jour du rassemblement">
+    @for (day of days; track day.date) {
+      <button
+        type="button"
+        class="chip"
+        [class.on]="selectedDate() === day.date"
+        (click)="selectDate(day.date)"
+      >
+        {{ day.label }}
+      </button>
+    }
+  </nav>
+
+  <section class="new-repartition" aria-labelledby="new-repartition-title">
+    <h2 id="new-repartition-title">Nouvelle répartition</h2>
+    <div class="new-form">
+      <tui-textfield>
+        <label tuiLabel for="new-name">Nom</label>
+        <input
+          id="new-name"
+          tuiInput
+          type="text"
+          placeholder="Ex. Repas du soir, Grand jeu…"
+          [ngModel]="newName()"
+          (ngModelChange)="newName.set($event)"
+        />
+      </tui-textfield>
+      <app-select-field
+        label="Événement rattaché"
+        [options]="sequenceOptions()"
+        [value]="newSequenceId()"
+        (valueChange)="newSequenceId.set($event ?? 0)"
+      />
+      <button
+        type="button"
+        tuiButton
+        appearance="primary"
+        [disabled]="!newName().trim() || busy()"
+        (click)="createRepartition()"
+      >
+        Créer
+      </button>
+    </div>
+  </section>
+
+  @if (loading()) {
+    <app-loading-skeleton />
+  } @else {
+    @if (eventRepartitions().length === 0 && autonomousRepartitions().length === 0) {
+      <p class="empty-state">
+        Aucune répartition pour ce jour. Créez la première ci-dessus : un jeu en trois groupes,
+        un repas en groupes par lieu, ou une répartition autonome sans événement.
+      </p>
+    }
+
+    @for (repartition of eventRepartitions(); track repartition.id) {
+      <section class="repartition" aria-labelledby="rep-{{ repartition.id }}">
+        <header>
+          <div class="rep-title">
+            @if (repartition.sequence; as sequence) {
+              <span class="time">{{ sequence.startTime }}–{{ sequence.endTime }}</span>
+              <span class="event">{{ sequence.title }}</span>
+            }
+            <h2 id="rep-{{ repartition.id }}">{{ repartition.name }}</h2>
+            @if (repartition.allowOverflow) {
+              <span class="badge-derogation">Dérogation dépassement active</span>
+            }
+          </div>
+          <div class="rep-actions">
+            <a tuiButton appearance="secondary" size="s" [routerLink]="['/groupes-rassemblement', 'repartitions', repartition.id]">
+              Dispatch
+            </a>
+            <button type="button" tuiButton appearance="flat" size="s" (click)="duplicate(repartition)">
+              Dupliquer
+            </button>
+            <button
+              type="button"
+              tuiButton
+              appearance="flat"
+              size="s"
+              (click)="toggleOverflow(repartition)"
+              [title]="repartition.allowOverflow ? 'Revenir au dépassement bloquant' : 'Autoriser les dépassements (niveau Gérer)'"
+            >
+              {{ repartition.allowOverflow ? 'Bloquer les dépassements' : 'Dérogation…' }}
+            </button>
+            <button type="button" tuiButton appearance="flat" size="s" (click)="removeRepartition(repartition)">
+              Supprimer
+            </button>
+          </div>
+        </header>
+        @if (repartition.groups.length === 0) {
+          <p class="empty-state">Aucun groupe : ouvrez le dispatch pour créer les groupes et placer les équipes.</p>
+        }
+        <ul class="groups">
+          @for (group of repartition.groups; track group.id) {
+            <li class="group-row" [class.overflow]="group.overflow" [class.almost]="group.almostFull">
+              <span class="cat" [class]="'cat cat-' + group.category | lowercase">
+                @if (group.category !== 'ES') { <img src="/assets/branches/ta.jpg" alt="" /> }
+                @if (group.category !== 'TA') { <img src="/assets/branches/es.jpg" alt="" /> }
+                {{ categoryLabels[group.category] }}
+              </span>
+              <a class="group-name" [routerLink]="['/groupes-rassemblement', 'groupes', group.id]">{{ group.name }}</a>
+              @if (group.location) { <span class="loc">{{ group.location }}</span> }
+              <span class="gauge" role="img" [attr.aria-label]="group.persons + ' personnes sur ' + (group.capacity ?? 'sans capacité')">
+                <span class="bar" [style.width.%]="gaugeRatio(group) * 100"></span>
+              </span>
+              <span class="count">
+                {{ group.persons }}<span class="muted">/{{ group.capacity ?? '∞' }}</span>
+              </span>
+              <span class="muted">{{ group.teamCount }} équipe{{ group.teamCount > 1 ? 's' : '' }}</span>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (autonomousRepartitions().length) {
+      <section class="repartition autonomous" aria-labelledby="autonomous-title">
+        <header>
+          <div class="rep-title"><h2 id="autonomous-title">Répartitions autonomes</h2></div>
+        </header>
+        @for (repartition of autonomousRepartitions(); track repartition.id) {
+          <section class="repartition nested" aria-labelledby="rep-{{ repartition.id }}">
+            <header>
+              <div class="rep-title">
+                <h3 id="rep-{{ repartition.id }}">{{ repartition.name }}</h3>
+                @if (repartition.allowOverflow) {
+                  <span class="badge-derogation">Dérogation dépassement active</span>
+                }
+              </div>
+              <div class="rep-actions">
+                <a tuiButton appearance="secondary" size="s" [routerLink]="['/groupes-rassemblement', 'repartitions', repartition.id]">Dispatch</a>
+                <button type="button" tuiButton appearance="flat" size="s" (click)="duplicate(repartition)">Dupliquer</button>
+                <button type="button" tuiButton appearance="flat" size="s" (click)="toggleOverflow(repartition)">
+                  {{ repartition.allowOverflow ? 'Bloquer les dépassements' : 'Dérogation…' }}
+                </button>
+                <button type="button" tuiButton appearance="flat" size="s" (click)="removeRepartition(repartition)">Supprimer</button>
+              </div>
+            </header>
+            <ul class="groups">
+              @for (group of repartition.groups; track group.id) {
+                <li class="group-row" [class.overflow]="group.overflow" [class.almost]="group.almostFull">
+                  <span class="cat" [class]="'cat cat-' + group.category | lowercase">
+                    @if (group.category !== 'ES') { <img src="/assets/branches/ta.jpg" alt="" /> }
+                    @if (group.category !== 'TA') { <img src="/assets/branches/es.jpg" alt="" /> }
+                    {{ categoryLabels[group.category] }}
+                  </span>
+                  <a class="group-name" [routerLink]="['/groupes-rassemblement', 'groupes', group.id]">{{ group.name }}</a>
+                  @if (group.location) { <span class="loc">{{ group.location }}</span> }
+                  <span class="gauge"><span class="bar" [style.width.%]="gaugeRatio(group) * 100"></span></span>
+                  <span class="count">{{ group.persons }}<span class="muted">/{{ group.capacity ?? '∞' }}</span></span>
+                  <span class="muted">{{ group.teamCount }} équipe{{ group.teamCount > 1 ? 's' : '' }}</span>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      </section>
+    }
+  }
+</app-page-layout>

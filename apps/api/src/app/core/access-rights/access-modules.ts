@@ -34,6 +34,7 @@ export const ACCESS_MODULES = [
   { code: 'HOST_FAMILIES', label: "Familles d'accueil" },
   { code: 'HOUSING', label: 'Hébergement et placement' },
   { code: 'GATHERING_TEAMS', label: 'Équipes de rassemblement (jeunes)' },
+  { code: 'GATHERING_GROUPS', label: 'Groupes de rassemblement' },
   { code: 'VOLUNTEER_DIRECTORY', label: 'Annuaire des bénévoles' },
   { code: 'OPERATIONAL_TEAMS', label: 'Équipes opérationnelles et missions' },
   { code: 'AGENDA', label: 'Agenda et programme' },

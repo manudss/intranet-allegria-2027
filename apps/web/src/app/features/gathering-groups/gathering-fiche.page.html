@@ -1,0 +1,308 @@
+<app-page-layout [title]="fiche()?.name ?? 'Fiche groupe'">
+  <p class="back">
+    @if (fiche(); as f0) {
+      <a [routerLink]="['/groupes-rassemblement', 'repartitions', f0.repartition.id]">← {{ f0.repartition.name }}</a>
+    } @else {
+      <a routerLink="/groupes-rassemblement">← Toutes les répartitions</a>
+    }
+  </p>
+
+  @if (notice(); as n) {
+    <div class="notice" [class.error]="n.kind === 'error'" role="status">
+      <span>{{ n.text }}</span>
+      <button type="button" class="link" (click)="notice.set(null)" aria-label="Fermer">✕</button>
+    </div>
+  }
+
+  @if (loading()) {
+    <app-loading-skeleton />
+  } @else if (fiche(); as f) {
+    @if (alertGroups().length) {
+      <section class="alerts" aria-label="Alertes du groupe">
+        @for (g of alertGroups(); track g.key) {
+          <details class="alert-group" [class.severe]="g.severe" [open]="g.severe">
+            <summary><strong>{{ g.items.length }}</strong> {{ g.label }}</summary>
+            <ul>
+              @for (i of g.items; track $index) { <li>{{ i }}</li> }
+            </ul>
+          </details>
+        }
+      </section>
+    }
+
+    <section class="card head-card">
+      <div class="head-main">
+        <span class="cat" [class]="'cat cat-' + f.category | lowercase">{{ categoryLabels[f.category] }}</span>
+        @if (f.location) { <span class="muted">{{ f.location }}</span> }
+        <span class="muted">{{ f.sequences.length }} créneau{{ f.sequences.length > 1 ? 'x' : '' }} lié{{ f.sequences.length > 1 ? 's' : '' }}</span>
+      </div>
+      <div class="gauge-line">
+        <span class="gauge" [class.overflow]="f.overflow" [class.almost]="f.almostFull">
+          <span class="bar" [style.width.%]="gaugeRatio() * 100"></span>
+        </span>
+        <span class="count" [class.over]="f.overflow">
+          {{ f.persons }}<span class="muted">/{{ f.capacity ?? '∞' }}</span>
+        </span>
+        <span class="muted">{{ f.teamCount }} équipe{{ f.teamCount > 1 ? 's' : '' }}</span>
+      </div>
+      @if (f.hostingGroup) {
+        <p class="muted">Hébergement lié : {{ f.hostingGroup.name }}</p>
+      }
+      @if (f.documentLink) {
+        <p class="muted">Document : <a [href]="f.documentLink.url" target="_blank" rel="noopener">{{ f.documentLink.title }}</a></p>
+      }
+      <div class="head-actions">
+        <button type="button" tuiButton appearance="secondary" size="s" (click)="startEdit()">Modifier</button>
+      </div>
+    </section>
+
+    @if (editing()) {
+      <section class="card" aria-labelledby="edit-title">
+        <h2 id="edit-title">Modifier le groupe</h2>
+        <form class="edit-form" (ngSubmit)="saveEdit()">
+          <tui-textfield>
+            <label tuiLabel for="f-name">Nom</label>
+            <input id="f-name" tuiInput type="text" [ngModel]="editName()" (ngModelChange)="editName.set($event)" name="f-name" />
+          </tui-textfield>
+          <app-select-field label="Catégorie" [options]="categoryOptions" [value]="editCategory()" (valueChange)="editCategory.set($event)" />
+          <tui-textfield>
+            <label tuiLabel for="f-cap">Capacité (personnes, vide = sans limite)</label>
+            <input id="f-cap" tuiInput type="number" min="1" [ngModel]="editCapacity()" (ngModelChange)="editCapacity.set(asText($event))" name="f-cap" />
+          </tui-textfield>
+          <tui-textfield>
+            <label tuiLabel for="f-loc">Lieu</label>
+            <input id="f-loc" tuiInput type="text" [ngModel]="editLocation()" (ngModelChange)="editLocation.set($event)" name="f-loc" />
+          </tui-textfield>
+          <label class="notes-label" for="f-notes">Notes</label>
+          <tui-textfield>
+            <textarea id="f-notes" tuiTextarea rows="2" placeholder="Précisions sur ce groupe (facultatif)" aria-label="Notes" [ngModel]="editNotes()" (ngModelChange)="editNotes.set($event)" name="f-notes"></textarea>
+          </tui-textfield>
+          <div class="form-actions">
+            <button type="submit" tuiButton appearance="primary" [disabled]="busy() || !editName().trim()">Enregistrer</button>
+            <button type="button" tuiButton appearance="flat" (click)="editing.set(false)">Annuler</button>
+          </div>
+        </form>
+      </section>
+    }
+    <nav class="fiche-tabs" role="tablist" aria-label="Sections du groupe">
+      <button type="button" role="tab" class="tab" [class.on]="tab() === 'resume'" [attr.aria-selected]="tab() === 'resume'" (click)="tab.set('resume')">Résumé</button>
+      <button type="button" role="tab" class="tab" [class.on]="tab() === 'creneaux'" [attr.aria-selected]="tab() === 'creneaux'" (click)="tab.set('creneaux')">Créneaux<span class="badge">{{ f.sequences.length }}</span></button>
+      <button type="button" role="tab" class="tab" [class.on]="tab() === 'equipes'" [attr.aria-selected]="tab() === 'equipes'" (click)="tab.set('equipes')">Équipes<span class="badge">{{ f.teams.length }}</span></button>
+      <button type="button" role="tab" class="tab" [class.on]="tab() === 'personnes'" [attr.aria-selected]="tab() === 'personnes'" (click)="tab.set('personnes')">Personnes<span class="badge">{{ f.people.length + f.animators.length }}</span></button>
+      <button type="button" role="tab" class="tab" [class.on]="tab() === 'responsables'" [attr.aria-selected]="tab() === 'responsables'" (click)="tab.set('responsables')">Responsables<span class="badge">{{ f.managers.length }}</span></button>
+    </nav>
+
+    @if (tab() === 'resume') {
+      <section class="card" aria-labelledby="resume-title">
+        <h2 id="resume-title">Résumé</h2>
+        <ul class="resume-list">
+          <li><button type="button" class="link" (click)="tab.set('creneaux')">{{ f.sequences.length }} créneau{{ f.sequences.length > 1 ? 'x' : '' }} de l'agenda lié{{ f.sequences.length > 1 ? 's' : '' }}</button></li>
+          <li><button type="button" class="link" (click)="tab.set('equipes')">{{ f.teams.length }} équipe{{ f.teams.length > 1 ? 's' : '' }} de rassemblement, {{ f.volunteerTeams.length }} équipe{{ f.volunteerTeams.length > 1 ? 's' : '' }} bénévole{{ f.volunteerTeams.length > 1 ? 's' : '' }} opérationnelle{{ f.volunteerTeams.length > 1 ? 's' : '' }}</button></li>
+          <li><button type="button" class="link" (click)="tab.set('personnes')">{{ f.people.length }} personne{{ f.people.length > 1 ? 's' : '' }}, {{ f.animators.length }} animateur{{ f.animators.length > 1 ? 's' : '' }}</button></li>
+          <li><button type="button" class="link" (click)="tab.set('responsables')">{{ f.managers.length }} responsable{{ f.managers.length > 1 ? 's' : '' }}</button></li>
+        </ul>
+      </section>
+    }
+    @if (tab() === 'creneaux') {
+    <section class="card" aria-labelledby="slots-title">
+      <h2 id="slots-title">Créneaux de l'agenda liés ({{ f.sequences.length }})</h2>
+      <table class="data-table" aria-label="Créneaux liés au groupe">
+        <thead><tr><th>Date</th><th>Horaire</th><th>Créneau</th><th>Piste</th><th>Lieu</th><th></th></tr></thead>
+        <tbody>
+          @for (q of f.sequences; track q.id) {
+            <tr>
+              <td data-label="Date">{{ q.eventDate | date: 'dd/MM/yyyy' }}</td>
+              <td data-label="Horaire">{{ q.startTime }}–{{ q.endTime }}</td>
+              <td data-label="Créneau">
+                @if (canOpenAgenda()) {
+                  <a [routerLink]="['/programme/evenements', q.id]"><strong>{{ q.title }}</strong></a>
+                } @else {
+                  <strong>{{ q.title }}</strong>
+                }
+              </td>
+              <td data-label="Piste">{{ trackLabels[q.track] }}</td>
+              <td data-label="Lieu">{{ q.location ?? '' }}</td>
+              <td>
+                @if (canEditGroups()) {
+                  <button type="button" tuiButton appearance="flat" size="xs" (click)="unlinkSequence(q)">Retirer</button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6" class="muted">Ce groupe n'est lié à aucun créneau.</td></tr>
+          }
+        </tbody>
+      </table>
+      @if (canEditGroups() && canOpenAgenda() && !addingSequence()) {
+        <div class="add-row">
+          <button type="button" tuiButton appearance="secondary" size="s" (click)="openAddSequence()">Ajouter un créneau</button>
+        </div>
+      }
+      @if (canEditGroups() && canOpenAgenda() && addingSequence()) {
+        <div class="picker">
+          <div class="picker-head">
+            <input class="picker-search" type="search" placeholder="Rechercher un créneau (titre, date, lieu)" aria-label="Rechercher un créneau à ajouter"
+                   [value]="sequenceSearch()" (input)="sequenceSearch.set($any($event.target).value)" />
+            <button type="button" tuiButton appearance="flat" size="s" (click)="addingSequence.set(false)">Fermer</button>
+          </div>
+        <ul class="results" aria-label="Créneaux à ajouter">
+          @for (x of addableSequences(); track x.id) {
+            <li>
+              <span>{{ x.eventDate | date: 'dd/MM/yyyy' }} · {{ x.startTime }}–{{ x.endTime }} · {{ x.title }} ({{ trackLabels[x.track] }}){{ x.location ? ' · ' + x.location : '' }}</span>
+              <button type="button" tuiButton appearance="secondary" size="xs" (click)="linkSequence(x.id)">Lier ce créneau</button>
+            </li>
+          } @empty {
+            <li class="muted">Aucun créneau à ajouter.</li>
+          }
+        </ul>
+        </div>
+      }
+    </section>
+    }
+    @if (tab() === 'equipes') {
+    <section class="card" aria-labelledby="teams-title">
+      <h2 id="teams-title">Équipes ({{ f.teams.length }})</h2>
+      @if (f.teams.length === 0) {
+        <p class="empty-state">Aucune équipe placée : passez par le dispatch de la répartition.</p>
+      } @else {
+        <table class="data-table">
+          <thead>
+            <tr><th>Équipe</th><th>Piste</th><th>Jeunes</th><th>Animateurs</th><th>Personnes</th><th></th></tr>
+          </thead>
+          <tbody>
+            @for (t of f.teams; track t.id) {
+              <tr>
+                <td data-label="Équipe">
+                  <span class="dot" [style.background]="trackColors[t.track]"></span>
+                  @if (canOpenTeams()) {
+                    <a [routerLink]="['/equipes']" [queryParams]="{ equipe: t.id }"><strong>{{ t.name }}</strong></a>
+                  } @else {
+                    <strong>{{ t.name }}</strong>
+                  }
+                </td>
+                <td data-label="Piste">{{ trackLabels[t.track] }}</td>
+                <td data-label="Jeunes">{{ t.jeunes }}</td>
+                <td data-label="Animateurs">{{ t.animateurs }}</td>
+                <td data-label="Personnes">{{ t.persons }}</td>
+                <td class="row-actions">
+                  <a [routerLink]="['/groupes-rassemblement', 'repartitions', f.repartition.id]">Dispatch</a>
+                  @if (canOpenTeams()) {
+                    <a [routerLink]="['/equipes']" [queryParams]="{ equipe: t.id }">{{ canEditTeams() ? 'Modifier' : 'Voir' }}</a>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+    <section class="card" aria-labelledby="volunteer-title">
+      <h2 id="volunteer-title">Équipes bénévoles opérationnelles ({{ f.volunteerTeams.length }})</h2>
+      <ul class="volunteer-list">
+        @for (v of f.volunteerTeams; track v.id) {
+          <li>
+            <strong>{{ v.name }}</strong>
+            @if (v.typeLabel) { <span class="muted">{{ v.typeLabel }}</span> }
+            <span class="muted">{{ v.memberCount }} membre{{ v.memberCount > 1 ? 's' : '' }}</span>
+            <button type="button" class="link" (click)="detachVolunteerTeam(v.id, v.name)">Retirer</button>
+          </li>
+        } @empty {
+          <li class="empty-state">Aucune équipe opérationnelle rattachée (cuisine, logistique…).</li>
+        }
+      </ul>
+      @if (addableVolunteerTeams().length) {
+        <div class="add-line">
+          <app-select-field
+            label="Rattacher une équipe"
+            [options]="addableVolunteerTeams()"
+            [value]="volunteerTeamToAdd()"
+            (valueChange)="volunteerTeamToAdd.set($event)"
+          />
+          <button type="button" tuiButton appearance="primary" size="s" [disabled]="busy() || !volunteerTeamToAdd()" (click)="attachVolunteerTeam()">
+            Rattacher
+          </button>
+        </div>
+      }
+    </section>
+    }
+    @if (tab() === 'personnes') {
+    <section class="card" aria-labelledby="people-title">
+      <h2 id="people-title">Personnes ({{ f.people.length }})</h2>
+      <p class="muted">Prénoms seulement pour les jeunes, par mesure de protection des mineurs.</p>
+      @if (f.people.length) {
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr><th>Prénom</th><th>Équipe</th><th>Tranche</th><th></th></tr></thead>
+            <tbody>
+              @for (p of f.people; track p.id) {
+                <tr>
+                  <td data-label="Nom">{{ p.lastName }} {{ p.firstName }}</td>
+                  <td data-label="Équipe">
+                    @if (canOpenTeams()) {
+                      <a [routerLink]="['/equipes']" [queryParams]="{ equipe: p.teamId }">{{ p.teamName }}</a>
+                    } @else { {{ p.teamName }} }
+                  </td>
+                  <td data-label="Tranche">{{ p.mejAgeGroup ?? '—' }}</td>
+                  <td class="row-actions">
+                    @if (canOpenPeople()) {
+                      <a [routerLink]="['/participants']" [queryParams]="{ participant: p.id }">{{ canEditPeople() ? 'Modifier' : 'Voir' }}</a>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+      @if (f.animators.length) {
+        <h3>Animateurs ({{ f.animators.length }})</h3>
+        <table class="data-table">
+          <thead><tr><th>Nom</th><th>Équipe</th></tr></thead>
+          <tbody>
+            @for (a of f.animators; track a.id + '-' + a.teamId) {
+              <tr>
+                <td data-label="Nom">{{ a.displayName }}</td>
+                <td data-label="Équipe">
+                  @if (canOpenTeams()) {
+                    <a [routerLink]="['/equipes']" [queryParams]="{ equipe: a.teamId }">{{ a.teamName }}</a>
+                  } @else { {{ a.teamName }} }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+    }
+    @if (tab() === 'responsables') {
+    <section class="card" aria-labelledby="managers-title">
+      <h2 id="managers-title">Responsables du groupe ({{ f.managers.length }})</h2>
+      <p class="muted">
+        La nomination fixe le périmètre de chaque responsable ; le niveau (Consulter, Modifier, Gérer)
+        se règle dans la matrice des droits.
+      </p>
+      <ul class="manager-list">
+        @for (m of f.managers; track m.userId) {
+          <li>
+            <strong>{{ m.displayName ?? m.email }}</strong>
+            @if (m.displayName) { <span class="muted">{{ m.email }}</span> }
+            <button type="button" class="link" (click)="removeManager(m.userId)">Retirer</button>
+          </li>
+        } @empty {
+          <li class="empty-state">Aucun responsable nommé.</li>
+        }
+      </ul>
+      <div class="add-line">
+        <app-person-picker
+          label="Nommer un responsable"
+          [value]="managerToAdd()"
+          (valueChange)="managerToAdd.set($event)"
+        />
+        <button type="button" tuiButton appearance="primary" size="s" [disabled]="busy() || !managerToAdd()" (click)="addManager()">
+          Nommer
+        </button>
+      </div>
+    </section>
+    }
+  }
+</app-page-layout>

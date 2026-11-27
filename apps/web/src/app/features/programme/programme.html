@@ -69,7 +69,11 @@
               <img class="track-logo" [src]="logo" [alt]="trackLabel(sequence.track)" />
               } {{ trackLabel(sequence.track) }}
             </span>
-            {{ sequence.title }} @if (sequence.status === ProgramSequenceStatus.FROZEN) {
+            {{ sequence.title }} @if (sequence.gatheringGroupIds?.length) {
+            <span tuiBadge appearance="neutral" title="Répartition en groupes de rassemblement"
+              >Groupes ×{{ sequence.gatheringGroupIds?.length }}</span
+            >
+            } @if (sequence.status === ProgramSequenceStatus.FROZEN) {
             <span tuiBadge appearance="warning">Figé</span>
             }
           </li>
@@ -337,12 +341,31 @@
       </section>
       } @else if (dayLayout() === 'groups') {
       <section class="groups-view" aria-label="Vue par groupe">
-        @if (groupLanes().length === 0) {
+        @if (groupLanes().lanes.length === 0 && groupLanes().without.length === 0) {
         <p class="empty-state">Aucun créneau pour ce jour.</p>
         }
-        @for (lane of groupLanes(); track lane.name) {
-        <h3 class="groups-lane">{{ lane.name || 'Sans groupe' }}</h3>
+        @for (lane of groupLanes().lanes; track lane.group.id) {
+        <h3 class="groups-lane">
+          <span [class]="'lane-cat cat-' + lane.group.category.toLowerCase()">{{ categoryLabels[lane.group.category] }}</span>
+          <a [routerLink]="['/groupes-rassemblement', 'groupes', lane.group.id]">{{ lane.group.name }}</a>
+          <small class="lane-meta">
+            {{ lane.repartition.name }} · {{ lane.group.teamCount }} équipe{{ lane.group.teamCount > 1 ? 's' : '' }} ·
+            {{ lane.group.persons }}/{{ lane.group.capacity ?? '∞' }} pers.
+            @if (lane.group.location) { · {{ lane.group.location }} }
+          </small>
+          <a class="lane-link" [routerLink]="['/groupes-rassemblement', 'repartitions', lane.repartition.id]">Dispatch</a>
+        </h3>
         @for (sequence of lane.sequences; track sequence.id) {
+        <ng-container *ngTemplateOutlet="groupSequenceCard; context: { sequence: sequence }" />
+        }
+        }
+        @if (groupLanes().without.length) {
+        <h3 class="groups-lane">Sans groupe</h3>
+        @for (sequence of groupLanes().without; track sequence.id) {
+        <ng-container *ngTemplateOutlet="groupSequenceCard; context: { sequence: sequence }" />
+        }
+        }
+        <ng-template #groupSequenceCard let-sequence="sequence">
         <button
           type="button"
           class="track-card"
@@ -355,8 +378,7 @@
           </header>
           <span class="track-meta">{{ trackLabel(sequence.track) }} · {{ sequence.location }}</span>
         </button>
-        }
-        }
+        </ng-template>
       </section>
       } @else if (columns().length) {
       <div class="calendar-scroll">

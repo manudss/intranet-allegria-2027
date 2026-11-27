@@ -178,7 +178,7 @@ export function personLabel(p: Pick<PersonSummary, 'email' | 'firstName' | 'last
               (valueChange)="setFilter('role', $event)"
             />
             <app-select-field
-              label="Groupe de rassemblement"
+              label="Délégation"
               testId="person-filter-group"
               [options]="groupOptions()"
               [value]="groupId()"

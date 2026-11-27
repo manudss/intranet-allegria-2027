@@ -7,12 +7,18 @@ import 'dotenv/config';
 
 import { randomUUID } from 'node:crypto';
 import { seedAccessTestkit } from './access-testkit';
+import { seedGatheringDemo } from './gathering-demo-seed';
 import { fakerFR as faker } from '@faker-js/faker';
 import type { DataSource } from 'typeorm';
 import { hashPassword } from '../../app/core/auth/password.util';
 import { randomBytes } from 'crypto';
 import {
   AccessBadge,
+  GatheringGroup,
+  GatheringGroupCategory,
+  GatheringGroupManager,
+  GatheringGroupTeam,
+  GatheringRepartition,
   AccessBadgeAssignment,
   AccessBadgeStatus,
   AccessControlMeta,
@@ -36,6 +42,8 @@ import {
   ParticipantSex,
   PersonSource,
   PersonType,
+  ProgramSequence,
+  ProgramSequenceTrack,
   Role,
   Team,
   TeamParticipant,
@@ -710,6 +718,12 @@ async function run(): Promise<void> {
     try {
       await queryRunner.query(`
         TRUNCATE TABLE
+          "gathering_group_managers",
+          "gathering_group_volunteer_teams",
+          "gathering_group_teams",
+          "gathering_group_sequences",
+          "gathering_groups",
+          "gathering_repartitions",
           "document_link_teams",
           "document_links",
           "document_categories",
@@ -1255,6 +1269,13 @@ async function run(): Promise<void> {
           secondaryAnimator: secondary,
           maxSize,
           hostingGroup: hostingGroupFor(globalTeamIndex),
+          // Piste de demonstration : un tiers TA, un tiers ES, un tiers a renseigner.
+          track:
+            globalTeamIndex % 3 === 0
+              ? ProgramSequenceTrack.TA
+              : globalTeamIndex % 3 === 1
+                ? ProgramSequenceTrack.ES
+                : ProgramSequenceTrack.COMMON,
           notes: chance(0.07) ? 'Equipe repere pour accueil familles.' : null,
         });
 
@@ -1787,6 +1808,18 @@ async function run(): Promise<void> {
 
     await seedProgram(dataSource, users, savedVolunteerTeams);
 
+    // Groupes de rassemblement : apres le programme, pour pouvoir lier les repartitions aux
+    // creneaux reels de l'agenda (avant, firstCommonSequence valait null).
+    const gatheringDemo = await seedGatheringDemo(dataSource, {
+      adminUser,
+      coordinator: users.find((user) => user.email === 'coordination@allegria.local') ?? null,
+      volunteerTeams: savedVolunteerTeams,
+      demoPasswordHash,
+    });
+    console.log(
+      `Groupes de rassemblement: ${gatheringDemo.repartitions} repartitions, ${gatheringDemo.groups} groupes, ${gatheringDemo.placements} equipes placees`,
+    );
+
     const accessControlSeed = await seedAccessControl(dataSource, {
       adminUser,
       scannerUsers,
@@ -1831,6 +1864,7 @@ async function run(): Promise<void> {
     console.log('Comptes de demo utilisables (tous avec ce mot de passe):');
     console.log('- admin@allegria.local (ADMIN)');
     console.log('- sante@allegria.local (sante)');
+    console.log('- groupes.sans-agenda@allegria.local, groupes.responsable@allegria.local (groupes de rassemblement sans droit agenda ; le second limite a ses groupes)');
     console.log('- coordination@allegria.local (coordination)');
     console.log(
       '- animator.1@allegria.local, animator.2@allegria.local, ... (benevoles lies a leur fiche, acces Mon espace)',

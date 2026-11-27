@@ -63,3 +63,22 @@ export const OwnTeamIds = createParamDecorator(
     return request.ownTeamIds ?? [];
   },
 );
+
+export const GATHERING_SCOPE_AWARE_KEY = 'access_gathering_scope_aware';
+/**
+ * Déclare que la route filtre elle-même ses données par groupes de rassemblement
+ * (portée « ses groupes » : les groupes dont le compte est responsable). Sans cette
+ * marque, une telle portée est refusée (fermé par défaut).
+ */
+export const GatheringScopeAware = () => SetMetadata(GATHERING_SCOPE_AWARE_KEY, true);
+
+export type GatheringScopeInfo = { all: true } | { all: false; gatheringGroupIds: number[] };
+
+/** Portée « ses groupes de rassemblement » calculée par la garde pour la requête en cours. */
+export const GatheringScope = createParamDecorator(
+  (_: unknown, ctx: ExecutionContext): GatheringScopeInfo => {
+    const request = ctx.switchToHttp().getRequest();
+    // Échec fermé : sans portée posée par la garde, aucun groupe n'est visible.
+    return request.gatheringScope ?? { all: false, gatheringGroupIds: [] };
+  },
+);

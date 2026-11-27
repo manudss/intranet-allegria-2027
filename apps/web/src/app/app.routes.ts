@@ -36,8 +36,32 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'rassemblement',
-        title: 'Rassemblement',
+        title: 'Délégations',
         loadComponent: () => import('./features/groups/groups').then((m) => m.GroupsPage),
+      },
+      {
+        path: 'groupes-rassemblement',
+        title: 'Groupes de rassemblement',
+        loadComponent: () =>
+          import('./features/gathering-groups/gathering-groups.page').then(
+            (m) => m.GatheringGroupsPage,
+          ),
+      },
+      {
+        path: 'groupes-rassemblement/repartitions/:id',
+        title: 'Dispatch des équipes',
+        loadComponent: () =>
+          import('./features/gathering-groups/gathering-dispatch.page').then(
+            (m) => m.GatheringDispatchPage,
+          ),
+      },
+      {
+        path: 'groupes-rassemblement/groupes/:id',
+        title: 'Fiche groupe de rassemblement',
+        loadComponent: () =>
+          import('./features/gathering-groups/gathering-fiche.page').then(
+            (m) => m.GatheringFichePage,
+          ),
       },
       {
         path: 'participants',

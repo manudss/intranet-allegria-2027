@@ -5,19 +5,28 @@ import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import {
   BenevoleAssignment,
-  Group,
   Participant,
+  ProgramSequenceTrack,
   Team,
   TeamPayload,
   Volunteer,
 } from '../../models/models';
+import { GatheringGroupsApiService } from '../gathering-groups/gathering-groups.api';
 import {
-  GroupsApiService,
+  CATEGORY_LABELS,
+  GatheringCategory,
+  GatheringRepartition,
+  TRACK_COLORS,
+  TRACK_LABELS,
+} from '../gathering-groups/gathering-groups.models';
+import {
   TeamBenevolesApiService,
   TeamParticipantsApiService,
   TeamsApiService,
 } from '../../services/api.services';
 import { PersonPickerComponent, PersonSummary } from '../../shared/person-picker.component';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { MyAccessService } from '../../core/my-access.service';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { DataTableColumn } from '../../shared/data-table';
 
@@ -39,16 +48,26 @@ const toPick = (v: Volunteer | null): PersonSummary | null =>
     : null;
 const blank = (): TeamPayload => ({
   name: '',
-  groupId: null,
   primaryAnimatorId: null,
   secondaryAnimatorId: null,
   maxSize: 10,
   notes: '',
+  track: ProgramSequenceTrack.COMMON,
 });
+
+/** Appartenance d'une équipe à un groupe de rassemblement (une répartition donnée). */
+interface GatheringMembership {
+  id: number;
+  label: string;
+  name: string;
+  category: GatheringCategory;
+  repartitionId: number;
+  repartitionName: string;
+}
 @Component({
   selector: 'app-teams',
   standalone: true,
-  imports: [...SHARED_IMPORTS, PersonPickerComponent],
+  imports: [...SHARED_IMPORTS, PersonPickerComponent, RouterLink],
   templateUrl: './teams.html',
   styleUrls: ['../../shared/crud.scss', './teams.scss'],
 })
@@ -63,11 +82,15 @@ export class TeamsPage implements OnInit {
       size: 'large',
     },
     {
-      key: 'group',
-      label: 'Groupe',
+      key: 'gatheringGroups',
+      label: 'Groupes de rassemblement',
       type: 'list',
-      value: (x) => x.group?.name || '—',
-      presentation: { type: 'chip', autoColor: true, icon: () => '@tui.users' },
+      value: (x) => this.membershipsOf(x.id).map((m) => m.label).join(', ') || '—',
+      presentation: {
+        type: 'chips',
+        autoColor: true,
+        values: (x) => this.membershipsOf(x.id).map((m) => m.label),
+      },
       size: 'large',
     },
     {
@@ -86,6 +109,18 @@ export class TeamsPage implements OnInit {
       hidden: true,
       presentation: { type: 'person', subtitle: (x) => x.secondaryAnimator?.email || '—' },
       size: 'large',
+    },
+    {
+      key: 'track',
+      label: 'Piste',
+      type: 'list',
+      value: (x) => TRACK_LABELS[x.track],
+      presentation: {
+        type: 'icon',
+        icon: () => '@tui.flag',
+        iconColor: (x) => TRACK_COLORS[x.track],
+      },
+      size: 'xsmall',
     },
     {
       key: 'maxSize',
@@ -109,19 +144,65 @@ export class TeamsPage implements OnInit {
   ];
   private api = inject(TeamsApiService);
   private readonly confirmDialog = inject(ConfirmDialogService);
+  private readonly route = inject(ActivatedRoute);
+  protected readonly myAccess = inject(MyAccessService);
   private membersApi = inject(TeamParticipantsApiService);
   private benevolesApi = inject(TeamBenevolesApiService);
-  private groupsApi = inject(GroupsApiService);
+  private gatheringApi = inject(GatheringGroupsApiService);
   items = signal<Team[]>([]);
-  groups = signal<Group[]>([]);
-  groupIds = computed(() => this.groups().map(({ id }) => id));
+  /** Répartitions de rassemblement avec leurs groupes (vide si le module n'est pas accessible). */
+  repartitions = signal<GatheringRepartition[]>([]);
+  /** Module groupes accessible au compte connecté ; sinon la colonne et l'ajout sont masqués. */
+  gatheringAccess = signal(true);
+  /** Tous les groupes de rassemblement, toutes répartitions, pour le filtre et l'ajout. */
+  gatheringOptions = computed(() =>
+    this.repartitions().flatMap((r) =>
+      r.groups.map((g) => ({
+        id: g.id,
+        label: `${g.name} · ${r.name}`,
+        name: g.name,
+        category: g.category,
+        repartitionId: r.id,
+        repartitionName: r.name,
+      })),
+    ),
+  );
+  gatheringGroupIds = computed(() => this.gatheringOptions().map(({ id }) => id));
+  /** Appartenances par équipe : tous les groupes de rassemblement dont elle fait partie. */
+  memberships = computed(() => {
+    const byTeam = new Map<number, GatheringMembership[]>();
+    for (const option of this.gatheringOptions()) {
+      const group = this.repartitions()
+        .flatMap((r) => r.groups)
+        .find((g) => g.id === option.id);
+      for (const teamId of group?.teamIds ?? []) {
+        byTeam.set(teamId, [...(byTeam.get(teamId) ?? []), option]);
+      }
+    }
+    return byTeam;
+  });
+  membershipsOf(teamId: number): GatheringMembership[] {
+    return this.memberships().get(teamId) ?? [];
+  }
   members = signal<Participant[]>([]);
   benevoles = signal<BenevoleAssignment[]>([]);
   /** Bénévoles déjà affectés à une équipe (toutes équipes) : exclus du sélecteur. */
   assignedVolunteerIds = signal<ReadonlySet<number>>(new Set());
   query = signal('');
+  /** Filtre par groupe de rassemblement (id de groupe, toutes répartitions). */
   groupFilter = signal<number | null>(null);
   groupFilterForm = form(this.groupFilter);
+  /** Groupe choisi dans le sélecteur d'ajout de la fiche équipe. */
+  addGroupId = signal<number | null>(null);
+  addGroupForm = form(this.addGroupId);
+  /** Groupes dont l'équipe ouverte ne fait pas encore partie. */
+  addableGroups = computed(() => {
+    const team = this.selected();
+    if (!team) return [];
+    const own = new Set(this.membershipsOf(team.id).map((m) => m.id));
+    return this.gatheringOptions().filter((o) => !own.has(o.id));
+  });
+  addableGroupIds = computed(() => this.addableGroups().map(({ id }) => id));
   /** Personnes choisies dans les sélecteurs à recherche serveur (rien n'est chargé à l'ouverture). */
   candidate = signal<PersonSummary | null>(null);
   benevoleCandidate = signal<PersonSummary | null>(null);
@@ -145,28 +226,90 @@ export class TeamsPage implements OnInit {
       g = this.groupFilter();
     return this.items().filter(
       (x) =>
-        (!g || x.group?.id === g) && `${x.name} ${x.group?.name ?? ''}`.toLowerCase().includes(q),
+        (!g || this.membershipsOf(x.id).some((m) => m.id === g)) &&
+        `${x.name} ${this.membershipsOf(x.id)
+          .map((m) => m.label)
+          .join(' ')}`.toLowerCase().includes(q),
     );
   });
   jeunesCount = computed(() => this.members().filter((x) => x.type === 'JEUNE').length);
   adultesCount = computed(() => this.members().length - this.jeunesCount());
-  stringifyGroup = (id: number) => this.groups().find((group) => group.id === id)?.name ?? '';
+  stringifyGroup = (id: number) =>
+    this.gatheringOptions().find((option) => option.id === id)?.label ?? '';
+  protected readonly trackValues = [
+    ProgramSequenceTrack.COMMON,
+    ProgramSequenceTrack.TA,
+    ProgramSequenceTrack.ES,
+  ];
+  protected readonly trackLabels = TRACK_LABELS;
+  stringifyTrack = (track: ProgramSequenceTrack) => TRACK_LABELS[track];
   ngOnInit() {
+    this.myAccess.load();
     forkJoin({
       items: this.api.list(),
-      groups: this.groupsApi.list(),
+      repartitions: this.gatheringApi.list().pipe(
+        catchError((e) => {
+          if (e?.status === 403) this.gatheringAccess.set(false);
+          return of([] as GatheringRepartition[]);
+        }),
+      ),
     }).subscribe((x) => {
       this.items.set(x.items);
-      this.groups.set(x.groups);
+      this.repartitions.set(x.repartitions);
       this.loading.set(false);
+      // Lien direct depuis les fiches de groupe : /equipes?equipe=ID ouvre la fiche de l'équipe.
+      const id = Number(this.route.snapshot.queryParamMap.get('equipe'));
+      const target = x.items.find((t) => t.id === id);
+      if (target) this.open(target);
     });
   }
   open(x: Team) {
     this.selected.set(x);
     this.mode.set('detail');
     this.opened.set(true);
+    this.addGroupId.set(null);
     this.api.getParticipants(x.id).subscribe((v) => this.members.set(v));
     this.refreshBenevoles(x.id);
+  }
+  /** Ajoute l'équipe ouverte au groupe de rassemblement choisi (contrôles serveur : piste, capacité). */
+  addToGroup() {
+    const groupId = this.addGroupId();
+    const team = this.selected();
+    if (!groupId || !team) return;
+    this.gatheringApi.assignTeam(groupId, team.id).subscribe({
+      next: () => {
+        this.addGroupId.set(null);
+        this.gatheringApi
+          .list()
+          .pipe(catchError(() => of([] as GatheringRepartition[])))
+          .subscribe((v) => this.repartitions.set(v));
+      },
+      error: (e) => alert(e?.error?.message ?? "L'ajout au groupe a échoué."),
+    });
+  }
+  protected readonly categoryLabels = CATEGORY_LABELS;
+  protected readonly trackColors = TRACK_COLORS;
+  /** Retire l'équipe ouverte d'un groupe de rassemblement (confirmation, puis rechargement). */
+  removeFromGroup(membership: GatheringMembership) {
+    const team = this.selected();
+    if (!team) return;
+    this.confirmDialog
+      .ask({
+        title: 'Retirer du groupe',
+        message: `Retirer « ${team.name} » du groupe « ${membership.name} » (${membership.repartitionName}) ?`,
+        yes: 'Retirer',
+      })
+      .subscribe((ok) => {
+        if (!ok) return;
+        this.gatheringApi.unassignTeam(membership.id, team.id).subscribe({
+          next: () =>
+            this.gatheringApi
+              .list()
+              .pipe(catchError(() => of([] as GatheringRepartition[])))
+              .subscribe((v) => this.repartitions.set(v)),
+          error: (e) => alert(e?.error?.message ?? 'Le retrait du groupe a échoué.'),
+        });
+      });
   }
   private refreshBenevoles(teamId: number) {
     this.benevolesApi
@@ -191,11 +334,11 @@ export class TeamsPage implements OnInit {
     this.secondaryAnimator.set(toPick(x.secondaryAnimator));
     this.model.set({
       name: x.name,
-      groupId: x.group?.id ?? null,
       primaryAnimatorId: x.primaryAnimator?.id ?? null,
       secondaryAnimatorId: x.secondaryAnimator?.id ?? null,
       maxSize: x.maxSize,
       notes: x.notes ?? '',
+      track: x.track,
     });
     this.mode.set('edit');
   }

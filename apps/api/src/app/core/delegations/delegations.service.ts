@@ -19,6 +19,7 @@ import {
   User,
   Volunteer,
 } from '../entities';
+import { CATALOGUE_DELEGATIONS } from '../../../database/seeds/delegations-catalog';
 import {
   AssignTransportDto,
   CreateExceptionDto,
@@ -516,49 +517,143 @@ export class DelegationsService {
     const relevant = rows.filter(
       (r) => r.delegation.id === delegationId || memberKeys.has(`${r.personType}:${r.personId}`),
     );
+    return {
+      delegationId,
+      directions: [
+        this.summarizeDirection(members, relevant, delegationId, TransportDirection.ALLER),
+        this.summarizeDirection(members, relevant, delegationId, TransportDirection.RETOUR),
+      ],
+    };
+  }
+
+  /**
+   * Totaux d'un sens pour une délégation : une exception compte dans les totaux
+   * de la délégation d'accueil (et dans la jauge du véhicule), pas dans ceux de
+   * l'origine ; « à placer » = membres sans affectation + exceptions reçues non
+   * placées. Partagé entre stats() et listSummaries().
+   */
+  private summarizeDirection(
+    members: PersonLite[],
+    relevant: TransportAssignment[],
+    delegationId: number,
+    direction: TransportDirection,
+  ) {
+    const memberKeys = new Set(members.map((m) => `${m.personType}:${m.id}`));
     const rowByPersonDirection = new Map(
       relevant.map((r) => [`${r.personType}:${r.personId}:${r.direction}`, r]),
     );
-
-    const perDirection = (direction: TransportDirection) => {
-      let outgoing = 0;
-      for (const member of members) {
-        const row = rowByPersonDirection.get(`${member.personType}:${member.id}:${direction}`);
-        if (row && row.delegation.id !== delegationId) outgoing += 1;
+    let outgoing = 0;
+    for (const member of members) {
+      const row = rowByPersonDirection.get(`${member.personType}:${member.id}:${direction}`);
+      if (row && row.delegation.id !== delegationId) outgoing += 1;
+    }
+    let received = 0;
+    let receivedToPlace = 0;
+    for (const row of relevant) {
+      const key = `${row.personType}:${row.personId}`;
+      if (
+        row.direction === direction &&
+        row.delegation.id === delegationId &&
+        !memberKeys.has(key)
+      ) {
+        received += 1;
+        if (!row.transport) receivedToPlace += 1;
       }
-      let received = 0;
-      let receivedToPlace = 0;
-      for (const row of relevant) {
-        const key = `${row.personType}:${row.personId}`;
-        if (
-          row.direction === direction &&
-          row.delegation.id === delegationId &&
-          !memberKeys.has(key)
-        ) {
-          received += 1;
-          if (!row.transport) receivedToPlace += 1;
-        }
+    }
+    let toPlace = receivedToPlace;
+    for (const member of members) {
+      if (!rowByPersonDirection.has(`${member.personType}:${member.id}:${direction}`)) {
+        toPlace += 1;
       }
-      let toPlace = receivedToPlace;
-      for (const member of members) {
-        if (!rowByPersonDirection.has(`${member.personType}:${member.id}:${direction}`)) {
-          toPlace += 1;
-        }
-      }
-      return {
-        direction,
-        total: members.length - outgoing + received,
-        members: members.length,
-        exceptionsReceived: received,
-        exceptionsOutgoing: outgoing,
-        toPlace,
-      };
-    };
-
+    }
     return {
-      delegationId,
-      directions: [perDirection(TransportDirection.ALLER), perDirection(TransportDirection.RETOUR)],
+      direction,
+      total: members.length - outgoing + received,
+      members: members.length,
+      exceptionsReceived: received,
+      exceptionsOutgoing: outgoing,
+      toPlace,
     };
+  }
+
+  /**
+   * Synthèses pour la page cartes des délégations (lot 3 de la refonte) :
+   * effectifs, répartition aller/retour, exceptions et responsables calculés en
+   * une passe pour toutes les délégations visibles du périmètre, sans données
+   * de santé. Les métadonnées zone/pays viennent du catalogue vérifié CEF.
+   */
+  async listSummaries(scope: AccessScopeInfo) {
+    const groups = await this.groupsRepository.find({ order: { name: 'ASC' } });
+    const visible = scope.all ? groups : groups.filter((g) => scope.groupIds.includes(g.id));
+    const [participants, volunteers, assignments] = await Promise.all([
+      this.participantsRepository.find({ relations: { group: true } }),
+      this.volunteersRepository.find({ relations: { group: true } }),
+      this.assignmentsRepository.find({ relations: { delegation: true } }),
+    ]);
+
+    const responsableRows: { group_id: number; firstName: string | null; lastName: string | null; email: string }[] =
+      await this.groupsRepository.manager.query(
+        'SELECT ugs.group_id, v."firstName", v."lastName", u.email FROM user_group_scopes ugs JOIN users u ON u.id = ugs.user_id AND u."isActive" LEFT JOIN volunteers v ON v.user_id = u.id ORDER BY v."lastName" ASC NULLS LAST, u.email ASC',
+      );
+    const responsablesByGroup = new Map<number, string[]>();
+    for (const row of responsableRows) {
+      const label =
+        row.firstName && row.lastName
+          ? `${row.firstName.charAt(0).toUpperCase()}. ${row.lastName}`
+          : row.email;
+      const list = responsablesByGroup.get(row.group_id) ?? [];
+      list.push(label);
+      responsablesByGroup.set(row.group_id, list);
+    }
+
+    const catalogByName = new Map(CATALOGUE_DELEGATIONS.map((e) => [e.name, e]));
+
+    return visible.map((group) => {
+      const groupParticipants = participants.filter((p) => p.group?.id === group.id);
+      const groupVolunteers = volunteers.filter((v) => v.group?.id === group.id);
+      const members: PersonLite[] = [
+        ...groupParticipants.map((p) => ({
+          personType: AssignmentPersonType.PARTICIPANT,
+          id: p.id,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          detail: p.type,
+          delegationId: group.id,
+        })),
+        ...groupVolunteers.map((v) => ({
+          personType: AssignmentPersonType.VOLUNTEER,
+          id: v.id,
+          firstName: v.firstName,
+          lastName: v.lastName,
+          detail: v.team,
+          delegationId: group.id,
+        })),
+      ];
+      const memberKeys = new Set(members.map((m) => `${m.personType}:${m.id}`));
+      const relevant = assignments.filter(
+        (r) => r.delegation.id === group.id || memberKeys.has(`${r.personType}:${r.personId}`),
+      );
+      const aller = this.summarizeDirection(members, relevant, group.id, TransportDirection.ALLER);
+      const retour = this.summarizeDirection(members, relevant, group.id, TransportDirection.RETOUR);
+      const catalog = catalogByName.get(group.name);
+      return {
+        id: group.id,
+        name: group.name,
+        diocese: group.diocese,
+        zone: catalog?.zone ?? null,
+        country: catalog?.country ?? null,
+        jeunes: groupParticipants.filter((p) => p.type === PersonType.JEUNE).length,
+        animateurs: groupParticipants.filter((p) => p.type === PersonType.ANIMATEUR).length,
+        benevoles: groupVolunteers.length,
+        total: members.length,
+        aller: { total: aller.total, toPlace: aller.toPlace, placed: aller.total - aller.toPlace },
+        retour: { total: retour.total, toPlace: retour.toPlace, placed: retour.total - retour.toPlace },
+        toPlace: aller.toPlace + retour.toPlace,
+        exceptionsReceived: aller.exceptionsReceived + retour.exceptionsReceived,
+        exceptionsOutgoing: aller.exceptionsOutgoing + retour.exceptionsOutgoing,
+        responsables: responsablesByGroup.get(group.id) ?? [],
+      };
+    });
   }
 
   /**

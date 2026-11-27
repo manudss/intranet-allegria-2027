@@ -1,0 +1,110 @@
+/* Page cartes des délégations (lot 3) : grille de cartes, pastilles d'état,
+   barre de répartition. Couleurs du projet : primaire #d52f57, accent #f5a623. */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17.5rem, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.delegation-card {
+  border: 1px solid var(--tui-border-normal, #e5e0da);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  background: var(--tui-background-base, #fff);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.card-dashed {
+  border-style: dashed;
+  border-width: 2px;
+}
+
+.card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.card-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.delegation-card p {
+  margin: 0;
+}
+
+.chip {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chip-ok {
+  background: #e3f2e6;
+  color: #1e7b34;
+}
+
+.chip-warn {
+  background: #fdf0d5;
+  color: #a36b00;
+}
+
+.chip-exception {
+  background: #fdf0d5;
+  color: #a36b00;
+}
+
+.bar-track {
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--tui-background-neutral-1, #efece8);
+  overflow: hidden;
+}
+
+.bar {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.bar-ok {
+  background: #2f9e44;
+}
+
+.bar-warn {
+  background: #f5a623;
+}
+
+.card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+.person-chip {
+  border: 1px solid var(--tui-border-normal, #e5e0da);
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+  font-size: 0.78rem;
+  background: var(--tui-background-neutral-1, #f6f3f0);
+}
+
+.error {
+  color: #d52f57;
+}
+
+@media (max-width: 480px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
+}

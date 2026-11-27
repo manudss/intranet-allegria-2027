@@ -117,10 +117,39 @@ export interface PersonJourneys {
   journeys: PersonJourney[];
 }
 
+export interface DelegationDirectionSummary {
+  total: number;
+  toPlace: number;
+  placed: number;
+}
+
+/** Synthèse d'une délégation pour la page cartes (lot 3 de la refonte). */
+export interface DelegationSummary {
+  id: number;
+  name: string;
+  diocese: string | null;
+  zone: 'metropole' | 'outre-mer' | 'luxembourg' | 'belgique' | 'institutionnel' | null;
+  country: 'FR' | 'LU' | 'BE' | null;
+  jeunes: number;
+  animateurs: number;
+  benevoles: number;
+  total: number;
+  aller: DelegationDirectionSummary;
+  retour: DelegationDirectionSummary;
+  toPlace: number;
+  exceptionsReceived: number;
+  exceptionsOutgoing: number;
+  responsables: string[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class DelegationsApiService {
   private readonly http = inject(HttpClient);
   private readonly base = '/api/delegations';
+
+  listSummaries() {
+    return this.http.get<DelegationSummary[]>(this.base);
+  }
 
   journeysForFiche(participantId: number) {
     return this.http.get<PersonJourneys>(`${this.base}/fiches/${participantId}/journeys`);

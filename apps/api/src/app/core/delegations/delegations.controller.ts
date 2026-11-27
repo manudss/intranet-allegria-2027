@@ -38,6 +38,12 @@ import {
 export class DelegationsController {
   constructor(private readonly delegationsService: DelegationsService) {}
 
+  @ApiOperation({ summary: 'Cartes des délégations visibles (effectifs, répartition, responsables)' })
+  @Get()
+  listSummaries(@AccessScope() scope: AccessScopeInfo) {
+    return this.delegationsService.listSummaries(scope);
+  }
+
   @ApiOperation({ summary: 'Sous-délégations (trajets) d une délégation' })
   @Get(':id/transports')
   listTransports(

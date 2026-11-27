@@ -95,7 +95,7 @@
     </dd>
   </dl>
   @if (journeys(); as j) {
-  <h3>Trajets</h3>
+  <h3>Sous-délégations</h3>
   <dl>
     @for (t of j.journeys; track t.direction) {
     <dt>{{ t.direction === 'ALLER' ? 'Aller' : 'Retour' }}</dt>

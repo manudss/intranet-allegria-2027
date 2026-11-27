@@ -128,7 +128,6 @@ export class Layout {
       icon: '@tui.layout-dashboard',
       items: [
         { label: 'Accueil', path: '/accueil', icon: '@tui.house' },
-        { label: 'Délégations', path: '/rassemblement', icon: '@tui.calendar' },
         { label: 'Glossaire', path: '/glossaire', icon: '@tui.book-open' },
       ],
     },
@@ -136,7 +135,9 @@ export class Layout {
       label: 'Inscriptions et personnes',
       icon: '@tui.users',
       items: [
+        { label: 'Délégations', path: '/rassemblement', icon: '@tui.calendar' },
         { label: 'Participants', path: '/participants', icon: '@tui.users' },
+        { label: 'Notes sur les participants', path: '/suivi-notes', icon: '@tui.message-square' },
         {label:'Dossiers sanitaires',path:'/dossiers-sanitaires',icon:'@tui.heart-pulse'},
         { label: 'Inscriptions familles', path: '/inscriptions-familles', icon: '@tui.clipboard-list' },
         { label: 'Équipes de rassemblement', path: '/equipes', icon: '@tui.users-round' },
@@ -153,7 +154,6 @@ export class Layout {
         { label: 'Équipes opérationnelles', path: '/equipes-operationnelles', icon: '@tui.users' },
         { label: 'Missions bénévoles', path: '/missions-benevoles', icon: '@tui.clipboard-list' },
         { label: 'Transports', path: '/transports', icon: '@tui.bus' },
-        { label: 'Suivi des notes', path: '/suivi-notes', icon: '@tui.message-square' },
         { label: 'Restauration : besoins', path: '/restauration-besoins', icon: '@tui.utensils' },
         { label: 'Hébergement', path: '/hebergement', icon: '@tui.building' },
       ],

@@ -1,13 +1,12 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Group } from '../models/models';
-import { GroupsApiService } from '../services/api.services';
 import { SHARED_IMPORTS } from '../shared/shared-imports';
 
 /**
- * Entrée « Transports » : choix de la délégation pour gérer ses trajets
- * aller/retour, la répartition des personnes et les exceptions. Le périmètre
- * est appliqué côté serveur : un responsable ne gère que sa délégation.
+ * Entrée « Transports » : la gestion des transports se fait par délégation
+ * (fiche de la délégation, vues Sous-délégations et Exceptions). Cette page
+ * n'affiche plus ni cartes ni liste de délégations (lot 1 de la refonte) ;
+ * la rubrique reste distincte de « Délégations ».
  */
 @Component({
   selector: 'app-transports',
@@ -16,22 +15,4 @@ import { SHARED_IMPORTS } from '../shared/shared-imports';
   templateUrl: './transports.html',
   styleUrl: '../shared/crud.scss',
 })
-export class Transports implements OnInit {
-  private readonly groupsApi = inject(GroupsApiService);
-  protected readonly loading = signal(true);
-  protected readonly error = signal('');
-  protected readonly groups = signal<Group[]>([]);
-
-  ngOnInit() {
-    this.groupsApi.list().subscribe({
-      next: (groups) => {
-        this.groups.set(groups);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.error.set('Impossible de charger les délégations.');
-        this.loading.set(false);
-      },
-    });
-  }
-}
+export class Transports {}

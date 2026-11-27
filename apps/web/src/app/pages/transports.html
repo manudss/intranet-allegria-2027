@@ -1,29 +1,15 @@
 <app-page-layout
-  title="Transports des délégations"
-  description="Chaque délégation organise ses trajets aller et retour : véhicules, horaires, rendez-vous, répartition des jeunes et des bénévoles, exceptions."
+  title="Transports"
+  description="Les transports du rassemblement s'organisent par délégation : sous-délégations (véhicules, horaires, rendez-vous), répartition des jeunes et des bénévoles, exceptions."
 >
-  <nav class="delegation-nav"><a routerLink="/suivi-notes">Suivi des notes logistiques</a></nav>
-  @if (error()) {
-    <p class="api-error">{{ error() }}</p>
-  }
-  @if (loading()) {
-    <app-loading-skeleton />
-  } @else {
-    @if (!groups().length) {
-      <p>Aucune délégation configurée pour l'instant.</p>
-    }
-    <ul>
-      @for (g of groups(); track g.id) {
-        <li class="card">
-          <a [routerLink]="['/delegations', g.id, 'transports']">
-            <strong>{{ g.name }}</strong>
-          </a>
-          @if (g.diocese) {
-            <span> · {{ g.diocese }}</span>
-          }
-          <p class="help">Trajets, répartition et exceptions de cette délégation.</p>
-        </li>
-      }
-    </ul>
-  }
+  <p>
+    Choisissez une délégation depuis la rubrique
+    <a routerLink="/rassemblement">Délégations</a> : sa fiche regroupe les sous-délégations
+    aller et retour, la répartition et les exceptions. Un responsable rattaché à une seule
+    délégation y arrive directement.
+  </p>
+  <p>
+    <a routerLink="/suivi-notes">Notes sur les participants</a> : commentaires logistiques
+    signés et datés, sans données de santé.
+  </p>
 </app-page-layout>

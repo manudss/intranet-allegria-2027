@@ -90,7 +90,7 @@
     </dl>
   </section>
   <section class="panel">
-    <h2>Répartition des trajets</h2>
+    <h2>Répartition des déplacements</h2>
     @for (rep of [aller(), retour()]; track $index) {
     <div class="rep-line">
       <strong>{{ $index === 0 ? 'Aller' : 'Retour' }}</strong>
@@ -160,7 +160,7 @@
   <div class="two-cols">
     @for (rep of [aller(), retour()]; track $index) {
     <section class="panel">
-      <h2>Trajets {{ $index === 0 ? 'aller' : 'retour' }}</h2>
+      <h2>Sous-délégations {{ $index === 0 ? 'aller' : 'retour' }}</h2>
       <p class="muted">{{ rep?.toAssign?.length ?? 0 }} à placer</p>
       @for (t of rep?.transports ?? []; track t.id) {
       <article class="transport-card" [class.transport-full]="t.full">

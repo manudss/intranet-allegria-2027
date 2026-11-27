@@ -238,7 +238,7 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'suivi-notes',
-        title: 'Suivi des notes',
+        title: 'Notes sur les participants',
         loadComponent: () =>
           import('./features/delegations/person-notes').then((m) => m.PersonNotesPage),
       },

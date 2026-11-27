@@ -1,8 +1,9 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { SHARED_IMPORTS } from '../../../shared/shared-imports';
 import { GroupPayload } from '../../../models/models';
 import { GroupsApiService } from '../../../services/api.services';
+import { MyAccessService } from '../../../core/my-access.service';
 import { DelegationSummary, DelegationsApiService } from '../delegations-api.service';
 
 const SANS_DELEGATION = 'Sans délégation';
@@ -37,6 +38,8 @@ const COUNTRY_LABELS: Record<string, string> = {
 export class DelegationsListPage implements OnInit {
   private readonly api = inject(DelegationsApiService);
   private readonly groupsApi = inject(GroupsApiService);
+  private readonly router = inject(Router);
+  private readonly access = inject(MyAccessService);
 
   protected readonly loading = signal(true);
   protected readonly loadError = signal(false);
@@ -53,6 +56,24 @@ export class DelegationsListPage implements OnInit {
   protected newName = '';
   protected newDiocese = '';
   protected newNotes = '';
+
+  private redirected = false;
+
+  constructor() {
+    this.access.load();
+    // Lot 2 : un responsable rattaché à une seule délégation (périmètre limité,
+    // appliqué côté serveur sur la liste) arrive directement sur sa fiche. Un
+    // compte sans périmètre limité (portée ALL) voit toujours les cartes.
+    effect(() => {
+      if (this.redirected || !this.access.loaded()) return;
+      if (this.access.scopeOf('TRANSPORT') === 'ALL') return;
+      const real = this.summaries().filter((r) => r.name !== SANS_DELEGATION);
+      if (real.length === 1) {
+        this.redirected = true;
+        void this.router.navigate(['/delegations', real[0].id], { replaceUrl: true });
+      }
+    });
+  }
 
   protected readonly zones = [null, 'metropole', 'outre-mer', 'luxembourg', 'belgique', 'institutionnel'];
   protected readonly countries = [null, 'FR', 'LU', 'BE'];

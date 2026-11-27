@@ -36,7 +36,7 @@ function formatDateTime(value: string | null): string {
 }
 
 /**
- * Fiche délégation côté transports : trajets aller/retour, répartition des
+ * Fiche délégation côté transports : sous-délégations aller/retour, répartition des
  * personnes (à placer, placées, exceptions) et création d'exceptions.
  * Le périmètre est appliqué côté serveur : un responsable ne voit que sa
  * délégation, sans jamais exposer de données de santé.
@@ -268,18 +268,18 @@ export class DelegationDetailPage implements OnInit {
         this.cancelTransportEdit();
         this.reload();
       },
-      error: () => this.error.set('Le trajet n’a pas pu être enregistré.'),
+      error: () => this.error.set('La sous-délégation n’a pas pu être enregistrée.'),
     });
   }
 
   protected removeTransport(id: number) {
     this.confirmDialog
-      .askDelete('ce trajet', 'Les personnes placées retournent dans l’« à placer ».')
+      .askDelete('cette sous-délégation', 'Les personnes placées retournent dans l’« à placer ».')
       .subscribe((ok) => {
         if (!ok) return;
         this.api.removeTransport(id).subscribe({
           next: () => this.reload(),
-          error: () => this.error.set('Le trajet n’a pas pu être supprimé.'),
+          error: () => this.error.set('La sous-délégation n’a pas pu être supprimée.'),
         });
       });
   }

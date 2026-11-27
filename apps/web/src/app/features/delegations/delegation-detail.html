@@ -1,6 +1,6 @@
 <app-page-layout
   [title]="delegation()?.name ? delegation()!.name + ' · Transports' : 'Transports de la délégation'"
-  description="Trajets aller/retour, répartition des personnes et exceptions. Les responsables ne voient que leur délégation ; aucune donnée de santé n'est affichée ici."
+  description="Sous-délégations aller/retour, répartition des personnes et exceptions. Les responsables ne voient que leur délégation ; aucune donnée de santé n'est affichée ici."
 >
   <nav class="delegation-nav">
     <a routerLink="/transports">Toutes les délégations</a> ·
@@ -39,7 +39,7 @@
     <section class="card">
       <h2>À placer ({{ rep.toAssign.length }})</h2>
       <p class="help">
-        Personnes de la délégation sans trajet sur ce sens, et exceptions reçues pas encore placées.
+        Personnes de la délégation sans sous-délégation sur ce sens, et exceptions reçues pas encore placées.
       </p>
       @if (!rep.toAssign.length) {
         <p>Tout le monde est placé sur ce sens.</p>
@@ -74,7 +74,7 @@
                 [items]="transportIds()"
                 [ngModel]="assignTargets()[entryKey(e)] ?? null"
                 (ngModelChange)="setAssignTarget(entryKey(e), $event)"
-                [attr.aria-label]="'Placer sur un trajet'"
+                [attr.aria-label]="'Placer sur une sous-délégation'"
                 name="assign-{{ entryKey(e) }}"
               ></select>
             </tui-textfield>
@@ -100,7 +100,7 @@
     </section>
 
     <section class="card">
-      <h2>Trajets ({{ rep.transports.length }})</h2>
+      <h2>Sous-délégations ({{ rep.transports.length }})</h2>
       @for (t of rep.transports; track t.id) {
         <article class="transport-block">
           <header>
@@ -175,7 +175,7 @@
         </article>
       }
 
-      <h3>{{ editingTransportId() ? 'Modifier le trajet' : 'Nouveau trajet' }}</h3>
+      <h3>{{ editingTransportId() ? 'Modifier la sous-délégation' : 'Nouvelle sous-délégation' }}</h3>
       <form class="drawer-form" (submit)="saveTransport(); $event.preventDefault()">
         <tui-textfield>
           <label for="t-name" tuiLabel>Libellé</label
@@ -227,7 +227,7 @@
         </div>
         <div>
           <button tuiButton type="submit" [disabled]="!transportForm().name">
-            {{ editingTransportId() ? 'Enregistrer' : 'Créer le trajet' }}
+            {{ editingTransportId() ? 'Enregistrer' : 'Créer la sous-délégation' }}
           </button>
           @if (editingTransportId()) {
             <button tuiButton appearance="secondary" type="button" (click)="cancelTransportEdit()">
@@ -241,14 +241,14 @@
     <section class="card">
       <h2>Exceptions</h2>
       <h3>Reçues ({{ rep.exceptionsReceived.length }})</h3>
-      <p class="help">Personnes d'autres délégations dont ce trajet relève de celle-ci.</p>
+      <p class="help">Personnes d'autres délégations dont le déplacement relève de celle-ci.</p>
       <ul>
         @for (e of rep.exceptionsReceived; track entryKey(e)) {
           <li>{{ personLabel(e.person) }}</li>
         }
       </ul>
       <h3>Sortantes ({{ rep.exceptionsOutgoing.length }})</h3>
-      <p class="help">Membres de cette délégation dont ce trajet relève d'une autre délégation.</p>
+      <p class="help">Membres de cette délégation dont le déplacement relève d'une autre délégation.</p>
       <ul>
         @for (e of rep.exceptionsOutgoing; track entryKey(e)) {
           <li>

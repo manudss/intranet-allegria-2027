@@ -94,6 +94,27 @@
       {{ selected()?.emergencyContactName || '—' }} · {{ selected()?.emergencyContactPhone || '—' }}
     </dd>
   </dl>
+  @if (journeys(); as j) {
+  <h3>Trajets</h3>
+  <dl>
+    @for (t of j.journeys; track t.direction) {
+    <dt>{{ t.direction === 'ALLER' ? 'Aller' : 'Retour' }}</dt>
+    <dd>
+      {{ t.delegation.name }}
+      @if (t.exception) {<span class="tui-badge">Exception</span>} ·
+      @if (t.transport) {
+      {{ t.transport.name }}
+      @if (t.transport.departureDatetime) {
+      · départ {{ t.transport.departureDatetime | date: 'dd/MM/yyyy HH:mm' }}
+      } @if (t.transport.meetingPoint) { · RDV {{ t.transport.meetingPoint }} } } @else { à placer
+      }
+    </dd>
+    }
+  </dl>
+  <p>
+    <a [routerLink]="['/person-notes', j.personType, j.personId]">Notes et suivi transport</a>
+  </p>
+  }
   @if(canSeeAdministrative()){
   <p>
     <a [routerLink]="['/inscriptions-familles']" [queryParams]="{participant:selected()?.id}"

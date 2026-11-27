@@ -333,3 +333,51 @@ describe('DelegationsService — notes', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 });
+
+describe('DelegationsService — fiche personne', () => {
+  it('les trajets d un jeune remontent statut, délégation, exception et transport', async () => {
+    const car = transport(50, ANNECY);
+    const svc = service({
+      transports: [car],
+      participants: [participant(10, LYON, 'Camille', 'Roche')],
+      assignments: [
+        assignment(1, 10, ANNECY, 50), // aller : voyage avec Annecy (exception placée)
+        assignment(2, 10, LYON, null, TransportDirection.RETOUR), // retour : à placer
+      ],
+    });
+
+    const result = await svc.journeysForParticipantFiche(10, all);
+    expect(result.personType).toBe(AssignmentPersonType.PARTICIPANT);
+    expect(result.personId).toBe(10);
+    const aller = result.journeys.find((j) => j.direction === TransportDirection.ALLER)!;
+    expect(aller.status).toBe('PLACED');
+    expect(aller.delegation.id).toBe(ANNECY);
+    expect(aller.exception).toBe(true);
+    expect(aller.transport?.name).toBe('Car 50');
+    const retour = result.journeys.find((j) => j.direction === TransportDirection.RETOUR)!;
+    expect(retour.status).toBe('TO_ASSIGN');
+    expect(retour.transport).toBeNull();
+  });
+
+  it('une fiche BENEVOLE est résolue vers le bénévole de la projection', async () => {
+    const ficheBenevole = {
+      ...participant(30, LYON, 'Nora', 'Silva'),
+      type: 'BENEVOLE',
+      volunteer: { id: 7, firstName: 'Nora', lastName: 'Silva', team: 'Accueil', group: group(LYON, 'Lyon') },
+    };
+    const svc = service({
+      participants: [ficheBenevole],
+      volunteers: [ficheBenevole.volunteer],
+      assignments: [
+        { ...assignment(3, 7, LYON, 50), personType: AssignmentPersonType.VOLUNTEER },
+      ],
+      transports: [transport(50, LYON)],
+    });
+
+    const result = await svc.journeysForParticipantFiche(30, all);
+    expect(result.personType).toBe(AssignmentPersonType.VOLUNTEER);
+    expect(result.personId).toBe(7);
+    expect(result.journeys).toHaveLength(1);
+    expect(result.journeys[0].exception).toBe(false);
+  });
+});

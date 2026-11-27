@@ -13,6 +13,7 @@ import {
   Group,
   Participant,
   PersonNote,
+  PersonType,
   TransportAssignment,
   TransportDirection,
   User,
@@ -551,6 +552,49 @@ export class DelegationsService {
     return {
       delegationId,
       directions: [perDirection(TransportDirection.ALLER), perDirection(TransportDirection.RETOUR)],
+    };
+  }
+
+  /**
+   * Trajets aller/retour pour la fiche personne de l'intranet : la fiche
+   * BENEVOLE est une projection de bénévole, on résout d'abord la personne
+   * réelle avant de lire ses affectations.
+   */
+  async journeysForParticipantFiche(participantFicheId: number, scope: AccessScopeInfo) {
+    const fiche = await this.participantsRepository.findOne({
+      where: { id: participantFicheId },
+      relations: { group: true, volunteer: true },
+    });
+    if (!fiche) throw new NotFoundException(`Participant ${participantFicheId} introuvable`);
+    const personType =
+      fiche.type === PersonType.BENEVOLE && fiche.volunteer
+        ? AssignmentPersonType.VOLUNTEER
+        : AssignmentPersonType.PARTICIPANT;
+    const personId = personType === AssignmentPersonType.VOLUNTEER ? fiche.volunteer!.id : fiche.id;
+    const person = await this.getPerson(personType, personId);
+    await this.assertPersonInScope(person, scope);
+    const rows = await this.assignmentsRepository.find({
+      where: { personType, personId },
+      relations: { delegation: true, transport: true },
+    });
+    return {
+      personType,
+      personId,
+      journeys: rows.map((r) => ({
+        direction: r.direction,
+        status: r.transport ? 'PLACED' : 'TO_ASSIGN',
+        delegation: { id: r.delegation.id, name: r.delegation.name },
+        exception: person.delegationId !== r.delegation.id,
+        transport: r.transport
+          ? {
+              name: r.transport.name,
+              mode: r.transport.transportMode,
+              departureDatetime: r.transport.departureDatetime,
+              arrivalDatetime: r.transport.arrivalDatetime,
+              meetingPoint: r.transport.meetingPoint,
+            }
+          : null,
+      })),
     };
   }
 

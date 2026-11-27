@@ -97,10 +97,34 @@ export interface NoteFeedRow {
   } | null;
 }
 
+export interface PersonJourney {
+  direction: TransportDirection;
+  status: 'PLACED' | 'TO_ASSIGN';
+  delegation: { id: number; name: string };
+  exception: boolean;
+  transport: {
+    name: string;
+    mode: string;
+    departureDatetime: string | null;
+    arrivalDatetime: string | null;
+    meetingPoint: string | null;
+  } | null;
+}
+
+export interface PersonJourneys {
+  personType: PersonType;
+  personId: number;
+  journeys: PersonJourney[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class DelegationsApiService {
   private readonly http = inject(HttpClient);
   private readonly base = '/api/delegations';
+
+  journeysForFiche(participantId: number) {
+    return this.http.get<PersonJourneys>(`${this.base}/fiches/${participantId}/journeys`);
+  }
 
   listTransports(delegationId: number, direction: TransportDirection) {
     return this.http.get<DelegationTransport[]>(`${this.base}/${delegationId}/transports`, {

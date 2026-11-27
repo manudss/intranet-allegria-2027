@@ -4,6 +4,7 @@ import { forkJoin } from 'rxjs';
 import { Group } from '../../models/models';
 import { GroupsApiService } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
+import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import {
   AssignmentEntry,
   DelegationStats,
@@ -49,6 +50,7 @@ function formatDateTime(value: string | null): string {
 export class DelegationDetailPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(DelegationsApiService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly groupsApi = inject(GroupsApiService);
 
   protected readonly modeLabels = MODE_LABELS;
@@ -192,12 +194,15 @@ export class DelegationDetailPage implements OnInit {
   }
 
   protected removeTransport(id: number) {
-    if (!confirm('Supprimer ce trajet ? Les personnes placées retournent dans l’« à placer ».'))
-      return;
-    this.api.removeTransport(id).subscribe({
-      next: () => this.reload(),
-      error: () => this.error.set('Le trajet n’a pas pu être supprimé.'),
-    });
+    this.confirmDialog
+      .askDelete('ce trajet', 'Les personnes placées retournent dans l’« à placer ».')
+      .subscribe((ok) => {
+        if (!ok) return;
+        this.api.removeTransport(id).subscribe({
+          next: () => this.reload(),
+          error: () => this.error.set('Le trajet n’a pas pu être supprimé.'),
+        });
+      });
   }
 
   // ------------------------------------------------------------- affectations

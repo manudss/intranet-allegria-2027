@@ -22,6 +22,10 @@ import {
 } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { DataTableColumn } from '../../shared/data-table';
+import {
+  DelegationsApiService,
+  PersonJourneys,
+} from '../delegations/delegations-api.service';
 
 const SEX_LABELS: Record<ParticipantSex, string> = {
   [ParticipantSex.FEMALE]: 'Femme',
@@ -217,6 +221,7 @@ export class ParticipantsPage implements OnInit {
   protected canSeeAdministrative = computed(() => this.auth.hasAnyRole(['ADMIN', 'COORDINATOR']));
   protected canSeeFamilyHealth = computed(() => this.auth.hasRole('HEALTH'));
   private api = inject(ParticipantsApiService);
+  private readonly delegationsApi = inject(DelegationsApiService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private groupsApi = inject(GroupsApiService);
   private healthApi = inject(HealthApiService);
@@ -237,6 +242,7 @@ export class ParticipantsPage implements OnInit {
   mode = signal<'detail' | 'create' | 'edit' | 'health'>('detail');
   selected = signal<Participant | null>(null);
   health = signal<ParticipantHealth | null>(null);
+  journeys = signal<PersonJourneys | null>(null);
   model = signal<ParticipantPayload>(blank());
   healthModel = signal<ParticipantHealthPayload>(blankHealth());
   participantForm = form(this.model, (p) => {
@@ -281,6 +287,11 @@ export class ParticipantsPage implements OnInit {
     this.selected.set(x);
     this.mode.set('detail');
     this.opened.set(true);
+    this.journeys.set(null);
+    this.delegationsApi.journeysForFiche(x.id).subscribe({
+      next: (j) => this.journeys.set(j),
+      error: () => this.journeys.set(null),
+    });
   }
   create() {
     this.model.set(blank());

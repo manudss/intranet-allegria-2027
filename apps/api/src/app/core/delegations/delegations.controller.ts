@@ -118,6 +118,15 @@ export class DelegationsController {
     return this.delegationsService.repartition(id, query.direction, scope);
   }
 
+  @ApiOperation({ summary: 'Trajets aller/retour pour la fiche personne (projection bénévole résolue)' })
+  @Get('fiches/:participantId/journeys')
+  journeys(
+    @Param('participantId', ParseIntPipe) participantId: number,
+    @AccessScope() scope: AccessScopeInfo,
+  ) {
+    return this.delegationsService.journeysForParticipantFiche(participantId, scope);
+  }
+
   @ApiOperation({ summary: 'Totaux par sens : exceptions reçues comprises, sortantes exclues' })
   @Get(':id/stats')
   stats(@Param('id', ParseIntPipe) id: number, @AccessScope() scope: AccessScopeInfo) {

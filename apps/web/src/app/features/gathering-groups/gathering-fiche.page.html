@@ -67,7 +67,7 @@
           <app-select-field label="Catégorie" [options]="categoryOptions" [value]="editCategory()" (valueChange)="editCategory.set($event)" />
           <tui-textfield>
             <label tuiLabel for="f-cap">Capacité (personnes, vide = sans limite)</label>
-            <input id="f-cap" tuiInput type="number" min="1" [ngModel]="editCapacity()" (ngModelChange)="editCapacity.set($event)" name="f-cap" />
+            <input id="f-cap" tuiInput type="number" min="1" [ngModel]="editCapacity()" (ngModelChange)="editCapacity.set(asText($event))" name="f-cap" />
           </tui-textfield>
           <tui-textfield>
             <label tuiLabel for="f-loc">Lieu</label>

@@ -163,7 +163,7 @@ export class GatheringFichePage implements OnInit, OnDestroy {
         },
         error: () => {
           this.loading.set(false);
-          this.notice.set({ kind: 'error', text: 'Impossible de charger la fiche.' });
+          this.showNotice({ kind: 'error', text: 'Impossible de charger la fiche.' });
         },
       });
   }
@@ -176,14 +176,14 @@ export class GatheringFichePage implements OnInit, OnDestroy {
   protected reload(): void {
     this.api.fiche(this.groupId()).subscribe({
       next: (fiche) => this.fiche.set(fiche),
-      error: () => this.notice.set({ kind: 'error', text: 'Rechargement impossible.' }),
+      error: () => this.showNotice({ kind: 'error', text: 'Rechargement impossible.' }),
     });
   }
 
   protected linkSequence(sequenceId: number): void {
     this.api.linkSequence(this.groupId(), sequenceId).subscribe({
       next: () => this.reload(),
-      error: (err) => this.notice.set({ kind: 'error', text: this.readError(err, 'Lien impossible.') }),
+      error: (err) => this.showNotice({ kind: 'error', text: this.readError(err, 'Lien impossible.') }),
     });
   }
 
@@ -198,7 +198,7 @@ export class GatheringFichePage implements OnInit, OnDestroy {
         if (!ok) return;
         this.api.unlinkSequence(this.groupId(), sequence.id).subscribe({
           next: () => this.reload(),
-          error: (err) => this.notice.set({ kind: 'error', text: this.readError(err, 'Retrait impossible.') }),
+          error: (err) => this.showNotice({ kind: 'error', text: this.readError(err, 'Retrait impossible.') }),
         });
       });
   }
@@ -216,10 +216,10 @@ export class GatheringFichePage implements OnInit, OnDestroy {
 
   protected saveEdit(): void {
     if (!this.editName().trim() || this.busy()) return;
-    const capacityRaw = this.editCapacity().trim();
+    const capacityRaw = String(this.editCapacity() ?? '').trim();
     const capacity = capacityRaw === '' ? null : Number(capacityRaw);
     if (capacity !== null && (!Number.isInteger(capacity) || capacity <= 0)) {
-      this.notice.set({ kind: 'error', text: 'Capacité invalide : un nombre entier positif, ou vide.' });
+      this.showNotice({ kind: 'error', text: 'Capacité invalide : un nombre entier positif, ou vide.' });
       return;
     }
     this.busy.set(true);
@@ -235,12 +235,12 @@ export class GatheringFichePage implements OnInit, OnDestroy {
         next: () => {
           this.busy.set(false);
           this.editing.set(false);
-          this.notice.set({ kind: 'info', text: 'Fiche mise à jour.' });
+          this.showNotice({ kind: 'info', text: 'Fiche mise à jour.' });
           this.reload();
         },
         error: (err) => {
           this.busy.set(false);
-          this.notice.set({ kind: 'error', text: this.readError(err, 'Enregistrement impossible.') });
+          this.showNotice({ kind: 'error', text: this.readError(err, 'Enregistrement impossible.') });
         },
       });
   }
@@ -257,7 +257,7 @@ export class GatheringFichePage implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.busy.set(false);
-        this.notice.set({ kind: 'error', text: this.readError(err, 'Rattachement impossible.') });
+        this.showNotice({ kind: 'error', text: this.readError(err, 'Rattachement impossible.') });
       },
     });
   }
@@ -274,7 +274,7 @@ export class GatheringFichePage implements OnInit, OnDestroy {
         this.api.detachVolunteerTeam(this.groupId(), volunteerTeamId).subscribe({
           next: () => this.reload(),
           error: (err) =>
-            this.notice.set({ kind: 'error', text: this.readError(err, 'Retrait impossible.') }),
+            this.showNotice({ kind: 'error', text: this.readError(err, 'Retrait impossible.') }),
         });
       });
   }
@@ -302,12 +302,12 @@ export class GatheringFichePage implements OnInit, OnDestroy {
     this.api.setManagers(this.groupId(), userIds).subscribe({
       next: () => {
         this.busy.set(false);
-        this.notice.set({ kind: 'info', text: successText });
+        this.showNotice({ kind: 'info', text: successText });
         this.reload();
       },
       error: (err) => {
         this.busy.set(false);
-        this.notice.set({ kind: 'error', text: this.readError(err, 'Nomination impossible.') });
+        this.showNotice({ kind: 'error', text: this.readError(err, 'Nomination impossible.') });
       },
     });
   }
@@ -316,6 +316,17 @@ export class GatheringFichePage implements OnInit, OnDestroy {
     const f = this.fiche();
     if (!f?.capacity) return 0;
     return Math.min(1, f.persons / f.capacity);
+  }
+
+  /** Champ Taiga type=number : la valeur émise est un number (ou null si vidé), on stocke une chaîne. */
+  protected asText(value: unknown): string {
+    return value == null ? '' : String(value);
+  }
+
+  /** Affiche le message en haut de page et le ramène dans le champ de vision (mobile : le formulaire est long). */
+  private showNotice(notice: Notice): void {
+    this.notice.set(notice);
+    globalThis.scrollTo?.({ top: 0, behavior: 'smooth' });
   }
 
   private readError(err: unknown, fallback: string): string {

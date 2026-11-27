@@ -100,9 +100,11 @@ export interface NoteFeedRow {
 export interface PersonJourney {
   direction: TransportDirection;
   status: 'PLACED' | 'TO_ASSIGN';
+  assignmentId: number;
   delegation: { id: number; name: string };
   exception: boolean;
   transport: {
+    id: number;
     name: string;
     mode: string;
     departureDatetime: string | null;

@@ -351,11 +351,14 @@ describe('DelegationsService — fiche personne', () => {
     expect(result.personId).toBe(10);
     const aller = result.journeys.find((j) => j.direction === TransportDirection.ALLER)!;
     expect(aller.status).toBe('PLACED');
+    expect(aller.assignmentId).toBe(1);
     expect(aller.delegation.id).toBe(ANNECY);
     expect(aller.exception).toBe(true);
     expect(aller.transport?.name).toBe('Car 50');
+    expect(aller.transport?.id).toBe(50);
     const retour = result.journeys.find((j) => j.direction === TransportDirection.RETOUR)!;
     expect(retour.status).toBe('TO_ASSIGN');
+    expect(retour.assignmentId).toBe(2);
     expect(retour.transport).toBeNull();
   });
 

@@ -96,21 +96,70 @@
   </dl>
   @if (journeys(); as j) {
   <h3>Sous-délégations</h3>
-  <dl>
-    @for (t of j.journeys; track t.direction) {
-    <dt>{{ t.direction === 'ALLER' ? 'Aller' : 'Retour' }}</dt>
-    <dd>
+  @if (journeyError()) {
+  <p class="api-error">{{ journeyError() }}</p>
+  }
+  @for (t of j.journeys; track t.direction) {
+  <div class="journey-line">
+    <strong>{{ t.direction === 'ALLER' ? 'Aller' : 'Retour' }}</strong>
+    @if (t.exception) {<span class="tui-badge">Exception tracée</span>}
+    <div class="journey-fields">
+      <tui-textfield>
+        <label [for]="'j-del-' + t.direction" tuiLabel>Délégation</label
+        ><select
+          tuiSelect
+          [id]="'j-del-' + t.direction"
+          [ngModel]="journeyEdit(t.direction)?.delegationId"
+          (ngModelChange)="setJourneyDelegation(t.direction, $event)"
+          [ngModelOptions]="{ standalone: true }"
+        >
+          @for (d of delegationOptions(); track d.id) {
+          <option [value]="d.id">{{ d.name }}</option>
+          }
+        </select>
+      </tui-textfield>
+      <tui-textfield>
+        <label [for]="'j-tr-' + t.direction" tuiLabel>Sous-délégation</label
+        ><select
+          tuiSelect
+          [id]="'j-tr-' + t.direction"
+          [ngModel]="journeyEdit(t.direction)?.transportId ?? ''"
+          (ngModelChange)="setJourneyTransport(t.direction, $event === '' ? null : $event)"
+          [ngModelOptions]="{ standalone: true }"
+        >
+          <option value="">À placer</option>
+          @for (tr of journeyTransports()[t.direction] ?? []; track tr.id) {
+          <option [value]="tr.id">
+            {{ tr.name }}@if (tr.departureDatetime) {
+              · départ {{ tr.departureDatetime | date: 'dd/MM/yyyy HH:mm' }}
+            }
+          </option>
+          }
+        </select>
+      </tui-textfield>
+      <button
+        tuiButton
+        size="s"
+        type="button"
+        [disabled]="journeySaving() === t.direction"
+        (click)="saveJourney(t.direction)"
+      >
+        {{ journeySaving() === t.direction ? 'Enregistrement…' : 'Enregistrer' }}
+      </button>
+    </div>
+    @if (t.transport) {
+    <p class="help">
+      Actuellement : {{ t.transport.name
+      }}@if (t.transport.departureDatetime) {
+        · départ {{ t.transport.departureDatetime | date: 'dd/MM/yyyy HH:mm' }}
+      }@if (t.transport.meetingPoint) { · RDV {{ t.transport.meetingPoint }} } —
       {{ t.delegation.name }}
-      @if (t.exception) {<span class="tui-badge">Exception</span>} ·
-      @if (t.transport) {
-      {{ t.transport.name }}
-      @if (t.transport.departureDatetime) {
-      · départ {{ t.transport.departureDatetime | date: 'dd/MM/yyyy HH:mm' }}
-      } @if (t.transport.meetingPoint) { · RDV {{ t.transport.meetingPoint }} } } @else { à placer
-      }
-    </dd>
+    </p>
+    } @else {
+    <p class="help">Actuellement à placer — {{ t.delegation.name }}</p>
     }
-  </dl>
+  </div>
+  }
   <p>
     <a [routerLink]="['/person-notes', j.personType, j.personId]">Notes et suivi transport</a>
   </p>

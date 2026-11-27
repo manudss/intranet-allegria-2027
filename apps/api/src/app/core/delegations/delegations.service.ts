@@ -684,10 +684,12 @@ export class DelegationsService {
       journeys: rows.map((r) => ({
         direction: r.direction,
         status: r.transport ? 'PLACED' : 'TO_ASSIGN',
+        assignmentId: r.id,
         delegation: { id: r.delegation.id, name: r.delegation.name },
         exception: person.delegationId !== r.delegation.id,
         transport: r.transport
           ? {
+              id: r.transport.id,
               name: r.transport.name,
               mode: r.transport.transportMode,
               departureDatetime: r.transport.departureDatetime,

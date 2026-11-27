@@ -1609,7 +1609,7 @@ async function run(): Promise<void> {
     const exceptionOriginGroup =
       groups.find((g) => g.name === 'Délégation de Lyon') ?? null;
     const exceptionHostGroup =
-      groups.find((g) => g.name === "Délégation d'Annecy") ?? null;
+      groups.find((g) => g.name === 'Délégation de Annecy') ?? null;
     const exceptionParticipantIds = new Set(
       exceptionOriginGroup
         ? (participantsByGroup.get(exceptionOriginGroup.id) ?? [])

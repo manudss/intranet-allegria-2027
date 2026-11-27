@@ -9,6 +9,7 @@
 }
 
 .delegation-card {
+  min-width: 0;
   border: 1px solid var(--tui-border-normal, #e5e0da);
   border-radius: 0.75rem;
   padding: 1rem;
@@ -33,6 +34,10 @@
 .card-head h3 {
   margin: 0;
   font-size: 1.05rem;
+  // Les noms longs (Saint-Jean-de-Maurienne…) doivent pouvoir se casser,
+  // sinon la pastille d'etat sort de la carte a 320 px.
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
 .delegation-card p {
@@ -105,6 +110,8 @@
 
 @media (max-width: 480px) {
   .cards {
-    grid-template-columns: 1fr;
+    // minmax(0, 1fr) : la piste peut retrecir sous le contenu minimal,
+    // sinon minmax(17.5rem, 1fr) impose ~328 px et la carte deborde a 320 px.
+    grid-template-columns: minmax(0, 1fr);
   }
 }

@@ -1,0 +1,240 @@
+<app-page-layout
+  [title]="delegation()?.name ? delegation()!.name + ' · Transports' : 'Transports de la délégation'"
+  description="Trajets aller/retour, répartition des personnes et exceptions. Les responsables ne voient que leur délégation ; aucune donnée de santé n'est affichée ici."
+>
+  <nav class="delegation-nav">
+    <a routerLink="/transports">Toutes les délégations</a> ·
+    <a routerLink="/suivi-notes">Suivi des notes</a>
+  </nav>
+  <div class="direction-switch" role="tablist">
+    <button
+      tuiButton
+      type="button"
+      [appearance]="direction() === 'ALLER' ? 'primary' : 'secondary'"
+      (click)="setDirection('ALLER')"
+    >
+      Aller
+      @if (statsFor('ALLER'); as s) {
+        ({{ s.total }} · {{ s.toPlace }} à placer)
+      }
+    </button>
+    <button
+      tuiButton
+      type="button"
+      [appearance]="direction() === 'RETOUR' ? 'primary' : 'secondary'"
+      (click)="setDirection('RETOUR')"
+    >
+      Retour
+      @if (statsFor('RETOUR'); as s) {
+        ({{ s.total }} · {{ s.toPlace }} à placer)
+      }
+    </button>
+  </div>
+  @if (error()) {
+    <p class="api-error">{{ error() }}</p>
+  }
+  @if (loading()) {
+    <app-loading-skeleton />
+  } @else if (repartition(); as rep) {
+    <section class="card">
+      <h2>À placer ({{ rep.toAssign.length }})</h2>
+      <p class="help">
+        Personnes de la délégation sans trajet sur ce sens, et exceptions reçues pas encore placées.
+      </p>
+      @if (!rep.toAssign.length) {
+        <p>Tout le monde est placé sur ce sens.</p>
+      }
+      <ul>
+        @for (e of rep.toAssign; track entryKey(e)) {
+          <li>
+            {{ personLabel(e.person) }}
+            @if (e.person && e.person.delegationId !== delegation()?.id) {
+              <span class="tui-badge">Exception reçue</span>
+            }
+            <select
+              [ngModel]="assignTargets()[entryKey(e)] || ''"
+              (ngModelChange)="setAssignTarget(entryKey(e), $event)"
+              [attr.aria-label]="'Placer sur un trajet'"
+            >
+              <option value="">Placer sur…</option>
+              @for (t of rep.transports; track t.id) {
+                <option [value]="t.id" [disabled]="t.full">
+                  {{ t.name }}{{ t.full ? ' (complet)' : '' }}
+                </option>
+              }
+            </select>
+            <button tuiButton size="s" type="button" (click)="assignTo(e)">Affecter</button>
+            @if (e.person) {
+              <a
+                [routerLink]="['/person-notes', e.person.personType, e.person.id]"
+                tuiButton
+                size="s"
+                appearance="secondary"
+                >Note</a
+              >
+            }
+          </li>
+        }
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Trajets ({{ rep.transports.length }})</h2>
+      @for (t of rep.transports; track t.id) {
+        <article class="transport-block">
+          <header>
+            <h3>
+              {{ modeLabels[t.transportMode] || t.transportMode }} · {{ t.name }}
+              @if (t.capacity !== null) {
+                <span [class.full]="t.full"> ({{ t.occupancy }}/{{ t.capacity }})</span>
+              } @else {
+                <span> ({{ t.occupancy }} placés, sans jauge)</span>
+              }
+            </h3>
+            <button tuiButton size="s" appearance="secondary" type="button" (click)="editTransport(t.id)">
+              Modifier
+            </button>
+            <button tuiButton size="s" appearance="secondary" type="button" (click)="removeTransport(t.id)">
+              Supprimer
+            </button>
+          </header>
+          <dl>
+            <dt>Départ</dt>
+            <dd>{{ fmt(t.departureDatetime) }}</dd>
+            <dt>Arrivée</dt>
+            <dd>{{ fmt(t.arrivalDatetime) }}</dd>
+            <dt>Rendez-vous</dt>
+            <dd>{{ t.meetingPoint || '—' }}</dd>
+            <dt>Infos pratiques pour les parents</dt>
+            <dd>{{ t.practicalInfo || '—' }}</dd>
+          </dl>
+          <ul>
+            @for (p of t.persons; track entryKey(p)) {
+              <li>
+                {{ personLabel(p.person) }}
+                @if (p.person && p.person.delegationId !== delegation()?.id) {
+                  <span class="tui-badge">Exception reçue</span>
+                }
+                <button tuiButton size="s" appearance="secondary" type="button" (click)="unassign(p)">
+                  Retirer
+                </button>
+                @if (p.person) {
+                  <a
+                    [routerLink]="['/person-notes', p.person.personType, p.person.id]"
+                    tuiButton
+                    size="s"
+                    appearance="secondary"
+                    >Note</a
+                  >
+                }
+              </li>
+            }
+          </ul>
+        </article>
+      }
+
+      <h3>{{ editingTransportId() ? 'Modifier le trajet' : 'Nouveau trajet' }}</h3>
+      <form class="drawer-form" (submit)="saveTransport(); $event.preventDefault()">
+        <tui-textfield>
+          <label for="t-name" tuiLabel>Libellé</label
+          ><input tuiInput id="t-name" [ngModel]="transportForm().name"
+            (ngModelChange)="transportForm.update((f) => ({ ...f, name: $event }))" name="tname" required />
+        </tui-textfield>
+        <label for="t-mode">Moyen de transport</label>
+        <select
+          id="t-mode"
+          [ngModel]="transportForm().transportMode"
+          (ngModelChange)="transportForm.update((f) => ({ ...f, transportMode: $event }))"
+          name="tmode"
+        >
+          @for (m of ['CAR', 'TRAIN', 'VOITURES', 'AUTRE']; track m) {
+            <option [value]="m">{{ modeLabels[m] }}</option>
+          }
+        </select>
+        <tui-textfield>
+          <label for="t-dep" tuiLabel>Départ</label
+          ><input tuiInput id="t-dep" type="datetime-local" [ngModel]="transportForm().departureDatetime"
+            (ngModelChange)="transportForm.update((f) => ({ ...f, departureDatetime: $event }))" name="tdep" />
+        </tui-textfield>
+        <tui-textfield>
+          <label for="t-arr" tuiLabel>Arrivée</label
+          ><input tuiInput id="t-arr" type="datetime-local" [ngModel]="transportForm().arrivalDatetime"
+            (ngModelChange)="transportForm.update((f) => ({ ...f, arrivalDatetime: $event }))" name="tarr" />
+        </tui-textfield>
+        <tui-textfield>
+          <label for="t-rdv" tuiLabel>Lieu de rendez-vous</label
+          ><input tuiInput id="t-rdv" [ngModel]="transportForm().meetingPoint"
+            (ngModelChange)="transportForm.update((f) => ({ ...f, meetingPoint: $event }))" name="trdv" />
+        </tui-textfield>
+        <tui-textfield>
+          <label for="t-cap" tuiLabel>Jauge (facultatif)</label
+          ><input tuiInput id="t-cap" type="number" min="1" [ngModel]="transportForm().capacity"
+            (ngModelChange)="transportForm.update((f) => ({ ...f, capacity: $event === '' || $event === null ? null : +$event }))" name="tcap" />
+        </tui-textfield>
+        <tui-textfield>
+          <label for="t-info" tuiLabel>Infos pratiques pour les parents</label
+          ><textarea tuiTextarea id="t-info" [ngModel]="transportForm().practicalInfo"
+            (ngModelChange)="transportForm.update((f) => ({ ...f, practicalInfo: $event }))" name="tinfo"></textarea>
+        </tui-textfield>
+        <div>
+          <button tuiButton type="submit" [disabled]="!transportForm().name">
+            {{ editingTransportId() ? 'Enregistrer' : 'Créer le trajet' }}
+          </button>
+          @if (editingTransportId()) {
+            <button tuiButton appearance="secondary" type="button" (click)="cancelTransportEdit()">
+              Annuler
+            </button>
+          }
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Exceptions</h2>
+      <h3>Reçues ({{ rep.exceptionsReceived.length }})</h3>
+      <p class="help">Personnes d'autres délégations dont ce trajet relève de celle-ci.</p>
+      <ul>
+        @for (e of rep.exceptionsReceived; track entryKey(e)) {
+          <li>{{ personLabel(e.person) }}</li>
+        }
+      </ul>
+      <h3>Sortantes ({{ rep.exceptionsOutgoing.length }})</h3>
+      <p class="help">Membres de cette délégation dont ce trajet relève d'une autre délégation.</p>
+      <ul>
+        @for (e of rep.exceptionsOutgoing; track entryKey(e)) {
+          <li>
+            {{ personLabel(e.person) }}
+            <button tuiButton size="s" appearance="secondary" type="button" (click)="unassign(e)">
+              Annuler l'exception
+            </button>
+          </li>
+        }
+      </ul>
+      <h3>Créer une exception</h3>
+      <form class="drawer-form" (submit)="createException(); $event.preventDefault()">
+        <label for="x-type">Type de personne</label>
+        <select id="x-type" [ngModel]="exceptionForm().personType"
+          (ngModelChange)="exceptionForm.update((f) => ({ ...f, personType: $event }))" name="xtype">
+          <option value="PARTICIPANT">Jeune</option>
+          <option value="VOLUNTEER">Bénévole</option>
+        </select>
+        <tui-textfield>
+          <label for="x-person" tuiLabel>Identifiant de la personne</label
+          ><input tuiInput id="x-person" type="number" [ngModel]="exceptionForm().personId"
+            (ngModelChange)="exceptionForm.update((f) => ({ ...f, personId: $event }))" name="xperson" required />
+        </tui-textfield>
+        <label for="x-deleg">Délégation d'accueil</label>
+        <select id="x-deleg" [ngModel]="exceptionForm().toDelegationId"
+          (ngModelChange)="exceptionForm.update((f) => ({ ...f, toDelegationId: $event }))" name="xdeleg">
+          <option value="">Choisir…</option>
+          @for (g of groups(); track g.id) {
+            @if (g.id !== delegation()?.id) {
+              <option [value]="g.id">{{ g.name }}</option>
+            }
+          }
+        </select>
+        <button tuiButton type="submit">Créer l'exception ({{ direction() === 'ALLER' ? 'aller' : 'retour' }})</button>
+      </form>
+    </section>
+  }
+</app-page-layout>

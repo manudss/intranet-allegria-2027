@@ -670,7 +670,20 @@ export class DelegationsService {
       byPerson.set(key, list);
     }
 
-    let feed = [...byPerson.entries()].map(([key, personNotes]) => {
+    interface FeedRow {
+      person: PersonLite | null;
+      delegationId: number;
+      notesCount: number;
+      unansweredCount: number;
+      lastNote: {
+        id: number;
+        body: string;
+        authorName: string;
+        authorRole: string | null;
+        createdAt: Date;
+      } | null;
+    }
+    let feed: FeedRow[] = [...byPerson.entries()].map(([key, personNotes]) => {
       const person = persons.get(key) ?? null;
       const roots = personNotes.filter((n) => !n.parent);
       const replies = personNotes.filter((n) => n.parent);
@@ -692,6 +705,27 @@ export class DelegationsService {
       };
     });
 
+    if (filter === 'ALL') {
+      // Personnes du périmètre sans aucune note : lignes à zéro pour pouvoir écrire.
+      const delegationIds = scope.all
+        ? [...new Set(feed.map((f) => f.delegationId))]
+        : scope.groupIds;
+      const known = new Set(
+        feed.map((f) => (f.person ? `${f.person.personType}:${f.person.id}` : '')),
+      );
+      for (const delegationId of delegationIds) {
+        for (const member of await this.listMembers(delegationId)) {
+          if (known.has(`${member.personType}:${member.id}`)) continue;
+          feed.push({
+            person: member,
+            delegationId,
+            notesCount: 0,
+            unansweredCount: 0,
+            lastNote: null,
+          });
+        }
+      }
+    }
     if (filter === 'WITH_NOTES') feed = feed.filter((f) => f.notesCount > 0);
     if (filter === 'UNANSWERED') feed = feed.filter((f) => f.unansweredCount > 0);
     if (q && q.trim()) {
@@ -702,7 +736,11 @@ export class DelegationsService {
           : false,
       );
     }
-    feed.sort((a, b) => b.lastNote.createdAt.getTime() - a.lastNote.createdAt.getTime());
+    feed.sort(
+      (a, b) =>
+        (b.lastNote ? new Date(b.lastNote.createdAt).getTime() : 0) -
+        (a.lastNote ? new Date(a.lastNote.createdAt).getTime() : 0),
+    );
     return feed;
   }
 }

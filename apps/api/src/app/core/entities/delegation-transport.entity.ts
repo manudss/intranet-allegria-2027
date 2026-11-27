@@ -4,10 +4,12 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Group } from './group.entity';
+import { TransportAssignment } from './transport-assignment.entity';
 import { TransportDirection } from './transport-direction.enum';
 import { TransportMode } from './transport-mode.enum';
 
@@ -37,6 +39,8 @@ export class DelegationTransport {
   /** Jauge facultative : nombre maximal de places, null = sans limite. */
   @Column({ type: 'int', nullable: true }) capacity: number | null;
   @Column({ type: 'text', nullable: true }) notes: string | null;
+  @OneToMany(() => TransportAssignment, (assignment) => assignment.transport)
+  assignments: TransportAssignment[];
   @CreateDateColumn({ type: 'timestamptz' }) createdAt: Date;
   @UpdateDateColumn({ type: 'timestamptz' }) updatedAt: Date;
 }

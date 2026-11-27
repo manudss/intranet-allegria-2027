@@ -1,0 +1,128 @@
+<app-page-layout
+  [title]="personMode() ? 'Notes de la personne' : 'Suivi des notes'"
+  description="Commentaires logistiques signés et datés, sans modifier les inscriptions. Jamais de données de santé ici : le dossier santé reste dans son module."
+>
+  <nav class="delegation-nav"><a routerLink="/transports">Toutes les délégations</a></nav>
+  @if (error()) {
+    <p class="api-error">{{ error() }}</p>
+  }
+  @if (loading()) {
+    <app-loading-skeleton />
+  } @else if (!personMode()) {
+    <div class="direction-switch">
+      <button
+        tuiButton
+        type="button"
+        [appearance]="filter() === 'WITH_NOTES' ? 'primary' : 'secondary'"
+        (click)="setFilter('WITH_NOTES')"
+      >
+        Avec notes
+      </button>
+      <button
+        tuiButton
+        type="button"
+        [appearance]="filter() === 'UNANSWERED' ? 'primary' : 'secondary'"
+        (click)="setFilter('UNANSWERED')"
+      >
+        Sans réponse
+      </button>
+      <button
+        tuiButton
+        type="button"
+        [appearance]="filter() === 'ALL' ? 'primary' : 'secondary'"
+        (click)="setFilter('ALL')"
+      >
+        Toutes les personnes
+      </button>
+    </div>
+    <tui-textfield iconStart="@tui.search">
+      <label for="notes-q" tuiLabel>Rechercher une personne</label
+      ><input tuiInput id="notes-q" [value]="query()" (input)="search($any($event.target).value)" />
+    </tui-textfield>
+    @if (!feed().length) {
+      <p>Aucune personne dans ce filtre pour votre périmètre.</p>
+    }
+    <ul>
+      @for (row of feed(); track (row.person ? row.person.personType + ':' + row.person.id : $index)) {
+        <li class="card">
+          @if (row.person; as p) {
+            <a [routerLink]="['/person-notes', p.personType, p.id]">
+              <strong>{{ p.firstName }} {{ p.lastName }}</strong>
+            </a>
+            <span>
+              · {{ p.personType === 'VOLUNTEER' ? 'Bénévole' : 'Jeune' }}{{ p.detail ? ' · ' + p.detail : '' }}</span
+            >
+          } @else {
+            <strong>Personne introuvable</strong>
+          }
+          <p>
+            {{ row.notesCount }} note(s)
+            @if (row.unansweredCount) {
+              <span class="tui-badge"> · {{ row.unansweredCount }} sans réponse</span>
+            }
+          </p>
+          @if (row.lastNote; as last) {
+            <blockquote>
+              {{ last.body }}<br />
+              <small>{{ last.authorName }} ({{ last.authorRole || 'équipe' }}), le {{ fmt(last.createdAt) }}</small>
+            </blockquote>
+          } @else {
+            <p class="help">Aucune note pour l'instant.</p>
+          }
+          @if (row.person; as p) {
+            <a
+              tuiButton
+              size="s"
+              appearance="secondary"
+              [routerLink]="['/person-notes', p.personType, p.id]"
+              >Ouvrir le fil</a
+            >
+          }
+        </li>
+      }
+    </ul>
+  } @else {
+    @if (!notes().length) {
+      <p class="help">Aucune note pour l'instant sur cette personne.</p>
+    }
+    @for (root of roots(); track root.id) {
+      <article class="card">
+        <blockquote>
+          {{ root.body }}<br />
+          <small>{{ root.authorName }} ({{ root.authorRole || 'équipe' }}), le {{ fmt(root.createdAt) }}</small>
+        </blockquote>
+        @for (r of repliesOf(root.id); track r.id) {
+          <blockquote class="reply">
+            {{ r.body }}<br />
+            <small>{{ r.authorName }} ({{ r.authorRole || 'équipe' }}), le {{ fmt(r.createdAt) }}</small>
+          </blockquote>
+        }
+        <tui-textfield>
+          <label for="reply-{{ root.id }}" tuiLabel>Répondre</label
+          ><input
+            tuiInput
+            id="reply-{{ root.id }}"
+            [ngModel]="replyDrafts()[root.id] || ''"
+            (ngModelChange)="setReply(root.id, $event)"
+            name="reply-{{ root.id }}"
+          />
+        </tui-textfield>
+        <button tuiButton size="s" type="button" (click)="reply(root.id)">Répondre</button>
+      </article>
+    }
+    <section class="card">
+      <h2>Nouvelle note</h2>
+      <p class="help">
+        Signée de votre nom et datée automatiquement. Contenu logistique uniquement : jamais
+        d'information de santé.
+      </p>
+      <tui-textfield>
+        <label for="new-note" tuiLabel>Note</label
+        ><textarea tuiTextarea id="new-note" [ngModel]="newNote()" (ngModelChange)="newNote.set($event)" name="newnote"></textarea>
+      </tui-textfield>
+      <button tuiButton type="button" (click)="addNote()" [disabled]="!newNote().trim()">
+        Ajouter la note
+      </button>
+    </section>
+  }
+</app-page-layout>

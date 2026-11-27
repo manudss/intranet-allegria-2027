@@ -41,7 +41,7 @@ export class PersonNote {
   /** Prénom et nom de l'auteur, figés à l'écriture (affichage de la signature). */
   @Column({ type: 'varchar' }) authorName: string;
   /** Fonction de l'auteur au moment de l'écriture (« Responsable de délégation »…). */
-  @Column({ type: 'varchar' }) authorRole: string;
+  @Column({ type: 'varchar', nullable: true }) authorRole: string | null;
   /** Réponse à une note existante (fil de discussion par fiche et délégation). */
   @ManyToOne(() => PersonNote, { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'parent_id' })

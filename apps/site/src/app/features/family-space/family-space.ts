@@ -16,6 +16,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { form, FormField, required, pattern, maxLength } from '@angular/forms/signals';
 import { firstValueFrom } from 'rxjs';
@@ -28,9 +29,29 @@ import {
   missingRequirements,
 } from '@mej-allegria/shared';
 import type { FamilyContact, FamilyRules, FamilySpace, YouthDossier } from '@mej-allegria/shared';
+
+/** Trajets aller/retour du jeune communiqués à la famille. */
+interface FamilyTransportInfo {
+  participantId: number | null;
+  journeys: {
+    direction: 'ALLER' | 'RETOUR';
+    status: 'PLACED' | 'TO_ASSIGN';
+    delegation: { id: number; name: string };
+    transport: {
+      name: string;
+      mode: string;
+      departureDatetime: string | null;
+      arrivalDatetime: string | null;
+      meetingPoint: string | null;
+      practicalInfo: string | null;
+    } | null;
+    contacts: { name: string; email: string }[];
+  }[];
+}
 @Component({
   selector: 'app-family-space',
   imports: [
+    DatePipe,
     FormField,
     RouterLink,
     FamilyHealthPage,
@@ -132,10 +153,8 @@ export class FamilySpacePage implements OnInit, OnDestroy {
     city: '',
     mejGroup: '',
     legalCapacity: '',
+    delegationId: '',
     presence: '',
-    arrival: '',
-    departure: '',
-    transport: '',
     accommodation: '',
     notes: '',
   });
@@ -149,6 +168,9 @@ export class FamilySpacePage implements OnInit, OnDestroy {
     finalAccepted: false,
   });
   protected readonly signatureForm = form(this.signatureModel);
+  protected delegationName(id: string) {
+    return this.rules().delegations?.find((d) => String(d.id) === id)?.name || '';
+  }
   protected chooseDiocese(dioceseId: string) {
     if (this.readOnly()) return;
     this.editModel.update((m) => ({ ...m, dioceseId }));
@@ -355,7 +377,30 @@ export class FamilySpacePage implements OnInit, OnDestroy {
       finalAccepted: false,
     });
     this.error.set('');
+    this.transportInfo.set(null);
+    if (y.participantId) void this.loadTransport(y.id);
     this.focusTitle();
+  }
+  /** Trajets de délégation visibles par la famille (aucune donnée de santé). */
+  protected readonly transportInfo = signal<FamilyTransportInfo | null>(null);
+  protected readonly transportModeLabels: Record<string, string> = {
+    TRAIN: 'Train',
+    CAR: 'Car',
+    VOITURES: 'Voitures individuelles',
+    AUTRE: 'Autre',
+  };
+  private async loadTransport(youthId: string) {
+    try {
+      this.transportInfo.set(
+        await firstValueFrom(
+          this.http.get<FamilyTransportInfo>(
+            '/api/public/family-space/youths/' + youthId + '/transport',
+          ),
+        ),
+      );
+    } catch {
+      this.transportInfo.set(null);
+    }
   }
   protected async dashboard() {
     if (await this.flush()) {
@@ -429,12 +474,10 @@ export class FamilySpacePage implements OnInit, OnDestroy {
                   city: m.city,
                   mejGroup: m.mejGroup,
                   legalCapacity: m.legalCapacity,
+                  delegationId: m.delegationId,
                 },
                 logistics: {
                   presence: m.presence,
-                  arrival: m.arrival,
-                  departure: m.departure,
-                  transport: m.transport,
                   accommodation: m.accommodation,
                   notes: m.notes,
                 },

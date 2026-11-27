@@ -153,6 +153,7 @@ export class Layout {
         { label: 'Équipes opérationnelles', path: '/equipes-operationnelles', icon: '@tui.users' },
         { label: 'Missions bénévoles', path: '/missions-benevoles', icon: '@tui.clipboard-list' },
         { label: 'Transports', path: '/transports', icon: '@tui.bus' },
+        { label: 'Suivi des notes', path: '/suivi-notes', icon: '@tui.message-square' },
         { label: 'Restauration : besoins', path: '/restauration-besoins', icon: '@tui.utensils' },
         { label: 'Hébergement', path: '/hebergement', icon: '@tui.building' },
       ],

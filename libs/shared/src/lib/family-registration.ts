@@ -28,9 +28,6 @@ export interface YouthIdentity {
 }
 export interface YouthLogistics {
   presence: string;
-  arrival: string;
-  departure: string;
-  transport: string;
   accommodation: string;
   notes: string;
 }
@@ -141,9 +138,6 @@ export const EMPTY_IDENTITY: YouthIdentity = {
 };
 export const EMPTY_LOGISTICS: YouthLogistics = {
   presence: '',
-  arrival: '',
-  departure: '',
-  transport: '',
   accommodation: '',
   notes: '',
 };

@@ -61,7 +61,7 @@ export class DelegationTransports1791100000000 implements MigrationInterface {
         "delegation_id" integer NOT NULL,
         "author_user_id" integer,
         "authorName" varchar NOT NULL,
-        "authorRole" varchar NOT NULL,
+        "authorRole" varchar,
         "parent_id" integer,
         "body" text NOT NULL,
         "createdAt" timestamptz NOT NULL DEFAULT now(),

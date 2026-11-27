@@ -196,6 +196,24 @@ export const appRoutes: Route[] = [
         loadComponent: () => import('./pages/transports').then((m) => m.Transports),
       },
       {
+        path: 'delegations/:id/transports',
+        title: 'Transports de la délégation',
+        loadComponent: () =>
+          import('./features/delegations/delegation-detail').then((m) => m.DelegationDetailPage),
+      },
+      {
+        path: 'suivi-notes',
+        title: 'Suivi des notes',
+        loadComponent: () =>
+          import('./features/delegations/person-notes').then((m) => m.PersonNotesPage),
+      },
+      {
+        path: 'person-notes/:personType/:personId',
+        title: 'Notes de la personne',
+        loadComponent: () =>
+          import('./features/delegations/person-notes').then((m) => m.PersonNotesPage),
+      },
+      {
         path: 'programme',
         canDeactivate: [
           (component: { canDeactivate: () => boolean | Promise<boolean> }) =>

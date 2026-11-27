@@ -261,6 +261,17 @@
     />
     @if(editModel().dioceseId==='OTHER'){<label for="y-other">Pays et diocèse / juridiction</label
     ><input id="y-other" [formField]="editForm.otherDiocese" (input)="changed()" />}
+    <label for="y-delegation">Délégation de départ</label
+    ><select id="y-delegation" [formField]="editForm.delegationId" (change)="changed()">
+      <option value="">À compléter</option>
+      @for(d of rules().delegations || []; track d.id){
+      <option [value]="''+d.id">{{d.name}}{{d.diocese ? ' · ' + d.diocese : ''}}</option>
+      }
+    </select>
+    <p class="help">
+      Le trajet est organisé par la délégation : les horaires, le lieu de rendez-vous et le
+      contact des responsables seront affichés ici une fois votre enfant placé.
+    </p>
     <div class="field-grid">
       <div>
         <label for="y-city">Ville du jeune, si différente du foyer</label
@@ -342,18 +353,6 @@
       <option value="PARTIAL">Présence partielle à confirmer</option>
     </select>
     <div class="field-grid">
-      <div>
-        <label for="l-arrival">Arrivée prévue</label
-        ><input id="l-arrival" [formField]="editForm.arrival" (input)="changed()" />
-      </div>
-      <div>
-        <label for="l-departure">Départ prévu</label
-        ><input id="l-departure" [formField]="editForm.departure" (input)="changed()" />
-      </div>
-      <div>
-        <label for="l-transport">Transport envisagé</label
-        ><input id="l-transport" [formField]="editForm.transport" (input)="changed()" />
-      </div>
       <div>
         <label for="l-hosting">Hébergement à organiser</label
         ><input id="l-hosting" [formField]="editForm.accommodation" (input)="changed()" />
@@ -489,16 +488,10 @@
         rassemblement':youth()!.logistics.presence==='PARTIAL'?'Présence partielle à confirmer':'Non
         renseignée'}}
       </dd>
-      <dt>Arrivée et départ</dt>
-      <dd>
-        {{youth()!.logistics.arrival || 'À préciser'}} / {{youth()!.logistics.departure || 'À
-        préciser'}}
-      </dd>
-      <dt>Transport et hébergement</dt>
-      <dd>
-        {{youth()!.logistics.transport || 'À préciser'}} / {{youth()!.logistics.accommodation || 'À
-        préciser'}}
-      </dd>
+      <dt>Délégation de départ</dt>
+      <dd>{{delegationName(youth()!.identity.delegationId) || 'À compléter'}}</dd>
+      <dt>Hébergement</dt>
+      <dd>{{youth()!.logistics.accommodation || 'À préciser'}}</dd>
       <dt>Précisions logistiques</dt>
       <dd>{{youth()!.logistics.notes || 'Aucune'}}</dd>
       <dt>Documents attestés</dt>
@@ -514,6 +507,45 @@
       <dt>Paiement</dt>
       <dd>{{simulationLabels[youth()!.simulation]}}</dd>
     </dl>
+    @if(transportInfo()?.journeys?.length){
+    <section class="card">
+      <h2>Trajets organisés par votre délégation</h2>
+      @for(j of transportInfo()!.journeys; track j.direction){
+      <article>
+        <h3>
+          {{j.direction==='ALLER'?'Aller':'Retour'}} · {{j.delegation.name}}
+        </h3>
+        @if(j.status==='TO_ASSIGN' || !j.transport){
+        <p>
+          La délégation prépare ce trajet : les horaires et le lieu de rendez-vous seront affichés
+          ici dès que votre enfant sera placé.
+        </p>
+        }@else{
+        <p>
+          {{transportModeLabels[j.transport.mode] || j.transport.mode}} · {{j.transport.name}}
+        </p>
+        @if(j.transport.meetingPoint){
+        <p>Rendez-vous : {{j.transport.meetingPoint}}</p>
+        } @if(j.transport.departureDatetime){
+        <p>Départ : {{j.transport.departureDatetime | date:'dd/MM/yyyy à HH\hmm'}}</p>
+        } @if(j.transport.arrivalDatetime){
+        <p>Arrivée : {{j.transport.arrivalDatetime | date:'dd/MM/yyyy à HH\hmm'}}</p>
+        } @if(j.transport.practicalInfo){
+        <p>{{j.transport.practicalInfo}}</p>
+        }
+        }
+        @if(j.contacts.length){
+        <p>
+          Responsables de la délégation :
+          @for(c of j.contacts; track c.email; let last = $last){
+          <a [href]="'mailto:' + c.email">{{c.name}}</a>{{last ? '' : ', '}}
+          }
+        </p>
+        }
+      </article>
+      }
+    </section>
+    }
     @if(!readOnly()){ @if(missing().length){
     <aside>
       <h2>Ce qu'il reste à compléter</h2>

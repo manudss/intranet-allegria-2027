@@ -600,6 +600,7 @@ export interface ProgramSequence {
   groupIds?: number[];
   /** Répartitions de groupes de rassemblement rattachées (vue jour). */
   gatheringRepartitionIds?: number[];
+  gatheringGroupIds?: number[];
 }
 
 export interface ProgramDay {

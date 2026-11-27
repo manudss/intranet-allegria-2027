@@ -69,9 +69,9 @@
               <img class="track-logo" [src]="logo" [alt]="trackLabel(sequence.track)" />
               } {{ trackLabel(sequence.track) }}
             </span>
-            {{ sequence.title }} @if (sequence.gatheringRepartitionIds?.length) {
+            {{ sequence.title }} @if (sequence.gatheringGroupIds?.length) {
             <span tuiBadge appearance="neutral" title="Répartition en groupes de rassemblement"
-              >Groupes ×{{ sequence.gatheringRepartitionIds?.length }}</span
+              >Groupes ×{{ sequence.gatheringGroupIds?.length }}</span
             >
             } @if (sequence.status === ProgramSequenceStatus.FROZEN) {
             <span tuiBadge appearance="warning">Figé</span>

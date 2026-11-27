@@ -7,6 +7,7 @@ import {
   GatheringFiche,
   GatheringProposal,
   GatheringRepartition,
+  GatheringSequenceRef,
 } from './gathering-groups.models';
 
 @Injectable({ providedIn: 'root' })
@@ -38,6 +39,18 @@ export class GatheringGroupsApiService {
   duplicateRepartition(id: number, name?: string) {
     return this.http.post<{ id: number }>(`${this.base}/repartitions/${id}/duplicate`, { name });
   }
+  linkSequence(groupId: number, sequenceId: number) {
+    return this.http.put(`${this.base}/groups/${groupId}/sequences/${sequenceId}`, {});
+  }
+
+  unlinkSequence(groupId: number, sequenceId: number) {
+    return this.http.delete(`${this.base}/groups/${groupId}/sequences/${sequenceId}`);
+  }
+
+  sequenceOptions(): Observable<GatheringSequenceRef[]> {
+    return this.http.get<GatheringSequenceRef[]>(`${this.base}/sequences`);
+  }
+
   forSequence(sequenceId: number): Observable<GatheringRepartition[]> {
     return this.http.get<GatheringRepartition[]>(`${this.base}/sequences/${sequenceId}/repartitions`);
   }

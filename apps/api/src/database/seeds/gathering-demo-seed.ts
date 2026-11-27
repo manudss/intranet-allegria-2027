@@ -3,6 +3,7 @@ import {
   GatheringGroup,
   GatheringGroupCategory,
   GatheringGroupManager,
+  GatheringGroupSequence,
   GatheringGroupTeam,
   GatheringGroupVolunteerTeam,
   GatheringRepartition,
@@ -54,6 +55,7 @@ export async function seedGatheringDemo(
   const groupRepo = dataSource.getRepository(GatheringGroup);
   const linkRepo = dataSource.getRepository(GatheringGroupTeam);
   const managerRepo = dataSource.getRepository(GatheringGroupManager);
+  const sequenceLinkRepo = dataSource.getRepository(GatheringGroupSequence);
   const volunteerLinkRepo = dataSource.getRepository(GatheringGroupVolunteerTeam);
 
   const sequences = await dataSource
@@ -133,6 +135,10 @@ export async function seedGatheringDemo(
       );
       groupCount += 1;
       created.push(group);
+      // Lien groupe <-> créneau : posé groupe par groupe (relation plusieurs-à-plusieurs).
+      if (seq) {
+        await sequenceLinkRepo.save(sequenceLinkRepo.create({ groupId: group.id, programSequenceId: seq.id }));
+      }
       if (picked.length) {
         await linkRepo.save(
           picked.map((t) =>
@@ -173,7 +179,7 @@ export async function seedGatheringDemo(
   const jeu = await build(
     'Grand jeu du samedi apres-midi',
     'Exemple : trois groupes par piste pour le grand jeu. Des équipes restent à placer pour tester le dispatch.',
-    sequence('2027-11-01', 'Jeu dans la ville'),
+    sequence('2027-11-01', 'Jeu dans la ville', ProgramSequenceTrack.COMMON),
     [
       { name: 'Vikings', category: TA, location: 'Grand terrain', fill: 1.6, teams: 6 },
       { name: 'Explorateurs', category: ES, location: 'Foret', fill: 1.6, teams: 6 },
@@ -222,7 +228,7 @@ export async function seedGatheringDemo(
   await build(
     'Ateliers découverte (chevauche le grand jeu)',
     'Cas : mêmes équipes que le grand jeu sur des horaires qui se chevauchent, pour voir l\'alerte de chevauchement.',
-    sequence('2027-11-01', 'Jeu dans la ville'),
+    sequence('2027-11-01', 'Jeu dans la ville', ProgramSequenceTrack.COMMON),
     [
       { name: 'Atelier théâtre', category: MIXTE, location: 'Salle 1', fill: 1.4, teams: 8 },
       { name: 'Atelier musique', category: MIXTE, location: 'Salle 2', fill: 1.4, teams: 8 },
@@ -269,6 +275,26 @@ export async function seedGatheringDemo(
     ],
     [...noTrackTeams.slice(0, 80), ...taTeams.slice(40, 60), ...esTeams.slice(40, 60)],
   );
+
+  // Liens multiples et partiels : un même groupe sur plusieurs créneaux, et un groupe de
+  // répartition liée volontairement non lié à son créneau.
+  const extraLinks: [GatheringGroup | undefined, ProgramSequence | null][] = [
+    [midi[0], diner[0] ? sequence('2027-11-01', 'Dîner') : null],
+    [midi[0], sequence('2027-11-02', 'Repas')],
+    [midi[1], sequence('2027-11-02', 'Repas')],
+    [jeu[2], sequence('2027-11-02', 'Grand Jeu', ProgramSequenceTrack.COMMON)],
+    [jeu[0], sequence('2027-11-02', 'Grand Jeu', ProgramSequenceTrack.COMMON)],
+  ];
+  for (const [group, seq] of extraLinks) {
+    if (!group || !seq) continue;
+    const exists = await sequenceLinkRepo.findOneBy({ groupId: group.id, programSequenceId: seq.id });
+    if (!exists) {
+      await sequenceLinkRepo.save(sequenceLinkRepo.create({ groupId: group.id, programSequenceId: seq.id }));
+    }
+  }
+  if (midi[5]) {
+    await sequenceLinkRepo.delete({ groupId: midi[5].id });
+  }
 
   // Équipes bénévoles opérationnelles rattachées à des groupes (cuisine, logistique...).
   const volunteerTeams = args.volunteerTeams.slice(0, 4);

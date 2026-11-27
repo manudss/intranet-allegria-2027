@@ -477,7 +477,7 @@
       } @case (2) {
       <section class="tab-panel" aria-label="Groupes concernés">
         <p class="hint">
-          Les groupes concernés sont les groupes de rassemblement des répartitions liées à ce créneau.
+          Les groupes concernés sont les groupes de rassemblement liés à ce créneau (groupe par groupe).
         </p>
         @for (r of gatheringRepartitions(); track r.id) {
         <article class="repartition-block">
@@ -488,11 +488,6 @@
             </h3>
             <span>
               <a tuiButton appearance="flat" size="xs" [routerLink]="['/groupes-rassemblement', 'repartitions', r.id]">Dispatch</a>
-              @if (canEdit()) {
-              <button tuiButton appearance="flat" size="xs" type="button" [disabled]="busy()" (click)="unlinkRepartition(r.id)">
-                Détacher du créneau
-              </button>
-              }
             </span>
           </header>
           <ul class="item-list">
@@ -507,10 +502,15 @@
                 <small>{{ g.teamCount }} équipe{{ g.teamCount > 1 ? 's' : '' }}</small>
                 <small>{{ g.persons }}/{{ g.capacity ?? '∞' }} personnes ({{ g.jeunes }} jeunes · {{ g.animateurs }} animateurs)</small>
                 <small [class]="'state s-' + stateOf(g).toLowerCase()">{{ stateLabels[stateOf(g)] }}</small>
+                @if (canEdit()) {
+                <button tuiButton appearance="flat" size="xs" type="button" [disabled]="busy()" (click)="unlinkGatheringGroup(g.id)">
+                  Retirer de ce créneau
+                </button>
+                }
               </span>
             </li>
             } @empty {
-            <li class="empty-state">Aucun groupe dans cette répartition.</li>
+            <li class="empty-state">Aucun groupe.</li>
             }
           </ul>
         </article>
@@ -524,7 +524,7 @@
           </button>
         </div>
         @if (showGroupPicker()) {
-        <p class="muted">Choisir un groupe lie sa répartition entière à ce créneau (tous les groupes de la répartition sont concernés).</p>
+        <p class="muted">Chaque groupe se lie à ce créneau séparément ; un groupe peut aussi être lié à d'autres créneaux.</p>
         <app-gathering-group-picker
           [options]="allGatheringGroups()"
           [currentSequenceId]="sequence.id"

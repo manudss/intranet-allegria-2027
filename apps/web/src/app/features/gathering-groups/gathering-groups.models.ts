@@ -26,6 +26,8 @@ export interface GatheringGroupSummary {
   overflow: boolean;
   almostFull: boolean;
   teamIds?: number[];
+  /** Créneaux de l'agenda liés à ce groupe (plusieurs possibles). */
+  sequences?: GatheringSequenceRef[];
   /** Détail des équipes placées (présent sur le board de dispatch). */
   teams?: GatheringBoardPlacedTeam[];
 }
@@ -125,6 +127,8 @@ export interface GatheringFiche {
     countAnimators: boolean;
   };
   sequence: GatheringSequenceRef | null;
+  /** Tous les créneaux liés au groupe, triés par date et heure. */
+  sequences: GatheringSequenceRef[];
   hostingGroup: { id: number; name: string } | null;
   documentLink: { id: number; title: string; url: string } | null;
   teams: GatheringFicheTeam[];
@@ -181,8 +185,8 @@ export interface GatheringGroupOption {
   almostFull: boolean;
   repartitionId: number;
   repartitionName: string;
-  /** Créneau de l'agenda auquel la répartition est déjà liée, s'il y en a un. */
-  sequence: GatheringSequenceRef | null;
+  /** Créneaux de l'agenda auxquels ce groupe est déjà lié. */
+  sequences: GatheringSequenceRef[];
 }
 
 export function toGroupOptions(repartitions: GatheringRepartition[]): GatheringGroupOption[] {
@@ -199,7 +203,7 @@ export function toGroupOptions(repartitions: GatheringRepartition[]): GatheringG
       almostFull: g.almostFull,
       repartitionId: r.id,
       repartitionName: r.name,
-      sequence: r.sequence ?? null,
+      sequences: g.sequences ?? [],
     })),
   );
 }

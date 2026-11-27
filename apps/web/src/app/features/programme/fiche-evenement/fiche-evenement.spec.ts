@@ -181,14 +181,25 @@ describe('FicheEvenementPage', () => {
     http.verify();
   });
 
-  it('détache une répartition du créneau', () => {
+  it('retire le lien d\'un seul groupe du créneau', () => {
     const { http, component } = setup();
     flushInitialLoad(http);
-    component.unlinkRepartition(5);
-    const request = http.expectOne('/api/gathering/repartitions/5');
-    expect(request.request.method).toBe('PATCH');
-    expect(request.request.body).toEqual({ programSequenceId: null });
-    request.flush({});
+    component.unlinkGatheringGroup(7);
+    const request = http.expectOne('/api/gathering/groups/7/sequences/1');
+    expect(request.request.method).toBe('DELETE');
+    request.flush({ unlinked: true });
+    http.expectOne('/api/gathering/sequences/1/repartitions').flush([]);
+    http.expectOne('/api/gathering/repartitions').flush([]);
+    http.verify();
+  });
+
+  it('lie un seul groupe au créneau, sans toucher à sa répartition', () => {
+    const { http, component } = setup();
+    flushInitialLoad(http);
+    component.linkGatheringGroup({ groupId: 9, name: 'Vikings', category: 'TA', location: null, teamCount: 0, persons: 0, capacity: null, overflow: false, almostFull: false, repartitionId: 3, repartitionName: 'Grand jeu', sequences: [] });
+    const request = http.expectOne('/api/gathering/groups/9/sequences/1');
+    expect(request.request.method).toBe('PUT');
+    request.flush({ linked: true });
     http.expectOne('/api/gathering/sequences/1/repartitions').flush([]);
     http.expectOne('/api/gathering/repartitions').flush([]);
     http.verify();

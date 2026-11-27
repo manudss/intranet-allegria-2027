@@ -41,7 +41,7 @@ type PisteFilter = Track | 'NONE' | 'ALL';
       <p class="count">{{ filtered().length }} groupe{{ filtered().length > 1 ? 's' : '' }} sur {{ options().length }}</p>
       <ul class="results" role="listbox" aria-label="Groupes de rassemblement">
         @for (g of filtered(); track g.groupId) {
-          <li class="row" [class.linked]="g.sequence?.id === currentSequenceId()">
+          <li class="row" [class.linked]="isLinked(g)">
             <div class="main">
               <span class="cat" [class]="'cat cat-' + g.category.toLowerCase()">{{ categoryLabels[g.category] }}</span>
               <strong>{{ g.name }}</strong>
@@ -52,16 +52,16 @@ type PisteFilter = Track | 'NONE' | 'ALL';
               <span>{{ g.teamCount }} équipe{{ g.teamCount > 1 ? 's' : '' }}</span>
               <span>{{ g.persons }}/{{ g.capacity ?? '∞' }} pers.</span>
               <span class="state" [class]="'state s-' + stateOf(g).toLowerCase()">{{ stateLabels[stateOf(g)] }}</span>
-              @if (g.sequence; as s) {
+              @for (s of g.sequences; track s.id) {
                 <span class="muted">Lié à {{ s.eventDate }} {{ s.startTime }} · {{ s.title }} ({{ trackLabels[s.track] }})</span>
-              } @else {
-                <span class="muted">Répartition non liée à un créneau</span>
+              } @empty {
+                <span class="muted">Aucun créneau lié</span>
               }
             </div>
             <div class="actions">
               <a [routerLink]="['/groupes-rassemblement', 'groupes', g.groupId]" target="_blank">Fiche</a>
-              <button type="button" [disabled]="disabled() || g.sequence?.id === currentSequenceId()" (click)="pick.emit(g)">
-                {{ g.sequence?.id === currentSequenceId() ? 'Déjà lié' : 'Lier à ce créneau' }}
+              <button type="button" [disabled]="disabled() || isLinked(g)" (click)="pick.emit(g)">
+                {{ isLinked(g) ? 'Déjà lié' : 'Lier ce groupe à ce créneau' }}
               </button>
             </div>
           </li>
@@ -131,6 +131,10 @@ export class GatheringGroupPickerComponent {
     ];
   });
 
+  protected isLinked(g: GatheringGroupOption): boolean {
+    return g.sequences.some((s) => s.id === this.currentSequenceId());
+  }
+
   protected readonly filtered = computed(() => {
     const q = this.query().trim().toLowerCase();
     const type = this.type();
@@ -141,7 +145,7 @@ export class GatheringGroupPickerComponent {
       (g) =>
         (!q || `${g.name} ${g.location ?? ''} ${g.repartitionName}`.toLowerCase().includes(q)) &&
         (type === 'ALL' || g.category === type) &&
-        (piste === 'ALL' || (piste === 'NONE' ? !g.sequence : g.sequence?.track === piste)) &&
+        (piste === 'ALL' || (piste === 'NONE' ? g.sequences.length === 0 : g.sequences.some((s) => s.track === piste))) &&
         (rep === 'ALL' || g.repartitionId === rep) &&
         (state === 'ALL' || groupState(g) === state),
     );

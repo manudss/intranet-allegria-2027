@@ -45,25 +45,22 @@ function detail(overrides: Partial<ProgramSequenceDetail> = {}): ProgramSequence
   };
 }
 
-const GROUPS: Group[] = [
-  { id: 11, name: 'Rassemblement Lyon 1', diocese: 'Lyon', arrivalDatetime: null, departureDatetime: null, notes: null },
-  { id: 12, name: 'Rassemblement Grenoble 1', diocese: 'Grenoble', arrivalDatetime: null, departureDatetime: null, notes: null },
-];
-
 function flushInitialLoad(
   http: HttpTestingController,
   seq: ProgramSequenceDetail = detail(),
   daySequences: unknown[] = [],
+  linked: unknown[] = [],
 ) {
   http.expectOne('/api/program/sequences/1').flush(seq);
   http.expectOne('/api/program/sequences/1/tasks').flush([]);
-  http.expectOne('/api/groups').flush(GROUPS);
   http.expectOne('/api/volunteer-missions').flush([
     { id: 42, title: 'Accueil des groupes', location: 'Parvis' },
     { id: 43, title: 'Service café', location: null },
   ]);
   http.expectOne('/api/volunteer-teams').flush([{ id: 3, name: 'Animation' }]);
   http.expectOne(`/api/program/days/${DAY}`).flush({ date: DAY, sequences: daySequences });
+  http.expectOne('/api/gathering/sequences/1/repartitions').flush(linked);
+  http.expectOne('/api/gathering/repartitions').flush([]);
 }
 
 describe('FicheEvenementPage', () => {
@@ -96,7 +93,7 @@ describe('FicheEvenementPage', () => {
     flushInitialLoad(http);
     fixture.detectChanges();
     expect(component.sequence()?.title).toBe('Célébration d’ouverture');
-    expect(component.linkedGroups().map((g) => g.name)).toEqual(['Rassemblement Lyon 1']);
+    expect(component.linkedGatheringGroups()).toEqual([]);
     expect(component.linkedMissions().map((m) => m.title)).toEqual(['Accueil des groupes']);
     expect(component.loading()).toBe(false);
     http.verify();
@@ -184,16 +181,16 @@ describe('FicheEvenementPage', () => {
     http.verify();
   });
 
-  it('lie un groupe existant', () => {
+  it('détache une répartition du créneau', () => {
     const { http, component } = setup();
     flushInitialLoad(http);
-    component.groupToAdd.set(12);
-    component.addGroup();
-    const request = http.expectOne('/api/program/sequences/1/groups');
-    expect(request.request.method).toBe('PUT');
-    expect(request.request.body).toEqual({ groupIds: [11, 12] });
-    request.flush(detail({ groupIds: [11, 12] }));
-    expect(component.sequence()?.groupIds).toEqual([11, 12]);
+    component.unlinkRepartition(5);
+    const request = http.expectOne('/api/gathering/repartitions/5');
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({ programSequenceId: null });
+    request.flush({});
+    http.expectOne('/api/gathering/sequences/1/repartitions').flush([]);
+    http.expectOne('/api/gathering/repartitions').flush([]);
     http.verify();
   });
 
@@ -261,7 +258,7 @@ describe('FicheEvenementPage', () => {
     expect(component.tabLabels()).toEqual([
       'Détails',
       'Missions & tâches 1 · 0',
-      'Groupes concernés 1',
+      'Groupes concernés 0',
       'Documents 1',
       'Historique',
     ]);

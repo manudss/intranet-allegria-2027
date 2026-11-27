@@ -194,13 +194,32 @@ export class ProgramService {
         link.groupId,
       ]);
     }
+    const gatheringIdsBySequence = await this.gatheringRepartitionIdsBySequence(ids);
     return {
       date,
       sequences: sequences.map((sequence) => ({
         ...toView(sequence),
         groupIds: groupIdsBySequence.get(sequence.id) ?? [],
+        gatheringRepartitionIds: gatheringIdsBySequence.get(sequence.id) ?? [],
       })),
     };
+  }
+
+  /** Répartitions de groupes de rassemblement rattachées aux séquences données. */
+  private async gatheringRepartitionIdsBySequence(
+    sequenceIds: number[],
+  ): Promise<Map<number, number[]>> {
+    const out = new Map<number, number[]>();
+    if (!sequenceIds.length) return out;
+    const rows: { program_sequence_id: number; id: number }[] = await this.dataSource.query(
+      `SELECT program_sequence_id, id FROM gathering_repartitions
+        WHERE program_sequence_id = ANY($1::int[]) ORDER BY id`,
+      [sequenceIds],
+    );
+    for (const row of rows) {
+      out.set(row.program_sequence_id, [...(out.get(row.program_sequence_id) ?? []), row.id]);
+    }
+    return out;
   }
 
   async previewInsert(

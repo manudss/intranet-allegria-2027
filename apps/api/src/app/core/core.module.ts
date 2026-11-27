@@ -23,6 +23,7 @@ import { ProgramModule } from './program/program.module';
 import { MySpaceModule } from './my-space/my-space.module';
 import { VolunteerHostingModule } from './volunteer-hosting/volunteer-hosting.module';
 import { JeunesRepartitionModule } from './jeunes-repartition/jeunes-repartition.module';
+import { GatheringGroupsModule } from './gathering-groups/gathering-groups.module';
 import { AccessControlModule } from './access-control/access-control.module';
 import { DocumentLibraryModule } from './document-library/document-library.module';
 import { DelegationsModule } from './delegations/delegations.module';
@@ -53,6 +54,7 @@ import { DelegationsModule } from './delegations/delegations.module';
     MySpaceModule,
     VolunteerHostingModule,
     JeunesRepartitionModule,
+    GatheringGroupsModule,
     AccessControlModule,
     DocumentLibraryModule,
     DelegationsModule,

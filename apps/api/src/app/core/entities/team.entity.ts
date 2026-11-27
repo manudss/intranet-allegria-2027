@@ -1,5 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Group } from './group.entity';
+import { ProgramSequenceTrack } from './program-sequence-track.enum';
 import { HostingGroup } from './hosting-group.entity';
 import { TeamParticipant } from './team-participant.entity';
 import { Volunteer } from './volunteer.entity';
@@ -39,6 +40,19 @@ export class Team {
 
   @Column({ type: 'int', default: 10 })
   maxSize!: number;
+
+  /**
+   * Piste de l'équipe : branche TA ou ES. COMMON = piste pas encore renseignée
+   * (valeur de repli à la création) : une telle équipe n'entre que dans un groupe
+   * de rassemblement mixte, avec une alerte, jusqu'à ce que sa piste soit choisie.
+   */
+  @Column({
+    type: 'enum',
+    enum: ProgramSequenceTrack,
+    enumName: 'program_sequence_track_enum',
+    default: ProgramSequenceTrack.COMMON,
+  })
+  track!: ProgramSequenceTrack;
 
   @Column({ type: 'text', nullable: true })
   notes!: string | null;

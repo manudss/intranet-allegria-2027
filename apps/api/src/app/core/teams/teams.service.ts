@@ -2,7 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import type { AccessScopeInfo } from '../auth/access-module.decorator';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
-import { Group, Participant, Team, TeamParticipant, Volunteer } from '../entities';
+import { Group, Participant, ProgramSequenceTrack, Team, TeamParticipant, Volunteer } from '../entities';
 import { CreateTeamDto, UpdateTeamDto } from './teams.types';
 
 @Injectable()
@@ -39,6 +39,7 @@ export class TeamsService {
         ? await this.volunteersRepository.findOneBy({ id: dto.secondaryAnimatorId })
         : null,
       maxSize: dto.maxSize ?? 10,
+      track: dto.track ?? ProgramSequenceTrack.COMMON,
       notes: dto.notes ?? null,
     });
 
@@ -95,6 +96,7 @@ export class TeamsService {
     Object.assign(team, {
       name: dto.name ?? team.name,
       maxSize: dto.maxSize ?? team.maxSize,
+      track: dto.track ?? team.track,
       notes: Object.prototype.hasOwnProperty.call(dto, 'notes') ? (dto.notes ?? null) : team.notes,
     });
 

@@ -883,24 +883,32 @@ describe('ProgrammePage', () => {
 });
 
 describe('ProgrammePage — vue « Par groupe »', () => {
+  const grp = (id: number, name: string) => ({
+    id, name, category: 'MIXTE', location: null, jeunes: 10, animateurs: 2, persons: 12,
+    teamCount: 2, capacity: 20, overflow: false, almostFull: false,
+  });
   const GROUPS = [
-    { id: 7, name: 'Lyon 1', diocese: 'Lyon', arrivalDatetime: null, departureDatetime: null, notes: null },
-    { id: 9, name: 'Grenoble 1', diocese: 'Grenoble', arrivalDatetime: null, departureDatetime: null, notes: null },
+    { id: 70, name: 'R1', notes: null, allowOverflow: false, countAnimators: true, programSequenceId: 1, groups: [grp(7, 'Lyon 1')] },
+    { id: 90, name: 'R2', notes: null, allowOverflow: false, countAnimators: true, programSequenceId: 3, groups: [grp(7, 'Lyon 1'), grp(9, 'Grenoble 1')] },
   ];
 
   it('regroupe les créneaux par groupe de rassemblement, « Sans groupe » en dernier', () => {
     const { http, flushDay, fixture, component } = setup(['COORDINATOR']);
     flushDay([
-      seq(1, '08:00', null, { title: 'Grand Jeu', groupIds: [7] }),
+      seq(1, '08:00', null, { title: 'Grand Jeu', gatheringRepartitionIds: [70] }),
       seq(2, '09:00', 1, { title: 'Repas' }),
-      seq(3, '10:00', 2, { title: 'Veillée', groupIds: [7, 9] }),
+      seq(3, '10:00', 2, { title: 'Veillée', gatheringRepartitionIds: [90, 70] }),
     ]);
     component.setDayLayout('groups');
-    http.expectOne('/api/groups').flush(GROUPS);
+    http.expectOne('/api/gathering/repartitions').flush(GROUPS);
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
     const lanes = [...root.querySelectorAll('.groups-lane')].map((el) => el.textContent?.trim());
-    expect(lanes).toEqual(['Grenoble 1', 'Lyon 1', 'Sans groupe']);
+    expect(lanes).toHaveLength(3);
+    expect(lanes[0]).toContain('Grenoble 1');
+    expect(lanes[0]).toContain('2 équipes');
+    expect(lanes[1]).toContain('Lyon 1');
+    expect(lanes[2]).toBe('Sans groupe');
     const cards = [...root.querySelectorAll('.groups-view .track-card')].map((el) => el.textContent);
     // « Veillée » est liée à deux groupes : elle apparaît dans les deux lanes.
     expect(cards.filter((card) => card?.includes('Veillée'))).toHaveLength(2);
@@ -912,11 +920,11 @@ describe('ProgrammePage — vue « Par groupe »', () => {
   it('la recherche surligne aussi dans la vue par groupe', () => {
     const { http, flushDay, fixture, component } = setup(['COORDINATOR']);
     flushDay([
-      seq(1, '08:00', null, { title: 'Grand Jeu', groupIds: [7] }),
+      seq(1, '08:00', null, { title: 'Grand Jeu', gatheringRepartitionIds: [70] }),
       seq(2, '09:00', 1, { title: 'Repas' }),
     ]);
     component.setDayLayout('groups');
-    http.expectOne('/api/groups').flush(GROUPS);
+    http.expectOne('/api/gathering/repartitions').flush(GROUPS);
     component.setSearchQuery('repas');
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;

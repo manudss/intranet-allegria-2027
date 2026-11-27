@@ -11,16 +11,18 @@
         id="rechercher-une-equipe"
       />
     </tui-textfield>
+    @if (gatheringAccess()) {
     <tui-textfield iconStart="@tui.filter" tuiChevron [stringify]="stringifyGroup">
-      <label for="groupe-2" tuiLabel>Groupe</label
+      <label for="groupe-2" tuiLabel>Groupe de rassemblement</label
       ><select
         tuiSelect
         placeholder="Tous les groupes"
-        [items]="groupIds()"
+        [items]="gatheringGroupIds()"
         [formField]="groupFilterForm"
         id="groupe-2"
       ></select>
     </tui-textfield>
+    }
   </div>
   @if (loading()) {
   <app-loading-skeleton />
@@ -35,8 +37,6 @@
   </header>
   @if (mode() === 'detail') {
   <dl>
-    <dt>Groupe</dt>
-    <dd>{{ selected()?.group?.name || '—' }}</dd>
     <dt>Animateur</dt>
     <dd>
       {{ selected()?.primaryAnimator?.firstName }} {{ selected()?.primaryAnimator?.lastName }}
@@ -53,6 +53,40 @@
       >
     </dd>
   </dl>
+  @if (gatheringAccess()) {
+  <h3>Groupes de rassemblement</h3>
+  <ul>
+    @for (g of membershipsOf(selected()!.id); track g.id) {
+    <li class="membership">
+      <span [class]="'cat cat-' + g.category.toLowerCase()">{{ categoryLabels[g.category] }}</span>
+      <a [routerLink]="['/groupes-rassemblement', 'groupes', g.id]"><strong>{{ g.name }}</strong></a>
+      <span class="muted">
+        {{ g.repartitionName }} · piste de l'équipe
+        <span [style.color]="trackColors[selected()!.track]">{{ trackLabels[selected()!.track] }}</span>
+      </span>
+      <a [routerLink]="['/groupes-rassemblement', 'repartitions', g.repartitionId]">Dispatch</a>
+      @if (myAccess.can('GATHERING_GROUPS', 'EDIT')) {
+      <button type="button" tuiButton appearance="flat" size="xs" (click)="removeFromGroup(g)">Retirer</button>
+      }
+    </li>
+    } @empty {
+    <li class="muted">Aucun groupe de rassemblement.</li>
+    }
+  </ul>
+  <div class="member-add">
+    <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyGroup">
+      <label for="ajout-groupe-rassemblement" tuiLabel>Ajouter à un groupe</label
+      ><select
+        tuiSelect
+        placeholder="Groupe · Répartition"
+        [items]="addableGroupIds()"
+        [formField]="addGroupForm"
+        id="ajout-groupe-rassemblement"
+      ></select>
+    </tui-textfield>
+    <button tuiButton size="s" [disabled]="!addGroupId()" (click)="addToGroup()">Ajouter</button>
+  </div>
+  }
   <h3>Membres</h3>
   <div class="member-add">
     <app-person-picker
@@ -124,14 +158,13 @@
       <label for="nom-de-l-equipe" tuiLabel>Nom de l'équipe</label
       ><input tuiInput [formField]="teamForm.name" id="nom-de-l-equipe" />
     </tui-textfield>
-    <tui-textfield iconStart="@tui.users" tuiChevron [stringify]="stringifyGroup">
-      <label for="groupe-3" tuiLabel>Groupe</label
+    <tui-textfield iconStart="@tui.flag" tuiChevron [stringify]="stringifyTrack">
+      <label for="piste-de-l-equipe" tuiLabel>Piste</label
       ><select
         tuiSelect
-        placeholder="Sans groupe"
-        [items]="groupIds()"
-        [formField]="teamForm.groupId"
-        id="groupe-3"
+        [items]="trackValues"
+        [formField]="teamForm.track"
+        id="piste-de-l-equipe"
       ></select>
     </tui-textfield>
     <app-person-picker

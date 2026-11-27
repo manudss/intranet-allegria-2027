@@ -1,3 +1,9 @@
+import { GatheringGroupsApiService } from '../gathering-groups/gathering-groups.api';
+import {
+  CATEGORY_LABELS,
+  GatheringGroupSummary,
+  GatheringRepartition,
+} from '../gathering-groups/gathering-groups.models';
 import { EventQuickEditorComponent } from './event-mission-links/event-quick-editor';
 import { ShiftChangesComponent } from './event-mission-links/shift-changes';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -14,7 +20,6 @@ import { ActivatedRoute, ParamMap, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import {
-  Group,
   ProgramChangeLogEntry,
   ProgramPreview,
   ProgramSequence,
@@ -25,7 +30,6 @@ import {
   ProgramSequenceVisibility,
 } from '../../models/models';
 import {
-  GroupsApiService,
   ProgramApiService,
 } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
@@ -167,11 +171,11 @@ interface OverviewDay {
     RouterLink,
   ],
   templateUrl: './programme.html',
-  styleUrl: './programme.scss',
+  styleUrls: ['./programme.scss', './programme-groups.scss'],
 })
 export class ProgrammePage {
   private readonly api = inject(ProgramApiService);
-  private readonly groupsApi = inject(GroupsApiService);
+  private readonly gatheringApi = inject(GatheringGroupsApiService);
   private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
@@ -198,47 +202,52 @@ export class ProgrammePage {
     if (mode === 'groups') this.loadGroupsOnce();
   }
 
-  readonly groups = signal<Group[]>([]);
+  /** Répartitions de groupes de rassemblement (nouveaux groupes), chargées à l'ouverture de la vue. */
+  readonly repartitions = signal<GatheringRepartition[]>([]);
   private groupsLoaded = false;
 
   private loadGroupsOnce(): void {
     if (this.groupsLoaded) return;
     this.groupsLoaded = true;
-    this.groupsApi.list().subscribe({
-      next: (groups) => this.groups.set(groups),
+    this.gatheringApi.list().subscribe({
+      next: (repartitions) => this.repartitions.set(repartitions),
       error: () => (this.groupsLoaded = false),
     });
   }
 
+  protected readonly categoryLabels = CATEGORY_LABELS;
+
   /**
-   * Lanes de la vue « Par groupe » : une lane par groupe de rassemblement lié aux créneaux du
-   * jour (un créneau lié à plusieurs groupes apparaît dans chaque lane), puis les créneaux sans
-   * groupe. Le filtre de piste s'applique comme dans les autres vues ; la recherche surligne
-   * et estompe sans retirer les créneaux.
+   * Lanes de la vue « Par groupe » : une lane par groupe de rassemblement des répartitions liées
+   * aux créneaux du jour (un créneau lié à une répartition apparaît dans la lane de chacun de ses
+   * groupes), puis les créneaux sans groupe. Le filtre de piste s'applique comme dans les autres
+   * vues ; la recherche surligne et estompe sans retirer les créneaux.
    */
   readonly groupLanes = computed(() => {
-    const names = new Map(this.groups().map((group) => [group.id, group.name]));
-    const lanes = new Map<string, ProgramSequence[]>();
+    const byRepartition = new Map(this.repartitions().map((r) => [r.id, r]));
+    const lanes = new Map<number, { group: GatheringGroupSummary; repartition: GatheringRepartition; sequences: ProgramSequence[] }>();
+    const without: ProgramSequence[] = [];
     for (const sequence of this.daySequences()) {
       if (!this.matchesTrack(sequence)) continue;
-      const groupIds = sequence.groupIds ?? [];
-      if (groupIds.length === 0) {
-        lanes.set('', [...(lanes.get('') ?? []), sequence]);
+      const linked = (sequence.gatheringRepartitionIds ?? [])
+        .map((id) => byRepartition.get(id))
+        .filter((r): r is GatheringRepartition => !!r);
+      const groups = linked.flatMap((r) => r.groups.map((group) => ({ group, repartition: r })));
+      if (groups.length === 0) {
+        without.push(sequence);
         continue;
       }
-      for (const groupId of groupIds) {
-        const name = names.get(groupId) ?? `Groupe #${groupId}`;
-        lanes.set(name, [...(lanes.get(name) ?? []), sequence]);
+      for (const entry of groups) {
+        const lane = lanes.get(entry.group.id) ?? { ...entry, sequences: [] };
+        if (!lane.sequences.includes(sequence)) lane.sequences.push(sequence);
+        lanes.set(entry.group.id, lane);
       }
     }
-    return Array.from(lanes.entries())
-      .map(([name, sequences]) => ({
-        name,
-        sequences: [...sequences].sort((a, b) => a.startTime.localeCompare(b.startTime)),
-      }))
-      .sort((a, b) =>
-        a.name === '' ? 1 : b.name === '' ? -1 : a.name.localeCompare(b.name, 'fr'),
-      );
+    const sorted = (list: ProgramSequence[]) => [...list].sort((a, b) => a.startTime.localeCompare(b.startTime));
+    const result = Array.from(lanes.values())
+      .map((lane) => ({ ...lane, sequences: sorted(lane.sequences) }))
+      .sort((a, b) => a.group.name.localeCompare(b.group.name, 'fr'));
+    return { lanes: result, without: sorted(without) };
   });
 
   trackColor(track: ProgramSequenceTrack): string {

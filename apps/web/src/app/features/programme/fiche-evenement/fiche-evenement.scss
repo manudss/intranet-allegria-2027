@@ -406,3 +406,15 @@
   font-size: 0.8rem;
   opacity: 0.8;
 }
+
+.hint { color: var(--appearance-muted); font-size: .85rem; margin: 0 0 .5rem; }
+.repartition-block { margin-bottom: .75rem; }
+.item-list-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .5rem; }
+.group-line { display: grid; gap: .15rem; }
+.group-main, .group-meta { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.cat { font-weight: 700; font-size: .8rem; }
+.cat-ta { color: #fe0002; }
+.cat-es { color: #00b2b2; }
+.cat-mixte { color: #6b5f52; }
+.state.s-full { color: #c62828; }
+.state.s-almost { color: #8a6d1a; }

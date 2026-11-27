@@ -238,6 +238,8 @@ export interface Team {
   secondaryAnimator: Volunteer | null;
   maxSize: number;
   notes: string | null;
+  /** Piste TA / ES de l'équipe ; COMMON = piste non renseignée. */
+  track: ProgramSequenceTrack;
 }
 /** Affectation d'un bénévole à une équipe de rassemblement, en tant qu'adulte. */
 export interface BenevoleAssignment {
@@ -383,9 +385,10 @@ export interface VolunteerShiftAssignmentVolunteerSearchResult {
   volunteer: Volunteer;
   hasOverlap: boolean;
 }
-export type TeamPayload = Pick<Team, 'name' | 'maxSize'> & {
+export type TeamPayload = Pick<Team, 'name' | 'maxSize' | 'track'> & {
   notes: string;
-  groupId: number | null;
+  /** Délégation (départs/arrivées) : gérée hors de la fiche équipe, jamais envoyée ici. */
+  groupId?: number | null;
   primaryAnimatorId: number | null;
   secondaryAnimatorId: number | null;
 };
@@ -595,6 +598,8 @@ export interface ProgramSequence {
   frozenAt: string | null;
   /** Groupes de rassemblement liés (uniquement dans la réponse de la vue jour). */
   groupIds?: number[];
+  /** Répartitions de groupes de rassemblement rattachées (vue jour). */
+  gatheringRepartitionIds?: number[];
 }
 
 export interface ProgramDay {

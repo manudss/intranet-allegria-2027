@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
+import { ProgramSequenceTrack } from '../entities';
 
 export class CreateTeamDto {
   @ApiProperty({ example: 'Equipe Saint Luc 01' })
@@ -15,6 +16,9 @@ export class CreateTeamDto {
 
   @ApiPropertyOptional({ example: 10, minimum: 1 })
   maxSize?: number;
+
+  @ApiPropertyOptional({ enum: ProgramSequenceTrack, example: 'TA', description: "Piste de l'équipe : TA ou ES. COMMON = pas encore renseignée (ne peut entrer que dans un groupe mixte)." })
+  track?: ProgramSequenceTrack;
 
   @ApiPropertyOptional({ example: 'Equipe calme, prefere ateliers logistiques.' })
   notes?: string | null;

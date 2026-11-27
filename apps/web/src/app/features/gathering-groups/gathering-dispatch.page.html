@@ -200,6 +200,8 @@
         }
         <ul class="group-list">
           @for (group of b.groups; track group.id) {
+            <!-- Raccourci souris : l'équivalent clavier est la barre « Placer » et les boutons de la carte. -->
+            <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
             <li
               class="group-card"
               [class.target]="selectedTeamId() !== null && !refusal(group)"

@@ -215,13 +215,15 @@
         </tui-textfield>
         <div class="field-block">
           <label class="field-label" for="t-info">Infos pratiques pour les parents</label>
-          <textarea
-            tuiTextarea
-            id="t-info"
-            [ngModel]="transportForm().practicalInfo"
-            (ngModelChange)="transportForm.update((f) => ({ ...f, practicalInfo: $event }))"
-            name="tinfo"
-          ></textarea>
+          <tui-textfield>
+            <textarea
+              tuiTextarea
+              id="t-info"
+              [ngModel]="transportForm().practicalInfo"
+              (ngModelChange)="transportForm.update((f) => ({ ...f, practicalInfo: $event }))"
+              name="tinfo"
+            ></textarea>
+          </tui-textfield>
         </div>
         <div>
           <button tuiButton type="submit" [disabled]="!transportForm().name">

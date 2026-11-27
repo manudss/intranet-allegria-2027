@@ -8,6 +8,7 @@ export { GatheringGroupCategory } from './gathering-group-category.enum';
 export { GatheringRepartition } from './gathering-repartition.entity';
 export { GatheringGroup } from './gathering-group.entity';
 export { GatheringGroupTeam } from './gathering-group-team.entity';
+export { GatheringGroupSequence } from './gathering-group-sequence.entity';
 export { GatheringGroupVolunteerTeam } from './gathering-group-volunteer-team.entity';
 export { GatheringGroupManager } from './gathering-group-manager.entity';
 export { Group } from './group.entity';

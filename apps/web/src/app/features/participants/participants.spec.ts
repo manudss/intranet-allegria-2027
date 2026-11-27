@@ -81,9 +81,14 @@ async function makePage(delegationsApi: unknown) {
         useValue: { snapshot: { queryParamMap: { get: () => null } } },
       },
     ],
-  }).compileComponents();
+  })
+    // Template vide : on teste la logique, pas le rendu des formulaires Taiga
+    // (qui lève des NG0950 non gérés hors navigateur).
+    .overrideComponent(ParticipantsPage, { set: { template: '', imports: [] } })
+    .compileComponents();
   const fixture = TestBed.createComponent(ParticipantsPage);
-  fixture.detectChanges();
+  // Pas de detectChanges : on teste la logique du composant, sans rendre le
+  // template complet (formulaires signal-forms et selects Taiga, erreurs NG0950).
   return fixture.componentInstance;
 }
 

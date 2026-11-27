@@ -79,3 +79,5 @@
   .data-table td[data-label]:not(:empty)::before { content: attr(data-label) ' : '; color: #777; font-size: .8rem; }
   .gauge-line { flex-wrap: wrap; }
 }
+
+.notes-label { display: block; margin: .25rem 0 -.25rem; font-size: .85rem; color: var(--appearance-text-secondary, #6b5f70); }

@@ -37,7 +37,10 @@ export const appRoutes: Route[] = [
       {
         path: 'rassemblement',
         title: 'Délégations',
-        loadComponent: () => import('./features/groups/groups').then((m) => m.GroupsPage),
+        loadComponent: () =>
+          import('./features/delegations/list/delegations-list.page').then(
+            (m) => m.DelegationsListPage,
+          ),
       },
       {
         path: 'groupes-rassemblement',

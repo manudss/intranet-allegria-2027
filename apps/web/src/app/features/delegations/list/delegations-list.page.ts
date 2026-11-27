@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { SHARED_IMPORTS } from '../../../shared/shared-imports';
 import { GroupPayload } from '../../../models/models';
 import { GroupsApiService } from '../../../services/api.services';
@@ -29,7 +30,7 @@ const COUNTRY_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-delegations-list-page',
   standalone: true,
-  imports: [...SHARED_IMPORTS],
+  imports: [...SHARED_IMPORTS, RouterLink],
   templateUrl: './delegations-list.page.html',
   styleUrls: ['../../../shared/crud.scss', './delegations-list.page.scss'],
 })

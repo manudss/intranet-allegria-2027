@@ -33,6 +33,7 @@ import {
   RepartitionParticipantsResult,
   RepartitionParamsDto,
 } from './jeunes-repartition.types';
+import { derivedDelegationIds, isTeamInScope, isTeamWritableInScope } from '../teams/team-scope';
 
 const DEFAULT_JEUNES_PER_TEAM = 6;
 const DEFAULT_ADULTS_PER_TEAM = 1;
@@ -42,8 +43,13 @@ export interface RepartitionTeamRow {
   id: number;
   name: string;
   maxSize: number;
+  /** @deprecated Lien historique équipe→délégation : dérivé des membres désormais. */
   groupId: number | null;
+  /** @deprecated Nom de la délégation dérivée (jointe par «, » si plusieurs). */
   groupName: string | null;
+  /** Délégations dérivées des membres de l'équipe (périmètre par rattachement). */
+  delegationIds: number[];
+  delegationNames: string[];
   jeunesCount: number;
   adultesCount: number;
   totalCount: number;
@@ -182,22 +188,31 @@ export class JeunesRepartitionService {
       scope.all || (this.accessRights ? await this.accessRights.getOption('GROUP_SCOPE_SHOW_OTHER_TEAMS') : false);
     const teams = (
       await this.teamsRepository.find({
-        relations: { group: true, members: { participant: true } },
+        relations: { members: { participant: { group: true } } },
         order: { name: 'ASC' },
       })
-    ).filter((t) => showOtherTeams || scope.groupIds.includes(t.group?.id ?? -1));
+    ).filter((t) => showOtherTeams || isTeamInScope(t, scope));
+
+    // Noms des délégations dérivées (affichage) : un seul chargement pour toutes les équipes.
+    const groupNames = new Map(
+      (await this.groupsRepository.find()).map((g) => [g.id, g.name] as const),
+    );
 
     const search = query.search?.trim().toLowerCase();
     const rows = teams.map((team): RepartitionTeamRow => {
       const members = team.members ?? [];
       const jeunes = members.filter((m) => m.participant?.type !== PersonType.ANIMATEUR).length;
       const adultes = members.length - jeunes;
+      const delegationIds = derivedDelegationIds(team);
+      const delegationNames = delegationIds.map((id) => groupNames.get(id) ?? `Délégation ${id}`);
       return {
         id: team.id,
         name: team.name,
         maxSize: team.maxSize,
-        groupId: team.group?.id ?? null,
-        groupName: team.group?.name ?? null,
+        groupId: delegationIds.length === 1 ? delegationIds[0] : null,
+        groupName: delegationNames.length ? delegationNames.join(', ') : null,
+        delegationIds,
+        delegationNames,
         jeunesCount: jeunes,
         adultesCount: adultes,
         totalCount: members.length,
@@ -206,7 +221,7 @@ export class JeunesRepartitionService {
 
     return rows.filter((row) => {
       if (search && !row.name.toLowerCase().includes(search)) return false;
-      if (query.groupId && row.groupId !== Number(query.groupId)) return false;
+      if (query.groupId && !row.delegationIds.includes(Number(query.groupId))) return false;
       if (query.fill === 'free' && row.totalCount >= row.maxSize) return false;
       if (query.fill === 'full' && row.totalCount < row.maxSize) return false;
       return true;
@@ -217,16 +232,14 @@ export class JeunesRepartitionService {
     dto: BulkCreateTeamsDto,
     scope: AccessScopeInfo = { all: true },
   ): Promise<BulkCreateTeamsResult> {
-    // Compte limité à des groupes : les équipes créées sont rattachées à un de ses groupes.
-    // Sans groupe, une équipe sortirait de toute portée de groupe.
+    // Le lien équipe→délégation n'est plus exigé : une équipe créée vide est neutre et
+    // rejoint la portée du premier membre rattaché (team-scope.ts). groupId reste accepté
+    // et stocké pendant la transition, sans contrôle de périmètre.
     const rawGroupId = dto.groupId === undefined || dto.groupId === null ? null : Number(dto.groupId);
     if (rawGroupId !== null && !Number.isInteger(rawGroupId)) {
       throw new BadRequestException('Groupe invalide.');
     }
     const groupId = rawGroupId;
-    if (!scope.all && (groupId === null || !scope.groupIds.includes(groupId))) {
-      throw new ForbiddenException('Précisez un de vos groupes pour créer des équipes.');
-    }
     // Portée « tout » : un groupe inexistant est une erreur de saisie (400), pas une erreur serveur.
     if (groupId !== null && !(await this.groupsRepository.findOne({ where: { id: groupId } }))) {
       throw new BadRequestException('Groupe inconnu.');
@@ -282,11 +295,14 @@ export class JeunesRepartitionService {
       throw new ForbiddenException('Un participant est hors de votre portée.');
     }
     const ts = teamIds.length
-      ? await this.teamsRepository.find({ where: { id: In(teamIds) }, relations: { group: true } })
+      ? await this.teamsRepository.find({
+          where: { id: In(teamIds) },
+          relations: { members: { participant: { group: true } } },
+        })
       : [];
     if (
       ts.length !== new Set(teamIds).size ||
-      ts.some((t) => !scope.groupIds.includes(t.group?.id ?? -1))
+      ts.some((t) => !isTeamWritableInScope(t, scope))
     ) {
       throw new ForbiddenException('Une équipe est hors de votre portée.');
     }

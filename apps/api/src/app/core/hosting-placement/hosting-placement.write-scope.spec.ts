@@ -4,14 +4,15 @@ import { HostingPlacementService } from './hosting-placement.service';
 import { JeunesRepartitionService } from '../jeunes-repartition/jeunes-repartition.service';
 import { AccessRightsService } from '../access-rights/access-rights.service';
 
-// Données fictives : jeunes 1 (groupe 5) et 2 (groupe 6) ; équipes 1 (groupe 5) et 2 (groupe 6), même groupe d'hébergement 10.
+// Données fictives : jeunes 1 (groupe 5) et 2 (groupe 6) ; l'équipe 1 a le jeune 1 pour
+// membre, l'équipe 2 le jeune 2 (délégation dérivée des membres), même groupe d'hébergement 10.
 const people: Record<number, any> = {
   1: { id: 1, type: 'JEUNE', sex: 'M', dateOfBirth: null, group: { id: 5 } },
   2: { id: 2, type: 'JEUNE', sex: 'F', dateOfBirth: null, group: { id: 6 } },
 };
 const teams = [
-  { id: 1, group: { id: 5 }, hostingGroup: { id: 10 } },
-  { id: 2, group: { id: 6 }, hostingGroup: { id: 10 } },
+  { id: 1, hostingGroup: { id: 10 }, members: [{ participant: people[1] }] },
+  { id: 2, hostingGroup: { id: 10 }, members: [{ participant: people[2] }] },
 ];
 const family = { id: 7, familyName: 'F', status: 'VALIDATED', hostingGroup: { id: 10 }, constraints: [], tags: [] };
 
@@ -33,10 +34,11 @@ function build() {
         return {
           find: async (o: any) => {
             const w = o.where;
-            if (w.participant) return [{ team: teams.find((t) => t.group.id === people[w.participant.id].group.id) }];
+            const teamOf = (pid: number) => teams.find((t) => t.members[0].participant.id === pid);
+            if (w.participant) return [{ team: teamOf(w.participant.id) }];
             return Object.values(people).map((p: any) => ({
               participant: p,
-              team: teams.find((t) => t.group.id === p.group.id),
+              team: teamOf(p.id),
             }));
           },
         };
@@ -97,12 +99,13 @@ describe('répartition jeunes : création en masse en portée groupes', () => {
       { find: async () => [], findOne: async ({ where }: any) => (where.id === 5 ? { id: 5 } : null) },
       { getOption: async () => false },
     ) as JeunesRepartitionService;
-  it('refuse sans groupe ou avec un groupe hors portée', async () => {
-    await expect(svc().bulkCreateTeams({ count: 2 } as any, scope5)).rejects.toBeInstanceOf(ForbiddenException);
-    await expect(svc().bulkCreateTeams({ count: 2, groupId: 6 } as any, scope5)).rejects.toBeInstanceOf(ForbiddenException);
-    expect(saved).toHaveLength(0);
+  it('crée les équipes sans exiger de délégation : une équipe vide est neutre et rejoint la portée au premier membre', async () => {
+    const r = await svc().bulkCreateTeams({ count: 2 } as any, scope5);
+    expect(r.created).toHaveLength(2);
+    expect(saved.every((t) => !t.group)).toBe(true);
   });
-  it('crée les équipes dans le groupe de la portée', async () => {
+  it('stocke encore un groupe fourni (colonne de transition, jamais utilisée pour l’accès)', async () => {
+    saved.length = 0;
     const r = await svc().bulkCreateTeams({ count: 2, groupId: 5 } as any, scope5);
     expect(r.created).toHaveLength(2);
     expect(saved.every((t) => t.group?.id === 5)).toBe(true);

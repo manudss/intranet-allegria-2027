@@ -24,6 +24,7 @@ import {
   VolunteerTeamLodging,
   VolunteerTeamMembership,
 } from '../entities';
+import { derivedDelegationIds } from '../teams/team-scope';
 import {
   ApplyRepartitionDto,
   ApplyRepartitionResult,
@@ -239,9 +240,13 @@ export class TeamBenevolesService {
   /** Étape 1 : équipes de rassemblement avec remplissage (jeunes / adultes / max). */
   async searchRepartitionTeams(query: RepartitionTeamsQueryDto): Promise<RepartitionTeamRow[]> {
     const teams = await this.teamsRepository.find({
-      relations: { group: true, hostingGroup: true, members: { participant: true } },
+      relations: { hostingGroup: true, members: { participant: { group: true } } },
       order: { name: 'ASC' },
     });
+    // Affichage : la délégation d'une équipe se déduit de ses membres (team-scope.ts).
+    const groupNames = new Map(
+      (await this.groupsRepository.find()).map((g) => [g.id, g.name] as const),
+    );
     const q = (query.search ?? '').trim().toLowerCase();
     return teams
       .map((team) => {
@@ -249,11 +254,15 @@ export class TeamBenevolesService {
         const jeunes = members.filter((m) => m.participant?.type === PersonType.JEUNE).length;
         const adultes = members.length - jeunes;
         const free = Math.max(0, team.maxSize - members.length);
+        const delegationIds = derivedDelegationIds(team);
+        const delegationNames = delegationIds.map((id) => groupNames.get(id) ?? `Délégation ${id}`);
         return {
           id: team.id,
           name: team.name,
-          groupId: team.group?.id ?? null,
-          groupName: team.group?.name ?? null,
+          groupId: delegationIds.length === 1 ? delegationIds[0] : null,
+          groupName: delegationNames.length ? delegationNames.join(', ') : null,
+          delegationIds,
+          delegationNames,
           hostingGroupId: team.hostingGroup?.id ?? null,
           hostingGroupName: team.hostingGroup?.name ?? null,
           jeunes,

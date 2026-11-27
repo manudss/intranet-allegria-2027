@@ -5,9 +5,10 @@ const p = (id: number) => ({ id, firstName: 'P' + id, lastName: 'N', sex: 'M', t
 const repo = (rows: unknown[]) => ({ find: async () => rows });
 
 function build(showGlobal = false) {
+  // Délégation dérivée des membres : E1 a un jeune du groupe 5, E2 un jeune du groupe 6.
   const teams = [
-    { id: 1, name: 'E1', group: { id: 5, name: 'G5' }, hostingGroup: { id: 10 } },
-    { id: 2, name: 'E2', group: { id: 6, name: 'G6' }, hostingGroup: { id: 11 } },
+    { id: 1, name: 'E1', hostingGroup: { id: 10 }, members: [{ participant: { group: { id: 5 } } }] },
+    { id: 2, name: 'E2', hostingGroup: { id: 11 }, members: [{ participant: { group: { id: 6 } } }] },
   ];
   const families = [
     { id: 1, familyName: 'Secret', city: 'X', hostingGroup: { id: 10 } },

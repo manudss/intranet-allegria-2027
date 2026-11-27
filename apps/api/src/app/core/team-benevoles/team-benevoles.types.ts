@@ -77,8 +77,13 @@ export class ApplyRepartitionDto {
 export interface RepartitionTeamRow {
   id: number;
   name: string;
+  /** @deprecated Lien historique équipe→délégation : dérivé des membres désormais. */
   groupId: number | null;
+  /** @deprecated Nom de la délégation dérivée (jointe par «, » si plusieurs). */
   groupName: string | null;
+  /** Délégations dérivées des membres de l'équipe (périmètre par rattachement). */
+  delegationIds: number[];
+  delegationNames: string[];
   hostingGroupId: number | null;
   hostingGroupName: string | null;
   jeunes: number;

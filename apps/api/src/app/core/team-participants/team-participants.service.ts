@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Participant, Team, TeamParticipant, TeamParticipantRole } from '../entities';
 import { AddTeamParticipantDto } from './team-participants.types';
+import { isTeamInScope, isTeamWritableInScope } from '../teams/team-scope';
 
 @Injectable()
 export class TeamParticipantsService {
@@ -28,10 +29,12 @@ export class TeamParticipantsService {
   ): Promise<TeamParticipant> {
     const team = await this.teamsRepository.findOne({
       where: { id: teamId },
-      relations: { group: true },
+      relations: { members: { participant: { group: true } } },
     });
 
-    if (!team || (!scope.all && !scope.groupIds.includes(team.group?.id ?? -1))) {
+    // Composition : l'équipe doit être dans la portée dérivée de ses membres, ou vide
+    // (elle rejoint alors la portée du premier membre rattaché). Voir team-scope.ts.
+    if (!team || !isTeamWritableInScope(team, scope)) {
       throw new NotFoundException(`Equipe ${teamId} introuvable`);
     }
 
@@ -78,14 +81,18 @@ export class TeamParticipantsService {
   ): Promise<void> {
     const membership = await this.teamParticipantsRepository.findOne({
       where: { team: { id: teamId }, participant: { id: participantId } },
-      relations: { team: { group: true }, participant: { group: true } },
+      relations: {
+        team: { members: { participant: { group: true } } },
+        participant: { group: true },
+      },
     });
 
+    // Le membre retiré doit être dans la portée du compte (jamais celle d'une autre
+    // délégation, même dans une équipe mixte) et l'équipe dans la portée dérivée.
     if (
       !membership ||
-      (!scope.all &&
-        (!scope.groupIds.includes(membership.team.group?.id ?? -1) ||
-          !scope.groupIds.includes(membership.participant.group?.id ?? -1)))
+      !isTeamInScope(membership.team, scope) ||
+      (!scope.all && !scope.groupIds.includes(membership.participant.group?.id ?? -1))
     ) {
       throw new NotFoundException(
         `Affectation team=${teamId} participant=${participantId} introuvable`,

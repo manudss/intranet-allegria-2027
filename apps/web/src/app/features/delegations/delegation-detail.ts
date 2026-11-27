@@ -68,9 +68,33 @@ export class DelegationDetailPage implements OnInit {
   protected readonly exceptionForm = signal({
     personType: 'PARTICIPANT' as PersonType,
     personId: '',
-    toDelegationId: '',
+    toDelegationId: null as number | null,
   });
-  protected readonly assignTargets = signal<Record<string, string>>({});
+  protected readonly assignTargets = signal<Record<string, number | null>>({});
+
+  // Selects Taiga UI : listes d'identifiants et libellés associés.
+  protected readonly transportModes = ['CAR', 'TRAIN', 'VOITURES', 'AUTRE'];
+  protected readonly personTypes: PersonType[] = ['PARTICIPANT', 'VOLUNTEER'];
+  protected transportIds(): number[] {
+    return this.repartition()?.transports.map((t) => t.id) ?? [];
+  }
+  protected stringifyTransportId = (id: number | null): string => {
+    const t = this.repartition()?.transports.find((x) => x.id === id);
+    return t ? `${t.name}${t.full ? ' (complet)' : ''}` : '';
+  };
+  protected transportIdFull = (id: number): boolean =>
+    this.repartition()?.transports.find((x) => x.id === id)?.full ?? false;
+  protected stringifyMode = (m: string | null): string =>
+    (m ? (MODE_LABELS as Record<string, string>)[m] : '') ?? '';
+  protected stringifyPersonType = (p: PersonType | null): string =>
+    p === 'VOLUNTEER' ? 'Bénévole' : p === 'PARTICIPANT' ? 'Jeune' : '';
+  protected otherDelegationIds(): number[] {
+    return this.groups()
+      .filter((g) => g.id !== this.delegation()?.id)
+      .map((g) => g.id);
+  }
+  protected stringifyDelegation = (id: number | null): string =>
+    this.groups().find((g) => g.id === id)?.name ?? '';
 
   private delegationId = 0;
 
@@ -209,7 +233,7 @@ export class DelegationDetailPage implements OnInit {
 
   protected assignTo(entry: AssignmentEntry) {
     const key = this.entryKey(entry);
-    const target = Number(this.assignTargets()[key]);
+    const target = this.assignTargets()[key];
     if (!target || !entry.person) return;
     this.api.assign(target, entry.person.personType, entry.person.id).subscribe({
       next: () => this.reload(),
@@ -225,7 +249,7 @@ export class DelegationDetailPage implements OnInit {
     });
   }
 
-  protected setAssignTarget(key: string, value: string) {
+  protected setAssignTarget(key: string, value: number | null) {
     this.assignTargets.update((m) => ({ ...m, [key]: value }));
   }
 
@@ -234,7 +258,7 @@ export class DelegationDetailPage implements OnInit {
   protected createException() {
     const f = this.exceptionForm();
     const personId = Number(f.personId);
-    const toDelegationId = Number(f.toDelegationId);
+    const toDelegationId = f.toDelegationId;
     if (!personId || !toDelegationId) return;
     this.api
       .createException(this.delegationId, {
@@ -245,7 +269,7 @@ export class DelegationDetailPage implements OnInit {
       })
       .subscribe({
         next: () => {
-          this.exceptionForm.set({ personType: 'PARTICIPANT', personId: '', toDelegationId: '' });
+          this.exceptionForm.set({ personType: 'PARTICIPANT', personId: '', toDelegationId: null });
           this.reload();
         },
         error: () => this.error.set('L’exception n’a pas pu être créée.'),

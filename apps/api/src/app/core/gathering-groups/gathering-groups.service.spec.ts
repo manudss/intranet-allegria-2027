@@ -131,7 +131,7 @@ const build = (data: {
     { findOneBy: vi.fn(async () => null) } as never,
     dataSource as never,
   );
-  return { service, manager, sequenceLinks };
+  return { service, manager, sequenceLinks, dataSource };
 };
 
 describe('règle des pistes (TA / ES / mixte)', () => {
@@ -322,5 +322,18 @@ describe('liens groupe <-> créneau (plusieurs-à-plusieurs)', () => {
   it('un compte limité à ses groupes ne lie pas un autre groupe', async () => {
     const { service } = build({ groups: [group(1), group(2)], sequenceIds: [50] });
     await expect(service.linkSequence(2, 50, SCOPED([1]))).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('renvoyer le même événement à la répartition ne ré-ajoute pas un lien retiré', async () => {
+    const { service, dataSource } = build({
+      repartition: repartition({ programSequenceId: 50 }),
+      groups: [group(1)],
+      sequenceIds: [50],
+    });
+    await service.updateRepartition(1, { programSequenceId: 50 } as never, ALL);
+    expect(dataSource.query).not.toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO gathering_group_sequences'),
+      expect.anything(),
+    );
   });
 });

@@ -324,6 +324,7 @@ export class GatheringGroupsService {
   async updateRepartition(id: number, dto: UpdateRepartitionDto, scope: GatheringScopeInfo) {
     this.assertRepartitionWritable(scope);
     const repartition = await this.findRepartition(id);
+    const previousSequenceId = repartition.programSequenceId;
     if (dto.name !== undefined) {
       if (!dto.name?.trim()) throw new BadRequestException('Le nom est obligatoire.');
       repartition.name = dto.name.trim();
@@ -342,8 +343,9 @@ export class GatheringGroupsService {
     }
     if (dto.countAnimators !== undefined) repartition.countAnimators = dto.countAnimators;
     const saved = await this.repartitions.save(repartition);
-    if (saved.programSequenceId != null && Object.prototype.hasOwnProperty.call(dto, 'programSequenceId')) {
-      // Action explicite au niveau de la répartition : ses groupes actuels sont liés au créneau.
+    if (saved.programSequenceId != null && saved.programSequenceId !== previousSequenceId) {
+      // Seulement quand l'événement de la répartition CHANGE (jamais sur un simple renvoi de la même
+      // valeur) : un lien retiré groupe par groupe ne réapparaît pas.
       await this.dataSource.query(
         `INSERT INTO gathering_group_sequences (group_id, program_sequence_id)
          SELECT id, $2 FROM gathering_groups WHERE repartition_id = $1 ON CONFLICT DO NOTHING`,

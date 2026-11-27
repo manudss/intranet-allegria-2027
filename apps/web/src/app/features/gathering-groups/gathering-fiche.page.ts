@@ -82,6 +82,19 @@ export class GatheringFichePage implements OnInit, OnDestroy {
   // Créneaux de l'agenda liés (plusieurs-à-plusieurs, ajout et retrait indépendants)
   protected readonly allSequences = signal<GatheringSequenceRef[]>([]);
   protected readonly sequenceSearch = signal('');
+  protected readonly addingSequence = signal(false);
+  private sequencesLoaded = false;
+
+  /** Charge les créneaux proposables à la demande (lecture réservée aux comptes ayant accès à l'agenda). */
+  protected openAddSequence(): void {
+    this.addingSequence.set(true);
+    if (this.sequencesLoaded) return;
+    this.sequencesLoaded = true;
+    this.api.sequenceOptions().subscribe({
+      next: (list) => this.allSequences.set(list),
+      error: () => (this.sequencesLoaded = false),
+    });
+  }
   protected readonly linkedSequenceIds = computed(
     () => new Set((this.fiche()?.sequences ?? []).map((q) => q.id)),
   );
@@ -106,10 +119,6 @@ export class GatheringFichePage implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.myAccess.load();
-    this.api.sequenceOptions().subscribe({
-      next: (list) => this.allSequences.set(list),
-      error: () => this.allSequences.set([]),
-    });
     this.route.paramMap
       .pipe(
         switchMap((params) => {

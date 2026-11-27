@@ -227,6 +227,7 @@ export class GatheringGroupsController {
   }
 
   @ApiOperation({ summary: 'Créneaux de l\'agenda proposables pour lier un groupe' })
+  @AccessModule('AGENDA')
   @Get('sequences')
   sequenceOptions() {
     return this.service.sequenceOptions();

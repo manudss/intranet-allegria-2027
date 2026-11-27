@@ -105,7 +105,12 @@
           }
         </tbody>
       </table>
-      @if (canEditGroups()) {
+      @if (canEditGroups() && canOpenAgenda() && !addingSequence()) {
+        <div class="add-row">
+          <button type="button" tuiButton appearance="secondary" size="s" (click)="openAddSequence()">Ajouter un créneau</button>
+        </div>
+      }
+      @if (canEditGroups() && canOpenAgenda() && addingSequence()) {
         <div class="add-row">
           <input type="search" placeholder="Ajouter un créneau : rechercher (titre, date, lieu)" aria-label="Rechercher un créneau à ajouter"
                  [value]="sequenceSearch()" (input)="sequenceSearch.set($any($event.target).value)" />

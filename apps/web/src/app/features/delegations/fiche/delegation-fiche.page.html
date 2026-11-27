@@ -138,7 +138,7 @@
       <tr>
         <td>{{ p.firstName }} {{ p.lastName }}</td>
         <td>{{ personLabel(p) }}</td>
-        <td>{{ p.detail ?? '—' }}</td>
+        <td>{{ detailLabel(p) }}</td>
       </tr>
       } @empty {
       <tr>

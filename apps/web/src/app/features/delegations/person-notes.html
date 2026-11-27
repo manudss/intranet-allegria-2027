@@ -4,178 +4,117 @@
 >
   <nav class="delegation-nav"><a routerLink="/rassemblement">Toutes les délégations</a></nav>
   @if (error()) {
-    <p class="api-error">{{ error() }}</p>
+  <p class="api-error">{{ error() }}</p>
+  } @if (loading() && !feed().length) {
+  <app-loading-skeleton />
+  } @else if (!personMode()) { @if (scopedView()) {
+  <p class="scope-banner">
+    Vous voyez uniquement les personnes de votre périmètre (votre délégation). Les coordinateurs
+    voient l'ensemble.
+  </p>
   }
-  @if (loading() && !feed().length) {
-    <app-loading-skeleton />
-  } @else if (!personMode()) {
-    @if (scopedView()) {
-      <p class="scope-banner">
-        Vous voyez uniquement les personnes de votre périmètre (votre délégation). Les
-        coordinateurs voient l'ensemble.
-      </p>
-    }
-    <div class="direction-switch">
-      <button
-        tuiButton
-        type="button"
-        [appearance]="filter() === 'WITH_NOTES' ? 'primary' : 'secondary'"
-        (click)="setFilter('WITH_NOTES')"
-      >
-        Avec notes
-      </button>
-      <button
-        tuiButton
-        type="button"
-        [appearance]="filter() === 'UNANSWERED' ? 'primary' : 'secondary'"
-        (click)="setFilter('UNANSWERED')"
-      >
-        Sans réponse
-      </button>
-      <button
-        tuiButton
-        type="button"
-        [appearance]="filter() === 'ALL' ? 'primary' : 'secondary'"
-        (click)="setFilter('ALL')"
-      >
-        Toutes les personnes
-      </button>
-    </div>
-    <tui-textfield iconStart="@tui.search">
-      <label for="notes-q" tuiLabel>Rechercher une personne</label
-      ><input tuiInput id="notes-q" [value]="query()" (input)="search($any($event.target).value)" />
-    </tui-textfield>
-    <div class="notes-cols" [class.thread-open]="selected()">
-      <ul class="notes-list">
-        @if (!feed().length) {
-          <p>Aucune personne dans ce filtre pour votre périmètre.</p>
-        }
-        @for (row of feed(); track (row.person ? row.person.personType + ':' + row.person.id : $index)) {
-          <li>
-            <button
-              type="button"
-              class="notes-row"
-              [class.notes-row-active]="
+  <div class="direction-switch">
+    <button
+      tuiButton
+      type="button"
+      [appearance]="filter() === 'WITH_NOTES' ? 'primary' : 'secondary'"
+      (click)="setFilter('WITH_NOTES')"
+    >
+      Avec notes
+    </button>
+    <button
+      tuiButton
+      type="button"
+      [appearance]="filter() === 'UNANSWERED' ? 'primary' : 'secondary'"
+      (click)="setFilter('UNANSWERED')"
+    >
+      Sans réponse
+    </button>
+    <button
+      tuiButton
+      type="button"
+      [appearance]="filter() === 'ALL' ? 'primary' : 'secondary'"
+      (click)="setFilter('ALL')"
+    >
+      Toutes les personnes
+    </button>
+  </div>
+  <tui-textfield iconStart="@tui.search">
+    <label for="notes-q" tuiLabel>Rechercher une personne</label
+    ><input tuiInput id="notes-q" [value]="query()" (input)="search($any($event.target).value)" />
+  </tui-textfield>
+  <div class="notes-cols" [class.thread-open]="selected()">
+    <ul class="notes-list">
+      @if (!feed().length) {
+      <p>Aucune personne dans ce filtre pour votre périmètre.</p>
+      } @for (row of feed(); track (row.person ? row.person.personType + ':' + row.person.id :
+      $index)) {
+      <li>
+        <button
+          type="button"
+          class="notes-row"
+          [class.notes-row-active]="
                 selected() && row.person && selected()!.id === row.person.id
               "
-              (click)="selectRow(row)"
-            >
-              @if (row.person; as p) {
-                <span class="row-head">
-                  <strong>{{ p.firstName }} {{ p.lastName }}</strong>
-                  @if (delegationName(row.delegationId); as dname) {
-                    @if (dname) {
-                      <span class="chip">{{ dname }}</span>
-                    }
-                  }
-                </span>
-                <span class="row-meta">
-                  {{ p.personType === 'VOLUNTEER' ? 'Bénévole' : 'Jeune' }}
-                  {{ p.detail ? ' · ' + p.detail : '' }} · {{ row.notesCount }} note(s)
-                  @if (row.unansweredCount) {
-                    <span class="badge-warn">{{ row.unansweredCount }} sans réponse</span>
-                  }
-                </span>
-              } @else {
-                <strong>Personne introuvable</strong>
-              }
-              @if (row.lastNote; as last) {
-                <span class="row-last"
-                  >« {{ last.body }} » — {{ last.authorName }}, le
-                  {{ fmt(last.createdAt) }}</span
-                >
-              }
-            </button>
-          </li>
-        }
-      </ul>
-      <section class="notes-thread">
-        @if (selected(); as p) {
-          <button tuiButton size="s" appearance="secondary" type="button" class="back-list" (click)="backToList()">
-            ← Retour à la liste
-          </button>
-          <h2>{{ p.firstName }} {{ p.lastName }}</h2>
-          @if (loading()) {
-            <app-loading-skeleton />
+          (click)="selectRow(row)"
+        >
+          @if (row.person; as p) {
+          <span class="row-head">
+            <strong>{{ p.firstName }} {{ p.lastName }}</strong>
+            @if (delegationName(row.delegationId); as dname) { @if (dname) {
+            <span class="chip">{{ dname }}</span>
+            } }
+          </span>
+          <span class="row-meta">
+            {{ personRoleLabel(p) }} {{ detailSuffix(p) }} · {{ row.notesCount }} note(s) @if
+            (row.unansweredCount) {
+            <span class="badge-warn">{{ row.unansweredCount }} sans réponse</span>
+            }
+          </span>
           } @else {
-            @if (!notes().length) {
-              <p class="help">Aucune note pour l'instant sur cette personne.</p>
-            }
-            @for (root of roots(); track root.id) {
-              <article class="card">
-                <blockquote>
-                  {{ root.body }}<br />
-                  <small
-                    >{{ root.authorName }} ({{ root.authorRole || 'équipe' }}), le
-                    {{ fmt(root.createdAt) }}</small
-                  >
-                </blockquote>
-                @for (r of repliesOf(root.id); track r.id) {
-                  <blockquote class="reply">
-                    {{ r.body }}<br />
-                    <small
-                      >{{ r.authorName }} ({{ r.authorRole || 'équipe' }}), le
-                      {{ fmt(r.createdAt) }}</small
-                    >
-                  </blockquote>
-                }
-                <tui-textfield>
-                  <label for="reply-{{ root.id }}" tuiLabel>Répondre</label
-                  ><input
-                    tuiInput
-                    id="reply-{{ root.id }}"
-                    [ngModel]="replyDrafts()[root.id] || ''"
-                    (ngModelChange)="setReply(root.id, $event)"
-                    name="reply-{{ root.id }}"
-                  />
-                </tui-textfield>
-                <button tuiButton size="s" type="button" (click)="reply(root.id)">Envoyer</button>
-              </article>
-            }
-            <section class="card">
-              <h2>Nouvelle note</h2>
-              <p class="help">
-                Signée de votre nom et datée automatiquement. Contenu logistique uniquement :
-                jamais d'information de santé.
-              </p>
-              <tui-textfield>
-                <label for="new-note" tuiLabel>Note</label
-                ><textarea
-                  tuiTextarea
-                  id="new-note"
-                  [ngModel]="newNote()"
-                  (ngModelChange)="newNote.set($event)"
-                  name="newnote"
-                ></textarea>
-              </tui-textfield>
-              <button tuiButton type="button" (click)="addNote()" [disabled]="!newNote().trim()">
-                Ajouter la note
-              </button>
-            </section>
+          <strong>Personne introuvable</strong>
+          } @if (row.lastNote; as last) {
+          <span class="row-last"
+            >« {{ last.body }} » — {{ last.authorName }}, le {{ fmt(last.createdAt) }}</span
+          >
           }
-        } @else {
-          <p class="help thread-empty">
-            Choisissez une personne dans la liste pour lire son fil de notes et répondre sans
-            quitter la page.
-          </p>
-        }
-      </section>
-    </div>
-  } @else {
-    @if (!notes().length) {
+        </button>
+      </li>
+      }
+    </ul>
+    <section class="notes-thread">
+      @if (selected(); as p) {
+      <button
+        tuiButton
+        size="s"
+        appearance="secondary"
+        type="button"
+        class="back-list"
+        (click)="backToList()"
+      >
+        ← Retour à la liste
+      </button>
+      <h2>{{ p.firstName }} {{ p.lastName }}</h2>
+      @if (loading()) {
+      <app-loading-skeleton />
+      } @else { @if (!notes().length) {
       <p class="help">Aucune note pour l'instant sur cette personne.</p>
-    }
-    @for (root of roots(); track root.id) {
+      } @for (root of roots(); track root.id) {
       <article class="card">
         <blockquote>
           {{ root.body }}<br />
-          <small>{{ root.authorName }} ({{ root.authorRole || 'équipe' }}), le {{ fmt(root.createdAt) }}</small>
+          <small
+            >{{ root.authorName }} ({{ root.authorRole || 'équipe' }}), le {{ fmt(root.createdAt)
+            }}</small
+          >
         </blockquote>
         @for (r of repliesOf(root.id); track r.id) {
-          <blockquote class="reply">
-            {{ r.body }}<br />
-            <small>{{ r.authorName }} ({{ r.authorRole || 'équipe' }}), le {{ fmt(r.createdAt) }}</small>
-          </blockquote>
+        <blockquote class="reply">
+          {{ r.body }}<br />
+          <small
+            >{{ r.authorName }} ({{ r.authorRole || 'équipe' }}), le {{ fmt(r.createdAt) }}</small
+          >
+        </blockquote>
         }
         <tui-textfield>
           <label for="reply-{{ root.id }}" tuiLabel>Répondre</label
@@ -187,22 +126,86 @@
             name="reply-{{ root.id }}"
           />
         </tui-textfield>
-        <button tuiButton size="s" type="button" (click)="reply(root.id)">Répondre</button>
+        <button tuiButton size="s" type="button" (click)="reply(root.id)">Envoyer</button>
       </article>
-    }
-    <section class="card">
-      <h2>Nouvelle note</h2>
-      <p class="help">
-        Signée de votre nom et datée automatiquement. Contenu logistique uniquement : jamais
-        d'information de santé.
+      }
+      <section class="card">
+        <h2>Nouvelle note</h2>
+        <p class="help">
+          Signée de votre nom et datée automatiquement. Contenu logistique uniquement : jamais
+          d'information de santé.
+        </p>
+        <tui-textfield>
+          <label for="new-note" tuiLabel>Note</label
+          ><textarea
+            tuiTextarea
+            id="new-note"
+            [ngModel]="newNote()"
+            (ngModelChange)="newNote.set($event)"
+            name="newnote"
+          ></textarea>
+        </tui-textfield>
+        <button tuiButton type="button" (click)="addNote()" [disabled]="!newNote().trim()">
+          Ajouter la note
+        </button>
+      </section>
+      } } @else {
+      <p class="help thread-empty">
+        Choisissez une personne dans la liste pour lire son fil de notes et répondre sans quitter la
+        page.
       </p>
-      <tui-textfield>
-        <label for="new-note" tuiLabel>Note</label
-        ><textarea tuiTextarea id="new-note" [ngModel]="newNote()" (ngModelChange)="newNote.set($event)" name="newnote"></textarea>
-      </tui-textfield>
-      <button tuiButton type="button" (click)="addNote()" [disabled]="!newNote().trim()">
-        Ajouter la note
-      </button>
+      }
     </section>
+  </div>
+  } @else { @if (!notes().length) {
+  <p class="help">Aucune note pour l'instant sur cette personne.</p>
+  } @for (root of roots(); track root.id) {
+  <article class="card">
+    <blockquote>
+      {{ root.body }}<br />
+      <small
+        >{{ root.authorName }} ({{ root.authorRole || 'équipe' }}), le {{ fmt(root.createdAt)
+        }}</small
+      >
+    </blockquote>
+    @for (r of repliesOf(root.id); track r.id) {
+    <blockquote class="reply">
+      {{ r.body }}<br />
+      <small>{{ r.authorName }} ({{ r.authorRole || 'équipe' }}), le {{ fmt(r.createdAt) }}</small>
+    </blockquote>
+    }
+    <tui-textfield>
+      <label for="reply-{{ root.id }}" tuiLabel>Répondre</label
+      ><input
+        tuiInput
+        id="reply-{{ root.id }}"
+        [ngModel]="replyDrafts()[root.id] || ''"
+        (ngModelChange)="setReply(root.id, $event)"
+        name="reply-{{ root.id }}"
+      />
+    </tui-textfield>
+    <button tuiButton size="s" type="button" (click)="reply(root.id)">Répondre</button>
+  </article>
+  }
+  <section class="card">
+    <h2>Nouvelle note</h2>
+    <p class="help">
+      Signée de votre nom et datée automatiquement. Contenu logistique uniquement : jamais
+      d'information de santé.
+    </p>
+    <tui-textfield>
+      <label for="new-note" tuiLabel>Note</label
+      ><textarea
+        tuiTextarea
+        id="new-note"
+        [ngModel]="newNote()"
+        (ngModelChange)="newNote.set($event)"
+        name="newnote"
+      ></textarea>
+    </tui-textfield>
+    <button tuiButton type="button" (click)="addNote()" [disabled]="!newNote().trim()">
+      Ajouter la note
+    </button>
+  </section>
   }
 </app-page-layout>

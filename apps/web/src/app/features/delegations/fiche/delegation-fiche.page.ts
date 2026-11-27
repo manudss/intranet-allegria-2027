@@ -107,7 +107,17 @@ export class DelegationFichePage implements OnInit {
   });
 
   protected personLabel(p: PersonLite) {
-    return p.personType === 'VOLUNTEER' ? 'Bénévole' : 'Jeune';
+    if (p.personType === 'VOLUNTEER') return 'Bénévole';
+    if (p.detail === 'ANIMATEUR') return 'Animateur';
+    if (p.detail === 'JEUNE') return 'Jeune';
+    if (p.detail === 'BENEVOLE') return 'Bénévole';
+    return 'Participant';
+  }
+
+  /** Détail affiché uniquement quand il n'est pas déjà dit par le type (pôle bénévole…). */
+  protected detailLabel(p: PersonLite) {
+    if (!p.detail || ['JEUNE', 'ANIMATEUR', 'BENEVOLE'].includes(p.detail)) return '—';
+    return p.detail;
   }
 
   protected delegationName(id: number | null | undefined) {

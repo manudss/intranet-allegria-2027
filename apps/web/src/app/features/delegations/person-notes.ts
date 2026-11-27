@@ -82,6 +82,19 @@ export class PersonNotesPage implements OnInit {
     }
   }
 
+  protected personRoleLabel(p: PersonLite) {
+    if (p.personType === 'VOLUNTEER') return 'Bénévole';
+    if (p.detail === 'ANIMATEUR') return 'Animateur';
+    if (p.detail === 'JEUNE') return 'Jeune';
+    if (p.detail === 'BENEVOLE') return 'Bénévole';
+    return 'Participant';
+  }
+
+  protected detailSuffix(p: PersonLite) {
+    if (!p.detail || ['JEUNE', 'ANIMATEUR', 'BENEVOLE'].includes(p.detail)) return '';
+    return ' · ' + p.detail;
+  }
+
   protected delegationName(id: number) {
     return this.delegationNames().get(id) ?? '';
   }

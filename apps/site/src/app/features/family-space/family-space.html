@@ -527,9 +527,9 @@
         @if(j.transport.meetingPoint){
         <p>Rendez-vous : {{j.transport.meetingPoint}}</p>
         } @if(j.transport.departureDatetime){
-        <p>Départ : {{j.transport.departureDatetime | date:'dd/MM/yyyy à HH'h'mm'}}</p>
+        <p>Départ : {{j.transport.departureDatetime | date:"dd/MM/yyyy à HH'h'mm"}}</p>
         } @if(j.transport.arrivalDatetime){
-        <p>Arrivée : {{j.transport.arrivalDatetime | date:'dd/MM/yyyy à HH'h'mm'}}</p>
+        <p>Arrivée : {{j.transport.arrivalDatetime | date:"dd/MM/yyyy à HH'h'mm"}}</p>
         } @if(j.transport.practicalInfo){
         <p>{{j.transport.practicalInfo}}</p>
         }

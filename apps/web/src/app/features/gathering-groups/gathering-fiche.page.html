@@ -84,34 +84,84 @@
       <h2 id="teams-title">Équipes ({{ f.teams.length }})</h2>
       @if (f.teams.length === 0) {
         <p class="empty-state">Aucune équipe placée : passez par le dispatch de la répartition.</p>
+      } @else {
+        <table class="data-table">
+          <thead>
+            <tr><th>Équipe</th><th>Piste</th><th>Jeunes</th><th>Animateurs</th><th>Personnes</th><th></th></tr>
+          </thead>
+          <tbody>
+            @for (t of f.teams; track t.id) {
+              <tr>
+                <td>
+                  <span class="dot" [style.background]="trackColors[t.track]"></span>
+                  @if (canOpenTeams()) {
+                    <a [routerLink]="['/equipes']" [queryParams]="{ equipe: t.id }"><strong>{{ t.name }}</strong></a>
+                  } @else {
+                    <strong>{{ t.name }}</strong>
+                  }
+                </td>
+                <td>{{ trackLabels[t.track] }}</td>
+                <td>{{ t.jeunes }}</td>
+                <td>{{ t.animateurs }}</td>
+                <td>{{ t.persons }}</td>
+                <td class="row-actions">
+                  <a [routerLink]="['/groupes-rassemblement', 'repartitions', f.repartition.id]">Dispatch</a>
+                  @if (canOpenTeams()) {
+                    <a [routerLink]="['/equipes']" [queryParams]="{ equipe: t.id }">{{ canEditTeams() ? 'Modifier' : 'Voir' }}</a>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
       }
-      <ul class="team-list">
-        @for (t of f.teams; track t.id) {
-          <li>
-            <span class="dot" [style.background]="trackColors[t.track]"></span>
-            <strong>{{ t.name }}</strong>
-            @if (t.delegation) { <span class="muted">{{ t.delegation }}</span> }
-            <span class="muted counts">{{ t.jeunes }} jeunes · {{ t.animateurs }} animateur{{ t.animateurs > 1 ? 's' : '' }}</span>
-          </li>
-        }
-      </ul>
     </section>
 
     <section class="card" aria-labelledby="people-title">
       <h2 id="people-title">Personnes ({{ f.people.length }})</h2>
-      <p class="muted">Prénoms seulement, par mesure de protection des mineurs.</p>
-      <p class="chips">
-        @for (p of f.people; track p.id) {
-          <span class="chip-item">{{ p.firstName }}</span>
-        }
-      </p>
+      <p class="muted">Prénoms seulement pour les jeunes, par mesure de protection des mineurs.</p>
+      @if (f.people.length) {
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr><th>Prénom</th><th>Équipe</th><th>Tranche</th><th></th></tr></thead>
+            <tbody>
+              @for (p of f.people; track p.id) {
+                <tr>
+                  <td>{{ p.firstName }}</td>
+                  <td>
+                    @if (canOpenTeams()) {
+                      <a [routerLink]="['/equipes']" [queryParams]="{ equipe: p.teamId }">{{ p.teamName }}</a>
+                    } @else { {{ p.teamName }} }
+                  </td>
+                  <td>{{ p.mejAgeGroup ?? '—' }}</td>
+                  <td class="row-actions">
+                    @if (canOpenPeople()) {
+                      <a [routerLink]="['/participants']" [queryParams]="{ participant: p.id }">{{ canEditPeople() ? 'Modifier' : 'Voir' }}</a>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
       @if (f.animators.length) {
         <h3>Animateurs ({{ f.animators.length }})</h3>
-        <p class="chips">
-          @for (a of f.animators; track a.id) {
-            <span class="chip-item animator">{{ a.displayName }}</span>
-          }
-        </p>
+        <table class="data-table">
+          <thead><tr><th>Nom</th><th>Équipe</th></tr></thead>
+          <tbody>
+            @for (a of f.animators; track a.id + '-' + a.teamId) {
+              <tr>
+                <td>{{ a.displayName }}</td>
+                <td>
+                  @if (canOpenTeams()) {
+                    <a [routerLink]="['/equipes']" [queryParams]="{ equipe: a.teamId }">{{ a.teamName }}</a>
+                  } @else { {{ a.teamName }} }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
       }
     </section>
 

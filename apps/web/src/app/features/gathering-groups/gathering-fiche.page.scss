@@ -44,3 +44,9 @@
 
 .muted { color: var(--appearance-muted); font-size: .85rem; }
 .empty-state { color: var(--appearance-muted); }
+
+.data-table { inline-size: 100%; border-collapse: collapse; font-size: .9rem; }
+.data-table th, .data-table td { text-align: start; padding: .35rem .5rem; border-bottom: 1px solid var(--appearance-border); }
+.data-table .row-actions { display: flex; gap: .75rem; justify-content: flex-end; }
+.table-scroll { max-block-size: 24rem; overflow: auto; }
+.dot { display: inline-block; inline-size: .65rem; block-size: .65rem; border-radius: 50%; margin-inline-end: .4rem; }

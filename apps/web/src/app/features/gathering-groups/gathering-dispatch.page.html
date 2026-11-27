@@ -26,31 +26,46 @@
 
     @if (proposal(); as p) {
       <section class="proposal" aria-labelledby="proposal-title">
-        <h2 id="proposal-title">Proposition automatique</h2>
+        <div class="proposal-head">
+          <h2 id="proposal-title">
+            Proposition automatique
+            <span class="muted">
+              {{ p.assignments.length }} placement{{ p.assignments.length > 1 ? 's' : '' }} proposé{{ p.assignments.length > 1 ? 's' : '' }}
+              @if (p.unplaced.length) { · {{ p.unplaced.length }} équipe{{ p.unplaced.length > 1 ? 's' : '' }} non placée{{ p.unplaced.length > 1 ? 's' : '' }} }
+            </span>
+          </h2>
+          <div class="proposal-actions">
+            <button
+              type="button"
+              tuiButton
+              appearance="primary"
+              [disabled]="busy() || p.assignments.length === 0"
+              (click)="applyProposal()"
+            >
+              Appliquer
+            </button>
+            <button type="button" tuiButton appearance="flat" (click)="proposal.set(null)">Fermer</button>
+          </div>
+        </div>
         @if (p.assignments.length === 0) {
           <p class="empty-state">Aucune équipe ne peut être placée automatiquement.</p>
         } @else {
-          <ul>
+          <ul class="proposal-list">
             @for (a of p.assignments; track a.teamId) {
               <li><strong>{{ teamName(a.teamId) }}</strong> → {{ a.groupName }}</li>
             }
           </ul>
         }
-        @for (u of p.unplaced; track u.teamId) {
-          <p class="unplaced-reason">{{ u.teamName }} : {{ u.reason }}.</p>
+        @if (p.unplaced.length) {
+          <details class="proposal-unplaced">
+            <summary>{{ p.unplaced.length }} équipe{{ p.unplaced.length > 1 ? 's' : '' }} non placée{{ p.unplaced.length > 1 ? 's' : '' }} (avertissements)</summary>
+            <div class="proposal-list">
+              @for (u of p.unplaced; track u.teamId) {
+                <p class="unplaced-reason">{{ u.teamName }} : {{ u.reason }}.</p>
+              }
+            </div>
+          </details>
         }
-        <div class="proposal-actions">
-          <button
-            type="button"
-            tuiButton
-            appearance="primary"
-            [disabled]="busy() || p.assignments.length === 0"
-            (click)="applyProposal()"
-          >
-            Appliquer
-          </button>
-          <button type="button" tuiButton appearance="flat" (click)="proposal.set(null)">Fermer</button>
-        </div>
       </section>
     }
 
@@ -77,16 +92,29 @@
       <section class="column teams" aria-labelledby="teams-title">
         <h2 id="teams-title">Équipes à placer</h2>
         <tui-textfield>
-          <label tuiLabel for="team-filter">Filtrer</label>
+          <label tuiLabel for="team-filter">Rechercher</label>
           <input
             id="team-filter"
             tuiInput
             type="text"
-            placeholder="Nom d'équipe ou de délégation…"
+            placeholder="Nom d'équipe ou d'un autre groupe…"
             [ngModel]="filter()"
             (ngModelChange)="filter.set($event)"
           />
         </tui-textfield>
+        <div class="filters">
+          <app-select-field label="Piste" [options]="trackOptions" [value]="trackFilter()" (valueChange)="trackFilter.set($event ?? 'ALL')" />
+          <app-select-field label="Autre groupe" [options]="otherGroupOptions()" [value]="otherGroupFilter()" (valueChange)="otherGroupFilter.set($event ?? 'ALL')" />
+          <app-select-field label="Appartenances" [options]="membershipOptions" [value]="membershipFilter()" (valueChange)="membershipFilter.set($event ?? 'ALL')" />
+          <tui-textfield>
+            <label tuiLabel for="min-persons">Personnes (min.)</label>
+            <input id="min-persons" tuiInput type="number" min="0" [ngModel]="minPersons()" (ngModelChange)="minPersons.set($event)" />
+          </tui-textfield>
+        </div>
+        <p class="filter-line muted">
+          {{ filteredTeams().length }} équipe{{ filteredTeams().length > 1 ? 's' : '' }} affichée{{ filteredTeams().length > 1 ? 's' : '' }}
+          @if (activeFilters()) { · <button type="button" class="link" (click)="resetFilters()">Réinitialiser les filtres ({{ activeFilters() }})</button> }
+        </p>
         @if (filteredTeams().length === 0) {
           <p class="empty-state">
             {{ filter() ? 'Aucune équipe ne correspond au filtre.' : 'Toutes les équipes sont placées.' }}
@@ -98,13 +126,25 @@
               <button
                 type="button"
                 class="team-card"
+                draggable="true"
                 [class.selected]="selectedTeamId() === team.id"
+                [class.dragging]="draggingTeamId() === team.id"
                 (click)="toggleTeam(team)"
+                (dragstart)="dragStart($event, team)"
+                (dragend)="dragEnd()"
               >
                 <span class="dot" [style.background]="trackColors[team.track]"></span>
                 <span class="team-name">{{ team.name }}</span>
-                <span class="muted">{{ team.persons }} pers.</span>
-                @if (team.delegation) { <span class="muted deleg">{{ team.delegation }}</span> }
+                <span class="muted">{{ team.persons }} pers. · {{ team.track === 'COMMON' ? 'piste à renseigner' : team.track }}</span>
+                @if (team.otherGroups.length) {
+                  <span class="other-groups">
+                    @for (g of team.otherGroups; track g.groupId) {
+                      <span class="chip" [class]="'chip cat-' + g.category | lowercase" [title]="g.repartitionName">
+                        {{ categoryLabels[g.category] }} · {{ g.groupName }}
+                      </span>
+                    }
+                  </span>
+                }
               </button>
             </li>
           }
@@ -113,10 +153,16 @@
 
       <section class="column groups" aria-labelledby="groups-title">
         @if (selectedTeamId() !== null) {
-          <p class="placing-hint" role="status">
-            Placement de « {{ selectedTeamName() }} » : touchez un groupe pour l'y affecter.
-            <button type="button" class="link" (click)="selectedTeamId.set(null)">Annuler</button>
-          </p>
+          <div class="placing-bar" role="status">
+            <p>
+              Placer « <strong>{{ selectedTeamName() }}</strong> » : touchez un groupe, glissez l'équipe sur un groupe, ou choisissez-le ici.
+            </p>
+            <div class="placing-controls">
+              <app-select-field label="Groupe" [options]="targetGroupOptions()" [value]="targetGroupId()" (valueChange)="targetGroupId.set($event)" />
+              <button type="button" tuiButton appearance="primary" size="s" [disabled]="busy() || targetGroupId() === null" (click)="placeFromBar()">Placer</button>
+              <button type="button" tuiButton appearance="flat" size="s" (click)="selectedTeamId.set(null)">Annuler</button>
+            </div>
+          </div>
         }
         <div class="groups-head">
           <h2 id="groups-title">Groupes</h2>
@@ -156,12 +202,19 @@
           @for (group of b.groups; track group.id) {
             <li
               class="group-card"
-              [class.target]="selectedTeamId() !== null"
+              [class.target]="selectedTeamId() !== null && !refusal(group)"
+              [class.refused]="selectedTeamId() !== null && !!refusal(group)"
+              [class.drop]="dropGroupId() === group.id"
               [class.overflow]="group.overflow"
               [class.almost]="group.almostFull"
+              [attr.title]="selectedTeamId() !== null ? refusal(group) : null"
+              (click)="onGroupCardClick($event, group)"
+              (dragover)="dragOver($event, group)"
+              (dragleave)="dropGroupId.set(null)"
+              (drop)="drop($event, group)"
             >
               <header>
-                <button type="button" class="group-hit" (click)="selectGroup(group)" [disabled]="selectedTeamId() === null">
+                <button type="button" class="group-hit" [disabled]="selectedTeamId() === null">
                   <span class="cat" [class]="'cat cat-' + group.category | lowercase">{{ categoryLabels[group.category] }}</span>
                   <strong>{{ group.name }}</strong>
                   @if (group.location) { <span class="muted">{{ group.location }}</span> }
@@ -171,6 +224,9 @@
                   <button type="button" tuiButton appearance="flat" size="s" (click)="removeGroup(group)">Suppr.</button>
                 </span>
               </header>
+              @if (selectedTeamId() !== null && refusal(group); as reason) {
+                <p class="refusal">{{ reason }}</p>
+              }
               <div class="gauge-line">
                 <span class="gauge"><span class="bar" [style.width.%]="gaugeRatio(group) * 100"></span></span>
                 <span class="count">{{ group.persons }}<span class="muted">/{{ group.capacity ?? '∞' }}</span></span>
@@ -181,6 +237,9 @@
                     <span class="dot" [style.background]="trackColors[t.track]"></span>
                     <span class="team-name">{{ t.name }}</span>
                     <span class="muted">{{ t.persons }} pers.</span>
+                    @for (g of t.otherGroups ?? []; track g.groupId) {
+                      <span class="chip" [class]="'chip cat-' + g.category | lowercase" [title]="g.repartitionName">{{ categoryLabels[g.category] }} · {{ g.groupName }}</span>
+                    }
                     <button type="button" class="link" (click)="unassign(group, t.id)" [attr.aria-label]="'Retirer ' + t.name">✕</button>
                   </li>
                 }

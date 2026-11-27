@@ -13,6 +13,8 @@ import {
 } from '../../models/models';
 import { GatheringGroupsApiService } from '../gathering-groups/gathering-groups.api';
 import {
+  CATEGORY_LABELS,
+  GatheringCategory,
   GatheringRepartition,
   TRACK_COLORS,
   TRACK_LABELS,
@@ -23,6 +25,8 @@ import {
   TeamsApiService,
 } from '../../services/api.services';
 import { PersonPickerComponent, PersonSummary } from '../../shared/person-picker.component';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { MyAccessService } from '../../core/my-access.service';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { DataTableColumn } from '../../shared/data-table';
 
@@ -55,11 +59,15 @@ const blank = (): TeamPayload => ({
 interface GatheringMembership {
   id: number;
   label: string;
+  name: string;
+  category: GatheringCategory;
+  repartitionId: number;
+  repartitionName: string;
 }
 @Component({
   selector: 'app-teams',
   standalone: true,
-  imports: [...SHARED_IMPORTS, PersonPickerComponent],
+  imports: [...SHARED_IMPORTS, PersonPickerComponent, RouterLink],
   templateUrl: './teams.html',
   styleUrls: ['../../shared/crud.scss', './teams.scss'],
 })
@@ -136,6 +144,8 @@ export class TeamsPage implements OnInit {
   ];
   private api = inject(TeamsApiService);
   private readonly confirmDialog = inject(ConfirmDialogService);
+  private readonly route = inject(ActivatedRoute);
+  protected readonly myAccess = inject(MyAccessService);
   private membersApi = inject(TeamParticipantsApiService);
   private benevolesApi = inject(TeamBenevolesApiService);
   private gatheringApi = inject(GatheringGroupsApiService);
@@ -147,7 +157,14 @@ export class TeamsPage implements OnInit {
   /** Tous les groupes de rassemblement, toutes répartitions, pour le filtre et l'ajout. */
   gatheringOptions = computed(() =>
     this.repartitions().flatMap((r) =>
-      r.groups.map((g) => ({ id: g.id, label: `${g.name} · ${r.name}` })),
+      r.groups.map((g) => ({
+        id: g.id,
+        label: `${g.name} · ${r.name}`,
+        name: g.name,
+        category: g.category,
+        repartitionId: r.id,
+        repartitionName: r.name,
+      })),
     ),
   );
   gatheringGroupIds = computed(() => this.gatheringOptions().map(({ id }) => id));
@@ -227,6 +244,7 @@ export class TeamsPage implements OnInit {
   protected readonly trackLabels = TRACK_LABELS;
   stringifyTrack = (track: ProgramSequenceTrack) => TRACK_LABELS[track];
   ngOnInit() {
+    this.myAccess.load();
     forkJoin({
       items: this.api.list(),
       repartitions: this.gatheringApi.list().pipe(
@@ -239,6 +257,10 @@ export class TeamsPage implements OnInit {
       this.items.set(x.items);
       this.repartitions.set(x.repartitions);
       this.loading.set(false);
+      // Lien direct depuis les fiches de groupe : /equipes?equipe=ID ouvre la fiche de l'équipe.
+      const id = Number(this.route.snapshot.queryParamMap.get('equipe'));
+      const target = x.items.find((t) => t.id === id);
+      if (target) this.open(target);
     });
   }
   open(x: Team) {
@@ -264,6 +286,30 @@ export class TeamsPage implements OnInit {
       },
       error: (e) => alert(e?.error?.message ?? "L'ajout au groupe a échoué."),
     });
+  }
+  protected readonly categoryLabels = CATEGORY_LABELS;
+  protected readonly trackColors = TRACK_COLORS;
+  /** Retire l'équipe ouverte d'un groupe de rassemblement (confirmation, puis rechargement). */
+  removeFromGroup(membership: GatheringMembership) {
+    const team = this.selected();
+    if (!team) return;
+    this.confirmDialog
+      .ask({
+        title: 'Retirer du groupe',
+        message: `Retirer « ${team.name} » du groupe « ${membership.name} » (${membership.repartitionName}) ?`,
+        yes: 'Retirer',
+      })
+      .subscribe((ok) => {
+        if (!ok) return;
+        this.gatheringApi.unassignTeam(membership.id, team.id).subscribe({
+          next: () =>
+            this.gatheringApi
+              .list()
+              .pipe(catchError(() => of([] as GatheringRepartition[])))
+              .subscribe((v) => this.repartitions.set(v)),
+          error: (e) => alert(e?.error?.message ?? 'Le retrait du groupe a échoué.'),
+        });
+      });
   }
   private refreshBenevoles(teamId: number) {
     this.benevolesApi

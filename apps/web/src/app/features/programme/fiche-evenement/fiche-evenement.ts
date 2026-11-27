@@ -8,7 +8,6 @@ import { TuiTabs } from '@taiga-ui/kit';
 import { AuthService } from '../../../core/auth.service';
 import {
   EventPreparationTask,
-  Group,
   ProgramChangeLogAction,
   ProgramChangeLogEntry,
   ProgramDocumentLink,
@@ -23,14 +22,22 @@ import {
   VolunteerTeam,
 } from '../../../models/models';
 import {
-  GroupsApiService,
   ProgramApiService,
   VolunteerMissionsApiService,
   VolunteerTeamsApiService,
 } from '../../../services/api.services';
 import { SHARED_IMPORTS } from '../../../shared/shared-imports';
 import { GatheringGroupsApiService } from '../../gathering-groups/gathering-groups.api';
-import { GatheringRepartition } from '../../gathering-groups/gathering-groups.models';
+import {
+  CATEGORY_LABELS,
+  GatheringGroupOption,
+  GatheringRepartition,
+  GROUP_STATE_LABELS,
+  groupState,
+  toGroupOptions,
+} from '../../gathering-groups/gathering-groups.models';
+import { GatheringGroupPickerComponent } from '../../gathering-groups/gathering-group-picker.component';
+import { ConfirmDialogService } from '../../../shared/confirm-dialog.service';
 import { minutesToTime, timeToMinutes } from '../schedule-time.util';
 
 const TRACK_LABELS: Record<ProgramSequenceTrack, string> = {
@@ -106,6 +113,7 @@ interface TaskDraft {
     RouterLink,
     TuiTabs,
     EventMissionLinksComponent,
+    GatheringGroupPickerComponent,
   ],
   templateUrl: './fiche-evenement.html',
   styleUrl: './fiche-evenement.scss',
@@ -114,7 +122,7 @@ export class FicheEvenementPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly api = inject(ProgramApiService);
-  private readonly groupsApi = inject(GroupsApiService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly missionsApi = inject(VolunteerMissionsApiService);
   private readonly teamsApi = inject(VolunteerTeamsApiService);
   private readonly auth = inject(AuthService);
@@ -134,7 +142,6 @@ export class FicheEvenementPage {
   readonly sequenceId = signal<number | null>(null);
   readonly sequence = signal<ProgramSequenceDetail | null>(null);
   readonly tasks = signal<EventPreparationTask[]>([]);
-  readonly groups = signal<Group[]>([]);
   /** Répartitions de groupes de rassemblement rattachées à ce créneau. */
   readonly gatheringRepartitions = signal<GatheringRepartition[]>([]);
   readonly missions = signal<VolunteerMission[]>([]);
@@ -162,8 +169,12 @@ export class FicheEvenementPage {
   readonly missionToAdd = signal<number | null>(null);
   readonly newMission = signal<NewMissionDraft | null>(null);
   readonly missionFormError = signal<string | null>(null);
-  readonly groupToAdd = signal<number | null>(null);
-  readonly newGroup = signal<{ name: string; diocese: string } | null>(null);
+  /** Tous les groupes de rassemblement (toutes répartitions), pour le sélecteur de l'onglet Groupes. */
+  readonly allGatheringGroups = signal<GatheringGroupOption[]>([]);
+  readonly showGroupPicker = signal(false);
+  protected readonly categoryLabels = CATEGORY_LABELS;
+  protected readonly stateLabels = GROUP_STATE_LABELS;
+  protected readonly stateOf = groupState;
   readonly newDoc = signal<{ label: string; url: string }>({ label: '', url: '' });
   readonly docFormError = signal<string | null>(null);
 
@@ -183,25 +194,18 @@ export class FicheEvenementPage {
     return [
       TABS[0],
       `${TABS[1]} ${sequence.missionIds.length} · ${this.tasks().length}`,
-      `${TABS[2]} ${sequence.groupIds.length}`,
+      `${TABS[2]} ${this.linkedGatheringGroups().length}`,
       `${TABS[3]} ${sequence.documentLinks.length}`,
       TABS[4],
     ];
   });
 
-  readonly linkedGroups = computed(() => {
-    const sequence = this.sequence();
-    if (!sequence) return [];
-    const byId = new Map(this.groups().map((g) => [g.id, g]));
-    return sequence.groupIds.map((id) => byId.get(id)).filter((g): g is Group => !!g);
-  });
-
-  readonly availableGroups = computed(() => {
-    const sequence = this.sequence();
-    if (!sequence) return this.groups();
-    const linked = new Set(sequence.groupIds);
-    return this.groups().filter((g) => !linked.has(g.id));
-  });
+  /** Groupes de rassemblement concernés : ceux des répartitions liées à ce créneau. */
+  readonly linkedGatheringGroups = computed(() =>
+    this.gatheringRepartitions().flatMap((r) =>
+      r.groups.map((g) => ({ ...g, repartitionId: r.id, repartitionName: r.name })),
+    ),
+  );
 
   readonly linkedMissions = computed(() => {
     const sequence = this.sequence();
@@ -260,14 +264,12 @@ export class FicheEvenementPage {
     forkJoin({
       sequence: this.api.getSequence(id),
       tasks: this.api.listTasks(id),
-      groups: this.groupsApi.list(),
       missions: this.missionsApi.list(),
       teams: this.teamsApi.list(),
     }).subscribe({
-      next: ({ sequence, tasks, groups, missions, teams }) => {
+      next: ({ sequence, tasks, missions, teams }) => {
         this.sequence.set(sequence);
         this.tasks.set(tasks);
-        this.groups.set(groups);
         this.missions.set(missions);
         this.teams.set(teams);
         this.loading.set(false);
@@ -279,6 +281,7 @@ export class FicheEvenementPage {
           next: (repartitions) => this.gatheringRepartitions.set(repartitions),
           error: () => this.gatheringRepartitions.set([]),
         });
+        this.reloadGatheringOptions();
       },
       error: () => {
         this.loadError.set('Impossible de charger la fiche de ce créneau.');
@@ -740,59 +743,59 @@ export class FicheEvenementPage {
 
   // ---- Onglet Groupes concernés ----
 
-  addGroup(): void {
-    const sequence = this.sequence();
-    const groupId = this.groupToAdd();
-    if (!sequence || !groupId || this.busy()) return;
-    this.setGroups([...sequence.groupIds, groupId], () => this.groupToAdd.set(null));
+  /** Recharge les groupes proposables et les répartitions liées (après lien ou retrait). */
+  private reloadGatheringOptions(): void {
+    this.gatheringApi.list().subscribe({
+      next: (repartitions) => this.allGatheringGroups.set(toGroupOptions(repartitions)),
+      error: () => this.allGatheringGroups.set([]),
+    });
   }
 
-  unlinkGroup(groupId: number): void {
+  private reloadLinkedGroups(): void {
+    const id = this.sequenceId();
+    if (!id) return;
+    this.gatheringApi.forSequence(id).subscribe({
+      next: (repartitions) => this.gatheringRepartitions.set(repartitions),
+      error: () => this.gatheringRepartitions.set([]),
+    });
+    this.reloadGatheringOptions();
+  }
+
+  /** Lie la répartition du groupe choisi à ce créneau (tous ses groupes deviennent concernés). */
+  linkGatheringGroup(option: GatheringGroupOption): void {
     const sequence = this.sequence();
     if (!sequence || this.busy()) return;
-    this.setGroups(sequence.groupIds.filter((id) => id !== groupId));
-  }
-
-  startNewGroup(): void {
-    this.newGroup.set({ name: '', diocese: '' });
-  }
-
-  cancelNewGroup(): void {
-    this.newGroup.set(null);
-  }
-
-  updateNewGroup(patch: Partial<{ name: string; diocese: string }>): void {
-    const draft = this.newGroup();
-    if (draft) this.newGroup.set({ ...draft, ...patch });
-  }
-
-  /** Crée un groupe de rassemblement puis le lie à ce créneau. */
-  createAndLinkGroup(): void {
-    const sequence = this.sequence();
-    const draft = this.newGroup();
-    if (!sequence || !draft || this.busy()) return;
-    const name = draft.name.trim();
-    if (!name) {
-      this.actionError.set('Le nom du groupe est obligatoire.');
-      return;
+    const apply = () => this.setRepartitionSequence(option.repartitionId, sequence.id, () => this.showGroupPicker.set(false));
+    if (option.sequence && option.sequence.id !== sequence.id) {
+      this.confirmDialog
+        .ask({
+          title: 'Déplacer la répartition',
+          message: `« ${option.repartitionName} » est déjà liée à « ${option.sequence.title} » (${option.sequence.eventDate} ${option.sequence.startTime}). La lier à ce créneau la retirera de l'autre.`,
+          yes: 'Déplacer',
+        })
+        .subscribe((ok) => ok && apply());
+    } else {
+      apply();
     }
+  }
+
+  /** Détache une répartition de ce créneau (ses groupes et placements sont conservés). */
+  unlinkRepartition(repartitionId: number): void {
+    if (this.busy()) return;
+    this.setRepartitionSequence(repartitionId, null);
+  }
+
+  private setRepartitionSequence(repartitionId: number, sequenceId: number | null, after?: () => void): void {
     this.busy.set(true);
-    this.groupsApi
-      .create({
-        name,
-        diocese: draft.diocese.trim(),
-        arrivalDatetime: '',
-        departureDatetime: '',
-        notes: '',
-      })
-      .subscribe({
-        next: (group) => {
-          this.groups.set([...this.groups(), group]);
-          this.newGroup.set(null);
-          this.setGroups([...this.sequence()!.groupIds, group.id]);
-        },
-        error: () => this.fail('La création du groupe a échoué.'),
-      });
+    this.gatheringApi.updateRepartition(repartitionId, { programSequenceId: sequenceId }).subscribe({
+      next: () => {
+        this.busy.set(false);
+        after?.();
+        this.reloadLinkedGroups();
+      },
+      error: (err) =>
+        this.fail(err?.error?.message || 'La mise à jour des groupes de rassemblement a échoué.'),
+    });
   }
 
   // ---- Onglet Documents ----
@@ -841,20 +844,6 @@ export class FicheEvenementPage {
   }
 
   // ---- Internes ----
-
-  private setGroups(groupIds: number[], after?: () => void): void {
-    const sequence = this.sequence();
-    if (!sequence) return;
-    this.busy.set(true);
-    this.api.setSequenceGroups(sequence.id, groupIds).subscribe({
-      next: (updated) => {
-        this.busy.set(false);
-        this.sequence.set(updated);
-        after?.();
-      },
-      error: () => this.fail('La mise à jour des groupes a échoué.'),
-    });
-  }
 
   private patchSequence(
     payload: Parameters<ProgramApiService['updateSequence']>[1],

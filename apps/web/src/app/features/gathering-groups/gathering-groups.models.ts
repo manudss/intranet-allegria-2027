@@ -30,11 +30,21 @@ export interface GatheringGroupSummary {
   teams?: GatheringBoardPlacedTeam[];
 }
 
+/** Appartenance d'une équipe à un groupe d'une autre répartition. */
+export interface GatheringOtherGroup {
+  groupId: number;
+  groupName: string;
+  category: GatheringCategory;
+  repartitionId: number;
+  repartitionName: string;
+}
+
 export interface GatheringBoardPlacedTeam {
   id: number;
   name: string;
   track: Track;
   persons: number;
+  otherGroups?: GatheringOtherGroup[];
 }
 
 export interface GatheringRepartition {
@@ -55,7 +65,7 @@ export interface GatheringBoardTeam {
   jeunes: number;
   animateurs: number;
   persons: number;
-  delegation: string | null;
+  otherGroups: GatheringOtherGroup[];
 }
 
 export interface GatheringBoard {
@@ -68,6 +78,8 @@ export interface GatheringBoard {
   };
   groups: GatheringGroupSummary[];
   unplacedTeams: GatheringBoardTeam[];
+  /** Groupes des autres répartitions, pour filtrer par autre appartenance. */
+  otherGroups: GatheringOtherGroup[];
 }
 
 export interface GatheringProposal {
@@ -79,10 +91,17 @@ export interface GatheringFicheTeam {
   id: number;
   name: string;
   track: Track;
-  delegation: string | null;
   jeunes: number;
   animateurs: number;
   persons: number;
+}
+
+export interface GatheringFichePerson {
+  id: number;
+  firstName: string;
+  teamId: number;
+  teamName: string;
+  mejAgeGroup: 'TA' | 'ES' | null;
 }
 
 export interface GatheringFiche {
@@ -108,8 +127,8 @@ export interface GatheringFiche {
   hostingGroup: { id: number; name: string } | null;
   documentLink: { id: number; title: string; url: string } | null;
   teams: GatheringFicheTeam[];
-  people: { id: number; firstName: string }[];
-  animators: { id: number; displayName: string }[];
+  people: GatheringFichePerson[];
+  animators: { id: number; displayName: string; teamId: number; teamName: string }[];
   volunteerTeams: { id: number; name: string; typeLabel: string | null; memberCount: number }[];
   managers: { userId: number; email: string; displayName: string | null }[];
   alerts: GatheringAlert[];
@@ -146,4 +165,56 @@ export const TRACK_COLORS: Record<Track, string> = {
   TA: '#fe0002',
   ES: '#00b2b2',
   COMMON: '#6b5f52',
+};
+
+/** Un groupe de rassemblement avec sa répartition et le créneau auquel elle est liée : base du sélecteur. */
+export interface GatheringGroupOption {
+  groupId: number;
+  name: string;
+  category: GatheringCategory;
+  location: string | null;
+  teamCount: number;
+  persons: number;
+  capacity: number | null;
+  overflow: boolean;
+  almostFull: boolean;
+  repartitionId: number;
+  repartitionName: string;
+  /** Créneau de l'agenda auquel la répartition est déjà liée, s'il y en a un. */
+  sequence: GatheringSequenceRef | null;
+}
+
+export function toGroupOptions(repartitions: GatheringRepartition[]): GatheringGroupOption[] {
+  return repartitions.flatMap((r) =>
+    r.groups.map((g) => ({
+      groupId: g.id,
+      name: g.name,
+      category: g.category,
+      location: g.location,
+      teamCount: g.teamCount,
+      persons: g.persons,
+      capacity: g.capacity,
+      overflow: g.overflow,
+      almostFull: g.almostFull,
+      repartitionId: r.id,
+      repartitionName: r.name,
+      sequence: r.sequence ?? null,
+    })),
+  );
+}
+
+/** État d'un groupe pour les filtres et les pastilles. */
+export type GroupState = 'EMPTY' | 'FREE' | 'ALMOST' | 'FULL';
+
+export function groupState(g: { teamCount: number; overflow: boolean; almostFull: boolean; capacity: number | null; persons: number }): GroupState {
+  if (g.overflow || (g.capacity != null && g.persons >= g.capacity)) return 'FULL';
+  if (g.almostFull) return 'ALMOST';
+  return g.teamCount === 0 ? 'EMPTY' : 'FREE';
+}
+
+export const GROUP_STATE_LABELS: Record<GroupState, string> = {
+  EMPTY: 'Vide',
+  FREE: 'Places libres',
+  ALMOST: 'Presque complet',
+  FULL: 'Complet ou dépassé',
 };

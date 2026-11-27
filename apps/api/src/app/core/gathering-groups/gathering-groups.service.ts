@@ -44,6 +44,15 @@ export type GatheringAlert =
       message: string;
     };
 
+/** Appartenance d'une équipe à un groupe d'une autre répartition. */
+export type OtherMembership = {
+  groupId: number;
+  groupName: string;
+  category: GatheringGroupCategory;
+  repartitionId: number;
+  repartitionName: string;
+};
+
 type GroupGauge = {
   groupId: number;
   jeunes: number;
@@ -474,6 +483,66 @@ export class GatheringGroupsService {
     }
   }
 
+  /**
+   * Autres groupes de rassemblement (hors répartition donnée) dont font partie les équipes.
+   * Respecte la portée « ses groupes » : un groupe hors périmètre n'est pas révélé.
+   */
+  private async otherMemberships(
+    teamIds: number[],
+    excludeRepartitionId: number,
+    filter: number[] | null,
+  ): Promise<Map<number, OtherMembership[]>> {
+    const out = new Map<number, OtherMembership[]>();
+    if (!teamIds.length) return out;
+    const rows: {
+      teamId: number;
+      groupId: number;
+      groupName: string;
+      category: GatheringGroupCategory;
+      repartitionId: number;
+      repartitionName: string;
+    }[] = await this.dataSource.query(
+      `SELECT l.team_id AS "teamId", g.id AS "groupId", g.name AS "groupName", g.category,
+              r.id AS "repartitionId", r.name AS "repartitionName"
+         FROM gathering_group_teams l
+         JOIN gathering_groups g ON g.id = l.group_id
+         JOIN gathering_repartitions r ON r.id = g.repartition_id
+        WHERE l.team_id = ANY($1::int[]) AND l.repartition_id <> $2
+        ORDER BY r.id, g.id`,
+      [teamIds, excludeRepartitionId],
+    );
+    for (const row of rows) {
+      if (filter && !filter.includes(row.groupId)) continue;
+      const list = out.get(row.teamId) ?? [];
+      list.push({
+        groupId: row.groupId,
+        groupName: row.groupName,
+        category: row.category,
+        repartitionId: row.repartitionId,
+        repartitionName: row.repartitionName,
+      });
+      out.set(row.teamId, list);
+    }
+    return out;
+  }
+
+  private async otherGroupOptions(excludeRepartitionId: number, filter: number[] | null) {
+    const rows: {
+      groupId: number;
+      groupName: string;
+      category: GatheringGroupCategory;
+      repartitionId: number;
+      repartitionName: string;
+    }[] = await this.dataSource.query(
+      `SELECT g.id AS "groupId", g.name AS "groupName", g.category,
+              r.id AS "repartitionId", r.name AS "repartitionName"
+         FROM gathering_groups g JOIN gathering_repartitions r ON r.id = g.repartition_id
+        WHERE g.repartition_id <> $1 ORDER BY r.id, g.id`,
+      [excludeRepartitionId],
+    );
+    return rows.filter((r) => !filter || filter.includes(r.groupId));
+  }
+
   /** Données du tableau de dispatch : équipes non placées + groupes avec jauges. */
   async board(repartitionId: number, scope: GatheringScopeInfo) {
     const repartition = await this.findRepartition(repartitionId);
@@ -487,8 +556,13 @@ export class GatheringGroupsService {
 
     const placedLinks = await this.teamLinks.find({ where: { repartitionId } });
     const placedIds = new Set(placedLinks.map((l) => l.teamId));
-    const allTeams = await this.teams.find({ relations: { group: true }, order: { name: 'ASC' } });
+    const allTeams = await this.teams.find({ order: { name: 'ASC' } });
     const sizes = await this.teamSizes(allTeams.map((t) => t.id));
+    const others = await this.otherMemberships(
+      allTeams.map((t) => t.id),
+      repartitionId,
+      filter,
+    );
     const unplaced = allTeams
       .filter((t) => !placedIds.has(t.id))
       .map((t) => {
@@ -500,7 +574,7 @@ export class GatheringGroupsService {
           jeunes: size.jeunes,
           animateurs: size.animateurs,
           persons: this.teamPersons(size, repartition.countAnimators),
-          delegation: t.group?.name ?? null,
+          otherGroups: others.get(t.id) ?? [],
         };
       });
 
@@ -538,11 +612,14 @@ export class GatheringGroupsService {
                 name: t.name,
                 track: t.track,
                 persons: this.teamPersons(size, repartition.countAnimators),
+                otherGroups: others.get(t.id) ?? [],
               };
             }),
         };
       }),
       unplacedTeams: unplaced,
+      /** Groupes des autres répartitions, pour filtrer les équipes par leurs autres appartenances. */
+      otherGroups: await this.otherGroupOptions(repartitionId, filter),
     };
   }
 
@@ -761,25 +838,39 @@ export class GatheringGroupsService {
     const teams = teamIds.length
       ? await this.teams.find({
           where: { id: In(teamIds) },
-          relations: { group: true, primaryAnimator: true, secondaryAnimator: true },
+          relations: { primaryAnimator: true, secondaryAnimator: true },
           order: { name: 'ASC' },
         })
       : [];
     // Personnes dérivées des équipes (source unique) : prénoms seulement pour les jeunes,
     // comme partout dans l'application (mineurs).
-    const people: { id: number; firstName: string }[] = teamIds.length
+    const people: {
+      id: number;
+      firstName: string;
+      teamId: number;
+      teamName: string;
+      mejAgeGroup: string | null;
+    }[] = teamIds.length
       ? await this.dataSource.query(
-          `SELECT p.id, p."firstName" AS "firstName"
-             FROM team_participants tp JOIN participants p ON p.id = tp.participant_id
+          `SELECT p.id, p."firstName" AS "firstName", t.id AS "teamId", t.name AS "teamName",
+                  p."mejAgeGroup" AS "mejAgeGroup"
+             FROM team_participants tp
+             JOIN participants p ON p.id = tp.participant_id
+             JOIN teams t ON t.id = tp.team_id
             WHERE tp.team_id = ANY($1::int[])
-            ORDER BY p."firstName", p.id`,
+            ORDER BY t.name, p."firstName", p.id`,
           [teamIds],
         )
       : [];
     const animators = teams.flatMap((t) =>
       [t.primaryAnimator, t.secondaryAnimator]
         .filter((a): a is NonNullable<typeof a> => !!a)
-        .map((a) => ({ id: a.id, displayName: `${a.firstName} ${a.lastName}`.trim() })),
+        .map((a) => ({
+          id: a.id,
+          displayName: `${a.firstName} ${a.lastName}`.trim(),
+          teamId: t.id,
+          teamName: t.name,
+        })),
     );
 
     const volunteerLinks = await this.volunteerTeamLinks.find({ where: { groupId } });
@@ -839,7 +930,6 @@ export class GatheringGroupsService {
           id: t.id,
           name: t.name,
           track: t.track,
-          delegation: t.group?.name ?? null,
           ...size,
           persons: this.teamPersons(size, repartition.countAnimators),
         };

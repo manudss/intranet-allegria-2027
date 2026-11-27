@@ -28,6 +28,7 @@ let nextId = 0;
       [placeholder]="placeholder()"
       [disabled]="disabled()"
       [ngModel]="value()"
+      [ngModelOptions]="{ standalone: true }"
       (ngModelChange)="valueChange.emit($event)"
     />
     <tui-data-list-wrapper *tuiDropdown [items]="values()" />

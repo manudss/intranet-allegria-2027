@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subject, forkJoin, switchMap, takeUntil } from 'rxjs';
+import { MyAccessService } from '../../core/my-access.service';
 import { VolunteerTeamsApiService } from '../../services/api.services';
 import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { PersonPickerComponent, PersonSummary, personLabel } from '../../shared/person-picker.component';
@@ -21,6 +22,7 @@ import {
   GatheringCategory,
   GatheringFiche,
   TRACK_COLORS,
+  TRACK_LABELS,
 } from './gathering-groups.models';
 
 type Notice = { kind: 'error' | 'info'; text: string };
@@ -46,6 +48,12 @@ export class GatheringFichePage implements OnInit, OnDestroy {
 
   protected readonly categoryLabels = CATEGORY_LABELS;
   protected readonly trackColors = TRACK_COLORS;
+  protected readonly trackLabels = TRACK_LABELS;
+  private readonly myAccess = inject(MyAccessService);
+  protected readonly canOpenTeams = () => this.myAccess.can('GATHERING_TEAMS', 'VIEW');
+  protected readonly canEditTeams = () => this.myAccess.can('GATHERING_TEAMS', 'EDIT');
+  protected readonly canOpenPeople = () => this.myAccess.can('PARTICIPANTS', 'VIEW');
+  protected readonly canEditPeople = () => this.myAccess.can('PARTICIPANTS', 'EDIT');
   protected readonly categoryOptions: SelectOption<GatheringCategory>[] = GATHERING_CATEGORIES.map(
     (c) => ({ value: c, label: CATEGORY_LABELS[c] }),
   );
@@ -80,6 +88,7 @@ export class GatheringFichePage implements OnInit, OnDestroy {
   protected readonly personLabel = personLabel;
 
   ngOnInit(): void {
+    this.myAccess.load();
     this.route.paramMap
       .pipe(
         switchMap((params) => {

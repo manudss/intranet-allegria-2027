@@ -476,116 +476,62 @@
       </section>
       } @case (2) {
       <section class="tab-panel" aria-label="Groupes concernés">
-        <ul class="item-list">
-          @for (group of linkedGroups(); track group.id) {
-          <li>
+        <p class="hint">
+          Les groupes concernés sont les groupes de rassemblement des répartitions liées à ce créneau.
+        </p>
+        @for (r of gatheringRepartitions(); track r.id) {
+        <article class="repartition-block">
+          <header class="item-list-head">
+            <h3 class="subhead">
+              {{ r.name }}
+              <small>— {{ r.groups.length }} groupe{{ r.groups.length > 1 ? 's' : '' }}</small>
+            </h3>
             <span>
-              {{ group.name }} @if (group.diocese) { <small>— {{ group.diocese }}</small> }
+              <a tuiButton appearance="flat" size="xs" [routerLink]="['/groupes-rassemblement', 'repartitions', r.id]">Dispatch</a>
+              @if (canEdit()) {
+              <button tuiButton appearance="flat" size="xs" type="button" [disabled]="busy()" (click)="unlinkRepartition(r.id)">
+                Détacher du créneau
+              </button>
+              }
             </span>
-            @if (canEdit()) {
-            <button
-              tuiButton
-              appearance="flat"
-              size="xs"
-              type="button"
-              [disabled]="busy()"
-              (click)="unlinkGroup(group.id)"
-            >
-              Retirer
-            </button>
+          </header>
+          <ul class="item-list">
+            @for (g of r.groups; track g.id) {
+            <li class="group-line">
+              <span class="group-main">
+                <span [class]="'cat cat-' + g.category.toLowerCase()">{{ categoryLabels[g.category] }}</span>
+                <a [routerLink]="['/groupes-rassemblement', 'groupes', g.id]"><strong>{{ g.name }}</strong></a>
+                @if (g.location) { <small>{{ g.location }}</small> }
+              </span>
+              <span class="group-meta">
+                <small>{{ g.teamCount }} équipe{{ g.teamCount > 1 ? 's' : '' }}</small>
+                <small>{{ g.persons }}/{{ g.capacity ?? '∞' }} personnes ({{ g.jeunes }} jeunes · {{ g.animateurs }} animateurs)</small>
+                <small [class]="'state s-' + stateOf(g).toLowerCase()">{{ stateLabels[stateOf(g)] }}</small>
+              </span>
+            </li>
+            } @empty {
+            <li class="empty-state">Aucun groupe dans cette répartition.</li>
             }
-          </li>
-          } @empty {
-          <li class="empty-state">Aucun groupe lié à ce créneau.</li>
-          }
-        </ul>
-        <h3 class="subhead">Répartitions en groupes de rassemblement</h3>
-        <ul class="item-list">
-          @for (r of gatheringRepartitions(); track r.id) {
-          <li>
-            <span>
-              {{ r.name }} <small>— {{ r.groups.length }} groupe{{ r.groups.length > 1 ? 's' : '' }}</small>
-            </span>
-            <a
-              tuiButton
-              appearance="flat"
-              size="xs"
-              [routerLink]="['/groupes-rassemblement', 'repartitions', r.id]"
-              >Dispatch</a
-            >
-          </li>
-          } @empty {
-          <li class="empty-state">Aucune répartition en groupes de rassemblement pour ce créneau.</li>
-          }
-        </ul>
+          </ul>
+        </article>
+        } @empty {
+        <p class="empty-state">Aucun groupe de rassemblement lié à ce créneau.</p>
+        }
         @if (canEdit()) {
         <div class="add-row">
-          <select
-            aria-label="Groupe à lier"
-            [ngModel]="groupToAdd() ?? ''"
-            (ngModelChange)="groupToAdd.set($event === '' ? null : +$event)"
-            name="fiche-groupe"
-          >
-            <option value="">Choisir un groupe existant…</option>
-            @for (group of availableGroups(); track group.id) {
-            <option [value]="group.id">
-              {{ group.name }}@if (group.diocese) { — {{ group.diocese }} }
-            </option>
-            }
-          </select>
-          <button
-            tuiButton
-            appearance="secondary"
-            size="s"
-            type="button"
-            [disabled]="busy() || !groupToAdd()"
-            (click)="addGroup()"
-          >
-            Lier un groupe existant
+          <button tuiButton appearance="secondary" size="s" type="button" (click)="showGroupPicker.set(!showGroupPicker())">
+            {{ showGroupPicker() ? 'Fermer le sélecteur' : 'Lier un groupe de rassemblement' }}
           </button>
         </div>
-        @if (newGroup(); as draft) {
-        <form class="add-task-form" (ngSubmit)="createAndLinkGroup()">
-          <label>
-            Nom du nouveau groupe
-            <input
-              type="text"
-              maxlength="200"
-              [ngModel]="draft.name"
-              (ngModelChange)="updateNewGroup({ name: $event })"
-              name="fiche-nouveau-groupe"
-            />
-          </label>
-          <label>
-            Diocèse (facultatif)
-            <input
-              type="text"
-              maxlength="100"
-              [ngModel]="draft.diocese"
-              (ngModelChange)="updateNewGroup({ diocese: $event })"
-              name="fiche-nouveau-groupe-diocese"
-            />
-          </label>
-          <footer class="form-actions">
-            <button tuiButton appearance="primary" size="s" type="submit" [disabled]="busy()">
-              Créer et lier
-            </button>
-            <button
-              tuiButton
-              appearance="secondary"
-              size="s"
-              type="button"
-              (click)="cancelNewGroup()"
-            >
-              Annuler
-            </button>
-          </footer>
-        </form>
-        } @else {
-        <button tuiButton appearance="flat" size="s" type="button" (click)="startNewGroup()">
-          Créer un groupe
-        </button>
-        } }
+        @if (showGroupPicker()) {
+        <app-gathering-group-picker
+          [options]="allGatheringGroups()"
+          [currentSequenceId]="sequence.id"
+          [disabled]="busy()"
+          (pick)="linkGatheringGroup($event)"
+        />
+        }
+        }
       </section>
       } @case (3) {
       <section class="tab-panel" aria-label="Documents">
@@ -693,8 +639,14 @@
       <section class="aside-card">
         <h3>Groupes concernés</h3>
         <ul class="aside-groups">
-          @for (group of linkedGroups(); track group.id) {
-          <li>{{ group.name }}</li>
+          @for (group of linkedGatheringGroups(); track group.id) {
+          <li>
+            <a [routerLink]="['/groupes-rassemblement', 'groupes', group.id]">{{ group.name }}</a>
+            <small>
+              {{ categoryLabels[group.category] }} · {{ group.teamCount }} équipe{{ group.teamCount > 1 ? 's' : '' }} ·
+              {{ group.persons }}/{{ group.capacity ?? '∞' }} pers.</small
+            >
+          </li>
           } @empty {
           <li class="empty-state">Aucun groupe lié.</li>
           }

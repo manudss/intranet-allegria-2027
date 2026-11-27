@@ -57,7 +57,18 @@
   <h3>Groupes de rassemblement</h3>
   <ul>
     @for (g of membershipsOf(selected()!.id); track g.id) {
-    <li>{{ g.label }}</li>
+    <li class="membership">
+      <span [class]="'cat cat-' + g.category.toLowerCase()">{{ categoryLabels[g.category] }}</span>
+      <a [routerLink]="['/groupes-rassemblement', 'groupes', g.id]"><strong>{{ g.name }}</strong></a>
+      <span class="muted">
+        {{ g.repartitionName }} · piste de l'équipe
+        <span [style.color]="trackColors[selected()!.track]">{{ trackLabels[selected()!.track] }}</span>
+      </span>
+      <a [routerLink]="['/groupes-rassemblement', 'repartitions', g.repartitionId]">Dispatch</a>
+      @if (myAccess.can('GATHERING_GROUPS', 'EDIT')) {
+      <button type="button" tuiButton appearance="flat" size="xs" (click)="removeFromGroup(g)">Retirer</button>
+      }
+    </li>
     } @empty {
     <li class="muted">Aucun groupe de rassemblement.</li>
     }

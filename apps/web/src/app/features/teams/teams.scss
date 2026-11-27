@@ -28,3 +28,7 @@ li {
     grid-template-columns: 1fr;
   }
 }
+
+.membership { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.membership .cat { font-weight: 700; font-size: .8rem; }
+.cat-ta { color: #fe0002; } .cat-es { color: #00b2b2; } .cat-mixte { color: #6b5f52; }

@@ -45,6 +45,10 @@ export class DelegationFichePage implements OnInit {
   protected readonly aller = signal<Repartition | null>(null);
   protected readonly retour = signal<Repartition | null>(null);
   protected readonly noteRows = signal<NoteFeedRow[]>([]);
+  /** Nombre de notes logistiques de la délégation (badge de l'onglet). */
+  protected readonly noteCount = computed(() =>
+    this.noteRows().reduce((total, row) => total + row.notesCount, 0),
+  );
   protected readonly delegationNames = signal<Map<number, string>>(new Map());
 
   protected readonly personFilter = signal<PersonFilter>('TOUT');
@@ -89,7 +93,8 @@ export class DelegationFichePage implements OnInit {
   }
   protected benevoles() {
     return this.persons().filter(
-      (p) => p.personType === 'VOLUNTEER' || (p.personType === 'PARTICIPANT' && p.detail === 'BENEVOLE'),
+      (p) =>
+        p.personType === 'VOLUNTEER' || (p.personType === 'PARTICIPANT' && p.detail === 'BENEVOLE'),
     );
   }
 

@@ -15,8 +15,7 @@
   <nav class="delegation-nav"><a routerLink="/rassemblement">Toutes les délégations</a></nav>
   @if (error(); as err) {
   <p class="error">{{ err }}</p>
-  }
-  @if (loading()) {
+  } @if (loading()) {
   <app-loading-skeleton />
   } @else {
   <div class="direction-switch" role="tablist">
@@ -63,7 +62,7 @@
       [appearance]="view() === 'notes' ? 'primary' : 'secondary'"
       (click)="setView('notes')"
     >
-      Notes ({{ noteRows().length }})
+      Notes ({{ noteCount() }})
     </button>
   </div>
 
@@ -111,9 +110,7 @@
       >
     </p>
   </section>
-  }
-
-  @if (view() === 'personnes') {
+  } @if (view() === 'personnes') {
   <div class="direction-switch">
     @for (f of ['TOUT', 'JEUNE', 'ANIMATEUR', 'BENEVOLE']; track f) {
     <button
@@ -122,10 +119,9 @@
       [appearance]="personFilter() === f ? 'primary' : 'secondary'"
       (click)="personFilter.set($any(f))"
     >
-      {{ f === 'TOUT' ? 'Tout voir (' + persons().length + ')' : '' }}
-      {{ f === 'JEUNE' ? 'Jeunes (' + jeunes().length + ')' : '' }}
-      {{ f === 'ANIMATEUR' ? 'Animateurs (' + animateurs().length + ')' : '' }}
-      {{ f === 'BENEVOLE' ? 'Bénévoles (' + benevoles().length + ')' : '' }}
+      {{ f === 'TOUT' ? 'Tout voir (' + persons().length + ')' : '' }} {{ f === 'JEUNE' ? 'Jeunes ('
+      + jeunes().length + ')' : '' }} {{ f === 'ANIMATEUR' ? 'Animateurs (' + animateurs().length +
+      ')' : '' }} {{ f === 'BENEVOLE' ? 'Bénévoles (' + benevoles().length + ')' : '' }}
     </button>
     }
   </div>
@@ -154,9 +150,7 @@
   <p class="muted sante-note">
     SANTÉ : les données de santé ne sont pas visibles par les responsables de délégation.
   </p>
-  }
-
-  @if (view() === 'sous-delegations') {
+  } @if (view() === 'sous-delegations') {
   <div class="two-cols">
     @for (rep of [aller(), retour()]; track $index) {
     <section class="panel">
@@ -183,8 +177,7 @@
         <p class="muted">{{ t.occupancy }}/{{ t.capacity }} places</p>
         } @else {
         <p class="muted">{{ t.occupancy }} personnes · sans jauge</p>
-        }
-        @if (t.practicalInfo) {
+        } @if (t.practicalInfo) {
         <p class="muted">Infos pratiques parents : {{ t.practicalInfo }}</p>
         }
       </article>
@@ -199,9 +192,7 @@
       >Gérer les sous-délégations et la répartition</a
     >
   </p>
-  }
-
-  @if (view() === 'exceptions') {
+  } @if (view() === 'exceptions') {
   <div class="two-cols">
     <section class="panel">
       <h2>Reçues · voyagent avec cette délégation sans en être</h2>
@@ -211,17 +202,13 @@
         <span class="chip chip-exception">{{ delegationName(e.person?.delegationId) }}</span>
         · aller · {{ e.transportId ? 'placée' : 'à placer' }}
       </p>
-      }
-      @for (e of retour()?.exceptionsReceived ?? []; track 'r' + e.assignmentId) {
+      } @for (e of retour()?.exceptionsReceived ?? []; track 'r' + e.assignmentId) {
       <p class="exception-line">
         <strong>{{ e.person?.firstName }} {{ e.person?.lastName }}</strong>
         <span class="chip chip-exception">{{ delegationName(e.person?.delegationId) }}</span>
         · retour · {{ e.transportId ? 'placée' : 'à placer' }}
       </p>
-      }
-      @if (
-        !(aller()?.exceptionsReceived?.length || retour()?.exceptionsReceived?.length)
-      ) {
+      } @if ( !(aller()?.exceptionsReceived?.length || retour()?.exceptionsReceived?.length) ) {
       <p class="muted">Aucune exception reçue.</p>
       }
     </section>
@@ -233,39 +220,31 @@
         <span class="chip chip-exception">{{ delegationName(e.delegationId) }}</span>
         · aller · {{ e.transportId ? 'placée' : 'à placer' }}
       </p>
-      }
-      @for (e of retour()?.exceptionsOutgoing ?? []; track 'r' + e.assignmentId) {
+      } @for (e of retour()?.exceptionsOutgoing ?? []; track 'r' + e.assignmentId) {
       <p class="exception-line">
         <strong>{{ e.person?.firstName }} {{ e.person?.lastName }}</strong>
         <span class="chip chip-exception">{{ delegationName(e.delegationId) }}</span>
         · retour · {{ e.transportId ? 'placée' : 'à placer' }}
       </p>
-      }
-      @if (
-        !(aller()?.exceptionsOutgoing?.length || retour()?.exceptionsOutgoing?.length)
-      ) {
+      } @if ( !(aller()?.exceptionsOutgoing?.length || retour()?.exceptionsOutgoing?.length) ) {
       <p class="muted">Aucune exception sortante.</p>
       }
     </section>
   </div>
-  }
-
-  @if (view() === 'notes') {
+  } @if (view() === 'notes') {
   <section class="panel">
     <h2>Notes logistiques des personnes de la délégation</h2>
-    @for (row of noteRows(); track row.person ? row.person.personType + ':' + row.person.id : $index) {
+    @for (row of noteRows(); track row.person ? row.person.personType + ':' + row.person.id :
+    $index) {
     <p class="note-line">
       @if (row.person; as p) {
       <a [routerLink]="['/person-notes', p.personType, p.id]">
         <strong>{{ p.firstName }} {{ p.lastName }}</strong>
       </a>
       <span class="muted">
-        · {{ row.notesCount }} note(s)@if (row.unansweredCount) {
-          · {{ row.unansweredCount }} sans réponse
-        }@if (row.lastNote) {
-          · « {{ row.lastNote.body }} » — {{ row.lastNote.authorName }},
-          {{ row.lastNote.createdAt | date: 'dd/MM/yyyy HH:mm' }}
-        }</span
+        · {{ row.notesCount }} note(s)@if (row.unansweredCount) { · {{ row.unansweredCount }} sans
+        réponse }@if (row.lastNote) { · « {{ row.lastNote.body }} » — {{ row.lastNote.authorName }},
+        {{ row.lastNote.createdAt | date: 'dd/MM/yyyy HH:mm' }} }</span
       >
       }
     </p>
@@ -274,6 +253,5 @@
     }
     <p><a routerLink="/suivi-notes">Ouvrir le suivi des notes complet</a></p>
   </section>
-  }
-  }
+  } }
 </app-page-layout>

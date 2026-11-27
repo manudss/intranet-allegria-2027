@@ -75,7 +75,7 @@
           </tui-textfield>
           <label class="notes-label" for="f-notes">Notes</label>
           <tui-textfield>
-            <textarea id="f-notes" tuiTextarea placeholder="Précisions sur ce groupe (facultatif)" aria-label="Notes" [ngModel]="editNotes()" (ngModelChange)="editNotes.set($event)" name="f-notes"></textarea>
+            <textarea id="f-notes" tuiTextarea rows="2" placeholder="Précisions sur ce groupe (facultatif)" aria-label="Notes" [ngModel]="editNotes()" (ngModelChange)="editNotes.set($event)" name="f-notes"></textarea>
           </tui-textfield>
           <div class="form-actions">
             <button type="submit" tuiButton appearance="primary" [disabled]="busy() || !editName().trim()">Enregistrer</button>

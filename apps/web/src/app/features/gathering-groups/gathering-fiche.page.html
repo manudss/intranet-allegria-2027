@@ -127,7 +127,7 @@
             <tbody>
               @for (p of f.people; track p.id) {
                 <tr>
-                  <td>{{ p.firstName }}</td>
+                  <td>{{ p.lastName }} {{ p.firstName }}</td>
                   <td>
                     @if (canOpenTeams()) {
                       <a [routerLink]="['/equipes']" [queryParams]="{ equipe: p.teamId }">{{ p.teamName }}</a>

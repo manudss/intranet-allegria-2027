@@ -842,23 +842,24 @@ export class GatheringGroupsService {
           order: { name: 'ASC' },
         })
       : [];
-    // Personnes dérivées des équipes (source unique) : prénoms seulement pour les jeunes,
-    // comme partout dans l'application (mineurs).
+    // Personnes dérivées des équipes (source unique). La fiche est déjà limitée au périmètre
+    // du compte (GatheringScope) : on affiche les membres de ses propres groupes.
     const people: {
       id: number;
       firstName: string;
+      lastName: string;
       teamId: number;
       teamName: string;
       mejAgeGroup: string | null;
     }[] = teamIds.length
       ? await this.dataSource.query(
-          `SELECT p.id, p."firstName" AS "firstName", t.id AS "teamId", t.name AS "teamName",
+          `SELECT p.id, p."firstName" AS "firstName", p."lastName" AS "lastName", t.id AS "teamId", t.name AS "teamName",
                   p."mejAgeGroup" AS "mejAgeGroup"
              FROM team_participants tp
              JOIN participants p ON p.id = tp.participant_id
              JOIN teams t ON t.id = tp.team_id
             WHERE tp.team_id = ANY($1::int[])
-            ORDER BY t.name, p."firstName", p.id`,
+            ORDER BY t.name, p."lastName", p."firstName", p.id`,
           [teamIds],
         )
       : [];

@@ -99,6 +99,7 @@ export interface GatheringFicheTeam {
 export interface GatheringFichePerson {
   id: number;
   firstName: string;
+  lastName: string;
   teamId: number;
   teamName: string;
   mejAgeGroup: 'TA' | 'ES' | null;

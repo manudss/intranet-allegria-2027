@@ -524,6 +524,7 @@
           </button>
         </div>
         @if (showGroupPicker()) {
+        <p class="muted">Choisir un groupe lie sa répartition entière à ce créneau (tous les groupes de la répartition sont concernés).</p>
         <app-gathering-group-picker
           [options]="allGatheringGroups()"
           [currentSequenceId]="sequence.id"

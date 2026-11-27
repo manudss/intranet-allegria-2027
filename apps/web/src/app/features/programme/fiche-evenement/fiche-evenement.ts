@@ -766,17 +766,21 @@ export class FicheEvenementPage {
     const sequence = this.sequence();
     if (!sequence || this.busy()) return;
     const apply = () => this.setRepartitionSequence(option.repartitionId, sequence.id, () => this.showGroupPicker.set(false));
-    if (option.sequence && option.sequence.id !== sequence.id) {
-      this.confirmDialog
-        .ask({
-          title: 'Déplacer la répartition',
-          message: `« ${option.repartitionName} » est déjà liée à « ${option.sequence.title} » (${option.sequence.eventDate} ${option.sequence.startTime}). La lier à ce créneau la retirera de l'autre.`,
-          yes: 'Déplacer',
-        })
-        .subscribe((ok) => ok && apply());
-    } else {
-      apply();
-    }
+    // Le lien est porté par la répartition (modèle actuel) : on le dit explicitement avant d'agir.
+    const siblings = this.allGatheringGroups()
+      .filter((g) => g.repartitionId === option.repartitionId)
+      .map((g) => g.name);
+    const moved =
+      option.sequence && option.sequence.id !== sequence.id
+        ? ` Elle est actuellement liée à « ${option.sequence.title} » (${option.sequence.eventDate} ${option.sequence.startTime}) et sera retirée de ce créneau.`
+        : '';
+    this.confirmDialog
+      .ask({
+        title: 'Lier la répartition à ce créneau',
+        message: `Le groupe « ${option.name} » fait partie de la répartition « ${option.repartitionName} ». Le lien se fait au niveau de la répartition : ses ${siblings.length} groupes (${siblings.join(', ')}) seront tous concernés par ce créneau.${moved}`,
+        yes: 'Lier la répartition',
+      })
+      .subscribe((ok) => ok && apply());
   }
 
   /** Détache une répartition de ce créneau (ses groupes et placements sont conservés). */

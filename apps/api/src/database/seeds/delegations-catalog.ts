@@ -137,11 +137,21 @@ export const CATALOGUE_DELEGATIONS: DelegationCatalogEntry[] = [
   ...CIRCONSCRIPTIONS_INSTITUTIONNELLES,
 ];
 
-/** Les cinq délégations bien remplies de la maquette (effectifs cibles du plan). */
+/**
+ * La dizaine de délégations bien remplies du seed de démonstration (plan lot 7 :
+ * « une dizaine de délégations bien remplies (celles de la maquette en tête) »).
+ * Les cinq premières portent les effectifs cibles de la maquette ; les cinq
+ * suivantes complètent la dizaine avec des effectifs variés.
+ */
 export const DELEGATIONS_VEDETTES: { diocese: string; effectifCible: number }[] = [
   { diocese: 'Lyon', effectifCible: 86 },
   { diocese: 'Annecy', effectifCible: 54 },
   { diocese: 'Valence', effectifCible: 31 },
   { diocese: 'Saint-Étienne', effectifCible: 58 },
   { diocese: 'Grenoble-Vienne', effectifCible: 63 },
+  { diocese: 'Chambéry, Saint-Jean-de-Maurienne et Tarentaise', effectifCible: 40 },
+  { diocese: 'Belley-Ars', effectifCible: 28 },
+  { diocese: 'Clermont', effectifCible: 36 },
+  { diocese: 'Marseille', effectifCible: 45 },
+  { diocese: 'Paris', effectifCible: 70 },
 ];

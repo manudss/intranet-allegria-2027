@@ -1022,6 +1022,29 @@ async function run(): Promise<void> {
       volunteerSaveCursor += expectedCount;
     }
 
+    // Perimetres de groupes : chaque benevole rattache a une delegation la
+    // voit dans son intranet et apparait comme contact responsable pour les
+    // familles (bloc trajets de l'espace famille, filtres du suivi des notes).
+    const scopeRows: { userId: number; groupId: number }[] = [];
+    for (const [groupId, groupVolunteers] of volunteersByGroupSaved) {
+      for (const volunteer of groupVolunteers) {
+        if (volunteer.user?.id != null) {
+          scopeRows.push({ userId: volunteer.user.id, groupId });
+        }
+      }
+    }
+    for (let i = 0; i < scopeRows.length; i += 500) {
+      const scopeChunk = scopeRows.slice(i, i + 500);
+      const valuesSql = scopeChunk
+        .map((_, j) => `($${j * 2 + 1}, $${j * 2 + 2})`)
+        .join(', ');
+      const params = scopeChunk.flatMap((r) => [r.userId, r.groupId]);
+      await dataSource.query(
+        `INSERT INTO user_group_scopes (user_id, group_id) VALUES ${valuesSql} ON CONFLICT DO NOTHING`,
+        params,
+      );
+    }
+
     const teamCountsByGroup = new Map<number, number>();
     const volunteerTeamsByGroup = new Map<number, VolunteerTeam[]>();
     const volunteerTeamsToCreate: VolunteerTeam[] = [];

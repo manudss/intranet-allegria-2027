@@ -104,7 +104,7 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
       (this.trackFilter() !== 'ALL' ? 1 : 0) +
       (this.otherGroupFilter() !== 'ALL' ? 1 : 0) +
       (this.membershipFilter() !== 'ALL' ? 1 : 0) +
-      (this.minPersons().trim() ? 1 : 0),
+      (String(this.minPersons() ?? '').trim() ? 1 : 0),
   );
 
   protected readonly filteredTeams = computed(() => {
@@ -173,7 +173,7 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
         },
         error: () => {
           this.loading.set(false);
-          this.notice.set({ kind: 'error', text: 'Impossible de charger la répartition.' });
+          this.showNotice({ kind: 'error', text: 'Impossible de charger la répartition.' });
         },
       });
   }
@@ -192,7 +192,7 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
       },
       error: () => {
         this.loading.set(false);
-        this.notice.set({ kind: 'error', text: 'Impossible de recharger la répartition.' });
+        this.showNotice({ kind: 'error', text: 'Impossible de recharger la répartition.' });
       },
     });
   }
@@ -252,7 +252,7 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
         this.dropGroupId.set(null);
         this.busy.set(false);
         this.panel.set('teams');
-        this.notice.set({
+        this.showNotice({
           kind: 'info',
           text: `« ${team?.name ?? 'Équipe'} » placée dans « ${group.name} ».`,
         });
@@ -262,7 +262,7 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
         this.busy.set(false);
         this.draggingTeamId.set(null);
         this.dropGroupId.set(null);
-        this.notice.set({ kind: 'error', text: this.readError(err, 'Affectation refusée.') });
+        this.showNotice({ kind: 'error', text: this.readError(err, 'Affectation refusée.') });
       },
     });
   }
@@ -273,7 +273,7 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
     if ((event.target as HTMLElement).closest('a, button.link, button[tuiButton]')) return;
     const reason = this.refusal(group);
     if (reason) {
-      this.notice.set({ kind: 'error', text: `${reason}.` });
+      this.showNotice({ kind: 'error', text: `${reason}.` });
       return;
     }
     this.selectGroup(group);
@@ -303,7 +303,7 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
     if (!teamId) return;
     const reason = this.refusal(group);
     if (reason) {
-      this.notice.set({ kind: 'error', text: `${reason}.` });
+      this.showNotice({ kind: 'error', text: `${reason}.` });
       this.dragEnd();
       return;
     }
@@ -320,17 +320,17 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.busy.set(false);
-        this.notice.set({ kind: 'error', text: this.readError(err, 'Retrait impossible.') });
+        this.showNotice({ kind: 'error', text: this.readError(err, 'Retrait impossible.') });
       },
     });
   }
 
   protected createGroup(): void {
     if (!this.newGroupName().trim() || this.busy()) return;
-    const capacityRaw = this.newGroupCapacity().trim();
+    const capacityRaw = String(this.newGroupCapacity() ?? '').trim();
     const capacity = capacityRaw === '' ? null : Number(capacityRaw);
     if (capacity !== null && (!Number.isInteger(capacity) || capacity <= 0)) {
-      this.notice.set({ kind: 'error', text: 'Capacité invalide : un nombre entier positif, ou vide.' });
+      this.showNotice({ kind: 'error', text: 'Capacité invalide : un nombre entier positif, ou vide.' });
       return;
     }
     this.busy.set(true);
@@ -348,11 +348,12 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
           this.newGroupName.set('');
           this.newGroupCapacity.set('');
           this.newGroupLocation.set('');
+          this.showNotice({ kind: 'info', text: 'Groupe créé.' });
           this.reload();
         },
         error: (err) => {
           this.busy.set(false);
-          this.notice.set({ kind: 'error', text: this.readError(err, 'Création impossible.') });
+          this.showNotice({ kind: 'error', text: this.readError(err, 'Création impossible.') });
         },
       });
   }
@@ -365,7 +366,7 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
         this.api.removeGroup(group.id).subscribe({
           next: () => this.reload(),
           error: (err) =>
-            this.notice.set({ kind: 'error', text: this.readError(err, 'Suppression impossible.') }),
+            this.showNotice({ kind: 'error', text: this.readError(err, 'Suppression impossible.') }),
         });
       });
   }
@@ -377,7 +378,7 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
     const action = () =>
       this.api.setOverflow(repartition.id, target).subscribe({
         next: () => {
-          this.notice.set({
+          this.showNotice({
             kind: 'info',
             text: target
               ? 'Dérogation activée : les dépassements de capacité sont possibles.'
@@ -386,7 +387,7 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
           this.reload();
         },
         error: (err) =>
-          this.notice.set({ kind: 'error', text: this.readError(err, 'Réglage impossible.') }),
+          this.showNotice({ kind: 'error', text: this.readError(err, 'Réglage impossible.') }),
       });
     if (target) {
       this.confirmDialog
@@ -410,7 +411,7 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.proposalBusy.set(false);
-        this.notice.set({ kind: 'error', text: this.readError(err, 'Proposition impossible.') });
+        this.showNotice({ kind: 'error', text: this.readError(err, 'Proposition impossible.') });
       },
     });
   }
@@ -428,12 +429,12 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
         next: () => {
           this.busy.set(false);
           this.proposal.set(null);
-          this.notice.set({ kind: 'info', text: 'Proposition appliquée.' });
+          this.showNotice({ kind: 'info', text: 'Proposition appliquée.' });
           this.reload();
         },
         error: (err) => {
           this.busy.set(false);
-          this.notice.set({ kind: 'error', text: this.readError(err, 'Application impossible.') });
+          this.showNotice({ kind: 'error', text: this.readError(err, 'Application impossible.') });
         },
       });
   }
@@ -456,6 +457,17 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
 
   private isNarrow(): boolean {
     return typeof window !== 'undefined' && window.matchMedia('(max-width: 60rem)').matches;
+  }
+
+  /** Champ Taiga type=number : la valeur émise est un number (ou null si vidé), on stocke une chaîne. */
+  protected asText(value: unknown): string {
+    return value == null ? '' : String(value);
+  }
+
+  /** Affiche le message en haut de page et le ramène dans le champ de vision (mobile : la page est longue). */
+  private showNotice(notice: Notice): void {
+    this.notice.set(notice);
+    globalThis.scrollTo?.({ top: 0, behavior: 'smooth' });
   }
 
   private readError(err: unknown, fallback: string): string {

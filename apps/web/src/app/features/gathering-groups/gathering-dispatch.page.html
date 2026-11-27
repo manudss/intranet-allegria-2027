@@ -108,7 +108,7 @@
           <app-select-field label="Appartenances" [options]="membershipOptions" [value]="membershipFilter()" (valueChange)="membershipFilter.set($event ?? 'ALL')" />
           <tui-textfield>
             <label tuiLabel for="min-persons">Personnes (min.)</label>
-            <input id="min-persons" tuiInput type="number" min="0" [ngModel]="minPersons()" (ngModelChange)="minPersons.set($event)" />
+            <input id="min-persons" tuiInput type="number" min="0" [ngModel]="minPersons()" (ngModelChange)="minPersons.set(asText($event))" />
           </tui-textfield>
         </div>
         <p class="filter-line muted">
@@ -185,7 +185,7 @@
             />
             <tui-textfield>
               <label tuiLabel for="ng-cap">Capacité (personnes, vide = sans limite)</label>
-              <input id="ng-cap" tuiInput type="number" min="1" [ngModel]="newGroupCapacity()" (ngModelChange)="newGroupCapacity.set($event)" name="ng-cap" />
+              <input id="ng-cap" tuiInput type="number" min="1" [ngModel]="newGroupCapacity()" (ngModelChange)="newGroupCapacity.set(asText($event))" name="ng-cap" />
             </tui-textfield>
             <tui-textfield>
               <label tuiLabel for="ng-loc">Lieu (optionnel)</label>

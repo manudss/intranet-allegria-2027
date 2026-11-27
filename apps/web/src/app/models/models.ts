@@ -387,7 +387,8 @@ export interface VolunteerShiftAssignmentVolunteerSearchResult {
 }
 export type TeamPayload = Pick<Team, 'name' | 'maxSize' | 'track'> & {
   notes: string;
-  groupId: number | null;
+  /** Délégation (départs/arrivées) : gérée hors de la fiche équipe, jamais envoyée ici. */
+  groupId?: number | null;
   primaryAnimatorId: number | null;
   secondaryAnimatorId: number | null;
 };

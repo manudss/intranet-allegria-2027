@@ -1526,6 +1526,17 @@ async function run(): Promise<void> {
     }
 
     const transportAssignmentsToCreate: TransportAssignment[] = [];
+    // Exceptions : deux jeunes du premier groupe voyagent (aller) avec le deuxième.
+    // Ils sont exclus de l'affectation ALLER normale de leur groupe d'origine
+    // (contrainte d'unicité personne/sens ; l'exception sortante sort des totaux d'origine).
+    const exceptionOriginGroup = groups.length >= 2 ? groups[0] : null;
+    const exceptionParticipantIds = new Set(
+      exceptionOriginGroup
+        ? (participantsByGroup.get(exceptionOriginGroup.id) ?? [])
+            .slice(0, 2)
+            .map((p) => p.id)
+        : [],
+    );
     for (const group of groups) {
       const members = [
         ...(participantsByGroup.get(group.id) ?? []).map((p) => ({
@@ -1542,6 +1553,13 @@ async function run(): Promise<void> {
         members.forEach((member, index) => {
           // Un membre sur six reste « à placer » : le cas est visible en preview.
           if (index % 6 === 5 || groupTransports.length === 0) return;
+          if (
+            direction === TransportDirection.ALLER &&
+            group.id === exceptionOriginGroup?.id &&
+            member.personType === AssignmentPersonType.PARTICIPANT &&
+            exceptionParticipantIds.has(member.personId)
+          )
+            return;
           transportAssignmentsToCreate.push(
             transportAssignmentRepository.create({
               personType: member.personType,
@@ -1554,11 +1572,10 @@ async function run(): Promise<void> {
         });
       }
     }
-    if (groups.length >= 2) {
-      // Exceptions : deux jeunes du premier groupe voyagent (aller) avec le deuxième,
-      // d’abord dans son « à placer ».
-      const [originGroup, hostGroup] = groups;
-      for (const p of (participantsByGroup.get(originGroup.id) ?? []).slice(0, 2)) {
+    if (groups.length >= 2 && exceptionOriginGroup) {
+      const hostGroup = groups[1];
+      // Les jeunes en exception atterrissent d'abord dans l'« à placer » de l'accueil.
+      for (const p of (participantsByGroup.get(exceptionOriginGroup.id) ?? []).slice(0, 2)) {
         transportAssignmentsToCreate.push(
           transportAssignmentRepository.create({
             personType: AssignmentPersonType.PARTICIPANT,

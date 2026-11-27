@@ -39,4 +39,9 @@ export class MyAccessService {
     const grant = (this.grants() ?? []).find((g) => g.module === module);
     return !!grant && RANK[grant.level] >= RANK[level];
   }
+
+  /** Portée du droit le plus large sur le module (ALL, GROUPS, OWN_TEAM, SELF). */
+  scopeOf(module: string): string | null {
+    return (this.grants() ?? []).find((g) => g.module === module)?.scope ?? null;
+  }
 }

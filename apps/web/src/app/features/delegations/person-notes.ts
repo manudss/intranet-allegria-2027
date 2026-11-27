@@ -1,9 +1,11 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
+import { MyAccessService } from '../../core/my-access.service';
 import {
   DelegationsApiService,
   NoteFeedRow,
+  PersonLite,
   PersonNote,
   PersonType,
 } from './delegations-api.service';
@@ -29,7 +31,7 @@ function formatDateTime(value: string): string {
   standalone: true,
   imports: [...SHARED_IMPORTS, RouterLink],
   templateUrl: './person-notes.html',
-  styleUrl: '../../shared/crud.scss',
+  styleUrls: ['../../shared/crud.scss', './person-notes.scss'],
 })
 export class PersonNotesPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
@@ -46,6 +48,15 @@ export class PersonNotesPage implements OnInit {
   protected readonly personMode = signal(false);
   protected readonly personLabel = signal('');
   protected readonly notes = signal<PersonNote[]>([]);
+  protected readonly selected = signal<PersonLite | null>(null);
+  protected readonly delegationNames = signal<Map<number, string>>(new Map());
+  private readonly access = inject(MyAccessService);
+
+  /** Bandeau de périmètre : un responsable ne voit que sa délégation. */
+  protected readonly scopedView = computed(() => {
+    if (!this.access.loaded()) return false;
+    return !this.access.can('TRANSPORT', 'VIEW') || this.access.scopeOf('TRANSPORT') !== 'ALL';
+  });
   protected readonly roots = computed(() => this.notes().filter((n) => !n.parent));
   protected readonly newNote = signal('');
   protected readonly replyDrafts = signal<Record<number, string>>({});
@@ -56,14 +67,36 @@ export class PersonNotesPage implements OnInit {
   ngOnInit() {
     const type = this.route.snapshot.paramMap.get('personType');
     const id = this.route.snapshot.paramMap.get('personId');
+    this.access.load();
     if (type && id) {
       this.personMode.set(true);
       this.personType = type as PersonType;
       this.personId = Number(id);
       this.reloadPerson();
     } else {
+      this.api.listSummaries().subscribe({
+        next: (s) => this.delegationNames.set(new Map(s.map((d) => [d.id, d.name]))),
+        error: () => undefined,
+      });
       this.reloadFeed();
     }
+  }
+
+  protected delegationName(id: number) {
+    return this.delegationNames().get(id) ?? '';
+  }
+
+  /** Ouvre le fil de la personne dans la colonne de droite (sans changer de page). */
+  protected selectRow(row: NoteFeedRow) {
+    if (!row.person) return;
+    this.selected.set(row.person);
+    this.personType = row.person.personType;
+    this.personId = row.person.id;
+    this.reloadPerson();
+  }
+
+  protected backToList() {
+    this.selected.set(null);
   }
 
   protected setFilter(f: 'WITH_NOTES' | 'UNANSWERED' | 'ALL') {

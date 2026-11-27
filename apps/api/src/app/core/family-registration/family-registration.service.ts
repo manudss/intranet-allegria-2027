@@ -76,9 +76,14 @@ export class FamilyRegistrationService {
   ) {}
   async rules(): Promise<FamilyRules> {
     const rows = await this.db.query('SELECT rules FROM registration_settings WHERE id=1');
+    // Délégations proposées à l'inscription (choix obligatoire, transport géré par les délégations).
+    const delegations = await this.db.query(
+      'SELECT id, name, diocese FROM groups ORDER BY name',
+    );
     return {
       ...DEFAULT_FAMILY_RULES,
       ...rows[0]?.rules,
+      delegations,
       registrationOpen: rows[0]?.rules?.previewDemoSeed
         ? familyPreviewEnabled(this.config) && rows[0].rules.registrationOpen === true
         : rows[0]?.rules?.registrationOpen === true,
@@ -243,6 +248,95 @@ export class FamilyRegistrationService {
     const y = s.youths.find((y) => y.id === id);
     if (!y) throw new NotFoundException('Dossier introuvable');
     return y;
+  }
+
+  /**
+   * Trajets aller/retour du jeune, visibles par la famille : statut (a placer
+   * tant que la delegation n'a pas affecte de transport, puis place),
+   * transport, horaires, lieu de rendez-vous, infos pratiques rédigées pour les
+   * parents et contact des responsables de la délégation. Aucune donnée de santé.
+   */
+  async transportForYouth(id: string, youthId: string) {
+    const space = await this.get(id);
+    const y = this.youth(space, youthId);
+    if (!y.participantId) return { participantId: null, journeys: [] };
+    const rows = (await this.db.query(
+      `SELECT a.direction, a.transport_id, t.name, t."transportMode" AS mode,
+              t."departureDatetime", t."arrivalDatetime", t."meetingPoint", t."practicalInfo",
+              g.id AS delegation_id, g.name AS delegation_name
+       FROM transport_assignments a
+       JOIN groups g ON g.id = a.delegation_id
+       LEFT JOIN delegation_transports t ON t.id = a.transport_id
+       WHERE a."personType"='PARTICIPANT' AND a."personId"=$1`,
+      [y.participantId],
+    )) as {
+      direction: 'ALLER' | 'RETOUR';
+      transport_id: number | null;
+      name: string | null;
+      mode: string | null;
+      departureDatetime: string | null;
+      arrivalDatetime: string | null;
+      meetingPoint: string | null;
+      practicalInfo: string | null;
+      delegation_id: number;
+      delegation_name: string;
+    }[];
+    const contacts = async (delegationId: number) =>
+      (await this.db.query(
+        `SELECT DISTINCT u.email, v."firstName", v."lastName"
+         FROM user_group_scopes s
+         JOIN users u ON u.id = s.user_id AND u."isActive" = true
+         LEFT JOIN volunteers v ON v.user_id = u.id
+         WHERE s.group_id=$1
+         ORDER BY u.email`,
+        [delegationId],
+      )) as { email: string; firstName: string | null; lastName: string | null }[];
+    // Un jeune fraichement envoye n'a pas encore de ligne d'affectation : sa
+    // famille doit quand meme voir le statut « a placer » et les contacts de
+    // SA delegation (son groupe), pour les deux sens.
+    const ownDelegation = (await this.db.query(
+      `SELECT g.id, g.name FROM participants p JOIN groups g ON g.id = p.group_id WHERE p.id=$1`,
+      [y.participantId],
+    )) as { id: number; name: string }[];
+    const journeys = [];
+    const byDirection = new Map(rows.map((r) => [r.direction, r]));
+    for (const direction of ['ALLER', 'RETOUR'] as const) {
+      const row = byDirection.get(direction);
+      if (row) {
+        journeys.push({
+          direction: row.direction,
+          status: row.transport_id ? 'PLACED' : 'TO_ASSIGN',
+          delegation: { id: row.delegation_id, name: row.delegation_name },
+          transport: row.transport_id
+            ? {
+                name: row.name,
+                mode: row.mode,
+                departureDatetime: row.departureDatetime,
+                arrivalDatetime: row.arrivalDatetime,
+                meetingPoint: row.meetingPoint,
+                practicalInfo: row.practicalInfo,
+              }
+            : null,
+          contacts: (await contacts(row.delegation_id)).map((c) => ({
+            name: c.firstName ? `${c.firstName} ${c.lastName ?? ''}`.trim() : c.email,
+            email: c.email,
+          })),
+        });
+      } else if (ownDelegation.length) {
+        const d = ownDelegation[0];
+        journeys.push({
+          direction,
+          status: 'TO_ASSIGN',
+          delegation: { id: d.id, name: d.name },
+          transport: null,
+          contacts: (await contacts(d.id)).map((c) => ({
+            name: c.firstName ? `${c.firstName} ${c.lastName ?? ''}`.trim() : c.email,
+            email: c.email,
+          })),
+        });
+      }
+    }
+    return { participantId: y.participantId, journeys };
   }
   editable(y: YouthDossier) {
     if (!['DRAFT', 'CORRECTION'].includes(y.state))
@@ -453,10 +547,16 @@ export class FamilyRegistrationService {
             [id, youthId, health.envelope],
           );
         }
+        const delegationId = Number(y.identity.delegationId);
+        const [delegation] = Number.isInteger(delegationId)
+          ? await m.query('SELECT id FROM groups WHERE id=$1', [delegationId])
+          : [];
+        if (!delegation) throw new BadRequestException('Délégation de départ inconnue');
         const repo = m.getRepository(Participant);
         const participant = await repo.save(
           repo.create({
             ...(y.participantId ? { id: y.participantId } : {}),
+            group: delegation,
             firstName: y.identity.firstName,
             lastName: y.identity.lastName,
             dateOfBirth: y.identity.dateOfBirth,

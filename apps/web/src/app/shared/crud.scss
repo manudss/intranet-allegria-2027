@@ -41,6 +41,53 @@
 .error {
   color: var(--tui-status-negative);
 }
+/* Jauge facultative d'un trajet : le depassement reste visible, jamais normalise. */
+.full {
+  color: var(--tui-status-negative);
+  font-weight: 700;
+}
+.jauge-alerte {
+  font-size: 0.85em;
+  margin-left: 0.35rem;
+}
+/* Barre de jauge d'un trajet : verte sous la jauge, rouge au-delà. */
+.jauge-bar {
+  height: 8px;
+  margin: 0.25rem 0 0.5rem;
+  overflow: hidden;
+  background: var(--tui-base-03, #e5e2e8);
+  border-radius: 4px;
+}
+.jauge-fill {
+  height: 100%;
+  background: var(--tui-status-positive, #3aa981);
+}
+.jauge-fill.over {
+  background: var(--tui-status-negative);
+}
+/* Libellé visible pour les champs hors tui-textfield (textarea). */
+.field-block {
+  display: grid;
+  gap: 0.35rem;
+}
+.field-block .field-label {
+  font-size: 0.85rem;
+  color: var(--tui-text-secondary, #6b6b6b);
+}
+/* Recherche de la file « à placer » et liens d'expansion des listes bornées. */
+.toassign-search {
+  max-width: 26rem;
+  margin-bottom: 0.5rem;
+}
+button.link {
+  padding: 0;
+  font: inherit;
+  color: var(--tui-text-action, #b3264b);
+  cursor: pointer;
+  background: none;
+  border: none;
+  text-decoration: underline;
+}
 tui-drawer {
   width: min(44rem, 100vw);
   padding: 1.25rem;

@@ -1,4 +1,5 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Group } from './group.entity';
 import { Team } from './team.entity';
 import { User } from './user.entity';
 import { VolunteerSkill } from './volunteer-skill.entity';
@@ -36,6 +37,11 @@ export class Volunteer {
 
   @Column({ type: 'text', nullable: true })
   notes!: string | null;
+
+  /** Délégation de rattachement (arrivées/départs) : ajoutée avec la gestion des délégations. */
+  @ManyToOne(() => Group, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'group_id' })
+  group!: Group | null;
 
   @OneToMany(() => Team, (team) => team.primaryAnimator)
   primaryForTeams!: Team[];

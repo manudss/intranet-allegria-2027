@@ -320,6 +320,14 @@ export class FamilyRegistrationController {
     res.setHeader('Content-Disposition', 'attachment; filename="autorisation.pdf"');
     res.send(Buffer.from(bytes));
   }
+  @Get('youths/:id/transport') async transport(
+    @Req() r: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Param('id') id: string,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    return this.service.transportForYouth(await this.owner(r), id);
+  }
   @Post('youths/:id/submit') async submit(
     @Req() r: Request,
     @Param('id') id: string,

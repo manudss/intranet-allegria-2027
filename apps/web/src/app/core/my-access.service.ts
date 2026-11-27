@@ -30,13 +30,23 @@ export class MyAccessService {
     this.requested = true;
     this.http
       .get<{ grants: MyGrant[] }>('/api/access/me')
-      .pipe(catchError(() => of({ grants: [] as MyGrant[] })))
-      .subscribe((me) => this.grants.set(me.grants ?? []));
+      // En cas d'échec (démarrage à froid de l'API), on laisse les droits
+      // « non chargés » plutôt que « aucun droit » : un coordinateur ne doit
+      // pas voir le bandeau « périmètre limité » à cause d'une erreur réseau.
+      .pipe(catchError(() => of(null)))
+      .subscribe((me) => {
+        if (me) this.grants.set(me.grants ?? []);
+      });
   }
 
   /** Vrai si le compte a au moins ce niveau sur le module (toute portée). */
   can(module: string, level: AccessLevelCode): boolean {
     const grant = (this.grants() ?? []).find((g) => g.module === module);
     return !!grant && RANK[grant.level] >= RANK[level];
+  }
+
+  /** Portée du droit le plus large sur le module (ALL, GROUPS, OWN_TEAM, SELF). */
+  scopeOf(module: string): string | null {
+    return (this.grants() ?? []).find((g) => g.module === module)?.scope ?? null;
   }
 }

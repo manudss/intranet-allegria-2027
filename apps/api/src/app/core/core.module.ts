@@ -26,6 +26,7 @@ import { JeunesRepartitionModule } from './jeunes-repartition/jeunes-repartition
 import { GatheringGroupsModule } from './gathering-groups/gathering-groups.module';
 import { AccessControlModule } from './access-control/access-control.module';
 import { DocumentLibraryModule } from './document-library/document-library.module';
+import { DelegationsModule } from './delegations/delegations.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { DocumentLibraryModule } from './document-library/document-library.modul
     GatheringGroupsModule,
     AccessControlModule,
     DocumentLibraryModule,
+    DelegationsModule,
   ],
 })
 export class CoreModule {}

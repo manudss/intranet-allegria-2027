@@ -22,6 +22,13 @@ import {
 } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { DataTableColumn } from '../../shared/data-table';
+import {
+  DelegationSummary,
+  DelegationTransport,
+  DelegationsApiService,
+  PersonJourneys,
+  TransportDirection,
+} from '../delegations/delegations-api.service';
 
 const SEX_LABELS: Record<ParticipantSex, string> = {
   [ParticipantSex.FEMALE]: 'Femme',
@@ -217,6 +224,7 @@ export class ParticipantsPage implements OnInit {
   protected canSeeAdministrative = computed(() => this.auth.hasAnyRole(['ADMIN', 'COORDINATOR']));
   protected canSeeFamilyHealth = computed(() => this.auth.hasRole('HEALTH'));
   private api = inject(ParticipantsApiService);
+  private readonly delegationsApi = inject(DelegationsApiService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private groupsApi = inject(GroupsApiService);
   private healthApi = inject(HealthApiService);
@@ -237,6 +245,7 @@ export class ParticipantsPage implements OnInit {
   mode = signal<'detail' | 'create' | 'edit' | 'health'>('detail');
   selected = signal<Participant | null>(null);
   health = signal<ParticipantHealth | null>(null);
+  journeys = signal<PersonJourneys | null>(null);
   model = signal<ParticipantPayload>(blank());
   healthModel = signal<ParticipantHealthPayload>(blankHealth());
   participantForm = form(this.model, (p) => {
@@ -281,6 +290,151 @@ export class ParticipantsPage implements OnInit {
     this.selected.set(x);
     this.mode.set('detail');
     this.opened.set(true);
+    this.journeys.set(null);
+    this.journeyError.set('');
+    this.journeyTransports.set({});
+    this.delegationsApi.journeysForFiche(x.id).subscribe({
+      next: (j) => {
+        this.journeys.set(j);
+        this.initJourneyEdits();
+      },
+      error: () => this.journeys.set(null),
+    });
+    if (!this.delegationOptions().length) {
+      this.loadDelegationOptions();
+    }
+  }
+
+  /** Charge la liste des délégations ; l'échec est visible et réessayable. */
+  protected loadDelegationOptions() {
+    this.delegationOptionsError.set('');
+    this.delegationsApi.listSummaries().subscribe({
+      next: (rows) => this.delegationOptions.set(rows),
+      error: () =>
+        this.delegationOptionsError.set(
+          "La liste des délégations n'a pas pu être chargée. Vérifiez votre connexion puis réessayez.",
+        ),
+    });
+  }
+
+  // ------------------------------------------------------------ lot 6 : trajets modifiables
+  /** Options de délégations pour la fiche personne (liste calculée serveur). */
+  readonly delegationOptions = signal<DelegationSummary[]>([]);
+  /** Brouillon d'édition par sens : délégation + sous-délégation choisies. */
+  readonly journeyEdits = signal<
+    Partial<Record<TransportDirection, { delegationId: number; transportId: number | null }>>
+  >({});
+  /** Sous-délégations chargées par sens pour la délégation choisie. */
+  readonly journeyTransports = signal<Partial<Record<TransportDirection, DelegationTransport[]>>>(
+    {},
+  );
+  readonly journeySaving = signal<TransportDirection | null>(null);
+  readonly journeyError = signal('');
+  /** Erreur de chargement de la liste des délégations (affichee, reessayable). */
+  readonly delegationOptionsError = signal('');
+
+  private initJourneyEdits() {
+    const j = this.journeys();
+    if (!j) return;
+    const edits: Partial<
+      Record<TransportDirection, { delegationId: number; transportId: number | null }>
+    > = {};
+    for (const journey of j.journeys) {
+      edits[journey.direction] = {
+        delegationId: journey.delegation.id,
+        transportId: journey.transport?.id ?? null,
+      };
+      this.loadJourneyTransports(journey.direction, journey.delegation.id);
+    }
+    this.journeyEdits.set(edits);
+  }
+
+  protected journeyEdit(direction: TransportDirection) {
+    return this.journeyEdits()[direction];
+  }
+
+  protected setJourneyDelegation(direction: TransportDirection, delegationId: number) {
+    this.journeyEdits.update((m) => ({
+      ...m,
+      [direction]: { delegationId, transportId: null },
+    }));
+    this.loadJourneyTransports(direction, delegationId);
+  }
+
+  protected setJourneyTransport(direction: TransportDirection, transportId: number | null) {
+    const current = this.journeyEdits()[direction];
+    if (!current) return;
+    this.journeyEdits.update((m) => ({ ...m, [direction]: { ...current, transportId } }));
+  }
+
+  private loadJourneyTransports(direction: TransportDirection, delegationId: number) {
+    this.delegationsApi.listTransports(delegationId, direction).subscribe({
+      next: (rows) => this.journeyTransports.update((m) => ({ ...m, [direction]: rows })),
+      error: () => this.journeyTransports.update((m) => ({ ...m, [direction]: [] })),
+    });
+  }
+
+  /**
+   * Enregistre le sens : une affectation suit une seule ligne par personne et
+   * par sens. Placer sur une sous-délégation (même d'une autre délégation) se
+   * fait par affectation directe ; « à placer » d'une autre délégation passe
+   * par une exception tracée ; « à placer » de sa propre délégation retire
+   * l'affectation. Le serveur applique le périmètre.
+   */
+  protected saveJourney(direction: TransportDirection) {
+    const j = this.journeys();
+    const edit = this.journeyEdits()[direction];
+    const journey = j?.journeys.find((x) => x.direction === direction);
+    if (!j || !edit || !journey) return;
+    // Pas d'enregistrement tant que la liste des délégations n'est pas chargée :
+    // l'écran ne montre pas ce qui serait réellement enregistré.
+    if (!this.delegationOptions().length) {
+      this.journeyError.set(
+        "La liste des délégations n'est pas chargée : enregistrement impossible pour l'instant.",
+      );
+      return;
+    }
+    this.journeySaving.set(direction);
+    this.journeyError.set('');
+    const done = {
+      next: () => {
+        this.journeySaving.set(null);
+        const x = this.selected();
+        if (x) this.open(x);
+      },
+      error: () => {
+        this.journeySaving.set(null);
+        this.journeyError.set(
+          "Le changement n'a pas pu être enregistré (hors de votre périmètre ?).",
+        );
+      },
+    };
+    if (edit.transportId) {
+      this.delegationsApi.assign(edit.transportId, j.personType, j.personId).subscribe(done);
+      return;
+    }
+    if (!journey.transport && journey.delegation.id === edit.delegationId) {
+      this.journeySaving.set(null);
+      return;
+    }
+    const homeId = this.selected()?.group?.id;
+    if (homeId && edit.delegationId === homeId) {
+      this.delegationsApi.unassign(journey.assignmentId).subscribe(done);
+      return;
+    }
+    if (!homeId) {
+      this.journeySaving.set(null);
+      this.journeyError.set('La délégation principale de la personne est introuvable.');
+      return;
+    }
+    this.delegationsApi
+      .createException(homeId, {
+        personType: j.personType,
+        personId: j.personId,
+        direction,
+        toDelegationId: edit.delegationId,
+      })
+      .subscribe(done);
   }
   create() {
     this.model.set(blank());

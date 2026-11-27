@@ -37,6 +37,12 @@ describe('Distinct signature verification, isolated SQL and fake mail transport 
     await new FamilyRegistration1790600000000().up({
       query: (sql: string) => pg.exec(sql),
     } as never);
+    // Le service liste les délégations proposées à l'inscription (rules() lit
+    // groups) : la fixture isolée crée la table minimale, comme les autres
+    // specs family-registration.
+    await pg.exec(
+      "CREATE TABLE groups(id serial PRIMARY KEY, name varchar NOT NULL, diocese varchar); INSERT INTO groups(name, diocese) VALUES('Délégation fictive','Lyon')",
+    );
     const query = async (sql: string, args: unknown[] = []) => (await pg.query(sql, args)).rows;
     db = {
       query,

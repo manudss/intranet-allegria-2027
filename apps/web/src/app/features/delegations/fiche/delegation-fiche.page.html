@@ -1,0 +1,257 @@
+<app-page-layout
+  [title]="group()?.name ?? 'Délégation'"
+  [description]="
+    (group()?.diocese ? 'Diocèse de ' + group()!.diocese + ' · ' : '') +
+    (summary()?.total ?? 0) +
+    ' personnes (' +
+    (summary()?.jeunes ?? 0) +
+    ' jeunes, ' +
+    (summary()?.animateurs ?? 0) +
+    ' animateurs, ' +
+    (summary()?.benevoles ?? 0) +
+    ' bénévoles) · périmètre appliqué côté serveur, sans données de santé'
+  "
+>
+  <nav class="delegation-nav"><a routerLink="/rassemblement">Toutes les délégations</a></nav>
+  @if (error(); as err) {
+  <p class="error">{{ err }}</p>
+  } @if (loading()) {
+  <app-loading-skeleton />
+  } @else {
+  <div class="direction-switch" role="tablist">
+    <button
+      tuiButton
+      type="button"
+      role="tab"
+      [appearance]="view() === 'ensemble' ? 'primary' : 'secondary'"
+      (click)="setView('ensemble')"
+    >
+      Vue d'ensemble
+    </button>
+    <button
+      tuiButton
+      type="button"
+      role="tab"
+      [appearance]="view() === 'personnes' ? 'primary' : 'secondary'"
+      (click)="setView('personnes')"
+    >
+      Personnes ({{ persons().length }})
+    </button>
+    <button
+      tuiButton
+      type="button"
+      role="tab"
+      [appearance]="view() === 'sous-delegations' ? 'primary' : 'secondary'"
+      (click)="setView('sous-delegations')"
+    >
+      Sous-délégations
+    </button>
+    <button
+      tuiButton
+      type="button"
+      role="tab"
+      [appearance]="view() === 'exceptions' ? 'primary' : 'secondary'"
+      (click)="setView('exceptions')"
+    >
+      Exceptions
+    </button>
+    <button
+      tuiButton
+      type="button"
+      role="tab"
+      [appearance]="view() === 'notes' ? 'primary' : 'secondary'"
+      (click)="setView('notes')"
+    >
+      Notes ({{ noteCount() }})
+    </button>
+  </div>
+
+  @if (view() === 'ensemble') {
+  <section class="panel">
+    <h2>Identité</h2>
+    <dl>
+      <dt>Nom</dt>
+      <dd>{{ group()?.name }}</dd>
+      <dt>Diocèse</dt>
+      <dd>{{ group()?.diocese ?? '—' }}</dd>
+      <dt>Responsables</dt>
+      <dd class="resp-line">
+        @for (r of summary()?.responsables ?? []; track r) {
+        <span class="person-chip">{{ r }}</span>
+        } @if (!(summary()?.responsables?.length)) {
+        <span class="muted">Aucun responsable rattaché</span>
+        }
+      </dd>
+      @if (group()?.notes) {
+      <dt>Notes</dt>
+      <dd>{{ group()!.notes }}</dd>
+      }
+    </dl>
+  </section>
+  <section class="panel">
+    <h2>Répartition des déplacements</h2>
+    @for (rep of [aller(), retour()]; track $index) {
+    <div class="rep-line">
+      <strong>{{ $index === 0 ? 'Aller' : 'Retour' }}</strong>
+      <div class="bar-track">
+        <div
+          class="bar"
+          [class.bar-ok]="pct(rep) >= 100"
+          [class.bar-warn]="pct(rep) < 100"
+          [style.width.%]="pct(rep)"
+        ></div>
+      </div>
+      <span class="muted">{{ rep?.toAssign?.length ?? 0 }} à placer</span>
+    </div>
+    }
+    <p>
+      <a [routerLink]="['/delegations', delegationId, 'transports']"
+        >Ouvrir la répartition détaillée</a
+      >
+    </p>
+  </section>
+  } @if (view() === 'personnes') {
+  <div class="direction-switch">
+    @for (f of ['TOUT', 'JEUNE', 'ANIMATEUR', 'BENEVOLE']; track f) {
+    <button
+      tuiButton
+      type="button"
+      [appearance]="personFilter() === f ? 'primary' : 'secondary'"
+      (click)="personFilter.set($any(f))"
+    >
+      {{ f === 'TOUT' ? 'Tout voir (' + persons().length + ')' : '' }} {{ f === 'JEUNE' ? 'Jeunes ('
+      + jeunes().length + ')' : '' }} {{ f === 'ANIMATEUR' ? 'Animateurs (' + animateurs().length +
+      ')' : '' }} {{ f === 'BENEVOLE' ? 'Bénévoles (' + benevoles().length + ')' : '' }}
+    </button>
+    }
+  </div>
+  <table class="persons-table">
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>Type</th>
+        <th>Détail</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (p of filteredPersons(); track p.personType + ':' + p.id) {
+      <tr>
+        <td>{{ p.firstName }} {{ p.lastName }}</td>
+        <td>{{ personLabel(p) }}</td>
+        <td>{{ detailLabel(p) }}</td>
+      </tr>
+      } @empty {
+      <tr>
+        <td colspan="3" class="muted">Aucune personne dans ce filtre.</td>
+      </tr>
+      }
+    </tbody>
+  </table>
+  <p class="muted sante-note">
+    SANTÉ : les données de santé ne sont pas visibles par les responsables de délégation.
+  </p>
+  } @if (view() === 'sous-delegations') {
+  <div class="two-cols">
+    @for (rep of [aller(), retour()]; track $index) {
+    <section class="panel">
+      <h2>Sous-délégations {{ $index === 0 ? 'aller' : 'retour' }}</h2>
+      <p class="muted">{{ rep?.toAssign?.length ?? 0 }} à placer</p>
+      @for (t of rep?.transports ?? []; track t.id) {
+      <article class="transport-card" [class.transport-full]="t.full">
+        <header>
+          <span class="mode-chip">{{ t.transportMode }}</span>
+          <strong>{{ t.name }}</strong>
+          @if (t.arrivalDatetime) {
+          <span class="muted">arrivée {{ formatDateTime(t.arrivalDatetime) }}</span>
+          }
+        </header>
+        @if (t.capacity) {
+        <div class="bar-track">
+          <div
+            class="bar"
+            [class.bar-ok]="!t.full"
+            [class.bar-warn]="t.full"
+            [style.width.%]="transportPct(t.occupancy, t.capacity)"
+          ></div>
+        </div>
+        <p class="muted">{{ t.occupancy }}/{{ t.capacity }} places</p>
+        } @else {
+        <p class="muted">{{ t.occupancy }} personnes · sans jauge</p>
+        } @if (t.practicalInfo) {
+        <p class="muted">Infos pratiques parents : {{ t.practicalInfo }}</p>
+        }
+      </article>
+      } @if (!(rep?.transports?.length)) {
+      <p class="muted">Aucune sous-délégation pour ce sens.</p>
+      }
+    </section>
+    }
+  </div>
+  <p>
+    <a [routerLink]="['/delegations', delegationId, 'transports']"
+      >Gérer les sous-délégations et la répartition</a
+    >
+  </p>
+  } @if (view() === 'exceptions') {
+  <div class="two-cols">
+    <section class="panel">
+      <h2>Reçues · voyagent avec cette délégation sans en être</h2>
+      @for (e of aller()?.exceptionsReceived ?? []; track 'a' + e.assignmentId) {
+      <p class="exception-line">
+        <strong>{{ e.person?.firstName }} {{ e.person?.lastName }}</strong>
+        <span class="chip chip-exception">{{ delegationName(e.person?.delegationId) }}</span>
+        · aller · {{ e.transportId ? 'placée' : 'à placer' }}
+      </p>
+      } @for (e of retour()?.exceptionsReceived ?? []; track 'r' + e.assignmentId) {
+      <p class="exception-line">
+        <strong>{{ e.person?.firstName }} {{ e.person?.lastName }}</strong>
+        <span class="chip chip-exception">{{ delegationName(e.person?.delegationId) }}</span>
+        · retour · {{ e.transportId ? 'placée' : 'à placer' }}
+      </p>
+      } @if ( !(aller()?.exceptionsReceived?.length || retour()?.exceptionsReceived?.length) ) {
+      <p class="muted">Aucune exception reçue.</p>
+      }
+    </section>
+    <section class="panel">
+      <h2>Sortantes · membres qui voyagent ailleurs</h2>
+      @for (e of aller()?.exceptionsOutgoing ?? []; track 'a' + e.assignmentId) {
+      <p class="exception-line">
+        <strong>{{ e.person?.firstName }} {{ e.person?.lastName }}</strong>
+        <span class="chip chip-exception">{{ delegationName(e.delegationId) }}</span>
+        · aller · {{ e.transportId ? 'placée' : 'à placer' }}
+      </p>
+      } @for (e of retour()?.exceptionsOutgoing ?? []; track 'r' + e.assignmentId) {
+      <p class="exception-line">
+        <strong>{{ e.person?.firstName }} {{ e.person?.lastName }}</strong>
+        <span class="chip chip-exception">{{ delegationName(e.delegationId) }}</span>
+        · retour · {{ e.transportId ? 'placée' : 'à placer' }}
+      </p>
+      } @if ( !(aller()?.exceptionsOutgoing?.length || retour()?.exceptionsOutgoing?.length) ) {
+      <p class="muted">Aucune exception sortante.</p>
+      }
+    </section>
+  </div>
+  } @if (view() === 'notes') {
+  <section class="panel">
+    <h2>Notes logistiques des personnes de la délégation</h2>
+    @for (row of noteRows(); track row.person ? row.person.personType + ':' + row.person.id :
+    $index) {
+    <p class="note-line">
+      @if (row.person; as p) {
+      <a [routerLink]="['/person-notes', p.personType, p.id]">
+        <strong>{{ p.firstName }} {{ p.lastName }}</strong>
+      </a>
+      <span class="muted">
+        · {{ row.notesCount }} note(s)@if (row.unansweredCount) { · {{ row.unansweredCount }} sans
+        réponse }@if (row.lastNote) { · « {{ row.lastNote.body }} » — {{ row.lastNote.authorName }},
+        {{ row.lastNote.createdAt | date: 'dd/MM/yyyy HH:mm' }} }</span
+      >
+      }
+    </p>
+    } @empty {
+    <p class="muted">Aucune note sur les personnes de cette délégation.</p>
+    }
+    <p><a routerLink="/suivi-notes">Ouvrir le suivi des notes complet</a></p>
+  </section>
+  } }
+</app-page-layout>

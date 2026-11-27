@@ -157,9 +157,6 @@ export class FamilyAdministrativeDetail {
     const l = this.youth().logistics;
     return [
       ['Participation', this.label(l.presence)],
-      ['Arrivée', l.arrival],
-      ['Départ', l.departure],
-      ['Transport', l.transport],
       ['Hébergement', l.accommodation],
       ['Notes administratives', l.notes],
     ];

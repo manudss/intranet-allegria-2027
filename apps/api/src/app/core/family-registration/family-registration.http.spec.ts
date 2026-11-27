@@ -35,6 +35,9 @@ describe('Family HTTP contract with disposable real SQL storage, no mail sent', 
     await new FamilyRegistration1790600000000().up({
       query: (sql: string) => pg.exec(sql),
     } as never);
+    await pg.exec(
+      "CREATE TABLE groups(id serial PRIMARY KEY, name varchar NOT NULL, diocese varchar); INSERT INTO groups(name, diocese) VALUES('Délégation fictive','Lyon')",
+    );
     const query = async (sql: string, params: unknown[] = []) => (await pg.query(sql, params)).rows;
     const db = {
       query,

@@ -27,7 +27,9 @@ import {
   AccessScanType,
   AccessScannerGrant,
   AccessZone,
+  AssignmentPersonType,
   AssignmentStatus,
+  DelegationTransport,
   Group,
   HostFamily,
   AccommodationType,
@@ -40,6 +42,7 @@ import {
   ParticipantHostFamilyAssignment,
   ParticipantRegistrationStatus,
   ParticipantSex,
+  PersonNote,
   PersonSource,
   PersonType,
   ProgramSequence,
@@ -48,6 +51,9 @@ import {
   Team,
   TeamParticipant,
   TeamParticipantRole,
+  TransportAssignment,
+  TransportDirection,
+  TransportMode,
   User,
   UserRole,
   Volunteer,
@@ -65,6 +71,11 @@ import {
   VolunteerTeamMembership,
 } from '../../app/core/entities';
 import { insertProgramDemoDay, PROGRAM_SEED_DAYS } from '../../app/core/program/program-demo-seed';
+import {
+  CATALOGUE_DELEGATIONS,
+  DELEGATIONS_VEDETTES,
+  SANS_DELEGATION,
+} from './delegations-catalog';
 import { insertDocumentLibraryDemo } from './document-library-demo-seed';
 import dataSource from '../typeorm.config';
 import { computeTeamMaxSize, hasSecondaryAnimator } from './team-fill';
@@ -119,28 +130,7 @@ const PROFILES: Record<SeedProfileName, SeedProfile> = {
   },
 };
 
-const dioceses = [
-  'Paris',
-  'Lyon',
-  'Marseille',
-  'Lille',
-  'Toulouse',
-  'Bordeaux',
-  'Nantes',
-  'Rennes',
-  'Grenoble',
-  'Montpellier',
-  'Strasbourg',
-  'Rouen',
-  'Dijon',
-  'Clermont-Ferrand',
-  'Orleans',
-  'Poitiers',
-  'Le Mans',
-  'Reims',
-  'Amiens',
-  'Metz',
-];
+
 
 /** Point de rassemblement du rassemblement 2027 : Saint-Etienne (45deg 26' 05" N, 4deg 23' 25" E). */
 const GATHERING_POINT = { latitude: 45.439695, longitude: 4.387178 } as const;
@@ -492,7 +482,7 @@ const splitEvenly = (total: number, parts: number): number[] => {
 // repartition), avec de la marge dans maxSize pour completer les equipes en demo.
 const TARGET_TEAM_SIZE = 6;
 const computeTeamCount = (participantsCount: number): number =>
-  Math.max(1, Math.ceil(participantsCount / TARGET_TEAM_SIZE));
+  participantsCount <= 0 ? 0 : Math.max(1, Math.ceil(participantsCount / TARGET_TEAM_SIZE));
 
 // ~10 % des jeunes restent volontairement sans equipe : la page de repartition
 // a ainsi des jeunes a placer en demonstration.
@@ -514,30 +504,32 @@ const buildTeamSizes = (participantsCount: number, teamCount: number): number[] 
   return sizes;
 };
 
+/**
+ * Répartit les comptes animateurs entre les délégations : un animateur par
+ * équipe d'abord (les délégations les plus dotées en équipes d'abord si les
+ * comptes manquent), puis un second si les comptes disponibles le permettent.
+ * Jamais plus de deux par équipe, jamais plus que les comptes créés : le
+ * catalogue du lot 7 varie fortement le nombre de groupes selon le profil.
+ */
 const allocateVolunteersPerGroup = (
   teamCountsPerGroup: number[],
   volunteersTotal: number,
 ): number[] => {
-  const minTotal = teamCountsPerGroup.reduce((sum, count) => sum + count, 0);
-  const maxTotal = teamCountsPerGroup.reduce((sum, count) => sum + count * 2, 0);
+  const allocated = teamCountsPerGroup.map(() => 0);
+  let remaining = volunteersTotal;
+  const order = teamCountsPerGroup
+    .map((count, index) => ({ count, index }))
+    .sort((a, b) => b.count - a.count)
+    .map((x) => x.index);
 
-  if (volunteersTotal < minTotal || volunteersTotal > maxTotal) {
-    throw new Error(
-      `Volumetrie animateurs invalide: volunteers=${volunteersTotal}, attendu entre ${minTotal} et ${maxTotal}`,
-    );
-  }
-
-  const allocated = [...teamCountsPerGroup];
-  let remaining = volunteersTotal - minTotal;
-  let cursor = 0;
-
-  while (remaining > 0) {
-    const index = cursor % allocated.length;
-    if (allocated[index] < teamCountsPerGroup[index] * 2) {
-      allocated[index] += 1;
-      remaining -= 1;
+  for (let round = 1; round <= 2 && remaining > 0; round += 1) {
+    for (const index of order) {
+      while (allocated[index] < teamCountsPerGroup[index] * round && remaining > 0) {
+        allocated[index] += 1;
+        remaining -= 1;
+      }
+      if (remaining <= 0) break;
     }
-    cursor += 1;
   }
 
   return allocated;
@@ -724,6 +716,9 @@ async function run(): Promise<void> {
           "gathering_group_sequences",
           "gathering_groups",
           "gathering_repartitions",
+          "person_notes",
+          "transport_assignments",
+          "delegation_transports",
           "document_link_teams",
           "document_links",
           "document_categories",
@@ -878,7 +873,22 @@ async function run(): Promise<void> {
       );
     };
 
-    const participantsPerGroup = splitEvenly(profile.participants, profile.groups);
+    // Effectifs : la dizaine de délégations vedettes porte les effectifs de la
+    // maquette, « Sans délégation » en a 9 à rattacher, les autres délégations
+    // sont presque vides (0, 5, 9 ou 10 jeunes — tailles compatibles avec les
+    // équipes de 4 à 10 jeunes), déterministe. Indépendant de
+    // profile.participants : le catalogue décrit la démonstration cible.
+    const effectifsVedettes = new Map(
+      DELEGATIONS_VEDETTES.map((v) => [`Délégation de ${v.diocese}`, v.effectifCible]),
+    );
+    const PETITS_EFFECTIFS = [0, 5, 0, 9, 0, 0, 10, 0];
+    const catalogueNames = [...CATALOGUE_DELEGATIONS.map((e) => e.name), SANS_DELEGATION.name];
+    const participantsPerGroup = catalogueNames.map((name, i) => {
+      if (name === SANS_DELEGATION.name) return 9;
+      const cible = effectifsVedettes.get(name);
+      if (cible != null) return cible;
+      return PETITS_EFFECTIFS[i % PETITS_EFFECTIFS.length];
+    });
     const teamCountsPerGroup = participantsPerGroup.map((count) => computeTeamCount(count));
     const volunteersPerGroup = allocateVolunteersPerGroup(teamCountsPerGroup, profile.volunteers);
 
@@ -958,25 +968,34 @@ async function run(): Promise<void> {
 
     await userRoleRepository.save(userRoles, { chunk: 1000 });
 
-    const groupsToCreate: Group[] = [];
-    for (let i = 0; i < profile.groups; i += 1) {
-      const diocese = dioceses[i % dioceses.length];
-      groupsToCreate.push(
-        groupRepository.create({
-          name: `Rassemblement ${diocese} ${Math.floor(i / dioceses.length) + 1}`,
-          diocese,
-          // Aligné sur l'événement (31 oct. au 3 nov. 2027) : un groupe sur
-          // deux arrive la veille au soir ou repart un jour plus tot.
-          arrivalDatetime: new Date(
-            i % 2 === 0 ? '2027-10-31T08:00:00.000Z' : '2027-10-30T18:00:00.000Z',
-          ),
-          departureDatetime: new Date(
-            i % 2 === 0 ? '2027-11-03T17:30:00.000Z' : '2027-11-02T17:30:00.000Z',
-          ),
-          notes: chance(0.2) ? 'Arrivee en bus de nuit, accueil gare requis.' : null,
-        }),
-      );
-    }
+    // Lot 7 de la refonte Délégations : les délégations du seed sont le
+    // catalogue complet (tous les diocèses de métropole et d'outre-mer,
+    // Luxembourg, trois diocèses belges, circonscriptions institutionnelles)
+    // plus « Sans délégation », au lieu d'une poignée de groupes génériques.
+    const groupsToCreate: Group[] = CATALOGUE_DELEGATIONS.map((entry, i) =>
+      groupRepository.create({
+        name: entry.name,
+        diocese: entry.diocese,
+        // Aligné sur l'événement (31 oct. au 3 nov. 2027) : une délégation sur
+        // deux arrive la veille au soir ou repart un jour plus tot.
+        arrivalDatetime: new Date(
+          i % 2 === 0 ? '2027-10-31T08:00:00.000Z' : '2027-10-30T18:00:00.000Z',
+        ),
+        departureDatetime: new Date(
+          i % 2 === 0 ? '2027-11-03T17:30:00.000Z' : '2027-11-02T17:30:00.000Z',
+        ),
+        notes: null,
+      }),
+    );
+    groupsToCreate.push(
+      groupRepository.create({
+        name: SANS_DELEGATION.name,
+        diocese: SANS_DELEGATION.diocese,
+        arrivalDatetime: new Date('2027-10-31T08:00:00.000Z'),
+        departureDatetime: new Date('2027-11-03T17:30:00.000Z'),
+        notes: 'Personnes non rattachées : les coordinateurs les répartissent.',
+      }),
+    );
     const groups = await groupRepository.save(groupsToCreate, { chunk: 200 });
 
     const volunteersToCreate: Volunteer[] = [];
@@ -997,6 +1016,7 @@ async function run(): Promise<void> {
 
         const volunteer = volunteerRepository.create({
           user,
+          group,
           firstName,
           lastName,
           phone: `+33${faker.string.numeric(9)}`,
@@ -1026,6 +1046,30 @@ async function run(): Promise<void> {
       volunteerSaveCursor += expectedCount;
     }
 
+    // Perimetres de groupes : les responsables de chaque delegation (chefs de
+    // groupe) la voient dans leur intranet et apparaissent comme contacts pour
+    // les familles (bloc trajets de l'espace famille). On ne scope pas tous
+    // les benevoles : une quarantaine de contacts illisibles s'afficheraient.
+    const scopeRows: { userId: number; groupId: number }[] = [];
+    for (const [groupId, groupVolunteers] of volunteersByGroupSaved) {
+      for (const volunteer of groupVolunteers) {
+        if (volunteer.user?.id != null && volunteer.isGroupLeader) {
+          scopeRows.push({ userId: volunteer.user.id, groupId });
+        }
+      }
+    }
+    for (let i = 0; i < scopeRows.length; i += 500) {
+      const scopeChunk = scopeRows.slice(i, i + 500);
+      const valuesSql = scopeChunk
+        .map((_, j) => `($${j * 2 + 1}, $${j * 2 + 2})`)
+        .join(', ');
+      const params = scopeChunk.flatMap((r) => [r.userId, r.groupId]);
+      await dataSource.query(
+        `INSERT INTO user_group_scopes (user_id, group_id) VALUES ${valuesSql} ON CONFLICT DO NOTHING`,
+        params,
+      );
+    }
+
     const teamCountsByGroup = new Map<number, number>();
     const volunteerTeamsByGroup = new Map<number, VolunteerTeam[]>();
     const volunteerTeamsToCreate: VolunteerTeam[] = [];
@@ -1033,10 +1077,11 @@ async function run(): Promise<void> {
     for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
       const group = groups[groupIndex];
       const groupVolunteers = volunteersByGroupSaved.get(group.id) ?? [];
-      const localTeamCount = Math.max(
-        6,
-        Math.min(12, Math.max(6, Math.ceil(groupVolunteers.length / 10))),
-      );
+      // Pas d'équipe opérationnelle pour une délégation sans bénévole.
+      const localTeamCount =
+        groupVolunteers.length === 0
+          ? 0
+          : Math.max(6, Math.min(12, Math.max(6, Math.ceil(groupVolunteers.length / 10))));
       teamCountsByGroup.set(group.id, localTeamCount);
 
       const localTeams: VolunteerTeam[] = [];
@@ -1082,6 +1127,10 @@ async function run(): Promise<void> {
       const groupMembers = faker.helpers.shuffle(groupVolunteers);
 
       for (const volunteer of groupMembers) {
+        // Groupe avec bénévoles mais sans équipe : pas d'affectation possible.
+        if (groupVolunteerTeams.length === 0) {
+          continue;
+        }
         const selectedTeam = pick(groupVolunteerTeams);
         volunteerTeamMembershipsToCreate.push(
           volunteerTeamMembershipRepository.create({
@@ -1163,7 +1212,9 @@ async function run(): Promise<void> {
     // une par equipe + deux en reserve par groupe, pour alimenter l'etape 1
     // de la page de repartition. Creees APRES tous les jeunes pour preserver
     // le decoupage par tranches du tableau sauvegarde.
-    const animateurCountsPerGroup = teamCountsPerGroup.map((count) => count + 2);
+    const animateurCountsPerGroup = teamCountsPerGroup.map((count) =>
+      count > 0 ? count + 2 : 0,
+    );
     const animateursByGroup = new Map<number, Participant[]>();
 
     for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
@@ -1207,7 +1258,7 @@ async function run(): Promise<void> {
     }
 
     const animateursByGroupSaved = new Map<number, Participant[]>();
-    let animateurSaveCursor = profile.participants;
+    let animateurSaveCursor = participantsPerGroup.reduce((sum, count) => sum + count, 0);
     for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
       const group = groups[groupIndex];
       const count = animateurCountsPerGroup[groupIndex];
@@ -1479,12 +1530,211 @@ async function run(): Promise<void> {
     }
     await teamParticipantRepository.save(adultTeamParticipants, { chunk: 1000 });
 
+    // ------------------------------------------------------------------
+    // Trajets de délégation (aller/retour), affectations, exceptions et notes
+    // logistiques : la preview montre tous les cas (à placer, placés, jauge,
+    // exceptions reçues et sortantes, notes avec et sans réponse).
+    const transportRepository = dataSource.getRepository(DelegationTransport);
+    const transportAssignmentRepository = dataSource.getRepository(TransportAssignment);
+    const personNoteRepository = dataSource.getRepository(PersonNote);
+
+    const transportsToCreate: DelegationTransport[] = [];
+    for (const group of groups) {
+      // Pas de sous-délégation pour une délégation vide ; « Sans délégation »
+      // n'a volontairement rien : ses membres restent « à rattacher ».
+      const memberCount =
+        (participantsByGroupSaved.get(group.id)?.length ?? 0) +
+        (animateursByGroupSaved.get(group.id)?.length ?? 0) +
+        (volunteersByGroupSaved.get(group.id)?.length ?? 0);
+      if (memberCount === 0 || group.name === SANS_DELEGATION.name) continue;
+      for (const direction of [TransportDirection.ALLER, TransportDirection.RETOUR]) {
+        const outward = direction === TransportDirection.ALLER;
+        const base = new Date(
+          (outward ? group.arrivalDatetime : group.departureDatetime) ?? '2027-10-31T08:00:00.000Z',
+        );
+        const departure = new Date(base.getTime() - (outward ? 90 : 0) * 60000);
+        const arrival = new Date(departure.getTime() + 150 * 60000);
+        // Jauge à ~78 % de l'effectif : le car se remplit à plein (cas
+        // « complet » de la maquette) et le reste attend dans l'« à placer ».
+        // Petites délégations : voitures sans jauge.
+        const capacity =
+          memberCount < 12 ? null : Math.max(1, Math.floor(memberCount * 0.78));
+        transportsToCreate.push(
+          transportRepository.create({
+            delegation: group,
+            direction,
+            transportMode: memberCount < 12 ? TransportMode.VOITURES : TransportMode.CAR,
+            name: memberCount < 12 ? 'Voitures individuelles' : 'Car 1',
+            departureDatetime: departure,
+            arrivalDatetime: arrival,
+            meetingPoint: `Gare de ${group.diocese}, parvis`,
+            practicalInfo:
+              'RDV 30 minutes avant le départ, colis étiqueté au nom du jeune.',
+            capacity,
+            notes: null,
+          }),
+        );
+        // Grandes délégations : un second transport sans jauge (cas « sans
+        // jauge » de la maquette), qui absorbe le reste de l'effectif.
+        if (memberCount >= 60) {
+          transportsToCreate.push(
+            transportRepository.create({
+              delegation: group,
+              direction,
+              transportMode: TransportMode.TRAIN,
+              name: 'TGV spécial',
+              departureDatetime: departure,
+              arrivalDatetime: arrival,
+              meetingPoint: `Gare de ${group.diocese}, voie 2`,
+              practicalInfo: 'Billets distribués par les responsables le jour J.',
+              capacity: null,
+              notes: null,
+            }),
+          );
+        }
+      }
+    }
+    const savedTransports = await transportRepository.save(transportsToCreate, { chunk: 500 });
+    const transportsByGroupDirection = new Map<string, DelegationTransport[]>();
+    for (const t of savedTransports) {
+      const key = `${t.delegation.id}:${t.direction}`;
+      transportsByGroupDirection.set(key, [...(transportsByGroupDirection.get(key) ?? []), t]);
+    }
+
+    const transportAssignmentsToCreate: TransportAssignment[] = [];
+    // Exceptions : deux jeunes de la délégation de Lyon voyagent (aller) avec
+    // celle d'Annecy. Ils sont exclus de l'affectation ALLER normale de leur
+    // délégation d'origine (contrainte d'unicité personne/sens ; l'exception
+    // sortante sort des totaux d'origine, la reçue compte chez l'accueil).
+    const exceptionOriginGroup =
+      groups.find((g) => g.name === 'Délégation de Lyon') ?? null;
+    const exceptionHostGroup =
+      groups.find((g) => g.name === 'Délégation de Annecy') ?? null;
+    const exceptionParticipantIds = new Set(
+      exceptionOriginGroup
+        ? (participantsByGroup.get(exceptionOriginGroup.id) ?? [])
+            .slice(0, 2)
+            .map((p) => p.id)
+        : [],
+    );
+    for (const group of groups) {
+      const members = [
+        ...(participantsByGroup.get(group.id) ?? []).map((p) => ({
+          personType: AssignmentPersonType.PARTICIPANT,
+          personId: p.id,
+        })),
+        ...(animateursByGroupSaved.get(group.id) ?? []).map((p) => ({
+          personType: AssignmentPersonType.PARTICIPANT,
+          personId: p.id,
+        })),
+        ...(volunteersByGroupSaved.get(group.id) ?? []).map((v) => ({
+          personType: AssignmentPersonType.VOLUNTEER,
+          personId: v.id,
+        })),
+      ];
+      for (const direction of [TransportDirection.ALLER, TransportDirection.RETOUR]) {
+        const groupTransports = transportsByGroupDirection.get(`${group.id}:${direction}`) ?? [];
+        // Remplissage dans l'ordre, sans jamais dépasser une jauge (null =
+        // sans jauge, illimité) : le premier transport devient « complet » et
+        // ce qui ne rentre plus reste « à placer ».
+        const placesRestantes = groupTransports.map((t) =>
+          t.capacity == null ? Number.POSITIVE_INFINITY : t.capacity,
+        );
+        let cursor = 0;
+        for (const member of members) {
+          if (
+            direction === TransportDirection.ALLER &&
+            group.id === exceptionOriginGroup?.id &&
+            member.personType === AssignmentPersonType.PARTICIPANT &&
+            exceptionParticipantIds.has(member.personId)
+          )
+            continue;
+          while (cursor < groupTransports.length && placesRestantes[cursor] <= 0) cursor += 1;
+          if (cursor >= groupTransports.length) break;
+          placesRestantes[cursor] -= 1;
+          transportAssignmentsToCreate.push(
+            transportAssignmentRepository.create({
+              personType: member.personType,
+              personId: member.personId,
+              direction,
+              delegation: group,
+              transport: groupTransports[cursor],
+            }),
+          );
+        }
+      }
+    }
+    if (exceptionOriginGroup && exceptionHostGroup) {
+      // Les jeunes en exception atterrissent d'abord dans l'« à placer » de l'accueil.
+      for (const p of (participantsByGroup.get(exceptionOriginGroup.id) ?? []).slice(0, 2)) {
+        transportAssignmentsToCreate.push(
+          transportAssignmentRepository.create({
+            personType: AssignmentPersonType.PARTICIPANT,
+            personId: p.id,
+            direction: TransportDirection.ALLER,
+            delegation: exceptionHostGroup,
+            transport: null,
+          }),
+        );
+      }
+    }
+    await transportAssignmentRepository.save(transportAssignmentsToCreate, { chunk: 1000 });
+
+    // Notes logistiques sur les quatre premières délégations remplies.
+    const groupesRemplis = groups.filter(
+      (g) => (participantsByGroup.get(g.id)?.length ?? 0) > 0,
+    );
+    const notesToCreate: PersonNote[] = [];
+    for (const group of groupesRemplis.slice(0, 4)) {
+      const authorVolunteer = (volunteersByGroupSaved.get(group.id) ?? [])[0];
+      const member = (participantsByGroup.get(group.id) ?? [])[0];
+      if (!authorVolunteer || !member) continue;
+      notesToCreate.push(
+        personNoteRepository.create({
+          personType: AssignmentPersonType.PARTICIPANT,
+          personId: member.id,
+          delegation: group,
+          author: authorVolunteer.user,
+          authorName: `${authorVolunteer.firstName} ${authorVolunteer.lastName}`,
+          authorRole: 'Responsable de délégation',
+          parent: null,
+          body: `${member.firstName} montera au car sur le parvis de la gare, pas au point habituel.`,
+        }),
+      );
+    }
+    const savedNoteRoots = await personNoteRepository.save(notesToCreate, { chunk: 100 });
+    const noteReplies: PersonNote[] = [];
+    savedNoteRoots.forEach((root, index) => {
+      // Une note sur deux reste sans réponse : les deux cas sont visibles.
+      if (index % 2 === 1) return;
+      const authorVolunteer = (volunteersByGroupSaved.get(root.delegation.id) ?? [])[0];
+      noteReplies.push(
+        personNoteRepository.create({
+          personType: root.personType,
+          personId: root.personId,
+          delegation: root.delegation,
+          author: authorVolunteer?.user ?? null,
+          authorName: root.authorName,
+          authorRole: root.authorRole,
+          parent: root,
+          body: 'C’est noté, le chauffeur est prévenu.',
+        }),
+      );
+    });
+    if (noteReplies.length) await personNoteRepository.save(noteReplies, { chunk: 100 });
+
     const volunteerMissionsToCreate: VolunteerMission[] = [];
     const volunteerShiftsToCreate: VolunteerShift[] = [];
     const volunteerShiftAssignmentsToCreate: VolunteerShiftAssignment[] = [];
     const missionBudgetPerGroup = splitEvenly(profile.volunteerMissions, groups.length);
     const volunteerMissionKeys = groups.flatMap((group, groupIndex) => {
       const teams = savedVolunteerTeamsByGroup.get(group.id) ?? [];
+      const groupVolunteers = volunteersByGroupSaved.get(group.id) ?? [];
+      // Groupes vides (petites délégations sans bénévole) : aucune équipe ni
+      // responsable à rattacher, on ne crée pas de mission pour eux.
+      if (teams.length === 0 || groupVolunteers.length === 0) {
+        return [];
+      }
       const missionCount = Math.max(1, missionBudgetPerGroup[groupIndex] ?? 1);
       return Array.from({ length: missionCount }, (_, missionIndex) => ({
         group,

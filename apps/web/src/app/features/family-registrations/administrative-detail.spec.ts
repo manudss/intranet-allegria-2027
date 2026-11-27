@@ -20,12 +20,10 @@ describe('Complete administrative view', () => {
       city: 'Ville jeune fictive',
       mejGroup: 'Groupe fictif',
       legalCapacity: 'LEGAL',
+      delegationId: '1',
     };
     y.logistics = {
       presence: 'FULL',
-      arrival: 'Arrivée fictive',
-      departure: 'Départ fictif',
-      transport: 'Transport fictif',
       accommodation: 'Hébergement fictif',
       notes: 'Notes fictives',
     };

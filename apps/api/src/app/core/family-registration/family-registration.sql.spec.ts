@@ -27,6 +27,9 @@ describe('Family registration SQL, fictitious database only', () => {
       query: async (sql: string) => pg.exec(sql),
     } as never);
     await pg.exec('CREATE TABLE test_participants(id serial PRIMARY KEY,data jsonb NOT NULL)');
+    await pg.exec(
+      "CREATE TABLE groups(id serial PRIMARY KEY, name varchar NOT NULL, diocese varchar); INSERT INTO groups(name, diocese) VALUES('Délégation fictive','Lyon')",
+    );
     const repository = {
       create: (v: unknown) => v,
       save: async (v: { id?: number }) => {
@@ -426,6 +429,7 @@ describe('Family registration SQL, fictitious database only', () => {
         mejAgeGroup: 'TA',
         dioceseId: DIOCESES[0].id,
         legalCapacity: 'LEGAL',
+        delegationId: '1',
       },
       logistics: { presence: 'FULL' },
     });

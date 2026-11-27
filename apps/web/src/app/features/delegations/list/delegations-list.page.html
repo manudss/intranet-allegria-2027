@@ -1,0 +1,157 @@
+<app-page-layout
+  title="Délégations"
+  description="Arrivées et départs des participants, animateurs et bénévoles · rattachées le plus souvent au diocèse"
+  ><button actions tuiButton type="button" (click)="openCreate()">
+    + Nouvelle délégation
+  </button>
+  <div class="filters">
+    <tui-textfield iconStart="@tui.search">
+      <label for="rechercher-une-delegation" tuiLabel>Rechercher une délégation</label
+      ><input
+        tuiInput
+        placeholder="Nom, diocèse ou responsable…"
+        [value]="query()"
+        (input)="query.set($any($event.target).value)"
+        id="rechercher-une-delegation"
+      />
+    </tui-textfield>
+    <tui-textfield iconStart="@tui.filter" tuiChevron [stringify]="zoneLabel">
+      <label for="filtre-zone" tuiLabel>Zone</label
+      ><select
+        tuiSelect
+        placeholder="Toutes les zones"
+        [items]="zones"
+        [ngModel]="zone()"
+        (ngModelChange)="zone.set($event)"
+        id="filtre-zone"
+      ></select>
+    </tui-textfield>
+    <tui-textfield iconStart="@tui.filter" tuiChevron [stringify]="countryLabel">
+      <label for="filtre-pays" tuiLabel>Pays</label
+      ><select
+        tuiSelect
+        placeholder="Tous les pays"
+        [items]="countries"
+        [ngModel]="country()"
+        (ngModelChange)="country.set($event)"
+        id="filtre-pays"
+      ></select>
+    </tui-textfield>
+    <button
+      tuiButton
+      type="button"
+      [appearance]="sortToPlace() ? 'primary' : 'secondary'"
+      (click)="sortToPlace.set(!sortToPlace())"
+    >
+      Trier par « à placer »
+    </button>
+  </div>
+  @if (loading()) {
+  <app-loading-skeleton />
+  } @else if (loadError()) {
+  <p class="error">Le chargement des délégations a échoué. Réessayez dans un instant.</p>
+  } @else {
+  <div class="cards">
+    @for (d of filtered(); track d.id) {
+    <article class="delegation-card" [class.card-dashed]="isSansDelegation(d)">
+      <header class="card-head">
+        <h3><a [routerLink]="['/delegations', d.id]">{{ d.name }}</a></h3>
+        <span [class]="chipClass(d)">{{ chip(d) }}</span>
+      </header>
+      @if (isSansDelegation(d)) {
+      <p class="muted">Staff national et bénévoles hors diocèse</p>
+      <p class="muted">
+        Personnes inscrites sans délégation de départ, regroupées ici en attendant leur
+        rattachement par les coordinateurs.
+      </p>
+      <footer class="card-foot">
+        <span class="person-chip">Coordinateurs</span>
+        <span class="muted">gestion</span>
+      </footer>
+      } @else {
+      <p class="muted">
+        {{ d.diocese ? 'Diocèse de ' + d.diocese : 'Sans diocèse renseigné' }} ·
+        {{ d.total }} personnes
+      </p>
+      <p>{{ d.jeunes }} jeunes · {{ d.animateurs }} animateurs · {{ d.benevoles }} bénévoles</p>
+      <div class="bar-track">
+        <div [class]="barClass(d)" [style.width.%]="pct(d)"></div>
+      </div>
+      <p class="muted">
+        {{ placedTotal(d) }}/{{ grandTotal(d) }} placées · aller {{ d.aller.placed }}/{{
+          d.aller.total
+        }}
+        · retour {{ d.retour.placed }}/{{ d.retour.total }}
+      </p>
+      <footer class="card-foot">
+        @for (r of d.responsables; track r) {
+        <span class="person-chip">{{ r }}</span>
+        }
+        <span class="muted">responsables</span>
+        @if (d.exceptionsReceived > 0) {
+        <span class="chip chip-exception"
+          >+{{ d.exceptionsReceived }} exception{{
+            d.exceptionsReceived > 1 ? 's' : ''
+          }}
+          accueillie{{ d.exceptionsReceived > 1 ? 's' : '' }}</span
+        >
+        }
+      </footer>
+      }
+    </article>
+    } @empty {
+    <p class="muted">Aucune délégation ne correspond à cette recherche.</p>
+    }
+  </div>
+  }
+</app-page-layout>
+@if (drawerOpen()) {
+<tui-drawer direction="end"
+  ><header>
+    <h2>Nouvelle délégation</h2>
+  </header>
+  <div class="drawer-form">
+    <tui-textfield iconStart="@tui.users" class="wide">
+      <label for="nouvelle-delegation-nom" tuiLabel>Nom de la délégation</label
+      ><input
+        tuiInput
+        placeholder="Délégation de Lyon"
+        [(ngModel)]="newName"
+        [ngModelOptions]="{ standalone: true }"
+        id="nouvelle-delegation-nom"
+      />
+    </tui-textfield>
+    <tui-textfield iconStart="@tui.map-pin" class="wide">
+      <label for="nouvelle-delegation-diocese" tuiLabel>Diocèse</label
+      ><input
+        tuiInput
+        placeholder="Lyon"
+        [(ngModel)]="newDiocese"
+        [ngModelOptions]="{ standalone: true }"
+        id="nouvelle-delegation-diocese"
+      />
+    </tui-textfield>
+    <tui-textfield class="wide">
+      <label for="nouvelle-delegation-notes" tuiLabel>Notes</label
+      ><textarea
+        tuiTextarea
+        placeholder="Précisions logistiques éventuelles"
+        [(ngModel)]="newNotes"
+        [ngModelOptions]="{ standalone: true }"
+        id="nouvelle-delegation-notes"
+      ></textarea>
+    </tui-textfield>
+  </div>
+  @if (createError(); as err) {
+  <p class="error">{{ err }}</p>
+  }
+  <footer>
+    <button tuiButton type="button" appearance="secondary" (click)="drawerOpen.set(false)">
+      Fermer
+    </button>
+    <button tuiButton type="button" [disabled]="saving()" (click)="create()">
+      {{ saving() ? 'Enregistrement…' : 'Enregistrer' }}
+    </button>
+  </footer></tui-drawer
+>
+}

@@ -37,7 +37,10 @@ export const appRoutes: Route[] = [
       {
         path: 'rassemblement',
         title: 'Délégations',
-        loadComponent: () => import('./features/groups/groups').then((m) => m.GroupsPage),
+        loadComponent: () =>
+          import('./features/delegations/list/delegations-list.page').then(
+            (m) => m.DelegationsListPage,
+          ),
       },
       {
         path: 'groupes-rassemblement',
@@ -218,6 +221,32 @@ export const appRoutes: Route[] = [
         path: 'transports',
         title: 'Transports',
         loadComponent: () => import('./pages/transports').then((m) => m.Transports),
+      },
+      {
+        path: 'delegations/:id',
+        loadComponent: () =>
+          import('./features/delegations/fiche/delegation-fiche.page').then(
+            (m) => m.DelegationFichePage,
+          ),
+        title: 'Délégation',
+      },
+      {
+        path: 'delegations/:id/transports',
+        title: 'Transports de la délégation',
+        loadComponent: () =>
+          import('./features/delegations/delegation-detail').then((m) => m.DelegationDetailPage),
+      },
+      {
+        path: 'suivi-notes',
+        title: 'Notes sur les participants',
+        loadComponent: () =>
+          import('./features/delegations/person-notes').then((m) => m.PersonNotesPage),
+      },
+      {
+        path: 'person-notes/:personType/:personId',
+        title: 'Notes de la personne',
+        loadComponent: () =>
+          import('./features/delegations/person-notes').then((m) => m.PersonNotesPage),
       },
       {
         path: 'programme',

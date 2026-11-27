@@ -23,9 +23,15 @@ export function buildFamilyDemo() {
     mejAgeGroup: 'TA',
     legalCapacity: 'LEGAL',
     dioceseId: DIOCESES.find((d) => d.name === 'Lyon')?.id || DIOCESES[0].id,
+    delegationId: '9901',
   };
   first.logistics.presence = 'FULL';
-  second.identity = { ...second.identity, firstName: 'Alexis', lastName: 'Exemple fictif' };
+  second.identity = {
+    ...second.identity,
+    firstName: 'Alexis',
+    lastName: 'Exemple fictif',
+    delegationId: '9901',
+  };
   second.currentPage = 2;
   second.simulation = 'SUCCESS';
   const transmitted = [
@@ -106,6 +112,9 @@ export function buildFamilyDemo() {
     },
     rules: {
       ...DEFAULT_FAMILY_RULES,
+      delegations: [
+        { id: 9901, name: 'EXEMPLE FICTIF : Délégation de Lyon', diocese: 'Lyon' },
+      ],
       previewDemoSeed: true,
       registrationOpen: true,
       finalDeclaration:

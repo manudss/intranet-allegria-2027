@@ -2,7 +2,26 @@ import type { ConfigService } from '@nestjs/config';
 /** Temporary PR42 demo access, fail closed outside this exact disposable deployment. */
 export const PREVIEW_FAMILY_EMAIL = 'famille-demo@example.test';
 export function familyPreviewEnabled(config: Pick<ConfigService, 'get'>): boolean {
-  return pr42PreviewEnabled(config) || pr49PreviewEnabled(config);
+  return (
+    pr42PreviewEnabled(config) || pr49PreviewEnabled(config) || pr56PreviewEnabled(config)
+  );
+}
+
+/**
+ * PR56 delegations/transports : meme phase de test ouverte (decision d'Emmanuel du 24 nov. 2026,
+ * donnees FICTIVES uniquement, a fermer a la mise en production) pour qualifier visuellement le
+ * bloc trajets de l'espace famille. Meme forme fail-closed : opt-ins explicites, nom de service
+ * image jetable exact et nom d'hote, aucune branche Git. Jamais la production ni une autre PR.
+ */
+function pr56PreviewEnabled(config: Pick<ConfigService, 'get'>): boolean {
+  return (
+    config.get('FAMILY_PREVIEW_DEMO_ENABLED') === 'pr56-fictional-only' &&
+    config.get('FAMILY_PREVIEW_IMAGE_ENABLED') === 'pr56-prebuilt-only' &&
+    config.get('PREVIEW_DEPLOYMENT') === 'true' &&
+    config.get('RENDER_SERVICE_NAME') === 'al-pr56-api' &&
+    !config.get('RENDER_GIT_BRANCH') &&
+    config.get('RENDER_EXTERNAL_HOSTNAME') === 'al-pr56-api.onrender.com'
+  );
 }
 
 /**

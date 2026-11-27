@@ -71,3 +71,9 @@ export { DocumentLink } from './document-link.entity';
 export { DocumentLinkTeam } from './document-link-team.entity';
 
 export * from './registration-family.entity';
+export { TransportDirection } from './transport-direction.enum';
+export { TransportMode } from './transport-mode.enum';
+export { AssignmentPersonType } from './assignment-person-type.enum';
+export { DelegationTransport } from './delegation-transport.entity';
+export { TransportAssignment } from './transport-assignment.entity';
+export { PersonNote } from './person-note.entity';

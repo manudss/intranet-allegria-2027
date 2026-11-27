@@ -19,6 +19,8 @@ export interface YouthIdentity {
   sex: string;
   mejAgeGroup: string;
   dioceseId: string;
+  /** Délégation de départ (groupe diocésain de l'intranet), obligatoire. */
+  delegationId: string;
   otherDiocese: string;
   city: string;
   mejGroup: string;
@@ -96,7 +98,13 @@ export interface FamilySpace {
   revision: number;
   updatedAt: string;
 }
+export interface FamilyDelegationOption {
+  id: number;
+  name: string;
+  diocese: string | null;
+}
 export interface FamilyRules {
+  delegations?: FamilyDelegationOption[];
   previewDemo?: boolean;
   previewMailEnabled?: boolean;
   previewHealthSamples?: Record<string, StructuredHealth>;
@@ -125,6 +133,7 @@ export const EMPTY_IDENTITY: YouthIdentity = {
   sex: '',
   mejAgeGroup: '',
   dioceseId: '',
+  delegationId: '',
   otherDiocese: '',
   city: '',
   mejGroup: '',
@@ -225,6 +234,7 @@ export function missingRequirements(
   if (i.dioceseId && !['UNKNOWN', 'OTHER', ...DIOCESES.map((d) => d.id)].includes(i.dioceseId))
     missing.push('Diocèse valide');
   if (i.dioceseId === 'OTHER' && !i.otherDiocese.trim()) missing.push('Autre diocèse / pays');
+  if (!i.delegationId?.trim()) missing.push('Délégation de départ');
   const age = ageOn(i.dateOfBirth, rules.ageReferenceDate);
   if (
     (rules.minAge !== null || rules.maxAge !== null) &&

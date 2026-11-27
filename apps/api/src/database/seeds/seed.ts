@@ -710,6 +710,9 @@ async function run(): Promise<void> {
     try {
       await queryRunner.query(`
         TRUNCATE TABLE
+          "person_notes",
+          "transport_assignments",
+          "delegation_transports",
           "document_link_teams",
           "document_links",
           "document_categories",

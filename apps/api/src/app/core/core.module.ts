@@ -25,6 +25,7 @@ import { VolunteerHostingModule } from './volunteer-hosting/volunteer-hosting.mo
 import { JeunesRepartitionModule } from './jeunes-repartition/jeunes-repartition.module';
 import { AccessControlModule } from './access-control/access-control.module';
 import { DocumentLibraryModule } from './document-library/document-library.module';
+import { DelegationsModule } from './delegations/delegations.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { DocumentLibraryModule } from './document-library/document-library.modul
     JeunesRepartitionModule,
     AccessControlModule,
     DocumentLibraryModule,
+    DelegationsModule,
   ],
 })
 export class CoreModule {}

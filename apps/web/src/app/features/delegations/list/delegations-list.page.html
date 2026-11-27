@@ -55,7 +55,7 @@
     @for (d of filtered(); track d.id) {
     <article class="delegation-card" [class.card-dashed]="isSansDelegation(d)">
       <header class="card-head">
-        <h3><a [routerLink]="['/delegations', d.id, 'transports']">{{ d.name }}</a></h3>
+        <h3><a [routerLink]="['/delegations', d.id]">{{ d.name }}</a></h3>
         <span [class]="chipClass(d)">{{ chip(d) }}</span>
       </header>
       @if (isSansDelegation(d)) {

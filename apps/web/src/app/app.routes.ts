@@ -223,6 +223,14 @@ export const appRoutes: Route[] = [
         loadComponent: () => import('./pages/transports').then((m) => m.Transports),
       },
       {
+        path: 'delegations/:id',
+        loadComponent: () =>
+          import('./features/delegations/fiche/delegation-fiche.page').then(
+            (m) => m.DelegationFichePage,
+          ),
+        title: 'Délégation',
+      },
+      {
         path: 'delegations/:id/transports',
         title: 'Transports de la délégation',
         loadComponent: () =>

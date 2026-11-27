@@ -1,0 +1,171 @@
+.delegation-nav {
+  margin: -0.5rem 0 1rem;
+}
+
+.two-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 767px) {
+  .two-cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  background: #fff;
+  border-radius: 1rem;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 2px 12px rgb(0 0 0 / 6%);
+  margin-bottom: 1rem;
+
+  h2 {
+    margin: 0 0 0.75rem;
+    font-size: 1.05rem;
+  }
+
+  dl {
+    margin: 0;
+
+    dt {
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #9aa0a6;
+      margin-top: 0.75rem;
+    }
+
+    dd {
+      margin: 0.15rem 0 0;
+    }
+  }
+}
+
+.resp-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.person-chip {
+  background: #eef2f7;
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.85rem;
+}
+
+.rep-line {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.5rem 0;
+
+  .bar-track {
+    flex: 1;
+  }
+}
+
+.bar-track {
+  background: #eef2f7;
+  border-radius: 999px;
+  height: 0.6rem;
+  overflow: hidden;
+}
+
+.bar {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.bar-ok {
+  background: #2f9e44;
+}
+
+.bar-warn {
+  background: #f5a623;
+}
+
+.muted {
+  color: #6b7280;
+  font-size: 0.88rem;
+}
+
+.chip {
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.78rem;
+  background: #eef2f7;
+}
+
+.chip-exception {
+  background: #f5a62333;
+  color: #9a6508;
+}
+
+.mode-chip {
+  background: #f5a62333;
+  color: #9a6508;
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.transport-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  &.transport-full {
+    border-color: #f5a623;
+  }
+
+  p {
+    margin: 0.4rem 0 0;
+  }
+}
+
+.persons-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgb(0 0 0 / 6%);
+
+  th,
+  td {
+    text-align: left;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid #eef0f3;
+    font-size: 0.92rem;
+  }
+
+  th {
+    color: #9aa0a6;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+}
+
+.sante-note {
+  margin-top: 0.75rem;
+}
+
+.exception-line,
+.note-line {
+  margin: 0.4rem 0;
+  font-size: 0.92rem;
+}

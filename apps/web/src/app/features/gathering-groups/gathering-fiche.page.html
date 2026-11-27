@@ -84,7 +84,26 @@
         </form>
       </section>
     }
+    <nav class="fiche-tabs" role="tablist" aria-label="Sections du groupe">
+      <button type="button" role="tab" class="tab" [class.on]="tab() === 'resume'" [attr.aria-selected]="tab() === 'resume'" (click)="tab.set('resume')">Résumé</button>
+      <button type="button" role="tab" class="tab" [class.on]="tab() === 'creneaux'" [attr.aria-selected]="tab() === 'creneaux'" (click)="tab.set('creneaux')">Créneaux<span class="badge">{{ f.sequences.length }}</span></button>
+      <button type="button" role="tab" class="tab" [class.on]="tab() === 'equipes'" [attr.aria-selected]="tab() === 'equipes'" (click)="tab.set('equipes')">Équipes<span class="badge">{{ f.teams.length }}</span></button>
+      <button type="button" role="tab" class="tab" [class.on]="tab() === 'personnes'" [attr.aria-selected]="tab() === 'personnes'" (click)="tab.set('personnes')">Personnes<span class="badge">{{ f.people.length + f.animators.length }}</span></button>
+      <button type="button" role="tab" class="tab" [class.on]="tab() === 'responsables'" [attr.aria-selected]="tab() === 'responsables'" (click)="tab.set('responsables')">Responsables<span class="badge">{{ f.managers.length }}</span></button>
+    </nav>
 
+    @if (tab() === 'resume') {
+      <section class="card" aria-labelledby="resume-title">
+        <h2 id="resume-title">Résumé</h2>
+        <ul class="resume-list">
+          <li><button type="button" class="link" (click)="tab.set('creneaux')">{{ f.sequences.length }} créneau{{ f.sequences.length > 1 ? 'x' : '' }} de l'agenda lié{{ f.sequences.length > 1 ? 's' : '' }}</button></li>
+          <li><button type="button" class="link" (click)="tab.set('equipes')">{{ f.teams.length }} équipe{{ f.teams.length > 1 ? 's' : '' }} de rassemblement, {{ f.volunteerTeams.length }} équipe{{ f.volunteerTeams.length > 1 ? 's' : '' }} bénévole{{ f.volunteerTeams.length > 1 ? 's' : '' }} opérationnelle{{ f.volunteerTeams.length > 1 ? 's' : '' }}</button></li>
+          <li><button type="button" class="link" (click)="tab.set('personnes')">{{ f.people.length }} personne{{ f.people.length > 1 ? 's' : '' }}, {{ f.animators.length }} animateur{{ f.animators.length > 1 ? 's' : '' }}</button></li>
+          <li><button type="button" class="link" (click)="tab.set('responsables')">{{ f.managers.length }} responsable{{ f.managers.length > 1 ? 's' : '' }}</button></li>
+        </ul>
+      </section>
+    }
+    @if (tab() === 'creneaux') {
     <section class="card" aria-labelledby="slots-title">
       <h2 id="slots-title">Créneaux de l'agenda liés ({{ f.sequences.length }})</h2>
       <table class="data-table" aria-label="Créneaux liés au groupe">
@@ -139,7 +158,8 @@
         </div>
       }
     </section>
-
+    }
+    @if (tab() === 'equipes') {
     <section class="card" aria-labelledby="teams-title">
       <h2 id="teams-title">Équipes ({{ f.teams.length }})</h2>
       @if (f.teams.length === 0) {
@@ -176,7 +196,36 @@
         </table>
       }
     </section>
-
+    <section class="card" aria-labelledby="volunteer-title">
+      <h2 id="volunteer-title">Équipes bénévoles opérationnelles ({{ f.volunteerTeams.length }})</h2>
+      <ul class="volunteer-list">
+        @for (v of f.volunteerTeams; track v.id) {
+          <li>
+            <strong>{{ v.name }}</strong>
+            @if (v.typeLabel) { <span class="muted">{{ v.typeLabel }}</span> }
+            <span class="muted">{{ v.memberCount }} membre{{ v.memberCount > 1 ? 's' : '' }}</span>
+            <button type="button" class="link" (click)="detachVolunteerTeam(v.id, v.name)">Retirer</button>
+          </li>
+        } @empty {
+          <li class="empty-state">Aucune équipe opérationnelle rattachée (cuisine, logistique…).</li>
+        }
+      </ul>
+      @if (addableVolunteerTeams().length) {
+        <div class="add-line">
+          <app-select-field
+            label="Rattacher une équipe"
+            [options]="addableVolunteerTeams()"
+            [value]="volunteerTeamToAdd()"
+            (valueChange)="volunteerTeamToAdd.set($event)"
+          />
+          <button type="button" tuiButton appearance="primary" size="s" [disabled]="busy() || !volunteerTeamToAdd()" (click)="attachVolunteerTeam()">
+            Rattacher
+          </button>
+        </div>
+      }
+    </section>
+    }
+    @if (tab() === 'personnes') {
     <section class="card" aria-labelledby="people-title">
       <h2 id="people-title">Personnes ({{ f.people.length }})</h2>
       <p class="muted">Prénoms seulement pour les jeunes, par mesure de protection des mineurs.</p>
@@ -224,36 +273,8 @@
         </table>
       }
     </section>
-
-    <section class="card" aria-labelledby="volunteer-title">
-      <h2 id="volunteer-title">Équipes bénévoles opérationnelles ({{ f.volunteerTeams.length }})</h2>
-      <ul class="volunteer-list">
-        @for (v of f.volunteerTeams; track v.id) {
-          <li>
-            <strong>{{ v.name }}</strong>
-            @if (v.typeLabel) { <span class="muted">{{ v.typeLabel }}</span> }
-            <span class="muted">{{ v.memberCount }} membre{{ v.memberCount > 1 ? 's' : '' }}</span>
-            <button type="button" class="link" (click)="detachVolunteerTeam(v.id, v.name)">Retirer</button>
-          </li>
-        } @empty {
-          <li class="empty-state">Aucune équipe opérationnelle rattachée (cuisine, logistique…).</li>
-        }
-      </ul>
-      @if (addableVolunteerTeams().length) {
-        <div class="add-line">
-          <app-select-field
-            label="Rattacher une équipe"
-            [options]="addableVolunteerTeams()"
-            [value]="volunteerTeamToAdd()"
-            (valueChange)="volunteerTeamToAdd.set($event)"
-          />
-          <button type="button" tuiButton appearance="primary" size="s" [disabled]="busy() || !volunteerTeamToAdd()" (click)="attachVolunteerTeam()">
-            Rattacher
-          </button>
-        </div>
-      }
-    </section>
-
+    }
+    @if (tab() === 'responsables') {
     <section class="card" aria-labelledby="managers-title">
       <h2 id="managers-title">Responsables du groupe ({{ f.managers.length }})</h2>
       <p class="muted">
@@ -282,5 +303,6 @@
         </button>
       </div>
     </section>
+    }
   }
 </app-page-layout>

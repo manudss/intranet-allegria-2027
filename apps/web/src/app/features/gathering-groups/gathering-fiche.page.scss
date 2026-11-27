@@ -62,3 +62,19 @@
 .picker-search { flex: 1; min-inline-size: 0; padding: .45rem .7rem; border: 1px solid #c9c9c9; border-radius: .5rem; font: inherit; background: #fff; }
 .picker .results { list-style: none; margin: .5rem 0 0; padding: 0; max-block-size: 16rem; overflow: auto; display: grid; gap: .25rem; }
 .picker .results li { display: flex; flex-wrap: wrap; gap: .4rem .8rem; align-items: center; justify-content: space-between; background: #fff; border-radius: .45rem; padding: .3rem .6rem; font-size: .9rem; }
+
+.fiche-tabs { display: flex; gap: .4rem; margin: .5rem 0 .75rem; overflow-x: auto; padding-bottom: .2rem; }
+.fiche-tabs .tab { flex: none; padding: .4rem .85rem; border-radius: 1.2rem; border: 1px solid #d5d5d5; background: var(--appearance-surface, #fff); font: inherit; cursor: pointer; white-space: nowrap; }
+.fiche-tabs .tab.on { background: var(--allegria-primary); color: #fff; border-color: var(--allegria-primary); }
+.fiche-tabs .badge { margin-left: .4rem; padding: 0 .4rem; border-radius: .7rem; background: #eee; color: #444; font-size: .75rem; }
+.fiche-tabs .tab.on .badge { background: #ffffff40; color: #fff; }
+.resume-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .35rem; }
+.resume-list .link { background: none; border: 0; padding: 0; font: inherit; color: var(--allegria-primary); text-decoration: underline; cursor: pointer; text-align: left; }
+
+@media (max-width: 700px) {
+  .data-table thead { display: none; }
+  .data-table, .data-table tbody, .data-table tr, .data-table td { display: block; inline-size: 100%; }
+  .data-table tr { border-bottom: 1px solid #e5e5e5; padding: .4rem 0; }
+  .data-table td { padding: .1rem 0; border: 0; }
+  .gauge-line { flex-wrap: wrap; }
+}

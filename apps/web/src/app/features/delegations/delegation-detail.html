@@ -90,6 +90,9 @@
               {{ modeLabels[t.transportMode] || t.transportMode }} · {{ t.name }}
               @if (t.capacity !== null) {
                 <span [class.full]="t.full"> ({{ t.occupancy }}/{{ t.capacity }})</span>
+                @if (t.full) {
+                  <span class="full jauge-alerte">jauge dépassée</span>
+                }
               } @else {
                 <span> ({{ t.occupancy }} placés, sans jauge)</span>
               }

@@ -41,6 +41,15 @@
 .error {
   color: var(--tui-status-negative);
 }
+/* Jauge facultative d'un trajet : le depassement reste visible, jamais normalise. */
+.full {
+  color: var(--tui-status-negative);
+  font-weight: 700;
+}
+.jauge-alerte {
+  font-size: 0.85em;
+  margin-left: 0.35rem;
+}
 tui-drawer {
   width: min(44rem, 100vw);
   padding: 1.25rem;

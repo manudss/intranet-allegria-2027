@@ -21,7 +21,9 @@ import {
   AccessScanType,
   AccessScannerGrant,
   AccessZone,
+  AssignmentPersonType,
   AssignmentStatus,
+  DelegationTransport,
   Group,
   HostFamily,
   AccommodationType,
@@ -34,12 +36,16 @@ import {
   ParticipantHostFamilyAssignment,
   ParticipantRegistrationStatus,
   ParticipantSex,
+  PersonNote,
   PersonSource,
   PersonType,
   Role,
   Team,
   TeamParticipant,
   TeamParticipantRole,
+  TransportAssignment,
+  TransportDirection,
+  TransportMode,
   User,
   UserRole,
   Volunteer,
@@ -986,6 +992,7 @@ async function run(): Promise<void> {
 
         const volunteer = volunteerRepository.create({
           user,
+          group,
           firstName,
           lastName,
           phone: `+33${faker.string.numeric(9)}`,
@@ -1460,6 +1467,149 @@ async function run(): Promise<void> {
       );
     }
     await teamParticipantRepository.save(adultTeamParticipants, { chunk: 1000 });
+
+    // ------------------------------------------------------------------
+    // Trajets de délégation (aller/retour), affectations, exceptions et notes
+    // logistiques : la preview montre tous les cas (à placer, placés, jauge,
+    // exceptions reçues et sortantes, notes avec et sans réponse).
+    const transportRepository = dataSource.getRepository(DelegationTransport);
+    const transportAssignmentRepository = dataSource.getRepository(TransportAssignment);
+    const personNoteRepository = dataSource.getRepository(PersonNote);
+
+    const transportsToCreate: DelegationTransport[] = [];
+    for (const group of groups) {
+      for (const direction of [TransportDirection.ALLER, TransportDirection.RETOUR]) {
+        const outward = direction === TransportDirection.ALLER;
+        const base = new Date(
+          (outward ? group.arrivalDatetime : group.departureDatetime) ?? '2027-10-31T08:00:00.000Z',
+        );
+        const departure = new Date(base.getTime() - (outward ? 90 : 0) * 60000);
+        const arrival = new Date(departure.getTime() + 150 * 60000);
+        transportsToCreate.push(
+          transportRepository.create({
+            delegation: group,
+            direction,
+            transportMode: TransportMode.CAR,
+            name: 'Car 1',
+            departureDatetime: departure,
+            arrivalDatetime: arrival,
+            meetingPoint: `Gare de ${group.diocese}, parvis`,
+            practicalInfo:
+              'RDV 30 minutes avant le départ, colis étiqueté au nom du jeune.',
+            capacity: 52,
+            notes: null,
+          }),
+        );
+        if (chance(0.5)) {
+          transportsToCreate.push(
+            transportRepository.create({
+              delegation: group,
+              direction,
+              transportMode: TransportMode.TRAIN,
+              name: 'TGV spécial',
+              departureDatetime: departure,
+              arrivalDatetime: arrival,
+              meetingPoint: `Gare de ${group.diocese}, voie 2`,
+              practicalInfo: 'Billets distribués par les responsables le jour J.',
+              capacity: null,
+              notes: null,
+            }),
+          );
+        }
+      }
+    }
+    const savedTransports = await transportRepository.save(transportsToCreate, { chunk: 500 });
+    const transportsByGroupDirection = new Map<string, DelegationTransport[]>();
+    for (const t of savedTransports) {
+      const key = `${t.delegation.id}:${t.direction}`;
+      transportsByGroupDirection.set(key, [...(transportsByGroupDirection.get(key) ?? []), t]);
+    }
+
+    const transportAssignmentsToCreate: TransportAssignment[] = [];
+    for (const group of groups) {
+      const members = [
+        ...(participantsByGroup.get(group.id) ?? []).map((p) => ({
+          personType: AssignmentPersonType.PARTICIPANT,
+          personId: p.id,
+        })),
+        ...(volunteersByGroupSaved.get(group.id) ?? []).map((v) => ({
+          personType: AssignmentPersonType.VOLUNTEER,
+          personId: v.id,
+        })),
+      ];
+      for (const direction of [TransportDirection.ALLER, TransportDirection.RETOUR]) {
+        const groupTransports = transportsByGroupDirection.get(`${group.id}:${direction}`) ?? [];
+        members.forEach((member, index) => {
+          // Un membre sur six reste « à placer » : le cas est visible en preview.
+          if (index % 6 === 5 || groupTransports.length === 0) return;
+          transportAssignmentsToCreate.push(
+            transportAssignmentRepository.create({
+              personType: member.personType,
+              personId: member.personId,
+              direction,
+              delegation: group,
+              transport: groupTransports[index % groupTransports.length],
+            }),
+          );
+        });
+      }
+    }
+    if (groups.length >= 2) {
+      // Exceptions : deux jeunes du premier groupe voyagent (aller) avec le deuxième,
+      // d’abord dans son « à placer ».
+      const [originGroup, hostGroup] = groups;
+      for (const p of (participantsByGroup.get(originGroup.id) ?? []).slice(0, 2)) {
+        transportAssignmentsToCreate.push(
+          transportAssignmentRepository.create({
+            personType: AssignmentPersonType.PARTICIPANT,
+            personId: p.id,
+            direction: TransportDirection.ALLER,
+            delegation: hostGroup,
+            transport: null,
+          }),
+        );
+      }
+    }
+    await transportAssignmentRepository.save(transportAssignmentsToCreate, { chunk: 1000 });
+
+    const notesToCreate: PersonNote[] = [];
+    for (const group of groups.slice(0, Math.min(4, groups.length))) {
+      const authorVolunteer = (volunteersByGroupSaved.get(group.id) ?? [])[0];
+      const member = (participantsByGroup.get(group.id) ?? [])[0];
+      if (!authorVolunteer || !member) continue;
+      notesToCreate.push(
+        personNoteRepository.create({
+          personType: AssignmentPersonType.PARTICIPANT,
+          personId: member.id,
+          delegation: group,
+          author: authorVolunteer.user,
+          authorName: `${authorVolunteer.firstName} ${authorVolunteer.lastName}`,
+          authorRole: 'Responsable de délégation',
+          parent: null,
+          body: `${member.firstName} montera au car sur le parvis de la gare, pas au point habituel.`,
+        }),
+      );
+    }
+    const savedNoteRoots = await personNoteRepository.save(notesToCreate, { chunk: 100 });
+    const noteReplies: PersonNote[] = [];
+    savedNoteRoots.forEach((root, index) => {
+      // Une note sur deux reste sans réponse : les deux cas sont visibles.
+      if (index % 2 === 1) return;
+      const authorVolunteer = (volunteersByGroupSaved.get(root.delegation.id) ?? [])[0];
+      noteReplies.push(
+        personNoteRepository.create({
+          personType: root.personType,
+          personId: root.personId,
+          delegation: root.delegation,
+          author: authorVolunteer?.user ?? null,
+          authorName: root.authorName,
+          authorRole: root.authorRole,
+          parent: root,
+          body: 'C’est noté, le chauffeur est prévenu.',
+        }),
+      );
+    });
+    if (noteReplies.length) await personNoteRepository.save(noteReplies, { chunk: 100 });
 
     const volunteerMissionsToCreate: VolunteerMission[] = [];
     const volunteerShiftsToCreate: VolunteerShift[] = [];

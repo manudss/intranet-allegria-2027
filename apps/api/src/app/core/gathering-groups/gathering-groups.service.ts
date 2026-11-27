@@ -125,12 +125,13 @@ export class GatheringGroupsService {
     return team.jeunes + (countAnimators ? team.animateurs : 0);
   }
 
-  private async teamSizes(teamIds: number[]): Promise<
-    Map<number, { jeunes: number; animateurs: number }>
-  > {
+  private async teamSizes(
+    teamIds: number[],
+    manager?: EntityManager,
+  ): Promise<Map<number, { jeunes: number; animateurs: number }>> {
     const out = new Map<number, { jeunes: number; animateurs: number }>();
     if (!teamIds.length) return out;
-    const rows: { id: number; jeunes: string; animateurs: string }[] = await this.dataSource.query(
+    const rows: { id: number; jeunes: string; animateurs: string }[] = await (manager ?? this.dataSource).query(
       `SELECT t.id,
               COUNT(DISTINCT tp.participant_id) AS jeunes,
               ((CASE WHEN t.primary_animator_id IS NOT NULL THEN 1 ELSE 0 END)
@@ -581,7 +582,7 @@ export class GatheringGroupsService {
     const links = await manager.find(GatheringGroupTeam, { where: { groupId: group.id } });
     const kept = links.filter((l) => !removeTeamIds.includes(l.teamId)).map((l) => l.teamId);
     const all = [...kept, ...addTeamIds.filter((t) => !kept.includes(t))];
-    const sizes = await this.teamSizes(all);
+    const sizes = await this.teamSizes(all, manager);
     let persons = 0;
     for (const id of all) {
       const size = sizes.get(id);

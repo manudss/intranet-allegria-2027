@@ -81,6 +81,7 @@ export class GatheringFichePage implements OnInit, OnDestroy {
 
   // Créneaux de l'agenda liés (plusieurs-à-plusieurs, ajout et retrait indépendants)
   protected readonly allSequences = signal<GatheringSequenceRef[]>([]);
+  protected readonly tab = signal<'resume' | 'creneaux' | 'equipes' | 'personnes' | 'responsables'>('resume');
   protected readonly sequenceSearch = signal('');
   /** Alertes du groupe regroupées par type : compactes, détail déroulable, rien de masqué. */
   protected readonly alertGroups = computed(() => {

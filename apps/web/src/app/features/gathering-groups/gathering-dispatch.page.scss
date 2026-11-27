@@ -1,7 +1,7 @@
 :host { display: block; }
 
 .back { margin: 0 0 .5rem; }
-.notice { position: sticky; top: .5rem; z-index: 20; display: flex; gap: .5rem; align-items: center; padding: .6rem .9rem; border-radius: .6rem; background: var(--appearance-surface); box-shadow: var(--card-shadow); margin-bottom: .75rem; }
+.notice { position: sticky; top: 3.4rem; z-index: 20; display: flex; gap: .5rem; align-items: center; padding: .6rem .9rem; border-radius: .6rem; background: var(--appearance-surface); box-shadow: var(--card-shadow); margin-bottom: .75rem; }
 .notice.error { color: var(--appearance-error); }
 .notice .link, .link { border: 0; background: none; cursor: pointer; color: inherit; }
 
@@ -14,11 +14,11 @@
 .proposal h2 { margin: 0 0 .4rem; font-size: 1rem; }
 .proposal ul { margin: 0; padding-left: 1.1rem; }
 .unplaced-reason { color: #c62828; margin: .2rem 0 0; font-size: .85rem; }
-.proposal { position: relative; }
-.proposal-head { position: sticky; top: .5rem; z-index: 10; display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: space-between; background: var(--appearance-surface); padding-block: .25rem; }
+.proposal { position: sticky; top: 3.4rem; z-index: 10; }
+.proposal-head { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: space-between; background: var(--appearance-surface); padding-block: .25rem; }
 .proposal-head h2 { margin: 0; }
 .proposal-actions { display: flex; gap: .5rem; }
-.proposal-list { max-block-size: 14rem; overflow: auto; margin: .4rem 0 0; }
+.proposal-list { max-block-size: 7rem; overflow: auto; margin: .4rem 0 0; }
 .proposal-unplaced { margin-top: .5rem; }
 .proposal-unplaced summary { cursor: pointer; color: #c62828; font-size: .9rem; }
 .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .5rem; margin-top: .5rem; }
@@ -31,7 +31,7 @@
 .group-card.target { cursor: pointer; }
 .group-card.drop { outline: 2px solid var(--allegria-primary); background: var(--appearance-surface); }
 .refusal { margin: .2rem 0 0; color: #c62828; font-size: .8rem; }
-.placing-bar { position: sticky; top: .5rem; z-index: 15; margin: 0 0 .5rem; padding: .5rem .7rem; border-radius: .6rem; background: #fdf0dc; box-shadow: var(--card-shadow); }
+.placing-bar { position: sticky; top: 3.4rem; z-index: 15; margin: 0 0 .5rem; padding: .5rem .7rem; border-radius: .6rem; background: #fdf0dc; box-shadow: var(--card-shadow); }
 .placing-bar p { margin: 0 0 .4rem; font-size: .9rem; }
 .placing-controls { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
 .placing-controls app-select-field { flex: 1 1 14rem; }

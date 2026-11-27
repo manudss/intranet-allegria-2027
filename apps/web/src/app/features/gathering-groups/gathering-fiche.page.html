@@ -25,11 +25,7 @@
       <div class="head-main">
         <span class="cat" [class]="'cat cat-' + f.category | lowercase">{{ categoryLabels[f.category] }}</span>
         @if (f.location) { <span class="muted">{{ f.location }}</span> }
-        @if (f.sequence; as sequence) {
-          <span class="muted">{{ sequence.eventDate | date: 'dd/MM/yyyy' }} · {{ sequence.startTime }}–{{ sequence.endTime }} · {{ sequence.title }}</span>
-        } @else {
-          <span class="muted">Répartition autonome</span>
-        }
+        <span class="muted">{{ f.sequences.length }} créneau{{ f.sequences.length > 1 ? 'x' : '' }} lié{{ f.sequences.length > 1 ? 's' : '' }}</span>
       </div>
       <div class="gauge-line">
         <span class="gauge" [class.overflow]="f.overflow" [class.almost]="f.almostFull">
@@ -79,6 +75,58 @@
         </form>
       </section>
     }
+
+    <section class="card" aria-labelledby="slots-title">
+      <h2 id="slots-title">Créneaux de l'agenda liés ({{ f.sequences.length }})</h2>
+      <table class="data-table" aria-label="Créneaux liés au groupe">
+        <thead><tr><th>Date</th><th>Horaire</th><th>Créneau</th><th>Piste</th><th>Lieu</th><th></th></tr></thead>
+        <tbody>
+          @for (q of f.sequences; track q.id) {
+            <tr>
+              <td>{{ q.eventDate | date: 'dd/MM/yyyy' }}</td>
+              <td>{{ q.startTime }}–{{ q.endTime }}</td>
+              <td>
+                @if (canOpenAgenda()) {
+                  <a [routerLink]="['/programme/evenements', q.id]"><strong>{{ q.title }}</strong></a>
+                } @else {
+                  <strong>{{ q.title }}</strong>
+                }
+              </td>
+              <td>{{ trackLabels[q.track] }}</td>
+              <td>{{ q.location ?? '' }}</td>
+              <td>
+                @if (canEditGroups()) {
+                  <button type="button" tuiButton appearance="flat" size="xs" (click)="unlinkSequence(q)">Retirer</button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6" class="muted">Ce groupe n'est lié à aucun créneau.</td></tr>
+          }
+        </tbody>
+      </table>
+      @if (canEditGroups() && canOpenAgenda() && !addingSequence()) {
+        <div class="add-row">
+          <button type="button" tuiButton appearance="secondary" size="s" (click)="openAddSequence()">Ajouter un créneau</button>
+        </div>
+      }
+      @if (canEditGroups() && canOpenAgenda() && addingSequence()) {
+        <div class="add-row">
+          <input type="search" placeholder="Ajouter un créneau : rechercher (titre, date, lieu)" aria-label="Rechercher un créneau à ajouter"
+                 [value]="sequenceSearch()" (input)="sequenceSearch.set($any($event.target).value)" />
+        </div>
+        <ul class="results" aria-label="Créneaux à ajouter">
+          @for (x of addableSequences(); track x.id) {
+            <li>
+              <span>{{ x.eventDate | date: 'dd/MM/yyyy' }} · {{ x.startTime }}–{{ x.endTime }} · {{ x.title }} ({{ trackLabels[x.track] }}){{ x.location ? ' · ' + x.location : '' }}</span>
+              <button type="button" tuiButton appearance="secondary" size="xs" (click)="linkSequence(x.id)">Lier ce créneau</button>
+            </li>
+          } @empty {
+            <li class="muted">Aucun créneau à ajouter.</li>
+          }
+        </ul>
+      }
+    </section>
 
     <section class="card" aria-labelledby="teams-title">
       <h2 id="teams-title">Équipes ({{ f.teams.length }})</h2>

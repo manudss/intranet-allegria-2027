@@ -4,6 +4,7 @@ import { AuthModule } from '../auth/auth.module';
 import {
   GatheringGroup,
   GatheringGroupManager,
+  GatheringGroupSequence,
   GatheringGroupTeam,
   GatheringGroupVolunteerTeam,
   GatheringRepartition,
@@ -21,6 +22,7 @@ import { GatheringGroupsService } from './gathering-groups.service';
       GatheringRepartition,
       GatheringGroup,
       GatheringGroupTeam,
+      GatheringGroupSequence,
       GatheringGroupVolunteerTeam,
       GatheringGroupManager,
       Team,

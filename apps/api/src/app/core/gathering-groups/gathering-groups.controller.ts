@@ -226,6 +226,35 @@ export class GatheringGroupsController {
     return this.service.detachVolunteerTeam(id, volunteerTeamId, scope);
   }
 
+  @ApiOperation({ summary: 'Créneaux de l\'agenda proposables pour lier un groupe' })
+  @AccessModule('AGENDA')
+  @Get('sequences')
+  sequenceOptions() {
+    return this.service.sequenceOptions();
+  }
+
+  @ApiOperation({ summary: 'Lier le groupe à un créneau de l\'agenda (indépendamment des autres groupes)' })
+  @AccessLevelRequired('EDIT')
+  @Put('groups/:id/sequences/:sequenceId')
+  linkSequence(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('sequenceId', ParseIntPipe) sequenceId: number,
+    @GatheringScope() scope: GatheringScopeInfo,
+  ) {
+    return this.service.linkSequence(id, sequenceId, scope);
+  }
+
+  @ApiOperation({ summary: 'Retirer le lien du groupe avec un créneau (les autres liens restent)' })
+  @AccessLevelRequired('EDIT')
+  @Delete('groups/:id/sequences/:sequenceId')
+  unlinkSequence(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('sequenceId', ParseIntPipe) sequenceId: number,
+    @GatheringScope() scope: GatheringScopeInfo,
+  ) {
+    return this.service.unlinkSequence(id, sequenceId, scope);
+  }
+
   @ApiOperation({ summary: 'Responsables du groupe (périmètre « ses groupes »)' })
   @Get('groups/:id/managers')
   listManagers(@Param('id', ParseIntPipe) id: number, @GatheringScope() scope: GatheringScopeInfo) {

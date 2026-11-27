@@ -224,15 +224,14 @@ export class ProgrammePage {
    * vues ; la recherche surligne et estompe sans retirer les créneaux.
    */
   readonly groupLanes = computed(() => {
-    const byRepartition = new Map(this.repartitions().map((r) => [r.id, r]));
     const lanes = new Map<number, { group: GatheringGroupSummary; repartition: GatheringRepartition; sequences: ProgramSequence[] }>();
     const without: ProgramSequence[] = [];
     for (const sequence of this.daySequences()) {
       if (!this.matchesTrack(sequence)) continue;
-      const linked = (sequence.gatheringRepartitionIds ?? [])
-        .map((id) => byRepartition.get(id))
-        .filter((r): r is GatheringRepartition => !!r);
-      const groups = linked.flatMap((r) => r.groups.map((group) => ({ group, repartition: r })));
+      const linkedIds = new Set(sequence.gatheringGroupIds ?? []);
+      const groups = this.repartitions().flatMap((r) =>
+        r.groups.filter((group) => linkedIds.has(group.id)).map((group) => ({ group, repartition: r })),
+      );
       if (groups.length === 0) {
         without.push(sequence);
         continue;

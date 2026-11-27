@@ -46,7 +46,14 @@ const build = (data: {
   links?: { groupId: number; teamId: number; repartitionId: number }[];
   teams?: ReturnType<typeof team>[];
   sizes?: Record<number, { jeunes: number; animateurs: number }>;
+  sequenceIds?: number[];
 }) => {
+  const sequenceLinks = {
+    findOneBy: vi.fn(async () => null),
+    create: vi.fn((p: unknown) => p),
+    save: vi.fn(async (p: unknown) => p),
+    delete: vi.fn(async () => undefined),
+  };
   const rep = data.repartition ?? repartition();
   const manager = {
     findOne: vi.fn(async (entity: { name?: string }, opts: { where: { id?: number; teamId?: number; repartitionId?: number } }) => {
@@ -104,6 +111,7 @@ const build = (data: {
       save: vi.fn(async (p: unknown) => p),
       remove: vi.fn(async () => undefined),
     } as never,
+    sequenceLinks as never,
     {
       find: vi.fn(async ({ where }: { where?: { repartitionId?: number; groupId?: number } }) =>
         (data.links ?? []).filter(
@@ -119,11 +127,11 @@ const build = (data: {
     {
       find: vi.fn(async () => data.teams ?? []),
     } as never,
-    { findOneBy: vi.fn(async () => null) } as never,
+    { findOneBy: vi.fn(async ({ id }: { id: number }) => (data.sequenceIds?.includes(id) ? { id } : null)) } as never,
     { findOneBy: vi.fn(async () => null) } as never,
     dataSource as never,
   );
-  return { service, manager };
+  return { service, manager, sequenceLinks, dataSource };
 };
 
 describe('règle des pistes (TA / ES / mixte)', () => {
@@ -289,5 +297,43 @@ describe('application en une transaction', () => {
         ALL,
       ),
     ).resolves.toEqual({ applied: 2 });
+  });
+});
+
+describe('liens groupe <-> créneau (plusieurs-à-plusieurs)', () => {
+  it('lie un seul groupe à un créneau, sans toucher aux autres groupes', async () => {
+    const { service, sequenceLinks } = build({ groups: [group(1), group(2)], sequenceIds: [50] });
+    await expect(service.linkSequence(1, 50, ALL)).resolves.toEqual({ linked: true, already: false });
+    expect(sequenceLinks.save).toHaveBeenCalledTimes(1);
+    expect(sequenceLinks.save).toHaveBeenCalledWith({ groupId: 1, programSequenceId: 50 });
+  });
+
+  it('refuse un créneau inconnu', async () => {
+    const { service } = build({ groups: [group(1)] });
+    await expect(service.linkSequence(1, 99, ALL)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('retire le lien d un groupe pour un créneau précis seulement', async () => {
+    const { service, sequenceLinks } = build({ groups: [group(1)], sequenceIds: [50, 51] });
+    await service.unlinkSequence(1, 50, ALL);
+    expect(sequenceLinks.delete).toHaveBeenCalledWith({ groupId: 1, programSequenceId: 50 });
+  });
+
+  it('un compte limité à ses groupes ne lie pas un autre groupe', async () => {
+    const { service } = build({ groups: [group(1), group(2)], sequenceIds: [50] });
+    await expect(service.linkSequence(2, 50, SCOPED([1]))).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('renvoyer le même événement à la répartition ne ré-ajoute pas un lien retiré', async () => {
+    const { service, dataSource } = build({
+      repartition: repartition({ programSequenceId: 50 }),
+      groups: [group(1)],
+      sequenceIds: [50],
+    });
+    await service.updateRepartition(1, { programSequenceId: 50 } as never, ALL);
+    expect(dataSource.query).not.toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO gathering_group_sequences'),
+      expect.anything(),
+    );
   });
 });

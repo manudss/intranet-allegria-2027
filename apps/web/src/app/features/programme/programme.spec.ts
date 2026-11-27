@@ -895,9 +895,9 @@ describe('ProgrammePage — vue « Par groupe »', () => {
   it('regroupe les créneaux par groupe de rassemblement, « Sans groupe » en dernier', () => {
     const { http, flushDay, fixture, component } = setup(['COORDINATOR']);
     flushDay([
-      seq(1, '08:00', null, { title: 'Grand Jeu', gatheringRepartitionIds: [70] }),
+      seq(1, '08:00', null, { title: 'Grand Jeu', gatheringGroupIds: [7] }),
       seq(2, '09:00', 1, { title: 'Repas' }),
-      seq(3, '10:00', 2, { title: 'Veillée', gatheringRepartitionIds: [90, 70] }),
+      seq(3, '10:00', 2, { title: 'Veillée', gatheringGroupIds: [7, 9] }),
     ]);
     component.setDayLayout('groups');
     http.expectOne('/api/gathering/repartitions').flush(GROUPS);
@@ -920,7 +920,7 @@ describe('ProgrammePage — vue « Par groupe »', () => {
   it('la recherche surligne aussi dans la vue par groupe', () => {
     const { http, flushDay, fixture, component } = setup(['COORDINATOR']);
     flushDay([
-      seq(1, '08:00', null, { title: 'Grand Jeu', gatheringRepartitionIds: [70] }),
+      seq(1, '08:00', null, { title: 'Grand Jeu', gatheringGroupIds: [7] }),
       seq(2, '09:00', 1, { title: 'Repas' }),
     ]);
     component.setDayLayout('groups');

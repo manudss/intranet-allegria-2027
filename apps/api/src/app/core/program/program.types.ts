@@ -187,6 +187,7 @@ export interface ProgramSequenceDayView extends ProgramSequenceView {
   groupIds: number[];
   /** Répartitions de groupes de rassemblement rattachées à ce créneau. */
   gatheringRepartitionIds?: number[];
+  gatheringGroupIds?: number[];
 }
 
 export interface ProgramSequenceView {

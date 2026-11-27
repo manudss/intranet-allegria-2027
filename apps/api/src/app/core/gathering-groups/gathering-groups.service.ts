@@ -11,6 +11,7 @@ import {
   GatheringGroup,
   GatheringGroupCategory,
   GatheringGroupManager,
+  GatheringGroupSequence,
   GatheringGroupTeam,
   GatheringGroupVolunteerTeam,
   GatheringRepartition,
@@ -71,6 +72,8 @@ export class GatheringGroupsService {
     private readonly repartitions: Repository<GatheringRepartition>,
     @InjectRepository(GatheringGroup)
     private readonly groups: Repository<GatheringGroup>,
+    @InjectRepository(GatheringGroupSequence)
+    private readonly sequenceLinks: Repository<GatheringGroupSequence>,
     @InjectRepository(GatheringGroupTeam)
     private readonly teamLinks: Repository<GatheringGroupTeam>,
     @InjectRepository(GatheringGroupVolunteerTeam)
@@ -187,6 +190,45 @@ export class GatheringGroupsService {
     return { byGroup, teamIds };
   }
 
+  /** Créneaux liés à chaque groupe (relation plusieurs-à-plusieurs), triés par date et heure. */
+  private async groupSequences(groupIds: number[]) {
+    const out = new Map<
+      number,
+      {
+        id: number;
+        title: string;
+        eventDate: string;
+        startTime: string;
+        endTime: string;
+        track: string;
+        location: string | null;
+      }[]
+    >();
+    if (!groupIds.length) return out;
+    const rows: {
+      group_id: number;
+      id: number;
+      title: string;
+      eventDate: string;
+      startTime: string;
+      endTime: string;
+      track: string;
+      location: string | null;
+    }[] = await this.dataSource.query(
+      `SELECT gs.group_id, s.id, s.title, s."eventDate"::text AS "eventDate", s."startTime"::text AS "startTime",
+              s."endTime"::text AS "endTime", s.track::text AS track, s.location
+         FROM gathering_group_sequences gs
+         JOIN program_sequences s ON s.id = gs.program_sequence_id
+        WHERE gs.group_id = ANY($1::int[])
+        ORDER BY s."eventDate", s."startTime", s.id`,
+      [groupIds],
+    );
+    for (const { group_id, ...seq } of rows) {
+      out.set(group_id, [...(out.get(group_id) ?? []), seq]);
+    }
+    return out;
+  }
+
   // ---- Lecture : page centrale ------------------------------------------
 
   /**
@@ -202,7 +244,14 @@ export class GatheringGroupsService {
       .leftJoinAndMapOne('r.programSequence', ProgramSequence, 's', 's.id = r.program_sequence_id')
       .orderBy('r.id', 'ASC');
     if (date) {
-      qb.where('s."eventDate" = :date OR r.program_sequence_id IS NULL', { date });
+      qb.where(
+        `r.program_sequence_id IS NULL OR s."eventDate" = :date OR EXISTS (
+           SELECT 1 FROM gathering_group_sequences gs
+             JOIN gathering_groups g ON g.id = gs.group_id
+             JOIN program_sequences s2 ON s2.id = gs.program_sequence_id
+            WHERE g.repartition_id = r.id AND s2."eventDate" = :date)`,
+        { date },
+      );
     }
     const repartitions = await qb.getMany();
 
@@ -215,6 +264,7 @@ export class GatheringGroupsService {
     const filter = this.scopeFilter(scope);
     const groups = filter ? allGroups.filter((g) => filter.includes(g.id)) : allGroups;
     const { byGroup, teamIds } = await this.groupCounts(groups.map((g) => g.id));
+    const sequencesByGroup = await this.groupSequences(groups.map((g) => g.id));
 
     return repartitions.map((r) => {
       const own = groups.filter((g) => g.repartitionId === r.id);
@@ -246,6 +296,7 @@ export class GatheringGroupsService {
             location: g.location,
             ...gauge,
             teamIds: teamIds.get(g.id) ?? [],
+            sequences: sequencesByGroup.get(g.id) ?? [],
           };
         }),
       };
@@ -273,6 +324,7 @@ export class GatheringGroupsService {
   async updateRepartition(id: number, dto: UpdateRepartitionDto, scope: GatheringScopeInfo) {
     this.assertRepartitionWritable(scope);
     const repartition = await this.findRepartition(id);
+    const previousSequenceId = repartition.programSequenceId;
     if (dto.name !== undefined) {
       if (!dto.name?.trim()) throw new BadRequestException('Le nom est obligatoire.');
       repartition.name = dto.name.trim();
@@ -290,7 +342,17 @@ export class GatheringGroupsService {
       repartition.notes = dto.notes ?? null;
     }
     if (dto.countAnimators !== undefined) repartition.countAnimators = dto.countAnimators;
-    return this.repartitions.save(repartition);
+    const saved = await this.repartitions.save(repartition);
+    if (saved.programSequenceId != null && saved.programSequenceId !== previousSequenceId) {
+      // Seulement quand l'événement de la répartition CHANGE (jamais sur un simple renvoi de la même
+      // valeur) : un lien retiré groupe par groupe ne réapparaît pas.
+      await this.dataSource.query(
+        `INSERT INTO gathering_group_sequences (group_id, program_sequence_id)
+         SELECT id, $2 FROM gathering_groups WHERE repartition_id = $1 ON CONFLICT DO NOTHING`,
+        [saved.id, saved.programSequenceId],
+      );
+    }
+    return saved;
   }
 
   /** Dérogation au dépassement bloquant : réservée au niveau Gérer (garde), toujours explicite. */
@@ -329,7 +391,7 @@ export class GatheringGroupsService {
         }),
       );
       for (const group of sourceGroups) {
-        await manager.save(
+        const copiedGroup = await manager.save(
           manager.create(GatheringGroup, {
             repartitionId: copy.id,
             name: group.name,
@@ -341,6 +403,11 @@ export class GatheringGroupsService {
             notes: group.notes,
           }),
         );
+        await manager.query(
+          `INSERT INTO gathering_group_sequences (group_id, program_sequence_id)
+           SELECT $2, program_sequence_id FROM gathering_group_sequences WHERE group_id = $1`,
+          [group.id, copiedGroup.id],
+        );
       }
       return copy;
     });
@@ -350,7 +417,7 @@ export class GatheringGroupsService {
 
   async createGroup(repartitionId: number, dto: CreateGroupDto, scope: GatheringScopeInfo) {
     this.assertRepartitionWritable(scope);
-    await this.findRepartition(repartitionId);
+    const parent = await this.findRepartition(repartitionId);
     if (!dto.name?.trim()) throw new BadRequestException('Le nom est obligatoire.');
     this.assertCapacity(dto.capacityPersons);
     const group = this.groups.create({
@@ -363,7 +430,46 @@ export class GatheringGroupsService {
       documentLinkId: dto.documentLinkId ?? null,
       notes: dto.notes ?? null,
     });
-    return this.groups.save(group);
+    const saved = await this.groups.save(group);
+    // Un nouveau groupe hérite du créneau de sa répartition (retirable ensuite, groupe par groupe).
+    if (parent.programSequenceId != null) {
+      await this.sequenceLinks.save(
+        this.sequenceLinks.create({ groupId: saved.id, programSequenceId: parent.programSequenceId }),
+      );
+    }
+    return saved;
+  }
+
+  /** Créneaux proposables pour lier un groupe (lecture seule, sans exiger l'accès à l'agenda). */
+  async sequenceOptions() {
+    const rows: {
+      id: number; title: string; eventDate: string; startTime: string; endTime: string; track: string; location: string | null;
+    }[] = await this.dataSource.query(
+      `SELECT id, title, "eventDate"::text AS "eventDate", "startTime"::text AS "startTime", "endTime"::text AS "endTime",
+              track::text AS track, location
+         FROM program_sequences ORDER BY "eventDate", "startTime", id`,
+    );
+    return rows;
+  }
+
+  // ---- Liens groupe <-> créneau (plusieurs-à-plusieurs, indépendants) ----------
+
+  async linkSequence(groupId: number, sequenceId: number, scope: GatheringScopeInfo) {
+    this.assertGroupInScope(scope, groupId);
+    await this.findGroup(groupId);
+    const sequence = await this.sequences.findOneBy({ id: sequenceId });
+    if (!sequence) throw new BadRequestException('Créneau de l\'agenda introuvable.');
+    const existing = await this.sequenceLinks.findOneBy({ groupId, programSequenceId: sequenceId });
+    if (!existing) {
+      await this.sequenceLinks.save(this.sequenceLinks.create({ groupId, programSequenceId: sequenceId }));
+    }
+    return { linked: true, already: !!existing };
+  }
+
+  async unlinkSequence(groupId: number, sequenceId: number, scope: GatheringScopeInfo) {
+    this.assertGroupInScope(scope, groupId);
+    await this.sequenceLinks.delete({ groupId, programSequenceId: sequenceId });
+    return { unlinked: true };
   }
 
   async updateGroup(id: number, dto: UpdateGroupDto, scope: GatheringScopeInfo) {
@@ -908,6 +1014,7 @@ export class GatheringGroupsService {
         allowOverflow: repartition.allowOverflow,
         countAnimators: repartition.countAnimators,
       },
+      sequences: (await this.groupSequences([group.id])).get(group.id) ?? [],
       sequence: sequence
         ? {
             id: sequence.id,
@@ -997,11 +1104,12 @@ export class GatheringGroupsService {
       }[] = await this.dataSource.query(
         `SELECT DISTINCT l2.team_id, r2.id AS other_repartition_id, r2.name AS other_name
            FROM gathering_group_teams l1
-           JOIN gathering_repartitions r1 ON r1.id = l1.repartition_id
-           JOIN program_sequences s1 ON s1.id = r1.program_sequence_id
-           JOIN gathering_group_teams l2 ON l2.team_id IN (SELECT team_id FROM gathering_group_teams WHERE repartition_id = $1)
-           JOIN gathering_repartitions r2 ON r2.id = l2.repartition_id AND r2.id <> $1
-           JOIN program_sequences s2 ON s2.id = r2.program_sequence_id
+           JOIN gathering_group_sequences gs1 ON gs1.group_id = l1.group_id
+           JOIN program_sequences s1 ON s1.id = gs1.program_sequence_id
+           JOIN gathering_group_teams l2 ON l2.team_id = l1.team_id AND l2.repartition_id <> l1.repartition_id
+           JOIN gathering_group_sequences gs2 ON gs2.group_id = l2.group_id
+           JOIN program_sequences s2 ON s2.id = gs2.program_sequence_id
+           JOIN gathering_repartitions r2 ON r2.id = l2.repartition_id
           WHERE l1.repartition_id = $1
             AND s2."eventDate" = s1."eventDate"
             AND s2."startTime" < s1."endTime" AND s1."startTime" < s2."endTime"`,
@@ -1022,22 +1130,26 @@ export class GatheringGroupsService {
 
   /** Répartitions rattachées à un événement de l'agenda (fiche événement, planning). */
   async forSequence(sequenceId: number, scope: GatheringScopeInfo) {
-    const repartitions = await this.repartitions.find({
-      where: { programSequenceId: sequenceId },
-      order: { id: 'ASC' },
-    });
+    const linked: { group_id: number }[] = await this.dataSource.query(
+      `SELECT group_id FROM gathering_group_sequences WHERE program_sequence_id = $1`,
+      [sequenceId],
+    );
     const filter = this.scopeFilter(scope);
-    const groups = repartitions.length
-      ? await this.groups.find({ where: { repartitionId: In(repartitions.map((r) => r.id)) } })
+    const linkedIds = linked.map((l) => l.group_id).filter((id) => !filter || filter.includes(id));
+    const groups = linkedIds.length ? await this.groups.find({ where: { id: In(linkedIds) }, order: { id: 'ASC' } }) : [];
+    const repartitions = groups.length
+      ? await this.repartitions.find({
+          where: { id: In([...new Set(groups.map((g) => g.repartitionId))]) },
+          order: { id: 'ASC' },
+        })
       : [];
-    const visible = filter ? groups.filter((g) => filter.includes(g.id)) : groups;
-    const { byGroup } = await this.groupCounts(visible.map((g) => g.id));
+    const { byGroup } = await this.groupCounts(groups.map((g) => g.id));
     return repartitions.map((r) => ({
       id: r.id,
       name: r.name,
       allowOverflow: r.allowOverflow,
       countAnimators: r.countAnimators,
-      groups: visible
+      groups: groups
         .filter((g) => g.repartitionId === r.id)
         .map((g) => {
           const counts = byGroup.get(g.id) ?? { jeunes: 0, animateurs: 0, teamCount: 0 };

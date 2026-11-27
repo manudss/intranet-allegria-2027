@@ -18,6 +18,7 @@ import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { GatheringGroupsApiService } from './gathering-groups.api';
 import {
   CATEGORY_LABELS,
+  GatheringSequenceRef,
   GATHERING_CATEGORIES,
   GatheringCategory,
   GatheringFiche,
@@ -54,6 +55,8 @@ export class GatheringFichePage implements OnInit, OnDestroy {
   protected readonly canEditTeams = () => this.myAccess.can('GATHERING_TEAMS', 'EDIT');
   protected readonly canOpenPeople = () => this.myAccess.can('PARTICIPANTS', 'VIEW');
   protected readonly canEditPeople = () => this.myAccess.can('PARTICIPANTS', 'EDIT');
+  protected readonly canOpenAgenda = () => this.myAccess.can('AGENDA', 'VIEW');
+  protected readonly canEditGroups = () => this.myAccess.can('GATHERING_GROUPS', 'EDIT');
   protected readonly categoryOptions: SelectOption<GatheringCategory>[] = GATHERING_CATEGORIES.map(
     (c) => ({ value: c, label: CATEGORY_LABELS[c] }),
   );
@@ -75,6 +78,33 @@ export class GatheringFichePage implements OnInit, OnDestroy {
   // Équipes bénévoles opérationnelles
   protected readonly volunteerTeamOptions = signal<SelectOption<number>[]>([]);
   protected readonly volunteerTeamToAdd = signal<number | null>(null);
+
+  // Créneaux de l'agenda liés (plusieurs-à-plusieurs, ajout et retrait indépendants)
+  protected readonly allSequences = signal<GatheringSequenceRef[]>([]);
+  protected readonly sequenceSearch = signal('');
+  protected readonly addingSequence = signal(false);
+  private sequencesLoaded = false;
+
+  /** Charge les créneaux proposables à la demande (lecture réservée aux comptes ayant accès à l'agenda). */
+  protected openAddSequence(): void {
+    this.addingSequence.set(true);
+    if (this.sequencesLoaded) return;
+    this.sequencesLoaded = true;
+    this.api.sequenceOptions().subscribe({
+      next: (list) => this.allSequences.set(list),
+      error: () => (this.sequencesLoaded = false),
+    });
+  }
+  protected readonly linkedSequenceIds = computed(
+    () => new Set((this.fiche()?.sequences ?? []).map((q) => q.id)),
+  );
+  protected readonly addableSequences = computed(() => {
+    const q = this.sequenceSearch().trim().toLowerCase();
+    return this.allSequences()
+      .filter((x) => !this.linkedSequenceIds().has(x.id))
+      .filter((x) => !q || `${x.title} ${x.eventDate} ${x.startTime} ${x.location ?? ''}`.toLowerCase().includes(q))
+      .slice(0, 30);
+  });
 
   // Responsables
   protected readonly managerToAdd = signal<PersonSummary | null>(null);
@@ -123,6 +153,29 @@ export class GatheringFichePage implements OnInit, OnDestroy {
       next: (fiche) => this.fiche.set(fiche),
       error: () => this.notice.set({ kind: 'error', text: 'Rechargement impossible.' }),
     });
+  }
+
+  protected linkSequence(sequenceId: number): void {
+    this.api.linkSequence(this.groupId(), sequenceId).subscribe({
+      next: () => this.reload(),
+      error: (err) => this.notice.set({ kind: 'error', text: this.readError(err, 'Lien impossible.') }),
+    });
+  }
+
+  protected unlinkSequence(sequence: GatheringSequenceRef): void {
+    this.confirmDialog
+      .ask({
+        title: 'Retirer le créneau',
+        message: `Retirer le lien avec « ${sequence.title} » (${sequence.eventDate} ${sequence.startTime}) ? Les autres créneaux et groupes ne changent pas.`,
+        yes: 'Retirer',
+      })
+      .subscribe((ok) => {
+        if (!ok) return;
+        this.api.unlinkSequence(this.groupId(), sequence.id).subscribe({
+          next: () => this.reload(),
+          error: (err) => this.notice.set({ kind: 'error', text: this.readError(err, 'Retrait impossible.') }),
+        });
+      });
   }
 
   protected startEdit(): void {

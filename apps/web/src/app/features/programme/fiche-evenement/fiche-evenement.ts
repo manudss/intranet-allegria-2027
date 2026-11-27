@@ -761,44 +761,31 @@ export class FicheEvenementPage {
     this.reloadGatheringOptions();
   }
 
-  /** Lie la répartition du groupe choisi à ce créneau (tous ses groupes deviennent concernés). */
+  /** Lie CE groupe (et lui seul) à ce créneau ; ses autres liens et ceux des autres groupes restent. */
   linkGatheringGroup(option: GatheringGroupOption): void {
     const sequence = this.sequence();
     if (!sequence || this.busy()) return;
-    const apply = () => this.setRepartitionSequence(option.repartitionId, sequence.id, () => this.showGroupPicker.set(false));
-    // Le lien est porté par la répartition (modèle actuel) : on le dit explicitement avant d'agir.
-    const siblings = this.allGatheringGroups()
-      .filter((g) => g.repartitionId === option.repartitionId)
-      .map((g) => g.name);
-    const moved =
-      option.sequence && option.sequence.id !== sequence.id
-        ? ` Elle est actuellement liée à « ${option.sequence.title} » (${option.sequence.eventDate} ${option.sequence.startTime}) et sera retirée de ce créneau.`
-        : '';
-    this.confirmDialog
-      .ask({
-        title: 'Lier la répartition à ce créneau',
-        message: `Le groupe « ${option.name} » fait partie de la répartition « ${option.repartitionName} ». Le lien se fait au niveau de la répartition : ses ${siblings.length} groupes (${siblings.join(', ')}) seront tous concernés par ce créneau.${moved}`,
-        yes: 'Lier la répartition',
-      })
-      .subscribe((ok) => ok && apply());
-  }
-
-  /** Détache une répartition de ce créneau (ses groupes et placements sont conservés). */
-  unlinkRepartition(repartitionId: number): void {
-    if (this.busy()) return;
-    this.setRepartitionSequence(repartitionId, null);
-  }
-
-  private setRepartitionSequence(repartitionId: number, sequenceId: number | null, after?: () => void): void {
     this.busy.set(true);
-    this.gatheringApi.updateRepartition(repartitionId, { programSequenceId: sequenceId }).subscribe({
+    this.gatheringApi.linkSequence(option.groupId, sequence.id).subscribe({
       next: () => {
         this.busy.set(false);
-        after?.();
         this.reloadLinkedGroups();
       },
-      error: (err) =>
-        this.fail(err?.error?.message || 'La mise à jour des groupes de rassemblement a échoué.'),
+      error: (err) => this.fail(err?.error?.message || 'Le lien du groupe avec ce créneau a échoué.'),
+    });
+  }
+
+  /** Retire le lien d'un seul groupe avec ce créneau (le groupe et ses autres créneaux sont conservés). */
+  unlinkGatheringGroup(groupId: number): void {
+    const sequence = this.sequence();
+    if (!sequence || this.busy()) return;
+    this.busy.set(true);
+    this.gatheringApi.unlinkSequence(groupId, sequence.id).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.reloadLinkedGroups();
+      },
+      error: (err) => this.fail(err?.error?.message || 'Le retrait du lien a échoué.'),
     });
   }
 

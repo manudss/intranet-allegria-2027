@@ -695,7 +695,7 @@ export class DelegationsService {
   async notesFeed(scope: AccessScopeInfo, filter: NoteFeedFilter = 'WITH_NOTES', q?: string) {
     // Filtrage en mémoire par périmètre : volumes faibles (notes de gestion).
     const allNotes = await this.notesRepository.find({
-      relations: { delegation: true },
+      relations: { delegation: true, parent: true },
       order: { createdAt: 'DESC' },
     });
     const notes = scope.all

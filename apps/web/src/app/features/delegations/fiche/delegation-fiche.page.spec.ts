@@ -107,11 +107,9 @@ describe('DelegationFichePage (lot 4 : fiche en vues)', () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.detectChanges();
     const http = TestBed.inject(HttpTestingController);
-    http.expectOne('/api/groups/2').flush({
-      id: 2,
-      name: "Délégation d'Annecy",
-      diocese: 'Annecy',
-    });
+    // Non-régression : la fiche ne lit plus /api/groups/:id (module PARTICIPANTS),
+    // elle s'ouvre avec le seul droit TRANSPORT.
+    http.expectNone('/api/groups/2');
     http.expectOne('/api/delegations').flush([SUMMARY]);
     http.expectOne('/api/delegations/2/persons').flush(PERSONS);
     http
@@ -126,6 +124,12 @@ describe('DelegationFichePage (lot 4 : fiche en vues)', () => {
     fixture.detectChanges();
     return { fixture };
   }
+
+  it("n'appelle pas /api/groups et masque le lien de retour pour une seule délégation", async () => {
+    const { fixture } = await setup();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('a[href="/rassemblement"]')).toBeNull();
+  });
 
   it("vue d'ensemble : identité, responsables et répartition par sens", async () => {
     const { fixture } = await setup();

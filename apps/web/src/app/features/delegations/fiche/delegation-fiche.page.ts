@@ -2,8 +2,6 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { SHARED_IMPORTS } from '../../../shared/shared-imports';
-import { Group } from '../../../models/models';
-import { GroupsApiService } from '../../../services/api.services';
 import {
   DelegationSummary,
   DelegationsApiService,
@@ -32,14 +30,12 @@ type PersonFilter = 'TOUT' | 'JEUNE' | 'ANIMATEUR' | 'BENEVOLE';
 export class DelegationFichePage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(DelegationsApiService);
-  private readonly groupsApi = inject(GroupsApiService);
 
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
   protected readonly view = signal<FicheView>('ensemble');
 
   protected delegationId = 0;
-  protected readonly group = signal<Group | null>(null);
   protected readonly summary = signal<DelegationSummary | null>(null);
   protected readonly persons = signal<PersonLite[]>([]);
   protected readonly aller = signal<Repartition | null>(null);
@@ -49,6 +45,8 @@ export class DelegationFichePage implements OnInit {
   protected readonly noteCount = computed(() =>
     this.noteRows().reduce((total, row) => total + row.notesCount, 0),
   );
+  /** Le lien de retour n'a de sens que si la personne voit plusieurs délégations. */
+  protected readonly seesSeveral = signal(false);
   protected readonly delegationNames = signal<Map<number, string>>(new Map());
 
   protected readonly personFilter = signal<PersonFilter>('TOUT');
@@ -57,7 +55,6 @@ export class DelegationFichePage implements OnInit {
     this.delegationId = Number(this.route.snapshot.paramMap.get('id'));
     this.loading.set(true);
     forkJoin({
-      group: this.groupsApi.get(this.delegationId),
       summaries: this.api.listSummaries(),
       persons: this.api.persons(this.delegationId),
       aller: this.api.repartition(this.delegationId, 'ALLER'),
@@ -65,8 +62,8 @@ export class DelegationFichePage implements OnInit {
       notes: this.api.notesFeed('ALL'),
     }).subscribe({
       next: (r) => {
-        this.group.set(r.group);
         this.summary.set(r.summaries.find((s) => s.id === this.delegationId) ?? null);
+        this.seesSeveral.set(r.summaries.length > 1);
         this.delegationNames.set(new Map(r.summaries.map((s) => [s.id, s.name])));
         this.persons.set(r.persons);
         this.aller.set(r.aller);

@@ -196,6 +196,11 @@ export const appRoutes: Route[] = [
           import('./features/access-control/access-audit.page').then((m) => m.AccessAuditPage),
       },
       {
+        path: 'lieux',
+        title: 'Lieux',
+        loadComponent: () => import('./features/places/places-page').then((m) => m.PlacesPageComponent),
+      },
+      {
         path: 'hebergement/carte',
         title: 'Hébergement : carte',
         loadComponent: () =>

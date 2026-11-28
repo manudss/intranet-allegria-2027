@@ -51,3 +51,7 @@ export class PlaceListQuery {
 
 /** Résultat de résolution d'un lieu et d'une salle choisis (utilisé par les modules rattachés). */
 export type ResolvedLocation = { placeId: number | null; roomId: number | null; text: string | null };
+
+export class GeocodeDto {
+  @IsString() @MinLength(6) @MaxLength(200) query!: string;
+}

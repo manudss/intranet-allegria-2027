@@ -164,6 +164,7 @@ export class Layout {
       items: [
         { label: 'Agenda et ordonnancement', path: '/programme', icon: '@tui.calendar-clock' },
         { label: 'Groupes de rassemblement', path: '/groupes-rassemblement', icon: '@tui.layers' },
+        { label: 'Lieux', path: '/lieux', icon: '@tui.map-pin' },
         { label: 'Suivi des accès', path: '/acces/suivi', icon: '@tui.scan-line' },
         { label: 'Tableau de bord Jour J', path: '/jour-j', icon: '@tui.activity' },
         { label: 'Incidents et demandes', path: '/incidents', icon: '@tui.triangle-alert' },

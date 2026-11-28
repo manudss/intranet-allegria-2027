@@ -23,12 +23,30 @@ export class PlacesService {
   ) {}
 
   /** Liste (page Lieux, droit PLACES) : lieux, salles et compteurs de rattachements propres au lieu. */
-  async list(query: { kind?: string; q?: string }) {
+  async list(query: { kind?: string; q?: string }, grants: Grants) {
     const qb = this.places.createQueryBuilder('p').leftJoinAndSelect('p.rooms', 'r').orderBy('p.name', 'ASC').addOrderBy('r.name', 'ASC');
     if (query.kind) qb.andWhere('p.kind = :kind', { kind: query.kind });
     if (query.q?.trim()) qb.andWhere('(p.name ILIKE :q OR p.address ILIKE :q OR p.city ILIKE :q)', { q: `%${query.q.trim()}%` });
     const rows = await qb.getMany();
-    return rows.map((p) => this.toListItem(p));
+    // Compteurs : seulement pour les modules visibles (absents sinon, jamais « 0 »).
+    const vis = relationVisibility(grants);
+    const counts = async (table: string): Promise<Map<number, number>> => {
+      const r: { place_id: number; n: string }[] = await this.dataSource.query(
+        `SELECT "place_id", count(*)::text AS n FROM "${table}" WHERE "place_id" IS NOT NULL GROUP BY "place_id"`,
+      );
+      return new Map(r.map((x) => [x.place_id, Number(x.n)]));
+    };
+    const ev = vis.events ? await counts('program_sequences') : null;
+    const sh = vis.missions ? await counts('volunteer_shifts') : null;
+    const gr = vis.groups === 'ALL' ? await counts('gathering_groups') : null;
+    return rows.map((p) => ({
+      ...this.toListItem(p),
+      counts: {
+        ...(ev ? { events: ev.get(p.id) ?? 0 } : {}),
+        ...(sh ? { shifts: sh.get(p.id) ?? 0 } : {}),
+        ...(gr ? { groups: gr.get(p.id) ?? 0 } : {}),
+      },
+    }));
   }
 
   private toListItem(p: Place) {

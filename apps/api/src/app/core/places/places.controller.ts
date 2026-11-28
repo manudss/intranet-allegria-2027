@@ -8,7 +8,8 @@ import { AccessLevelRequired, AccessModule, GatheringScope, GatheringScopeInfo, 
 import { AccessRightsService } from '../access-rights/access-rights.service';
 import { ForbiddenException } from '@nestjs/common';
 import { PlacesService } from './places.service';
-import { CreatePlaceDto, PlaceListQuery, RoomDto, SetTeamsDto, UpdatePlaceDto } from './places.types';
+import { GeocodingService } from './geocoding.service';
+import { CreatePlaceDto, GeocodeDto, PlaceListQuery, RoomDto, SetTeamsDto, UpdatePlaceDto } from './places.types';
 import { PICKER_MODULES, hasAny } from './places.rights';
 
 type Req = { user: { id: number; roles: string[] } };
@@ -25,12 +26,20 @@ export class PlacesController {
   constructor(
     private readonly service: PlacesService,
     private readonly rights: AccessRightsService,
+    private readonly geocoder: GeocodingService,
   ) {}
+
+  @ApiOperation({ summary: 'Recherche d\'adresse (Nominatim, côté serveur, 1 requête/s, sur clic uniquement)' })
+  @AccessLevelRequired('EDIT')
+  @Post('geocode')
+  geocode(@Body() dto: GeocodeDto) {
+    return this.geocoder.search(dto.query);
+  }
 
   @ApiOperation({ summary: 'Liste des lieux (filtre par type, recherche)' })
   @Get()
-  list(@Query() query: PlaceListQuery) {
-    return this.service.list(query);
+  async list(@Query() query: PlaceListQuery, @Req() req: Req) {
+    return this.service.list(query, await this.rights.effective(req.user.id, req.user.roles));
   }
 
   @ApiOperation({ summary: 'Textes de lieu libres non rattachés, limités aux modules que la personne voit' })

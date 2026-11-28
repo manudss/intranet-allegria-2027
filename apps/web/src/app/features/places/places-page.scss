@@ -1,0 +1,29 @@
+.places { display: grid; gap: 0.85rem; }
+.places-head { display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap; }
+.places-search { flex: 1 1 16rem; }
+.mobile-switch { display: none; gap: 0.4rem; }
+.kind-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.places-body { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+.places-list { display: grid; gap: 0.6rem; }
+.place-card { border: 1px solid var(--tui-border-normal); border-radius: 0.8rem; background: var(--tui-background-elevation-1); }
+.place-card.is-selected { border-color: var(--tui-background-accent-1); box-shadow: 0 0 0 1px var(--tui-background-accent-1); }
+.place-main { display: flex; align-items: center; gap: 0.75rem; width: 100%; padding: 0.75rem; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; min-height: 3rem; }
+.place-badge { flex: none; width: 2.1rem; height: 2.1rem; border-radius: 0.4rem; display: grid; place-items: center; font-weight: 700; font-size: 0.8rem; color: #fff; background: var(--tui-background-accent-1); }
+.place-text { display: grid; flex: 1; min-width: 0; gap: 0.15rem; }
+.muted { color: var(--tui-text-secondary); font-size: 0.85rem; }
+.track-tag { font-size: 0.75rem; padding: 0.1rem 0.6rem; border-radius: 99px; background: var(--tui-background-neutral-1); }
+.track-tag[data-track='TA'] { background: #dbe8ff; color: #1c3a6e; }
+.track-tag[data-track='ES'] { background: #d8f0dc; color: #1d5e2b; }
+.places-side { display: grid; gap: 0.6rem; position: sticky; top: 1rem; }
+.places-map-host { height: 22rem; }
+.preview { display: grid; gap: 0.35rem; padding: 0.85rem; border: 1px solid var(--tui-border-normal); border-radius: 0.8rem; background: var(--tui-background-elevation-1); }
+.preview-actions { display: flex; gap: 0.5rem; margin-top: 0.4rem; }
+.hint { color: var(--tui-text-secondary); }
+@media (max-width: 760px) {
+  .mobile-switch { display: flex; }
+  .places-body { grid-template-columns: 1fr; }
+  .places-body[data-view='list'] .places-side .places-map-host { display: none; }
+  .places-body[data-view='map'] .places-list { display: none; }
+  .places-map-host { height: 60vh; }
+  .places-side { position: static; }
+}

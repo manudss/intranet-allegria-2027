@@ -1,0 +1,61 @@
+<app-page-layout title="Lieux du rassemblement" description="Les lieux (adresse, point sur la carte, responsable, équipes) et leurs salles. Un clic sur un repère ou une carte ouvre l'aperçu.">
+  <div class="places">
+    <div class="places-head">
+      <tui-textfield iconStart="@tui.search" class="places-search">
+        <label tuiLabel for="places-search">Rechercher un lieu</label>
+        <input tuiInput id="places-search" [ngModel]="search()" (ngModelChange)="search.set($event)" autocomplete="off" />
+      </tui-textfield>
+      <div class="mobile-switch" role="group" aria-label="Affichage">
+        <button tuiButton size="s" type="button" [appearance]="mobileView() === 'list' ? 'primary' : 'outline'" (click)="mobileView.set('list')">Liste</button>
+        <button tuiButton size="s" type="button" [appearance]="mobileView() === 'map' ? 'primary' : 'outline'" (click)="mobileView.set('map')">Carte</button>
+      </div>
+    </div>
+
+    <div class="kind-chips" role="group" aria-label="Filtrer par type de lieu">
+      @for (k of kinds; track k) {
+        <button type="button" tuiChip size="s" [appearance]="kindFilter() === k ? 'primary' : 'outline'" [attr.aria-pressed]="kindFilter() === k" (click)="toggleKind(k)">{{ kindLabel[k] }}</button>
+      }
+    </div>
+
+    @if (loading()) {
+      <p class="hint">Chargement des lieux…</p>
+    } @else if (error()) {
+      <p class="hint" role="alert">Lieux indisponibles (droits ou réseau).</p>
+    } @else {
+      <div class="places-body" [attr.data-view]="mobileView()">
+        <section class="places-list" aria-label="Liste des lieux">
+          @for (p of shown(); track p.id) {
+            <article class="place-card" [class.is-selected]="p.id === selectedId()">
+              <button type="button" class="place-main" (click)="select(p.id)" [attr.aria-label]="'Aperçu de ' + p.name">
+                <span class="place-badge" aria-hidden="true">{{ initials(p.name) }}</span>
+                <span class="place-text">
+                  <b>{{ p.name }}</b>
+                  <span class="muted">{{ kindLabel[p.kind] }} · {{ summary(p) }}</span>
+                </span>
+                <span class="track-tag" [attr.data-track]="p.track">{{ trackLabel[p.track] }}</span>
+              </button>
+            </article>
+          } @empty {
+            <p class="hint">Aucun lieu ne correspond. Utilisez « Nouveau lieu » pour en ajouter un.</p>
+          }
+        </section>
+
+        <section class="places-side" aria-label="Plan de Saint-Étienne">
+          <app-places-map class="places-map-host" [places]="shown()" [selectedId]="selectedId()" (selected)="select($event)" />
+          @if (unlocated() > 0) {
+            <p class="muted">{{ unlocated() }} lieu(x) sans point sur la carte : ajoutez leur adresse pour les situer.</p>
+          }
+          @if (selected(); as s) {
+            <div class="preview">
+              <b>{{ s.name }}</b>
+              <span class="muted">{{ s.address || 'Adresse non renseignée' }}{{ s.city ? ', ' + s.city : '' }}</span>
+              <div class="preview-actions">
+                <button tuiButton size="m" type="button" (click)="open(s)">Ouvrir la fiche</button>
+              </div>
+            </div>
+          }
+        </section>
+      </div>
+    }
+  </div>
+</app-page-layout>

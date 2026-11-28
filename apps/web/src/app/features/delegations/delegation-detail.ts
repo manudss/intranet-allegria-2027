@@ -1,10 +1,9 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { concat, forkJoin, last, of } from 'rxjs';
+import { concat, forkJoin, last, map, of } from 'rxjs';
 import { RoleFilter, dragPayload, entryKeyOf, filterPeople } from './repartition-panels';
 import { DEFAULT_DATE_BY_DIRECTION, TransportTimes, composeIso, defaultTimes, splitIso } from './transport-dates';
 import { Group } from '../../models/models';
-import { GroupsApiService } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { SelectFieldComponent, SelectOption } from '../../shared/select-field.component';
@@ -54,7 +53,6 @@ export class DelegationDetailPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(DelegationsApiService);
   private readonly confirmDialog = inject(ConfirmDialogService);
-  private readonly groupsApi = inject(GroupsApiService);
 
   protected readonly modeLabels = MODE_LABELS;
   protected readonly fmt = formatDateTime;
@@ -117,8 +115,12 @@ export class DelegationDetailPage implements OnInit {
 
   ngOnInit() {
     this.delegationId = Number(this.route.snapshot.paramMap.get('id'));
+    // Delegations visibles pour ce compte (périmètre serveur) : un responsable n'a pas accès à /api/groups
+    // (403 puis /unauthorized). On lit donc les résumés de délégations, déjà bornés à son périmètre.
     forkJoin({
-      groups: this.groupsApi.list(),
+      groups: this.api
+        .listSummaries()
+        .pipe(map((rows) => rows.map((r) => ({ id: r.id, name: r.name }) as unknown as Group))),
     }).subscribe({
       next: ({ groups }) => {
         this.groups.set(groups);

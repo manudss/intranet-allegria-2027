@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { concat, forkJoin, last, of } from 'rxjs';
+import { RoleFilter, dragPayload, entryKeyOf, filterPeople } from './repartition-panels';
 import { DEFAULT_DATE_BY_DIRECTION, TransportTimes, composeIso, defaultTimes, splitIso } from './transport-dates';
 import { Group } from '../../models/models';
 import { GroupsApiService } from '../../services/api.services';
@@ -47,7 +48,7 @@ function formatDateTime(value: string | null): string {
   standalone: true,
   imports: [...SHARED_IMPORTS, RouterLink, SelectFieldComponent],
   templateUrl: './delegation-detail.html',
-  styleUrl: '../../shared/crud.scss',
+  styleUrls: ['../../shared/crud.scss', './delegation-detail.scss'],
 })
 export class DelegationDetailPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
@@ -77,6 +78,18 @@ export class DelegationDetailPage implements OnInit {
   protected readonly members = signal<PersonLite[]>([]);
   protected readonly toAssignSearch = signal('');
   protected readonly toAssignShowAll = signal(false);
+  // Refonte : onglets, deux panneaux, sélection, glisser-déposer, tiroirs.
+  protected readonly view = signal<'repartition' | 'exceptions'>('repartition');
+  protected readonly step = signal<'personnes' | 'destinations'>('personnes');
+  protected readonly roleFilter = signal<RoleFilter>('ALL');
+  protected readonly selectedKeys = signal<ReadonlySet<string>>(new Set());
+  protected readonly bulkTarget = signal<number | null>(null);
+  protected readonly drawer = signal<'transport' | 'exception' | null>(null);
+  protected readonly dragOverId = signal<number | null>(null);
+  protected readonly assigning = signal(false);
+  protected readonly roleOptions: RoleFilter[] = ['ALL', 'PARTICIPANT', 'VOLUNTEER'];
+  protected readonly stringifyRole = (r: RoleFilter | null): string =>
+    r === 'PARTICIPANT' ? 'Jeunes' : r === 'VOLUNTEER' ? 'Bénévoles' : 'Tous les rôles';
   protected readonly expandedTransports = signal<ReadonlySet<number>>(new Set());
 
   // Selects Taiga UI : listes d'identifiants et libellés associés.
@@ -100,7 +113,7 @@ export class DelegationDetailPage implements OnInit {
   protected stringifyDelegation = (id: number | null): string =>
     this.groups().find((g) => g.id === id)?.name ?? '';
 
-  private delegationId = 0;
+  protected delegationId = 0;
 
   ngOnInit() {
     this.delegationId = Number(this.route.snapshot.paramMap.get('id'));
@@ -125,6 +138,7 @@ export class DelegationDetailPage implements OnInit {
 
   protected setDirection(d: TransportDirection) {
     this.direction.set(d);
+    this.selectedKeys.set(new Set());
     this.transportForm.set(this.emptyTransport());
     this.transportTimes.set(defaultTimes(d));
     this.editingTransportId.set(null);
@@ -240,6 +254,7 @@ export class DelegationDetailPage implements OnInit {
     const dep = splitIso(t.departureDatetime, fallback);
     const arr = splitIso(t.arrivalDatetime, fallback);
     this.transportTimes.set({ depDate: dep.date, depTime: dep.time, arrDate: arr.date, arrTime: arr.time });
+    this.drawer.set('transport');
     this.transportForm.set({
       direction: t.direction,
       transportMode: t.transportMode,
@@ -257,6 +272,7 @@ export class DelegationDetailPage implements OnInit {
     this.editingTransportId.set(null);
     this.transportForm.set(this.emptyTransport());
     this.transportTimes.set(defaultTimes(this.direction()));
+    this.drawer.set(null);
   }
 
   protected saveTransport() {
@@ -338,9 +354,111 @@ export class DelegationDetailPage implements OnInit {
       .subscribe({
         next: () => {
           this.exceptionForm.set({ personKey: '', toDelegationId: null, note: '' });
+          this.drawer.set(null);
           this.reload();
         },
         error: () => this.error.set('L’exception n’a pas pu être créée.'),
+      });
+  }
+
+  // ------------------------------------------------- refonte : panneaux et sélection
+
+  protected entryKeyOf = entryKeyOf;
+
+  protected openTransportDrawer() {
+    this.editingTransportId.set(null);
+    this.transportForm.set(this.emptyTransport());
+    this.transportTimes.set(defaultTimes(this.direction()));
+    this.drawer.set('transport');
+  }
+
+  protected openExceptionDrawer() {
+    this.drawer.set('exception');
+  }
+
+  protected panelPeople(): AssignmentEntry[] {
+    return filterPeople(this.repartition()?.toAssign ?? [], this.toAssignSearch(), this.roleFilter());
+  }
+
+  protected isSelected(e: AssignmentEntry): boolean {
+    return this.selectedKeys().has(entryKeyOf(e));
+  }
+
+  protected toggleSelect(e: AssignmentEntry) {
+    const key = entryKeyOf(e);
+    this.selectedKeys.update((set) => {
+      const next = new Set(set);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  protected allVisibleSelected(): boolean {
+    const visible = this.panelPeople();
+    return visible.length > 0 && visible.every((e) => this.isSelected(e));
+  }
+
+  protected toggleAllVisible() {
+    const visible = this.panelPeople();
+    const all = this.allVisibleSelected();
+    this.selectedKeys.update((set) => {
+      const next = new Set(set);
+      for (const e of visible) {
+        if (all) next.delete(entryKeyOf(e));
+        else next.add(entryKeyOf(e));
+      }
+      return next;
+    });
+  }
+
+  protected selectionCount(): number {
+    return this.selectedKeys().size;
+  }
+
+  protected onDragStart(event: DragEvent, e: AssignmentEntry) {
+    const keys = dragPayload(this.selectedKeys(), e);
+    this.selectedKeys.set(new Set(keys));
+    event.dataTransfer?.setData('text/plain', keys.join(','));
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+  }
+
+  protected onDragOver(event: DragEvent, transportId: number) {
+    event.preventDefault();
+    this.dragOverId.set(transportId);
+  }
+
+  protected onDrop(event: DragEvent, transportId: number) {
+    event.preventDefault();
+    this.dragOverId.set(null);
+    this.assignSelection(transportId);
+  }
+
+  /** Affecte la sélection à une sous-délégation, une personne après l'autre (pas de rafale de requêtes). */
+  protected assignSelection(transportId: number | null) {
+    if (!transportId || this.assigning()) return;
+    const keys = this.selectedKeys();
+    const people = (this.repartition()?.toAssign ?? []).filter((e) => e.person && keys.has(entryKeyOf(e)));
+    if (!people.length) {
+      this.error.set('Sélectionnez au moins une personne à placer.');
+      return;
+    }
+    this.error.set('');
+    this.assigning.set(true);
+    concat(...people.map((e) => this.api.assign(transportId, e.person!.personType, e.person!.id)), of(null))
+      .pipe(last())
+      .subscribe({
+        next: () => {
+          this.assigning.set(false);
+          this.selectedKeys.set(new Set());
+          this.bulkTarget.set(null);
+          this.reload();
+        },
+        error: () => {
+          this.assigning.set(false);
+          this.error.set('L’affectation n’a pas pu être enregistrée pour toute la sélection. Rechargement de l’état réel.');
+          this.reload();
+        },
       });
   }
 }

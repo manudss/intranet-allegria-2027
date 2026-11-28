@@ -2,309 +2,281 @@
   [title]="delegation()?.name ? delegation()!.name + ' · Transports' : 'Transports de la délégation'"
   description="Sous-délégations aller/retour, répartition des personnes et exceptions. Les responsables ne voient que leur délégation ; aucune donnée de santé n'est affichée ici."
 >
-  <nav class="delegation-nav">
-    <a routerLink="/transports">Toutes les délégations</a> ·
-    <a routerLink="/suivi-notes">Suivi des notes</a>
+  <nav class="tabbar" aria-label="Navigation de la délégation">
+    <a routerLink="/rassemblement" class="tab back">‹ Délégations</a>
+    <button type="button" class="tab" role="tab" [class.active]="view() === 'repartition'" [attr.aria-selected]="view() === 'repartition'" (click)="view.set('repartition')">Répartition</button>
+    <button type="button" class="tab" role="tab" [class.active]="view() === 'exceptions'" [attr.aria-selected]="view() === 'exceptions'" (click)="view.set('exceptions')">
+      Exceptions
+      @if (repartition(); as r) {
+        ({{ r.exceptionsReceived.length + r.exceptionsOutgoing.length }})
+      }
+    </button>
+    <a [routerLink]="['/delegations', delegationId]" class="tab">Notes</a>
+    <a routerLink="/suivi-notes" class="tab">Suivi des notes</a>
   </nav>
-  <div class="direction-switch" role="tablist">
-    <button
-      tuiButton
-      type="button"
-      [appearance]="direction() === 'ALLER' ? 'primary' : 'secondary'"
-      (click)="setDirection('ALLER')"
-    >
-      Aller
-      @if (statsFor('ALLER'); as s) {
-        ({{ s.total }} · {{ s.toPlace }} à placer)
-      }
-    </button>
-    <button
-      tuiButton
-      type="button"
-      [appearance]="direction() === 'RETOUR' ? 'primary' : 'secondary'"
-      (click)="setDirection('RETOUR')"
-    >
-      Retour
-      @if (statsFor('RETOUR'); as s) {
-        ({{ s.total }} · {{ s.toPlace }} à placer)
-      }
-    </button>
+  <div class="toolbar">
+    <div class="direction-switch" role="tablist" aria-label="Sens du déplacement">
+      <button tuiButton type="button" size="s" role="tab" [attr.aria-selected]="direction() === 'ALLER'" [appearance]="direction() === 'ALLER' ? 'primary' : 'secondary'" (click)="setDirection('ALLER')">
+        Aller
+        @if (statsFor('ALLER'); as s) {
+          · {{ s.toPlace }} à placer
+        }
+      </button>
+      <button tuiButton type="button" size="s" role="tab" [attr.aria-selected]="direction() === 'RETOUR'" [appearance]="direction() === 'RETOUR' ? 'primary' : 'secondary'" (click)="setDirection('RETOUR')">
+        Retour
+        @if (statsFor('RETOUR'); as s) {
+          · {{ s.toPlace }} à placer
+        }
+      </button>
+    </div>
+    <div class="create-buttons">
+      <button tuiButton type="button" size="s" appearance="secondary" (click)="openTransportDrawer()">+ Sous-délégation</button>
+      <button tuiButton type="button" size="s" appearance="secondary" (click)="openExceptionDrawer()">+ Exception</button>
+    </div>
   </div>
   @if (error()) {
-    <p class="api-error">{{ error() }}</p>
+    <p class="api-error" role="alert">{{ error() }}</p>
   }
-  @if (loading()) {
+  @if (loading() && !repartition()) {
     <app-loading-skeleton />
   } @else if (repartition(); as rep) {
-    <section class="card">
-      <h2>À placer ({{ rep.toAssign.length }})</h2>
-      <p class="help">
-        Personnes de la délégation sans sous-délégation sur ce sens, et exceptions reçues pas encore placées.
-      </p>
-      @if (!rep.toAssign.length) {
-        <p>Tout le monde est placé sur ce sens.</p>
-      }
-      @if (rep.toAssign.length) {
-        <tui-textfield iconStart="@tui.search" class="toassign-search">
-          <label tuiLabel for="toassign-search">Rechercher une personne…</label>
-          <input
-            tuiInput
-            id="toassign-search"
-            [ngModel]="toAssignSearch()"
-            (ngModelChange)="toAssignSearch.set($event)"
-            name="toassign-search"
-          />
-        </tui-textfield>
-      }
-      <ul>
-        @for (e of visibleToAssign(); track entryKey(e)) {
-          <li>
-            {{ personLabel(e.person) }}
-            @if (e.person && e.person.delegationId !== delegation()?.id) {
-              <span class="tui-badge">Exception reçue</span>
-            }
-            <tui-textfield
-              tuiChevron
-              [stringify]="stringifyTransportId"
-              [disabledItemHandler]="transportIdFull"
-            >
-              <select
-                tuiSelect
-                placeholder="Placer sur…"
-                [items]="transportIds()"
-                [ngModel]="assignTargets()[entryKey(e)] ?? null"
-                (ngModelChange)="setAssignTarget(entryKey(e), $event)"
-                [attr.aria-label]="'Placer sur une sous-délégation'"
-                name="assign-{{ entryKey(e) }}"
-              ></select>
-            </tui-textfield>
-            <button tuiButton size="s" type="button" (click)="assignTo(e)">Affecter</button>
-            @if (e.person) {
-              <a
-                [routerLink]="['/person-notes', e.person.personType, e.person.id]"
-                tuiButton
-                size="s"
-                appearance="secondary"
-                >Note</a
-              >
-            }
-          </li>
-        }
-      </ul>
-      @if (hiddenToAssignCount() > 0) {
-        <p class="help">
-          + {{ hiddenToAssignCount() }} autres · affinez la recherche ou
-          <button type="button" class="link" (click)="toAssignShowAll.set(true)">tout afficher</button>
-        </p>
-      }
-    </section>
-
-    <section class="card">
-      <h2>Sous-délégations ({{ rep.transports.length }})</h2>
-      @for (t of rep.transports; track t.id) {
-        <article class="transport-block">
-          <header>
-            <h3>
-              {{ modeLabels[t.transportMode] || t.transportMode }} · {{ t.name }}
-              @if (t.capacity !== null) {
-                <span [class.full]="t.full"> ({{ t.occupancy }}/{{ t.capacity }})</span>
-                @if (t.full) {
-                  <span class="full jauge-alerte">jauge dépassée</span>
-                }
-              } @else {
-                <span> ({{ t.occupancy }} placés, sans jauge)</span>
-              }
-            </h3>
-            <button tuiButton size="s" appearance="secondary" type="button" (click)="editTransport(t.id)">
-              Modifier
-            </button>
-            <button tuiButton size="s" appearance="secondary" type="button" (click)="removeTransport(t.id)">
-              Supprimer
-            </button>
-          </header>
-          @if (t.capacity !== null) {
-            <div
-              class="jauge-bar"
-              role="img"
-              [attr.aria-label]="'Jauge : ' + t.occupancy + ' sur ' + t.capacity"
-            >
-              <div class="jauge-fill" [class.over]="t.full" [style.width.%]="jaugePercent(t)"></div>
-            </div>
+    @if (view() === 'repartition') {
+      <div class="steps" role="tablist" aria-label="Étapes">
+        <button type="button" class="step" role="tab" [class.active]="step() === 'personnes'" [attr.aria-selected]="step() === 'personnes'" (click)="step.set('personnes')">
+          1. Personnes
+          @if (selectionCount() > 0) {
+            <span class="count">{{ selectionCount() }}</span>
           }
-          <dl>
-            <dt>Départ</dt>
-            <dd>{{ fmt(t.departureDatetime) }}</dd>
-            <dt>Arrivée</dt>
-            <dd>{{ fmt(t.arrivalDatetime) }}</dd>
-            <dt>Rendez-vous</dt>
-            <dd>{{ t.meetingPoint || '—' }}</dd>
-            <dt>Infos pratiques pour les parents</dt>
-            <dd>{{ t.practicalInfo || '—' }}</dd>
-          </dl>
-          <ul>
-            @for (p of visiblePersons(t); track entryKey(p)) {
-              <li>
-                {{ personLabel(p.person) }}
-                @if (p.person && p.person.delegationId !== delegation()?.id) {
+        </button>
+        <button type="button" class="step" role="tab" [class.active]="step() === 'destinations'" [attr.aria-selected]="step() === 'destinations'" (click)="step.set('destinations')">
+          2. Destinations
+        </button>
+      </div>
+      <div class="panels">
+        <section class="panel people" [class.hidden-mobile]="step() !== 'personnes'" aria-label="Personnes à placer">
+          <header class="panel-head">
+            <h2>À placer ({{ rep.toAssign.length }})</h2>
+            <p class="help">Cochez des personnes puis choisissez une destination, ou glissez-les sur une sous-délégation.</p>
+            <div class="panel-filters">
+              <tui-textfield iconStart="@tui.search" class="toassign-search">
+                <label tuiLabel for="toassign-search">Rechercher une personne…</label>
+                <input tuiInput id="toassign-search" [ngModel]="toAssignSearch()" (ngModelChange)="toAssignSearch.set($event)" name="toassign-search" />
+              </tui-textfield>
+              <tui-textfield tuiChevron [stringify]="stringifyRole" class="role-filter">
+                <label tuiLabel for="role-filter">Rôle</label>
+                <select tuiSelect id="role-filter" [items]="roleOptions" [ngModel]="roleFilter()" (ngModelChange)="roleFilter.set($event ?? 'ALL')" name="role-filter"></select>
+              </tui-textfield>
+            </div>
+            <label class="check-all">
+              <input type="checkbox" [checked]="allVisibleSelected()" (change)="toggleAllVisible()" />
+              Tout cocher ({{ panelPeople().length }})
+            </label>
+          </header>
+          <ul class="panel-list">
+            @for (e of panelPeople(); track entryKeyOf(e)) {
+              <li class="person-row" [class.selected]="isSelected(e)" draggable="true" (dragstart)="onDragStart($event, e)">
+                <input type="checkbox" [checked]="isSelected(e)" (change)="toggleSelect(e)" [attr.aria-label]="'Sélectionner ' + e.person?.firstName + ' ' + e.person?.lastName" />
+                <span class="person-label">{{ personLabel(e.person) }}</span>
+                @if (e.person && e.person.delegationId !== delegation()?.id) {
                   <span class="tui-badge">Exception reçue</span>
                 }
-                <button tuiButton size="s" appearance="secondary" type="button" (click)="unassign(p)">
-                  Retirer
-                </button>
-                @if (p.person) {
-                  <a
-                    [routerLink]="['/person-notes', p.person.personType, p.person.id]"
-                    tuiButton
-                    size="s"
-                    appearance="secondary"
-                    >Note</a
-                  >
+                @if (e.person) {
+                  <a [routerLink]="['/person-notes', e.person.personType, e.person.id]" tuiButton size="xs" appearance="flat">Note</a>
+                }
+              </li>
+            } @empty {
+              <li class="empty">
+                @if (rep.toAssign.length) {
+                  Aucune personne ne correspond à la recherche.
+                } @else {
+                  Tout le monde est placé sur ce sens.
                 }
               </li>
             }
           </ul>
-            @if (hiddenPersonsCount(t) > 0) {
-              <button type="button" class="link" (click)="toggleTransportExpanded(t.id)">
-                + {{ hiddenPersonsCount(t) }} autres
-              </button>
-            } @else if (t.persons.length > 8 && isTransportExpanded(t.id)) {
-              <button type="button" class="link" (click)="toggleTransportExpanded(t.id)">
-                Réduire
-              </button>
+          <footer class="panel-foot">
+            <tui-textfield tuiChevron [stringify]="stringifyTransportId" class="bulk-target">
+              <label tuiLabel for="bulk-target">Affecter à…</label>
+              <select tuiSelect id="bulk-target" [items]="transportIds()" [ngModel]="bulkTarget()" (ngModelChange)="bulkTarget.set($event)" name="bulk-target"></select>
+            </tui-textfield>
+            <button tuiButton type="button" size="s" [disabled]="!selectionCount() || !bulkTarget() || assigning()" (click)="assignSelection(bulkTarget())">
+              Affecter ({{ selectionCount() }})
+            </button>
+            <button tuiButton type="button" size="s" appearance="secondary" class="only-mobile" (click)="step.set('destinations')">Choisir la destination</button>
+          </footer>
+        </section>
+
+        <section class="panel destinations" [class.hidden-mobile]="step() !== 'destinations'" aria-label="Sous-délégations">
+          <header class="panel-head">
+            <h2>Sous-délégations ({{ rep.transports.length }})</h2>
+            <p class="help">Déposez la sélection sur une carte ou utilisez « Affecter la sélection ».</p>
+          </header>
+          <div class="panel-list cards">
+            @for (t of rep.transports; track t.id) {
+              <article class="transport-card" [class.drop-over]="dragOverId() === t.id" [class.over-capacity]="t.full"
+                (dragover)="onDragOver($event, t.id)" (dragleave)="dragOverId.set(null)" (drop)="onDrop($event, t.id)">
+                <header>
+                  <h3>{{ modeLabels[t.transportMode] || t.transportMode }} · {{ t.name }}</h3>
+                  <span class="gauge-text" [class.full]="t.full">
+                    @if (t.capacity !== null) { {{ t.occupancy }}/{{ t.capacity }} } @else { {{ t.occupancy }} placés, sans jauge }
+                  </span>
+                </header>
+                @if (t.capacity !== null) {
+                  <div class="jauge-bar" role="img" [attr.aria-label]="'Jauge : ' + t.occupancy + ' sur ' + t.capacity">
+                    <div class="jauge-fill" [class.over]="t.full" [style.width.%]="jaugePercent(t)"></div>
+                  </div>
+                  @if (t.full) {
+                    <p class="full jauge-alerte">Jauge dépassée</p>
+                  }
+                }
+                <dl class="meta">
+                  <dt>Départ</dt><dd>{{ fmt(t.departureDatetime) }}</dd>
+                  <dt>Arrivée</dt><dd>{{ fmt(t.arrivalDatetime) }}</dd>
+                  <dt>Rendez-vous</dt><dd>{{ t.meetingPoint || '—' }}</dd>
+                  <dt>Infos pratiques pour les parents</dt><dd>{{ t.practicalInfo || '—' }}</dd>
+                </dl>
+                <div class="card-actions">
+                  <button tuiButton size="s" type="button" [disabled]="!selectionCount() || assigning()" (click)="assignSelection(t.id)">
+                    Affecter la sélection ({{ selectionCount() }})
+                  </button>
+                  <button tuiButton size="s" appearance="secondary" type="button" (click)="editTransport(t.id)">Modifier</button>
+                  <button tuiButton size="s" appearance="secondary" type="button" (click)="removeTransport(t.id)">Supprimer</button>
+                </div>
+                <ul class="placed">
+                  @for (p of visiblePersons(t); track entryKey(p)) {
+                    <li>
+                      {{ personLabel(p.person) }}
+                      @if (p.person && p.person.delegationId !== delegation()?.id) {
+                        <span class="tui-badge">Exception reçue</span>
+                      }
+                      <button tuiButton size="xs" appearance="flat" type="button" (click)="unassign(p)">Retirer</button>
+                    </li>
+                  }
+                </ul>
+                @if (hiddenPersonsCount(t) > 0) {
+                  <button type="button" class="link" (click)="toggleTransportExpanded(t.id)">+ {{ hiddenPersonsCount(t) }} autres</button>
+                } @else if (t.persons.length > 8 && isTransportExpanded(t.id)) {
+                  <button type="button" class="link" (click)="toggleTransportExpanded(t.id)">Réduire</button>
+                }
+              </article>
+            } @empty {
+              <p class="empty">Aucune sous-délégation sur ce sens. Utilisez « + Sous-délégation ».</p>
             }
-        </article>
-      }
-
-      <h3>{{ editingTransportId() ? 'Modifier la sous-délégation' : 'Nouvelle sous-délégation' }}</h3>
-      <form class="drawer-form" (submit)="saveTransport(); $event.preventDefault()">
-        <tui-textfield>
-          <label for="t-name" tuiLabel>Libellé</label
-          ><input tuiInput id="t-name" [ngModel]="transportForm().name"
-            (ngModelChange)="transportForm.update((f) => ({ ...f, name: $event }))" name="tname" required />
-        </tui-textfield>
-        <tui-textfield tuiChevron [stringify]="stringifyMode">
-          <label for="t-mode" tuiLabel>Moyen de transport</label
-          ><select
-            tuiSelect
-            id="t-mode"
-            [items]="transportModes"
-            [ngModel]="transportForm().transportMode"
-            (ngModelChange)="transportForm.update((f) => ({ ...f, transportMode: $event }))"
-            name="tmode"
-          ></select>
-        </tui-textfield>
-        <div class="datetime-row">
-          <tui-textfield>
-            <label for="t-dep-date" tuiLabel>Départ : date</label
-            ><input tuiInput id="t-dep-date" type="date" [ngModel]="transportTimes().depDate"
-              (ngModelChange)="transportTimes.update((f) => ({ ...f, depDate: $event }))" name="tdepdate" />
-          </tui-textfield>
-          <tui-textfield>
-            <label for="t-dep-time" tuiLabel>Départ : heure</label
-            ><input tuiInput id="t-dep-time" type="time" [ngModel]="transportTimes().depTime"
-              (ngModelChange)="transportTimes.update((f) => ({ ...f, depTime: $event }))" name="tdeptime" />
-          </tui-textfield>
-        </div>
-        <div class="datetime-row">
-          <tui-textfield>
-            <label for="t-arr-date" tuiLabel>Arrivée : date</label
-            ><input tuiInput id="t-arr-date" type="date" [ngModel]="transportTimes().arrDate"
-              (ngModelChange)="transportTimes.update((f) => ({ ...f, arrDate: $event }))" name="tarrdate" />
-          </tui-textfield>
-          <tui-textfield>
-            <label for="t-arr-time" tuiLabel>Arrivée : heure</label
-            ><input tuiInput id="t-arr-time" type="time" [ngModel]="transportTimes().arrTime"
-              (ngModelChange)="transportTimes.update((f) => ({ ...f, arrTime: $event }))" name="tarrtime" />
-          </tui-textfield>
-        </div>
-        <tui-textfield>
-          <label for="t-rdv" tuiLabel>Lieu de rendez-vous</label
-          ><input tuiInput id="t-rdv" [ngModel]="transportForm().meetingPoint"
-            (ngModelChange)="transportForm.update((f) => ({ ...f, meetingPoint: $event }))" name="trdv" />
-        </tui-textfield>
-        <tui-textfield>
-          <label for="t-cap" tuiLabel>Jauge (facultatif)</label
-          ><input tuiInput id="t-cap" type="number" min="1" [ngModel]="transportForm().capacity"
-            (ngModelChange)="transportForm.update((f) => ({ ...f, capacity: $event === '' || $event === null ? null : +$event }))" name="tcap" />
-        </tui-textfield>
-        <div class="field-block">
-          <label class="field-label" for="t-info">Infos pratiques pour les parents</label>
-          <tui-textfield>
-            <textarea
-              tuiTextarea
-              id="t-info"
-              [ngModel]="transportForm().practicalInfo"
-              (ngModelChange)="transportForm.update((f) => ({ ...f, practicalInfo: $event }))"
-              name="tinfo"
-            ></textarea>
-          </tui-textfield>
-        </div>
-        <div>
-          <button tuiButton type="submit" [disabled]="!transportForm().name">
-            {{ editingTransportId() ? 'Enregistrer' : 'Créer la sous-délégation' }}
-          </button>
-          @if (editingTransportId()) {
-            <button tuiButton appearance="secondary" type="button" (click)="cancelTransportEdit()">
-              Annuler
-            </button>
+          </div>
+        </section>
+      </div>
+    } @else {
+      <section class="card">
+        <h2>Exceptions</h2>
+        <h3>Reçues ({{ rep.exceptionsReceived.length }})</h3>
+        <p class="help">Personnes d'autres délégations dont le déplacement relève de celle-ci.</p>
+        <ul>
+          @for (e of rep.exceptionsReceived; track entryKey(e)) {
+            <li>{{ personLabel(e.person) }}</li>
           }
-        </div>
-      </form>
-    </section>
-
-    <section class="card">
-      <h2>Exceptions</h2>
-      <h3>Reçues ({{ rep.exceptionsReceived.length }})</h3>
-      <p class="help">Personnes d'autres délégations dont le déplacement relève de celle-ci.</p>
-      <ul>
-        @for (e of rep.exceptionsReceived; track entryKey(e)) {
-          <li>{{ personLabel(e.person) }}</li>
-        }
-      </ul>
-      <h3>Sortantes ({{ rep.exceptionsOutgoing.length }})</h3>
-      <p class="help">Membres de cette délégation dont le déplacement relève d'une autre délégation.</p>
-      <ul>
-        @for (e of rep.exceptionsOutgoing; track entryKey(e)) {
-          <li>
-            {{ personLabel(e.person) }}
-            <button tuiButton size="s" appearance="secondary" type="button" (click)="unassign(e)">
-              Annuler l'exception
-            </button>
-          </li>
-        }
-      </ul>
-      <h3>Créer une exception</h3>
-      <form class="drawer-form" (submit)="createException(); $event.preventDefault()">
-        <app-select-field
-          label="Personne (membre de cette délégation)"
-          [options]="memberOptions()"
-          [value]="exceptionForm().personKey || null"
-          placeholder="Rechercher par nom…"
-          (valueChange)="exceptionForm.update((f) => ({ ...f, personKey: $event ?? '' }))"
-        />
-        <tui-textfield tuiChevron [stringify]="stringifyDelegation">
-          <label for="x-deleg" tuiLabel>Délégation d'accueil</label
-          ><select tuiSelect id="x-deleg" placeholder="Choisir…" [items]="otherDelegationIds()"
-            [ngModel]="exceptionForm().toDelegationId"
-            (ngModelChange)="exceptionForm.update((f) => ({ ...f, toDelegationId: $event }))" name="xdeleg">
-          </select>
-        </tui-textfield>
-        <tui-textfield>
-          <label for="x-note" tuiLabel>Note (facultatif)</label
-          ><textarea
-            tuiTextarea
-            id="x-note"
-            [ngModel]="exceptionForm().note"
-            (ngModelChange)="exceptionForm.update((f) => ({ ...f, note: $event }))"
-            name="xnote"
-          ></textarea>
-        </tui-textfield>
-        <p class="help">
-          Si une note est saisie, elle est créée avec l'exception, signée et datée, et visible dans le
-          suivi des notes. Aucune donnée de santé.
-        </p>
-        <button tuiButton type="submit">Créer l'exception ({{ direction() === 'ALLER' ? 'aller' : 'retour' }})</button>
-      </form>
-    </section>
+        </ul>
+        <h3>Sortantes ({{ rep.exceptionsOutgoing.length }})</h3>
+        <p class="help">Membres de cette délégation dont le déplacement relève d'une autre délégation.</p>
+        <ul>
+          @for (e of rep.exceptionsOutgoing; track entryKey(e)) {
+            <li>
+              {{ personLabel(e.person) }}
+              <button tuiButton size="s" appearance="secondary" type="button" (click)="unassign(e)">Annuler l'exception</button>
+            </li>
+          }
+        </ul>
+        <button tuiButton type="button" size="s" (click)="openExceptionDrawer()">+ Exception</button>
+      </section>
+    }
   }
 </app-page-layout>
+
+@if (drawer() === 'transport') {
+  <tui-drawer direction="end">
+    <header>
+      <h2>{{ editingTransportId() ? 'Modifier la sous-délégation' : 'Nouvelle sous-délégation' }} ({{ direction() === 'ALLER' ? 'aller' : 'retour' }})</h2>
+    </header>
+    <form class="drawer-form" id="transport-form" (submit)="saveTransport(); $event.preventDefault()">
+      <tui-textfield>
+        <label for="t-name" tuiLabel>Libellé</label
+        ><input tuiInput id="t-name" [ngModel]="transportForm().name" (ngModelChange)="transportForm.update((f) => ({ ...f, name: $event }))" name="tname" required />
+      </tui-textfield>
+      <tui-textfield tuiChevron [stringify]="stringifyMode">
+        <label for="t-mode" tuiLabel>Moyen de transport</label
+        ><select tuiSelect id="t-mode" [items]="transportModes" [ngModel]="transportForm().transportMode" (ngModelChange)="transportForm.update((f) => ({ ...f, transportMode: $event }))" name="tmode"></select>
+      </tui-textfield>
+      <div class="datetime-row">
+        <tui-textfield>
+          <label for="t-dep-date" tuiLabel>Départ : date</label
+          ><input tuiInput id="t-dep-date" type="date" [ngModel]="transportTimes().depDate" (ngModelChange)="transportTimes.update((f) => ({ ...f, depDate: $event }))" name="tdepdate" />
+        </tui-textfield>
+        <tui-textfield>
+          <label for="t-dep-time" tuiLabel>Départ : heure</label
+          ><input tuiInput id="t-dep-time" type="time" [ngModel]="transportTimes().depTime" (ngModelChange)="transportTimes.update((f) => ({ ...f, depTime: $event }))" name="tdeptime" />
+        </tui-textfield>
+      </div>
+      <div class="datetime-row">
+        <tui-textfield>
+          <label for="t-arr-date" tuiLabel>Arrivée : date</label
+          ><input tuiInput id="t-arr-date" type="date" [ngModel]="transportTimes().arrDate" (ngModelChange)="transportTimes.update((f) => ({ ...f, arrDate: $event }))" name="tarrdate" />
+        </tui-textfield>
+        <tui-textfield>
+          <label for="t-arr-time" tuiLabel>Arrivée : heure</label
+          ><input tuiInput id="t-arr-time" type="time" [ngModel]="transportTimes().arrTime" (ngModelChange)="transportTimes.update((f) => ({ ...f, arrTime: $event }))" name="tarrtime" />
+        </tui-textfield>
+      </div>
+      <tui-textfield>
+        <label for="t-rdv" tuiLabel>Lieu de rendez-vous</label
+        ><input tuiInput id="t-rdv" [ngModel]="transportForm().meetingPoint" (ngModelChange)="transportForm.update((f) => ({ ...f, meetingPoint: $event }))" name="trdv" />
+      </tui-textfield>
+      <tui-textfield>
+        <label for="t-cap" tuiLabel>Jauge (facultatif)</label
+        ><input tuiInput id="t-cap" type="number" min="1" [ngModel]="transportForm().capacity" (ngModelChange)="transportForm.update((f) => ({ ...f, capacity: $event === '' || $event === null ? null : +$event }))" name="tcap" />
+      </tui-textfield>
+      <div class="field-block">
+        <label class="field-label" for="t-info">Infos pratiques pour les parents</label>
+        <tui-textfield>
+          <textarea tuiTextarea id="t-info" [ngModel]="transportForm().practicalInfo" (ngModelChange)="transportForm.update((f) => ({ ...f, practicalInfo: $event }))" name="tinfo"></textarea>
+        </tui-textfield>
+      </div>
+    </form>
+    <footer>
+      <button tuiButton appearance="flat" type="button" (click)="cancelTransportEdit()">Annuler</button>
+      <button tuiButton type="submit" form="transport-form" [disabled]="!transportForm().name">
+        {{ editingTransportId() ? 'Enregistrer' : 'Créer la sous-délégation' }}
+      </button>
+    </footer>
+  </tui-drawer>
+}
+
+@if (drawer() === 'exception') {
+  <tui-drawer direction="end">
+    <header>
+      <h2>Nouvelle exception ({{ direction() === 'ALLER' ? 'aller' : 'retour' }})</h2>
+    </header>
+    <form class="drawer-form" id="exception-form" (submit)="createException(); $event.preventDefault()">
+      <app-select-field
+        label="Personne (membre de cette délégation)"
+        [options]="memberOptions()"
+        [value]="exceptionForm().personKey || null"
+        placeholder="Rechercher par nom…"
+        (valueChange)="exceptionForm.update((f) => ({ ...f, personKey: $event ?? '' }))"
+      />
+      <tui-textfield tuiChevron [stringify]="stringifyDelegation">
+        <label for="x-deleg" tuiLabel>Délégation d'accueil</label
+        ><select tuiSelect id="x-deleg" placeholder="Choisir…" [items]="otherDelegationIds()" [ngModel]="exceptionForm().toDelegationId" (ngModelChange)="exceptionForm.update((f) => ({ ...f, toDelegationId: $event }))" name="xdeleg"></select>
+      </tui-textfield>
+      <tui-textfield>
+        <label for="x-note" tuiLabel>Note (facultatif)</label
+        ><textarea tuiTextarea id="x-note" [ngModel]="exceptionForm().note" (ngModelChange)="exceptionForm.update((f) => ({ ...f, note: $event }))" name="xnote"></textarea>
+      </tui-textfield>
+      <p class="help">
+        Si une note est saisie, elle est créée avec l'exception, signée et datée, et visible dans le suivi des notes. Aucune donnée de santé.
+      </p>
+    </form>
+    <footer>
+      <button tuiButton appearance="flat" type="button" (click)="drawer.set(null)">Annuler</button>
+      <button tuiButton type="submit" form="exception-form">Créer l'exception ({{ direction() === 'ALLER' ? 'aller' : 'retour' }})</button>
+    </footer>
+  </tui-drawer>
+}

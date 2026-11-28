@@ -43,7 +43,7 @@ Module `GatheringTransportsModule` (`apps/api/src/app/core/gathering-transports/
 - `GET /gathering-transports/board` — cibles + cars en une réponse.
 - CRUD cars : `POST/GET/PATCH/DELETE /gathering-transports/cars[/:id]`.
 - `PUT /cars/:id/stops` — remplace la liste d'arrêts.
-- `PUT /cars/:id/assignments` — remplace les cibles du car (409 si une cible est déjà desservie ailleurs).
+- `PUT /cars/:id/assignments` — ajoute des cibles au car ; une cible déjà desservie ailleurs est DÉPLACÉE vers ce car (choix d'implémentation, pas une règle validée).
 - `POST /cars/:id/persons`, `DELETE /persons/:id` — exceptions individuelles.
 
 ## Web

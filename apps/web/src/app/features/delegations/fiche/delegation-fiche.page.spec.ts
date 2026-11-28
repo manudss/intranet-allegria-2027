@@ -130,6 +130,39 @@ describe('DelegationFichePage (lot 4 : fiche en vues)', () => {
     return { fixture };
   }
 
+  async function setupFailure() {
+    await TestBed.configureTestingModule({
+      imports: [HostComponent],
+      providers: [
+        provideTaiga(),
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: new Map([['id', '2']]) } },
+        },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/delegations').flush('panne', { status: 500, statusText: 'Erreur' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return { fixture };
+  }
+
+  it('chargement en échec : message seul, ni zéro personne, ni barres, ni onglets présentés comme des données', async () => {
+    const { fixture } = await setupFailure();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('Le chargement de la délégation a échoué');
+    expect(el.textContent).not.toContain('0 personnes');
+    expect(el.textContent).not.toContain('Personnes (0)');
+    expect(el.textContent).not.toContain('Répartition des déplacements');
+  });
+
   it("s'ouvre sous le seul droit TRANSPORT : sans droit PERSON_NOTES, aucune requête de notes (pas de 403 vers Accès refusé)", async () => {
     const { fixture } = await setup(true);
     const el: HTMLElement = fixture.nativeElement;

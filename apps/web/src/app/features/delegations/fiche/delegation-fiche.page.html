@@ -1,7 +1,9 @@
 <app-page-layout
   [title]="summary()?.name ?? 'Délégation'"
   [description]="
-    (summary()?.diocese ? 'Diocèse de ' + summary()!.diocese + ' · ' : '') +
+    !summary()
+      ? ''
+      : (summary()?.diocese ? 'Diocèse de ' + summary()!.diocese + ' · ' : '') +
     (summary()?.total ?? 0) +
     ' personnes (' +
     (summary()?.jeunes ?? 0) +
@@ -19,7 +21,7 @@
   <p class="error">{{ err }}</p>
   } @if (loading()) {
   <app-loading-skeleton />
-  } @else {
+  } @else if (!error()) {
   <div class="direction-switch" role="tablist">
     <button
       tuiButton

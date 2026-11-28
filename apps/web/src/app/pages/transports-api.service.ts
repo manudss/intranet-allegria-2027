@@ -14,6 +14,8 @@ export interface ServeTarget {
   assignmentId: number | null;
   carId: number | null;
   carName: string | null;
+  /** null = pas encore renseigné, false = pas besoin de transport, true = à desservir. */
+  needsTransport: boolean | null;
 }
 
 export interface CarStop {
@@ -54,6 +56,10 @@ export interface GatheringCar {
 
 export interface GatheringTransportsBoard {
   targets: ServeTarget[];
+  /** Besoin non renseigné : à vérifier (ne pas présumer qu'ils ont besoin de transport). */
+  undecidedTargets: ServeTarget[];
+  /** Cibles marquées « pas besoin de transport », non listées. */
+  notNeededCount: number;
   cars: GatheringCar[];
 }
 
@@ -91,6 +97,10 @@ export class TransportsApiService {
   }
   assign(id: number, targets: { targetType: GatheringCarTarget; id: number }[]) {
     return this.http.put<GatheringCar>(`${this.base}/cars/${id}/assignments`, { targets });
+  }
+  setNeed(target: Pick<ServeTarget, 'targetType' | 'id'>, needsTransport: boolean | null) {
+    const path = target.targetType === 'HOSTING_GROUP' ? 'hosting-groups' : 'host-families';
+    return this.http.patch(`${this.base}/${path}/${target.id}/transport-need`, { needsTransport });
   }
   unassign(assignmentId: number) {
     return this.http.delete(`${this.base}/assignments/${assignmentId}`);

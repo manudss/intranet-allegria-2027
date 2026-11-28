@@ -48,6 +48,9 @@
                 <small>{{ t.detail }}</small>
               </span>
               <span class="tui-badge" [class.served]="t.carId !== null">{{ t.carName || 'Non desservie' }}</span>
+              @if (t.carId === null) {
+                <button type="button" tuiButton appearance="flat" size="xs" (click)="setNeed(t, false)" [attr.aria-label]="'Pas besoin de transport pour ' + t.name">Pas besoin</button>
+              }
             </li>
           } @empty {
             <li class="empty">
@@ -59,6 +62,27 @@
             </li>
           }
         </ul>
+        @if (undecidedCount() || b.notNeededCount) {
+          <section class="need-check" aria-label="Besoin de transport à vérifier">
+            <button type="button" tuiButton appearance="secondary" size="s" [attr.aria-expanded]="showUndecided()" (click)="showUndecided.set(!showUndecided())">
+              {{ undecidedCount() }} non renseigné(s), à vérifier
+            </button>
+            @if (b.notNeededCount) {
+              <span class="muted">{{ b.notNeededCount }} marqué(s) « pas besoin de transport » (non listés)</span>
+            }
+            @if (showUndecided()) {
+              <ul class="panel-list need-list">
+                @for (t of b.undecidedTargets; track t.key) {
+                  <li class="target-row">
+                    <span class="target-label"><b>{{ t.name }}</b><small>{{ t.detail }}</small></span>
+                    <button type="button" tuiButton appearance="secondary" size="xs" (click)="setNeed(t, true)" [attr.aria-label]="'Transport nécessaire pour ' + t.name">Transport nécessaire</button>
+                    <button type="button" tuiButton appearance="flat" size="xs" (click)="setNeed(t, false)" [attr.aria-label]="'Pas besoin de transport pour ' + t.name">Pas besoin</button>
+                  </li>
+                }
+              </ul>
+            }
+          </section>
+        }
         <footer class="panel-foot">
           <span class="hint">{{ selectionCount() }} sélectionné(s), {{ selectionPersons() }} personnes · {{ servedCount() }}/{{ b.targets.length }} desservis</span>
           <app-select-field

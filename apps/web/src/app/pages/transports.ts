@@ -119,6 +119,21 @@ export class Transports implements OnInit {
   protected panelTargets(): ServeTarget[] {
     return filterTargets(this.board()?.targets ?? [], this.search());
   }
+  protected readonly showUndecided = signal(false);
+  protected undecidedCount(): number {
+    return this.board()?.undecidedTargets?.length ?? 0;
+  }
+  /** Marque le besoin de transport d'une cible (true = nécessaire, false = pas besoin, null = non renseigné). */
+  protected setNeed(t: ServeTarget, needsTransport: boolean | null) {
+    this.error.set('');
+    this.api.setNeed(t, needsTransport).subscribe({
+      next: () => this.reload(),
+      error: () => {
+        this.error.set('Le besoin de transport n\'a pas pu être enregistré. Rechargement de l\'état réel.');
+        this.reload();
+      },
+    });
+  }
   protected servedCount(): number {
     return (this.board()?.targets ?? []).filter((t) => t.carId !== null).length;
   }

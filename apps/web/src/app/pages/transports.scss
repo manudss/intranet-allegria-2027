@@ -70,3 +70,8 @@
   .panel-foot .bulk-target, .panel-foot .assign-btn { display: none; }
   .panel-foot .only-mobile { flex: 1; justify-content: center; }
 }
+
+.need-check { display: grid; gap: .4rem; padding: .5rem .75rem; border-top: 1px solid var(--line-soft); }
+.need-check .muted { color: var(--appearance-muted); font-size: .85rem; }
+.need-list { max-block-size: 14rem; overflow: auto; }
+.need-list .target-row { flex-wrap: wrap; }

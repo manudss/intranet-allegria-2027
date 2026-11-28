@@ -21,6 +21,7 @@ const target = (id: number, name: string, personCount: number, carId: number | n
   assignmentId: carId ? 50 : null,
   carId,
   carName: carId ? 'Car A' : null,
+  needsTransport: true,
 });
 
 describe('transports-board.logic', () => {

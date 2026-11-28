@@ -134,3 +134,48 @@ describe('GatheringFichePage (modification du groupe)', () => {
     expect(component.busy()).toBe(false);
   });
 });
+
+/** Aides d'affichage ajoutées pour la fiche : tri agenda et avatars (jeunes : prénom seulement). */
+describe('GatheringFichePage (agenda et avatars)', () => {
+  type Helpers = {
+    groupSequencesByDay(l: unknown[]): { date: string; items: { id: number }[] }[];
+    initialsOfFirstName(n: string): string;
+    initialsOfName(n: string): string;
+    initialsOfLabel(n: string): string;
+  };
+  function helpers(): Helpers {
+    TestBed.configureTestingModule({
+      imports: [GatheringFichePage],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: MyAccessService, useValue: { load: vi.fn(), can: () => true } },
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: '19' })) } },
+      ],
+    });
+    return TestBed.createComponent(GatheringFichePage).componentInstance as unknown as Helpers;
+  }
+  const seq = (id: number, eventDate: string, startTime: string) => ({
+    id, title: `S${id}`, eventDate, startTime, endTime: '23:00', track: 'TA', location: '',
+  });
+
+  it('trie les créneaux par jour puis heure et les regroupe par jour', () => {
+    const h = helpers();
+    const days = h.groupSequencesByDay([
+      seq(1, '2027-07-26', '14:00'),
+      seq(2, '2027-07-25', '20:30'),
+      seq(3, '2027-07-26', '09:00'),
+    ]);
+    expect(days.map((d) => d.date)).toEqual(['2027-07-25', '2027-07-26']);
+    expect(days[1].items.map((i) => i.id)).toEqual([3, 1]);
+    expect(h.groupSequencesByDay([])).toEqual([]);
+  });
+
+  it("avatar des jeunes : lettres du prénom seulement, jamais le nom de famille", () => {
+    const h = helpers();
+    expect(h.initialsOfFirstName('Léa')).toBe('Lé');
+    expect(h.initialsOfFirstName('  ')).toBe('?');
+    expect(h.initialsOfName('Marie Dupont')).toBe('MD');
+    expect(h.initialsOfLabel('AIR-Aurore-Nomades')).toBe('AA');
+  });
+});

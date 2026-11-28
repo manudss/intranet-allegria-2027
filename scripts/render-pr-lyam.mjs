@@ -51,6 +51,10 @@ export async function deploy(e, fetcher = fetch) {
     (service.serviceDetails?.plan !== 'free' || service.serviceDetails?.runtime !== 'image')
   )
     throw new Error('existing service is not the dedicated free image preview');
+  // Mode « image seulement » (commit marque [preview-image-only]) : jamais de creation de service,
+  // seulement le redeploiement d'un service gratuit existant avec une nouvelle image, sans migration ni seed.
+  if (e.PREVIEW_IMAGE_ONLY === 'true' && !service)
+    throw new Error('image-only mode needs an existing preview service');
   const env = [
     { key: 'DATABASE_URL', value: e.PREVIEW_DB_URL },
     { key: 'DATABASE_URL_DIRECT', value: e.PREVIEW_DB_URL_DIRECT },

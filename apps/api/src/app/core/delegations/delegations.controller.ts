@@ -11,6 +11,7 @@ import {
   Query,
   UseGuards,
   ValidationPipe,
+  Req,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
@@ -20,10 +21,15 @@ import {
   GroupScopeAware,
 } from '../auth/access-module.decorator';
 import { RoleGuard } from '../auth/role.guard';
+import { AccessRightsService } from '../access-rights/access-rights.service';
+import { LEVEL_RANK } from '../access-rights/access-modules';
 import { DelegationsService } from './delegations.service';
+
+type UserRequest = { user: { id: number; email: string; roles: string[] } };
 import {
   AssignTransportDto,
   CreateExceptionDto,
+  ExceptionLookupDto,
   CreateTransportDto,
   RepartitionQueryDto,
   TransportsQueryDto,
@@ -36,12 +42,21 @@ import {
 @GroupScopeAware()
 @Controller('delegations')
 export class DelegationsController {
-  constructor(private readonly delegationsService: DelegationsService) {}
+  constructor(
+    private readonly delegationsService: DelegationsService,
+    private readonly accessRights: AccessRightsService,
+  ) {}
 
   @ApiOperation({ summary: 'Cartes des délégations visibles (effectifs, répartition, responsables)' })
   @Get()
   listSummaries(@AccessScope() scope: AccessScopeInfo) {
     return this.delegationsService.listSummaries(scope);
+  }
+
+  @ApiOperation({ summary: 'Destinations possibles d une exception : id et nom des délégations, sans autre donnée' })
+  @Get('destinations')
+  destinations() {
+    return this.delegationsService.destinations();
   }
 
   @ApiOperation({ summary: 'Sous-délégations (trajets) d une délégation' })
@@ -96,12 +111,42 @@ export class DelegationsController {
 
   @ApiOperation({ summary: 'Créer une exception vers une autre délégation (créable des deux côtés)' })
   @Post(':id/exceptions')
-  createException(
+  async createException(
     @Param('id', ParseIntPipe) id: number,
     @Body(new ValidationPipe({ whitelist: true })) dto: CreateExceptionDto,
+    @Req() req: UserRequest,
     @AccessScope() scope: AccessScopeInfo,
   ) {
-    return this.delegationsService.createException(id, dto, scope);
+    const author = await this.delegationsService.resolveAuthor(
+      req.user.id,
+      req.user.email,
+      req.user.roles,
+    );
+    // Même contrôle d'écriture que les notes ordinaires : PERSON_NOTES niveau MANAGE.
+    const grants = await this.accessRights.effective(req.user.id, req.user.roles);
+    const usable = (grants['PERSON_NOTES']?.pairs ?? []).filter(
+      (p) => LEVEL_RANK[p.level] >= LEVEL_RANK['MANAGE'],
+    );
+    const noteScope: AccessScopeInfo | null = usable.some((p) => p.scope === 'ALL')
+      ? { all: true }
+      : usable.some((p) => p.scope === 'GROUPS')
+        ? { all: false, groupIds: await this.accessRights.groupIdsForUser(req.user.id) }
+        : null;
+    return this.delegationsService.createException(id, dto, scope, author, noteScope);
+  }
+
+  @ApiOperation({
+    summary:
+      'Côté accueil : retrouver une personne d une autre délégation par prénom et nom exacts (résultat minimal, 5 maximum, journalisé)',
+  })
+  @Post(':id/exception-lookup')
+  exceptionLookup(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ValidationPipe({ whitelist: true })) dto: ExceptionLookupDto,
+    @Req() req: UserRequest,
+    @AccessScope() scope: AccessScopeInfo,
+  ) {
+    return this.delegationsService.lookupPersonForException(id, dto.firstName, dto.lastName, scope, req.user.id);
   }
 
   @ApiOperation({ summary: 'Retirer une affectation (retour dans l à placer de la délégation d origine)' })

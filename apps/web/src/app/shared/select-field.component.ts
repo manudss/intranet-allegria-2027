@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { TuiLabel, TuiInput } from '@taiga-ui/core';
-import { TuiChevron, TuiDataListWrapper, TuiSelect } from '@taiga-ui/kit';
+import { TuiFilterByInputPipe, TuiLabel, TuiInput } from '@taiga-ui/core';
+import { TuiChevron, TuiComboBox, TuiDataListWrapper, TuiSelect } from '@taiga-ui/kit';
 
 export interface SelectOption<T> {
   value: T;
@@ -16,10 +16,25 @@ let nextId = 0;
  */
 @Component({
   selector: 'app-select-field',
-  imports: [FormsModule, TuiLabel, ...TuiInput, TuiChevron, TuiSelect, TuiDataListWrapper],
+  imports: [FormsModule, TuiLabel, ...TuiInput, TuiChevron, TuiSelect, TuiComboBox, TuiDataListWrapper, TuiFilterByInputPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<tui-textfield tuiChevron [stringify]="stringify()" [iconStart]="icon()">
     <label tuiLabel [attr.for]="inputId">{{ label() }}</label>
+    @if (searchable()) {
+    <input
+      tuiComboBox
+      [strict]="true"
+      [id]="inputId"
+      [attr.aria-label]="label()"
+      [attr.data-testid]="testId()"
+      [placeholder]="placeholder()"
+      [disabled]="disabled()"
+      [ngModel]="value()"
+      [ngModelOptions]="{ standalone: true }"
+      (ngModelChange)="valueChange.emit($event)"
+    />
+    <tui-data-list-wrapper *tuiDropdown [items]="values() | tuiFilterByInput" />
+    } @else {
     <input
       tuiSelect
       [id]="inputId"
@@ -32,11 +47,21 @@ let nextId = 0;
       (ngModelChange)="valueChange.emit($event)"
     />
     <tui-data-list-wrapper *tuiDropdown [items]="values()" />
+    }
   </tui-textfield>`,
   styles: `
     :host {
       display: block;
       min-inline-size: 12rem;
+    }
+
+    /* Taiga 5.16 ne fait flotter le libellé que pour un <label> placé APRÈS le champ
+       (sélecteur ~) ; notre libellé est avant. On reproduit le flottement dès que le
+       champ a une valeur ou le focus, sinon le libellé chevauche la valeur. */
+    :host tui-textfield:has(input:not(:placeholder-shown)) label[tuiLabel],
+    :host tui-textfield:focus-within label[tuiLabel] {
+      font: var(--t-label-font);
+      transform: translateY(calc(var(--t-label-y) - var(--tui-font-offset) / 2));
     }
   `,
 })
@@ -48,6 +73,8 @@ export class SelectFieldComponent<T> {
   readonly icon = input('');
   readonly testId = input<string | null>(null);
   readonly disabled = input(false);
+  /** Champ à saisie : la liste se filtre au fil de la frappe (longues listes). */
+  readonly searchable = input(false);
   readonly valueChange = output<T | null>();
   protected readonly inputId = `app-select-field-${nextId++}`;
   protected readonly values = computed(() => this.options().map((o) => o.value));

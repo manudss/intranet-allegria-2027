@@ -70,3 +70,24 @@ test('opens the PR49 demo mode with fictional-only flags and an owner-only mail 
   assert.equal(get('FAMILY_HEALTH_ENCRYPTION_KEY').length, 44);
   assert.equal(get('FAMILY_HEALTH_APPROVAL_REFERENCE'), undefined);
 });
+
+test('image-only mode never creates a service and only redeploys an existing free image service', async () => {
+  const calls = [];
+  await assert.rejects(deploy(env({ PREVIEW_IMAGE_ONLY: 'true' }), fakeRender([demo], calls)), /existing preview service/);
+  assert.ok(calls.every((c) => !c.startsWith('POST') && !c.startsWith('PUT')));
+  const existing = {
+    id: 'srv-9',
+    name: 'al-pr49-api',
+    ownerId: OWNER,
+    serviceDetails: { runtime: 'image', plan: 'free', url: 'https://al-pr49-api.onrender.com' },
+  };
+  const ok = [];
+  const base = fakeRender([demo, existing], ok);
+  const withEnvVars = async (url, init) =>
+    url.endsWith('/env-vars') && init.method === 'GET'
+      ? (ok.push(`GET ${url.replace('https://api.render.com/v1', '')}`), { ok: true, status: 200, json: async () => [] })
+      : base(url, init);
+  await deploy(env({ PREVIEW_IMAGE_ONLY: 'true' }), withEnvVars);
+  assert.ok(ok.includes('POST /services/srv-9/deploys'));
+  assert.ok(!ok.includes('POST /services'));
+});

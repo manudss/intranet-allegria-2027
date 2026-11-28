@@ -169,3 +169,32 @@
   margin: 0.4rem 0;
   font-size: 0.92rem;
 }
+
+/* Mobile (320 à 600 px) : l'identité passe sur une colonne, les valeurs longues
+   (nom, courriel du responsable) vont à la ligne au lieu de déborder. */
+@media (max-width: 600px) {
+  .panel dl {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.15rem;
+  }
+
+  .panel dd {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .person-chip {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  [role='tablist'] {
+    gap: 0.35rem;
+  }
+
+  [role='tablist'] [role='tab'],
+  [role='tablist'] button {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.9rem;
+  }
+}

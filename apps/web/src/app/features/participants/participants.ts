@@ -298,7 +298,12 @@ export class ParticipantsPage implements OnInit {
         this.journeys.set(j);
         this.initJourneyEdits();
       },
-      error: () => this.journeys.set(null),
+      error: () => {
+        this.journeys.set(null);
+        this.journeyError.set(
+          "Les sous-délégations de cette personne n'ont pas pu être chargées. Fermez puis rouvrez la fiche pour réessayer.",
+        );
+      },
     });
     if (!this.delegationOptions().length) {
       this.loadDelegationOptions();
@@ -348,6 +353,36 @@ export class ParticipantsPage implements OnInit {
     }
     this.journeyEdits.set(edits);
   }
+
+  /** Identifiants proposés dans la liste Délégation (libellés via stringify). */
+  protected readonly delegationIds = computed(() => this.delegationOptions().map((d) => d.id));
+
+  protected readonly stringifyJourneyDelegation = (id: number | null): string =>
+    this.delegationOptions().find((d) => d.id === id)?.name ?? '';
+
+  /** « À placer » (null) puis les sous-délégations du sens, de la délégation choisie. */
+  protected readonly journeyTransportIdsMap = computed(() => {
+    const t = this.journeyTransports();
+    const out: Record<string, (number | null)[]> = {};
+    for (const dir of ['ALLER', 'RETOUR'] as const) {
+      out[dir] = [null, ...(t[dir] ?? []).map((tr) => tr.id)];
+    }
+    return out;
+  });
+
+  protected readonly stringifyJourneyTransport = (id: number | null): string => {
+    if (id === null) return 'À placer';
+    const tr = Object.values(this.journeyTransports())
+      .flat()
+      .find((x) => x?.id === id);
+    if (!tr) return '';
+    const d = tr.departureDatetime ? new Date(tr.departureDatetime) : null;
+    const p = (n: number) => String(n).padStart(2, '0');
+    const when = d
+      ? ` · départ ${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`
+      : '';
+    return `${tr.name}${when}`;
+  };
 
   protected journeyEdit(direction: TransportDirection) {
     return this.journeyEdits()[direction];

@@ -7,6 +7,7 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  MinLength,
   Min,
 } from 'class-validator';
 import { AssignmentPersonType, TransportDirection, TransportMode } from '../entities';
@@ -78,6 +79,16 @@ export class CreateExceptionDto {
   @ApiProperty({ example: 7, description: 'Délégation d\'accueil (différente de celle de la personne).' })
   @IsInt()
   toDelegationId!: number;
+
+  @ApiPropertyOptional({
+    example: 'Famille à Annecy ce week-end, accord du responsable.',
+    description:
+      'Note facultative : si elle est remplie, elle est créée avec l\'exception (signée, datée) et visible dans le suivi des notes.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  note?: string;
 }
 
 export class AssignTransportDto {
@@ -88,6 +99,20 @@ export class AssignTransportDto {
   @ApiProperty({ example: 128 })
   @IsInt()
   personId!: number;
+}
+
+export class ExceptionLookupDto {
+  @ApiProperty({ example: 'Camille' })
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  firstName!: string;
+
+  @ApiProperty({ example: 'Martin' })
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  lastName!: string;
 }
 
 export class CreateNoteDto {

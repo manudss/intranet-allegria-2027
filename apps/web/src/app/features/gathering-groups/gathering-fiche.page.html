@@ -95,44 +95,82 @@
     @if (tab() === 'resume') {
       <section class="card" aria-labelledby="resume-title">
         <h2 id="resume-title">Résumé</h2>
-        <ul class="resume-list">
-          <li><button type="button" class="link" (click)="tab.set('creneaux')">{{ f.sequences.length }} créneau{{ f.sequences.length > 1 ? 'x' : '' }} de l'agenda lié{{ f.sequences.length > 1 ? 's' : '' }}</button></li>
-          <li><button type="button" class="link" (click)="tab.set('equipes')">{{ f.teams.length }} équipe{{ f.teams.length > 1 ? 's' : '' }} de rassemblement, {{ f.volunteerTeams.length }} équipe{{ f.volunteerTeams.length > 1 ? 's' : '' }} bénévole{{ f.volunteerTeams.length > 1 ? 's' : '' }} opérationnelle{{ f.volunteerTeams.length > 1 ? 's' : '' }}</button></li>
-          <li><button type="button" class="link" (click)="tab.set('personnes')">{{ f.people.length }} personne{{ f.people.length > 1 ? 's' : '' }}, {{ f.animators.length }} animateur{{ f.animators.length > 1 ? 's' : '' }}</button></li>
-          <li><button type="button" class="link" (click)="tab.set('responsables')">{{ f.managers.length }} responsable{{ f.managers.length > 1 ? 's' : '' }}</button></li>
+        <ul class="resume-tiles">
+          <li>
+            <button type="button" class="tile" (click)="tab.set('creneaux')" [attr.aria-label]="f.sequences.length + ' créneau' + (f.sequences.length > 1 ? 'x' : '') + ' de l\'agenda lié' + (f.sequences.length > 1 ? 's' : '') + ', ouvrir les créneaux'">
+              <tui-icon icon="@tui.calendar" />
+              <span class="tile-num">{{ f.sequences.length }}</span>
+              <span class="tile-label">créneau{{ f.sequences.length > 1 ? 'x' : '' }} lié{{ f.sequences.length > 1 ? 's' : '' }}</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="tile" (click)="tab.set('equipes')" [attr.aria-label]="f.teams.length + ' équipe' + (f.teams.length > 1 ? 's' : '') + ' de rassemblement, ouvrir les équipes'">
+              <tui-icon icon="@tui.users" />
+              <span class="tile-num">{{ f.teams.length }}</span>
+              <span class="tile-label">équipe{{ f.teams.length > 1 ? 's' : '' }} de rassemblement</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="tile" (click)="tab.set('equipes')" [attr.aria-label]="f.volunteerTeams.length + ' équipe' + (f.volunteerTeams.length > 1 ? 's' : '') + ' bénévole' + (f.volunteerTeams.length > 1 ? 's' : '') + ' opérationnelle' + (f.volunteerTeams.length > 1 ? 's' : '') + ', ouvrir les équipes'">
+              <tui-icon icon="@tui.hand-heart" />
+              <span class="tile-num">{{ f.volunteerTeams.length }}</span>
+              <span class="tile-label">équipe{{ f.volunteerTeams.length > 1 ? 's' : '' }} bénévole{{ f.volunteerTeams.length > 1 ? 's' : '' }}</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="tile" (click)="tab.set('personnes')" [attr.aria-label]="f.people.length + ' jeune' + (f.people.length > 1 ? 's' : '') + ' et participants hors animateurs, ouvrir les personnes'">
+              <tui-icon icon="@tui.smile" />
+              <span class="tile-num">{{ f.people.length }}</span>
+              <span class="tile-label">jeune{{ f.people.length > 1 ? 's' : '' }} et participants</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="tile" (click)="tab.set('personnes')" [attr.aria-label]="f.animators.length + ' animateur' + (f.animators.length > 1 ? 's' : '') + ', ouvrir les personnes'">
+              <tui-icon icon="@tui.user-check" />
+              <span class="tile-num">{{ f.animators.length }}</span>
+              <span class="tile-label">animateur{{ f.animators.length > 1 ? 's' : '' }}</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="tile" (click)="tab.set('responsables')" [attr.aria-label]="f.managers.length + ' responsable' + (f.managers.length > 1 ? 's' : '') + ', ouvrir les responsables'">
+              <tui-icon icon="@tui.shield-check" />
+              <span class="tile-num">{{ f.managers.length }}</span>
+              <span class="tile-label">responsable{{ f.managers.length > 1 ? 's' : '' }}</span>
+            </button>
+          </li>
         </ul>
+        <p class="muted tile-note">Effectif total du groupe : {{ f.persons }} personne{{ f.persons > 1 ? 's' : '' }} ({{ f.jeunes }} jeune{{ f.jeunes > 1 ? 's' : '' }} et {{ f.animateurs }} animateur{{ f.animateurs > 1 ? 's' : '' }}, selon la règle de comptage de la répartition).</p>
       </section>
     }
     @if (tab() === 'creneaux') {
     <section class="card" aria-labelledby="slots-title">
       <h2 id="slots-title">Créneaux de l'agenda liés ({{ f.sequences.length }})</h2>
-      <table class="data-table" aria-label="Créneaux liés au groupe">
-        <thead><tr><th>Date</th><th>Horaire</th><th>Créneau</th><th>Piste</th><th>Lieu</th><th></th></tr></thead>
-        <tbody>
-          @for (q of f.sequences; track q.id) {
-            <tr>
-              <td data-label="Date">{{ q.eventDate | date: 'dd/MM/yyyy' }}</td>
-              <td data-label="Horaire">{{ q.startTime }}–{{ q.endTime }}</td>
-              <td data-label="Créneau">
+      @for (day of groupSequencesByDay(f.sequences); track day.date) {
+        <h3 class="agenda-day"><tui-icon icon="@tui.calendar" /> {{ day.date | date: 'EEEE d MMMM yyyy' }}</h3>
+        <ul class="agenda" [attr.aria-label]="'Créneaux du ' + (day.date | date: 'd MMMM')">
+          @for (q of day.items; track q.id) {
+            <li class="agenda-item" [style.border-inline-start-color]="q.title | tuiAutoColor">
+              <span class="agenda-time"><tui-icon icon="@tui.clock" />{{ q.startTime }}–{{ q.endTime }}</span>
+              <span class="agenda-main">
                 @if (canOpenAgenda()) {
                   <a [routerLink]="['/programme/evenements', q.id]"><strong>{{ q.title }}</strong></a>
                 } @else {
                   <strong>{{ q.title }}</strong>
                 }
-              </td>
-              <td data-label="Piste">{{ trackLabels[q.track] }}</td>
-              <td data-label="Lieu">{{ q.location ?? '' }}</td>
-              <td>
-                @if (canEditGroups()) {
-                  <button type="button" tuiButton appearance="flat" size="xs" (click)="unlinkSequence(q)">Retirer</button>
-                }
-              </td>
-            </tr>
-          } @empty {
-            <tr><td colspan="6" class="muted">Ce groupe n'est lié à aucun créneau.</td></tr>
+                <span class="muted agenda-sub">
+                  <img class="track-logo" [src]="trackLogos[q.track]" [alt]="'Piste ' + trackLabels[q.track]" />
+                  {{ trackLabels[q.track] }}@if (q.location) { · <tui-icon icon="@tui.map-pin" /> {{ q.location }} }
+                </span>
+              </span>
+              @if (canEditGroups()) {
+                <button type="button" tuiIconButton appearance="flat" size="xs" iconStart="@tui.unlink" (click)="unlinkSequence(q)" [attr.aria-label]="'Retirer le créneau ' + q.title" title="Retirer ce créneau">Retirer</button>
+              }
+            </li>
           }
-        </tbody>
-      </table>
+        </ul>
+      } @empty {
+        <p class="muted">Ce groupe n'est lié à aucun créneau.</p>
+      }
       @if (canEditGroups() && canOpenAgenda() && !addingSequence()) {
         <div class="add-row">
           <button type="button" tuiButton appearance="secondary" size="s" (click)="openAddSequence()">Ajouter un créneau</button>
@@ -146,11 +184,21 @@
             <button type="button" tuiButton appearance="flat" size="s" (click)="addingSequence.set(false)">Fermer</button>
           </div>
         <ul class="results" aria-label="Créneaux à ajouter">
-          @for (x of addableSequences(); track x.id) {
-            <li>
-              <span>{{ x.eventDate | date: 'dd/MM/yyyy' }} · {{ x.startTime }}–{{ x.endTime }} · {{ x.title }} ({{ trackLabels[x.track] }}){{ x.location ? ' · ' + x.location : '' }}</span>
-              <button type="button" tuiButton appearance="secondary" size="xs" (click)="linkSequence(x.id)">Lier ce créneau</button>
-            </li>
+          @for (day of groupSequencesByDay(addableSequences()); track day.date) {
+            <li class="picker-day"><tui-icon icon="@tui.calendar" /> {{ day.date | date: 'EEEE d MMMM yyyy' }}</li>
+            @for (x of day.items; track x.id) {
+              <li class="agenda-item" [style.border-inline-start-color]="x.title | tuiAutoColor">
+                <span class="agenda-time"><tui-icon icon="@tui.clock" />{{ x.startTime }}–{{ x.endTime }}</span>
+                <span class="agenda-main">
+                  <strong>{{ x.title }}</strong>
+                  <span class="muted agenda-sub">
+                    <img class="track-logo" [src]="trackLogos[x.track]" [alt]="'Piste ' + trackLabels[x.track]" />
+                    {{ trackLabels[x.track] }}@if (x.location) { · <tui-icon icon="@tui.map-pin" /> {{ x.location }} }
+                  </span>
+                </span>
+                <button type="button" tuiButton appearance="secondary" size="xs" iconStart="@tui.link" (click)="linkSequence(x.id)">Lier ce créneau</button>
+              </li>
+            }
           } @empty {
             <li class="muted">Aucun créneau à ajouter.</li>
           }
@@ -167,13 +215,14 @@
       } @else {
         <table class="data-table">
           <thead>
-            <tr><th>Équipe</th><th>Piste</th><th>Jeunes</th><th>Animateurs</th><th>Personnes</th><th></th></tr>
+            <tr><th>Équipe</th><th>Piste</th><th>Jeunes</th><th>Animateurs</th><th>Effectif total</th><th></th></tr>
           </thead>
           <tbody>
             @for (t of f.teams; track t.id) {
               <tr>
                 <td data-label="Équipe">
-                  <span class="dot" [style.background]="trackColors[t.track]"></span>
+                  <img class="track-logo" [src]="trackLogos[t.track]" [alt]="'Piste ' + trackLabels[t.track]" />
+                  <span tuiAvatar size="xs" [round]="false" class="avatar-dark" [style.background]="t.name | tuiAutoColor">{{ initialsOfLabel(t.name) }}</span>
                   @if (canOpenTeams()) {
                     <a [routerLink]="['/equipes']" [queryParams]="{ equipe: t.id }"><strong>{{ t.name }}</strong></a>
                   } @else {
@@ -183,7 +232,7 @@
                 <td data-label="Piste">{{ trackLabels[t.track] }}</td>
                 <td data-label="Jeunes">{{ t.jeunes }}</td>
                 <td data-label="Animateurs">{{ t.animateurs }}</td>
-                <td data-label="Personnes">{{ t.persons }}</td>
+                <td data-label="Effectif total">{{ t.persons }}</td>
                 <td class="row-actions">
                   <a [routerLink]="['/groupes-rassemblement', 'repartitions', f.repartition.id]">Dispatch</a>
                   @if (canOpenTeams()) {
@@ -227,16 +276,16 @@
     }
     @if (tab() === 'personnes') {
     <section class="card" aria-labelledby="people-title">
-      <h2 id="people-title">Personnes ({{ f.people.length }})</h2>
-      <p class="muted">Prénoms seulement pour les jeunes, par mesure de protection des mineurs.</p>
+      <h2 id="people-title">Jeunes et participants hors animateurs ({{ f.people.length }})</h2>
+      <p class="muted">Effectif total du groupe : {{ f.persons }} ({{ f.people.length }} jeunes et participants + {{ f.animators.length }} animateurs, les animateurs sont listés plus bas). Les avatars des jeunes n'utilisent que les lettres du prénom.</p>
       @if (f.people.length) {
         <div class="table-scroll">
           <table class="data-table">
-            <thead><tr><th>Prénom</th><th>Équipe</th><th>Tranche</th><th></th></tr></thead>
+            <thead><tr><th>Nom</th><th>Équipe</th><th>Tranche</th><th></th></tr></thead>
             <tbody>
               @for (p of f.people; track p.id) {
                 <tr>
-                  <td data-label="Nom">{{ p.lastName }} {{ p.firstName }}</td>
+                  <td data-label="Nom"><span class="person-cell"><span tuiAvatar size="xs" [round]="true" class="avatar-dark" [style.background]="p.firstName | tuiAutoColor" aria-hidden="true">{{ initialsOfFirstName(p.firstName) }}</span>{{ p.lastName }} {{ p.firstName }}</span></td>
                   <td data-label="Équipe">
                     @if (canOpenTeams()) {
                       <a [routerLink]="['/equipes']" [queryParams]="{ equipe: p.teamId }">{{ p.teamName }}</a>
@@ -261,7 +310,7 @@
           <tbody>
             @for (a of f.animators; track a.id + '-' + a.teamId) {
               <tr>
-                <td data-label="Nom">{{ a.displayName }}</td>
+                <td data-label="Nom"><span class="person-cell"><span tuiAvatar size="xs" [round]="true" class="avatar-dark" [style.background]="a.displayName | tuiAutoColor" aria-hidden="true">{{ initialsOfName(a.displayName) }}</span>{{ a.displayName }}</span></td>
                 <td data-label="Équipe">
                   @if (canOpenTeams()) {
                     <a [routerLink]="['/equipes']" [queryParams]="{ equipe: a.teamId }">{{ a.teamName }}</a>
@@ -284,6 +333,7 @@
       <ul class="manager-list">
         @for (m of f.managers; track m.userId) {
           <li>
+            <span tuiAvatar size="xs" [round]="true" class="avatar-dark" [style.background]="(m.displayName ?? m.email) | tuiAutoColor" aria-hidden="true">{{ initialsOfName(m.displayName ?? m.email) }}</span>
             <strong>{{ m.displayName ?? m.email }}</strong>
             @if (m.displayName) { <span class="muted">{{ m.email }}</span> }
             <button type="button" class="link" (click)="removeManager(m.userId)">Retirer</button>

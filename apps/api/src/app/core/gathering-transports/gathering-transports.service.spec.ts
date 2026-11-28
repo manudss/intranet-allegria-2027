@@ -108,7 +108,8 @@ describe('GatheringTransportsService', () => {
   it('board : cibles = groupes + collectifs isolés, avec effectifs logés et car affecté', async () => {
     const { service, state } = buildService();
     state.cars[0].assignments = [
-      { id: 50, car: { id: 100, name: 'Car A' }, targetType: GatheringCarTarget.HOSTING_GROUP, hostingGroup: { id: 1 }, hostFamily: null },
+      // TypeORM ne charge pas la relation inverse car : les doubles la reflètent.
+      { id: 50, targetType: GatheringCarTarget.HOSTING_GROUP, hostingGroup: { id: 1 }, hostFamily: null },
     ];
 
     const board = await service.board();
@@ -136,8 +137,8 @@ describe('GatheringTransportsService', () => {
   it('board : occupation = cibles + ajoutés - retirés ; arrêts ordonnés', async () => {
     const { service, state } = buildService();
     state.cars[0].assignments = [
-      { id: 50, car: { id: 100, name: 'Car A' }, targetType: GatheringCarTarget.HOSTING_GROUP, hostingGroup: { id: 1, name: 'Zone Nord' }, hostFamily: null },
-      { id: 51, car: { id: 100, name: 'Car A' }, targetType: GatheringCarTarget.HOST_FAMILY, hostingGroup: null, hostFamily: { id: 13, familyName: 'Internat Exemple' } },
+      { id: 50, targetType: GatheringCarTarget.HOSTING_GROUP, hostingGroup: { id: 1, name: 'Zone Nord' }, hostFamily: null },
+      { id: 51, targetType: GatheringCarTarget.HOST_FAMILY, hostingGroup: null, hostFamily: { id: 13, familyName: 'Internat Exemple' } },
     ];
     state.cars[0].persons = [
       { id: 60, kind: GatheringCarPersonKind.ADDED, participant: { id: 2001, firstName: 'X', lastName: 'Y' } },

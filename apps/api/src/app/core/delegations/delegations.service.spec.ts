@@ -352,6 +352,25 @@ describe('DelegationsService — note facultative à la création d une exceptio
     expect(options.lock).toEqual({ mode: 'pessimistic_write' });
   });
 
+  it('droit de note : sans PERSON_NOTES MANAGE (null) ou hors périmètre, exception créée sans note ; avec le droit, note créée', async () => {
+    const none = build();
+    const r1 = await none.svc.createException(LYON, dto('x'), all, author, null);
+    expect(none.assignments.save).toHaveBeenCalled();
+    expect(none.notes.save).not.toHaveBeenCalled();
+    expect(r1.noteStatus).toBe('NOT_ALLOWED');
+    const elsewhere = build();
+    const r2 = await elsewhere.svc.createException(LYON, dto('x'), all, author, { all: false, groupIds: [999] });
+    expect(elsewhere.notes.save).not.toHaveBeenCalled();
+    expect(r2.noteStatus).toBe('NOT_ALLOWED');
+    const allowed = build();
+    const r3 = await allowed.svc.createException(LYON, dto('x'), lyonOnly, author, { all: false, groupIds: [LYON] });
+    expect(allowed.notes.save).toHaveBeenCalledTimes(1);
+    expect(r3.noteStatus).toBe('SAVED');
+    const noNote = build();
+    const r4 = await noNote.svc.createException(LYON, dto(), all, author, null);
+    expect(r4.noteStatus).toBe('NOT_REQUESTED');
+  });
+
   it('note rangée dans la délégation d origine si elle est dans le périmètre de l auteur, sinon dans l accueil', async () => {
     const a = build();
     await a.svc.createException(LYON, dto('x'), all, author);

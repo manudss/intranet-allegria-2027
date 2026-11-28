@@ -63,7 +63,8 @@ export class DelegationFichePage implements OnInit {
         this.notesUnavailable.set(true);
         return;
       }
-      this.api.notesFeed('ALL').subscribe({
+      // Seules les personnes qui ont des notes (original : « que ceux où il y a des notes »).
+      this.api.notesFeed('WITH_NOTES').subscribe({
         next: (rows) => this.noteRows.set(rows.filter((n) => n.delegationId === this.delegationId)),
         error: () => this.notesUnavailable.set(true),
       });

@@ -21,6 +21,8 @@ import {
   GroupScopeAware,
 } from '../auth/access-module.decorator';
 import { RoleGuard } from '../auth/role.guard';
+import { AccessRightsService } from '../access-rights/access-rights.service';
+import { LEVEL_RANK } from '../access-rights/access-modules';
 import { DelegationsService } from './delegations.service';
 
 type UserRequest = { user: { id: number; email: string; roles: string[] } };
@@ -39,7 +41,10 @@ import {
 @GroupScopeAware()
 @Controller('delegations')
 export class DelegationsController {
-  constructor(private readonly delegationsService: DelegationsService) {}
+  constructor(
+    private readonly delegationsService: DelegationsService,
+    private readonly accessRights: AccessRightsService,
+  ) {}
 
   @ApiOperation({ summary: 'Cartes des délégations visibles (effectifs, répartition, responsables)' })
   @Get()
@@ -110,7 +115,17 @@ export class DelegationsController {
       req.user.email,
       req.user.roles,
     );
-    return this.delegationsService.createException(id, dto, scope, author);
+    // Même contrôle d'écriture que les notes ordinaires : PERSON_NOTES niveau MANAGE.
+    const grants = await this.accessRights.effective(req.user.id, req.user.roles);
+    const usable = (grants['PERSON_NOTES']?.pairs ?? []).filter(
+      (p) => LEVEL_RANK[p.level] >= LEVEL_RANK['MANAGE'],
+    );
+    const noteScope: AccessScopeInfo | null = usable.some((p) => p.scope === 'ALL')
+      ? { all: true }
+      : usable.some((p) => p.scope === 'GROUPS')
+        ? { all: false, groupIds: await this.accessRights.groupIdsForUser(req.user.id) }
+        : null;
+    return this.delegationsService.createException(id, dto, scope, author, noteScope);
   }
 
   @ApiOperation({ summary: 'Retirer une affectation (retour dans l à placer de la délégation d origine)' })

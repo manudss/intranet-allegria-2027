@@ -347,7 +347,13 @@ export class DelegationsService {
     dto: CreateExceptionDto,
     scope: AccessScopeInfo,
     author?: NoteAuthor,
-  ): Promise<TransportAssignment> {
+    /**
+     * Périmètre du droit PERSON_NOTES (MANAGE) de l'appelant : même contrôle d'écriture que les
+     * notes ordinaires. null = pas de droit : l'exception est créée sans la note.
+     * Absent = on reprend le périmètre de l'exception (appels internes et anciens tests).
+     */
+    noteScope?: AccessScopeInfo | null,
+  ): Promise<TransportAssignment & { noteStatus: 'SAVED' | 'NOT_REQUESTED' | 'NOT_ALLOWED' }> {
     await this.findDelegation(delegationId, scope);
     const person = await this.getPerson(dto.personType, dto.personId);
     if (!person.delegationId) {
@@ -364,8 +370,20 @@ export class DelegationsService {
       throw new ForbiddenException('Ni la délégation d\'origine ni celle d\'accueil n\'est dans votre périmètre');
     }
     await this.findDelegation(dto.toDelegationId, { all: true });
-    const noteBody = dto.note?.trim();
+    const requestedNote = dto.note?.trim();
+    const effectiveNoteScope = noteScope === undefined ? scope : noteScope;
+    const inNoteScope = (id: number) =>
+      !!effectiveNoteScope && (effectiveNoteScope.all || effectiveNoteScope.groupIds.includes(id));
     const personDelegationId = person.delegationId;
+    // Droit d'écrire une note sur cette personne : même règle que les notes ordinaires
+    // (périmètre PERSON_NOTES couvrant sa délégation d'origine ou d'accueil).
+    const mayNote = inNoteScope(personDelegationId) || inNoteScope(dto.toDelegationId);
+    const noteBody = requestedNote && mayNote ? requestedNote : undefined;
+    const noteStatus: 'SAVED' | 'NOT_REQUESTED' | 'NOT_ALLOWED' = !requestedNote
+      ? 'NOT_REQUESTED'
+      : noteBody
+        ? 'SAVED'
+        : 'NOT_ALLOWED';
     // Exception et note dans une seule transaction SQL : tout ou rien.
     // Relecture sous verrou en écriture : deux requêtes concurrentes sur la même
     // personne et le même sens se sérialisent, la contrainte unique protège le reste.
@@ -398,7 +416,7 @@ export class DelegationsService {
       if (noteBody && author) {
         // Note rangée dans la délégation d'origine si elle est dans le périmètre de
         // l'auteur, sinon dans la délégation d'accueil (cloisonnement inchangé).
-        const noteDelegationId = touchesScope(personDelegationId) ? personDelegationId : dto.toDelegationId;
+        const noteDelegationId = inNoteScope(personDelegationId) ? personDelegationId : dto.toDelegationId;
         await em.getRepository(PersonNote).save(
           em.getRepository(PersonNote).create({
             personType: dto.personType,
@@ -412,7 +430,7 @@ export class DelegationsService {
           }),
         );
       }
-      return saved;
+      return Object.assign(saved, { noteStatus });
     });
   }
 

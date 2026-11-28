@@ -122,8 +122,8 @@ describe('DelegationFichePage (lot 4 : fiche en vues)', () => {
       grants: notesForbidden ? [] : [{ module: 'PERSON_NOTES', level: 'VIEW', scope: 'ALL' }],
     });
     fixture.detectChanges();
-    if (notesForbidden) http.expectNone('/api/person-notes?filter=ALL');
-    else http.expectOne('/api/person-notes?filter=ALL').flush([]);
+    if (notesForbidden) http.expectNone('/api/person-notes?filter=WITH_NOTES');
+    else http.expectOne('/api/person-notes?filter=WITH_NOTES').flush([]);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();

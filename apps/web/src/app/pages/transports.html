@@ -62,7 +62,7 @@
             </li>
           }
         </ul>
-        @if (undecidedCount() || b.notNeededCount) {
+        @if (undecidedCount() || b.notNeededCount || familyChoices().length) {
           <section class="need-check" aria-label="Besoin de transport à vérifier">
             <button type="button" tuiButton appearance="secondary" size="s" [attr.aria-expanded]="showUndecided()" (click)="showUndecided.set(!showUndecided())">
               {{ undecidedCount() }} non renseigné(s), à vérifier
@@ -80,6 +80,27 @@
                   </li>
                 }
               </ul>
+            }
+            @if (familyChoices().length) {
+              <button type="button" tuiButton appearance="secondary" size="s" [attr.aria-expanded]="showFamilies()" (click)="showFamilies.set(!showFamilies())">
+                Familles : besoin propre ({{ familyChoices().length }})
+              </button>
+              @if (showFamilies()) {
+                <p class="muted">Par défaut une famille suit son groupe. Un choix propre est prioritaire : « nécessaire » dans un groupe sans transport la fait apparaître à part.</p>
+                <ul class="panel-list need-list">
+                  @for (f of familyChoices(); track f.id) {
+                    <li class="target-row">
+                      <span class="target-label">
+                        <b>{{ f.name }}</b>
+                        <small>{{ f.groupName }} · {{ f.personCount }} pers. · {{ f.needsTransport === null ? 'suit le groupe' : f.needsTransport ? 'transport nécessaire' : 'pas besoin' }}</small>
+                      </span>
+                      <button type="button" tuiButton [appearance]="f.needsTransport === null ? 'primary' : 'flat'" size="xs" (click)="setFamilyNeed(f, null)" [attr.aria-label]="f.name + ' suit son groupe'">Suit le groupe</button>
+                      <button type="button" tuiButton [appearance]="f.needsTransport === true ? 'primary' : 'flat'" size="xs" (click)="setFamilyNeed(f, true)" [attr.aria-label]="'Transport nécessaire pour ' + f.name">Nécessaire</button>
+                      <button type="button" tuiButton [appearance]="f.needsTransport === false ? 'primary' : 'flat'" size="xs" (click)="setFamilyNeed(f, false)" [attr.aria-label]="'Pas besoin de transport pour ' + f.name">Pas besoin</button>
+                    </li>
+                  }
+                </ul>
+              }
             }
           </section>
         }

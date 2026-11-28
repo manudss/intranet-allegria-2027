@@ -42,6 +42,18 @@ export interface ServeTargetView {
   needsTransport: boolean | null;
 }
 
+export interface FamilyChoiceView {
+  id: number;
+  name: string;
+  groupId: number;
+  groupName: string;
+  personCount: number;
+  /** null = suit le groupe ; true/false = choix propre prioritaire. */
+  needsTransport: boolean | null;
+  /** Famille qui se dessert à part (« nécessaire » alors que son groupe ne l'est pas). */
+  separate: boolean;
+}
+
 export interface CarStopView {
   id: number;
   orderIndex: number;
@@ -87,6 +99,8 @@ export interface GatheringTransportsBoard {
   undecidedTargets: ServeTargetView[];
   /** Nombre de cibles marquées « pas besoin de transport » (non listées). */
   notNeededCount: number;
+  /** Familles d'un groupe : choix propre (null = suit le groupe). */
+  familyChoices: FamilyChoiceView[];
   cars: CarView[];
 }
 
@@ -96,12 +110,30 @@ export interface TripOccupancy {
   count: number;
 }
 
+/**
+ * Une famille d'un groupe est-elle comprise dans la cible de son groupe ? (choix validé par l'utilisateur)
+ * - besoin non renseigné (null) : elle suit le groupe ;
+ * - « pas besoin » explicite : elle n'est jamais comprise dans le groupe ;
+ * - « nécessaire » explicite : comprise si le groupe est lui aussi « nécessaire », sinon cible séparée ;
+ * - une famille déjà desservie à part (affectation propre) n'est jamais comptée une 2e fois dans son groupe.
+ */
+export const carriedByGroup = (
+  familyNeed: boolean | null | undefined,
+  groupNeed: boolean | null | undefined,
+  hasOwnAssignment = false,
+): boolean => {
+  if (hasOwnAssignment) return false;
+  if (familyNeed === false) return false;
+  if (familyNeed === true && groupNeed !== true) return false;
+  return true;
+};
+
 interface HousedLike {
   status: AssignmentStatus;
   arrivalDate?: string | null;
   departureDate?: string | null;
   participant: { id: number };
-  hostFamily: { id: number; hostingGroup?: { id: number } | null };
+  hostFamily: { id: number; needsTransport?: boolean | null; hostingGroup?: { id: number; needsTransport?: boolean | null } | null };
 }
 
 /**
@@ -119,6 +151,7 @@ export const computeTripOccupancy = (
   persons: { kind: GatheringCarPersonKind; participantId: number }[],
   housed: HousedLike[],
   filterByHousingDates = false,
+  ownFamilyIds: Set<number> = new Set(),
 ): TripOccupancy[] => {
   const removed = new Set(persons.filter((p) => p.kind === GatheringCarPersonKind.REMOVED).map((p) => p.participantId));
   const added = persons.filter((p) => p.kind === GatheringCarPersonKind.ADDED).map((p) => p.participantId);
@@ -131,7 +164,8 @@ export const computeTripOccupancy = (
       if (date && row.arrivalDate && row.departureDate && (date < row.arrivalDate || date > row.departureDate)) continue;
       const served = targets.some((t) =>
         t.targetType === GatheringCarTarget.HOSTING_GROUP
-          ? row.hostFamily.hostingGroup?.id === t.id
+          ? row.hostFamily.hostingGroup?.id === t.id &&
+            carriedByGroup(row.hostFamily.needsTransport, row.hostFamily.hostingGroup?.needsTransport, ownFamilyIds.has(row.hostFamily.id))
           : row.hostFamily.id === t.id,
       );
       if (served) ids.add(row.participant.id);
@@ -200,14 +234,27 @@ export class GatheringTransportsService {
       this.housedRepository.find({ relations: { hostFamily: { hostingGroup: true }, participant: true } }),
     ]);
 
-    // Effectifs logés (affectations non annulées), par groupe et par hébergement.
+    // Familles déjà desservies à part : jamais comptées une 2e fois dans leur groupe.
+    const ownFamilyIds = new Set<number>();
+    for (const car of cars) {
+      for (const a of car.assignments) {
+        if (a.targetType === GatheringCarTarget.HOST_FAMILY && a.hostFamily) ownFamilyIds.add(a.hostFamily.id);
+      }
+    }
+    const carried = (row: (typeof housed)[number]) =>
+      carriedByGroup(row.hostFamily.needsTransport, row.hostFamily.hostingGroup?.needsTransport, ownFamilyIds.has(row.hostFamily.id));
+
+    // Effectifs logés (affectations non annulées), par groupe (familles comprises) et par hébergement.
     const countByGroup = new Map<number, number>();
     const countByFamily = new Map<number, number>();
+    const excludedByGroup = new Map<number, number>();
     for (const row of housed) {
       if (row.status === AssignmentStatus.CANCELLED) continue;
       countByFamily.set(row.hostFamily.id, (countByFamily.get(row.hostFamily.id) ?? 0) + 1);
       const groupId = row.hostFamily.hostingGroup?.id;
-      if (groupId) countByGroup.set(groupId, (countByGroup.get(groupId) ?? 0) + 1);
+      if (!groupId) continue;
+      if (carried(row)) countByGroup.set(groupId, (countByGroup.get(groupId) ?? 0) + 1);
+      else excludedByGroup.set(groupId, (excludedByGroup.get(groupId) ?? 0) + 1);
     }
 
     // Cibles d'hébergement de chaque participant logé (pour rattacher les retraits aux cibles).
@@ -219,7 +266,7 @@ export class GatheringTransportsService {
         familyIds: new Set<number>(),
       };
       entry.familyIds.add(row.hostFamily.id);
-      if (row.hostFamily.hostingGroup?.id) entry.groupIds.add(row.hostFamily.hostingGroup.id);
+      if (row.hostFamily.hostingGroup?.id && carried(row)) entry.groupIds.add(row.hostFamily.hostingGroup.id);
       targetsOfParticipant.set(row.participant.id, entry);
     }
 
@@ -245,13 +292,14 @@ export class GatheringTransportsService {
       if (familyCount) parts.push(`${familyCount} ${plural(familyCount, 'famille d\'accueil', 'familles d\'accueil')}`);
       if (collectiveCount) parts.push(`${collectiveCount} ${plural(collectiveCount, 'hébergement collectif', 'hébergements collectifs')}`);
       const personCount = countByGroup.get(group.id) ?? 0;
+      const excluded = excludedByGroup.get(group.id) ?? 0;
       const entry = assignmentByTarget.get(targetKey(GatheringCarTarget.HOSTING_GROUP, group.id));
       targets.push({
         key: targetKey(GatheringCarTarget.HOSTING_GROUP, group.id),
         targetType: GatheringCarTarget.HOSTING_GROUP,
         id: group.id,
         name: group.name,
-        detail: `${parts.join(', ') || 'Aucun hébergement'} · ${personCount} ${plural(personCount, 'personne', 'personnes')} · ${kindLabel(group.kind)}`,
+        detail: `${parts.join(', ') || 'Aucun hébergement'} · ${personCount} ${plural(personCount, 'personne', 'personnes')} · ${kindLabel(group.kind)}${excluded ? ` · ${excluded} ${plural(excluded, 'personne gérée', 'personnes gérées')} à part` : ''}`,
         personCount,
         assignmentId: entry?.assignment.id ?? null,
         carId: entry?.car.id ?? null,
@@ -270,6 +318,28 @@ export class GatheringTransportsService {
         id: family.id,
         name: family.familyName,
         detail: `Hébergement collectif · ${family.city} · ${personCount} ${plural(personCount, 'personne', 'personnes')}`,
+        personCount,
+        assignmentId: entry?.assignment.id ?? null,
+        carId: entry?.car.id ?? null,
+        carName: entry?.car.name ?? null,
+        needsTransport: family.needsTransport ?? null,
+      });
+    }
+    // Familles d'un groupe avec un choix propre : cible séparée si elles se distinguent de leur groupe
+    // (« nécessaire » alors que le groupe ne l'est pas), ou si elles sont déjà desservies à part (jamais masquées).
+    for (const family of families) {
+      if (!family.hostingGroup) continue;
+      const entry = assignmentByTarget.get(targetKey(GatheringCarTarget.HOST_FAMILY, family.id));
+      const groupNeed = groups.find((g) => g.id === family.hostingGroup!.id)?.needsTransport ?? null;
+      const separate = family.needsTransport === true && groupNeed !== true;
+      if (!separate && !entry) continue;
+      const personCount = countByFamily.get(family.id) ?? 0;
+      targets.push({
+        key: targetKey(GatheringCarTarget.HOST_FAMILY, family.id),
+        targetType: GatheringCarTarget.HOST_FAMILY,
+        id: family.id,
+        name: family.familyName,
+        detail: `Famille du groupe ${family.hostingGroup.name ?? ''} · besoin propre · ${personCount} ${plural(personCount, 'personne', 'personnes')}`.replace('  ', ' '),
         personCount,
         assignmentId: entry?.assignment.id ?? null,
         carId: entry?.car.id ?? null,
@@ -341,7 +411,22 @@ export class GatheringTransportsService {
     carViews.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
 
     undecidedTargets.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
-    return { targets, undecidedTargets, notNeededCount, cars: carViews };
+    const familyChoices: FamilyChoiceView[] = families
+      .filter((f) => f.hostingGroup)
+      .map((f) => {
+        const group = groups.find((g) => g.id === f.hostingGroup!.id);
+        return {
+          id: f.id,
+          name: f.familyName,
+          groupId: f.hostingGroup!.id,
+          groupName: group?.name ?? '',
+          personCount: countByFamily.get(f.id) ?? 0,
+          needsTransport: f.needsTransport ?? null,
+          separate: f.needsTransport === true && (group?.needsTransport ?? null) !== true,
+        };
+      })
+      .sort((a, b) => a.groupName.localeCompare(b.groupName, 'fr') || a.name.localeCompare(b.name, 'fr'));
+    return { targets, undecidedTargets, notNeededCount, familyChoices, cars: carViews };
   }
 
   // -------------------------------------------------------------------- cars
@@ -394,6 +479,13 @@ export class GatheringTransportsService {
   // ------------------------------------------------------------- affectations
 
   /** Affecte des cibles à un car : une cible déjà desservie ailleurs est déplacée. */
+  /** Famille « nécessaire » dans un groupe qui ne l'est pas : elle devient une cible propre. */
+  private async ownChoiceDiffers(family: HostFamily): Promise<boolean> {
+    if (family.needsTransport !== true || !family.hostingGroup) return false;
+    const group = await this.hostingGroupsRepository.findOneBy({ id: family.hostingGroup.id });
+    return group?.needsTransport !== true;
+  }
+
   /**
    * Affecte des cibles à un car. Règles validées par l'utilisateur :
    * - on bloque une affectation qui dépasse la capacité renseignée du car (sans capacité : pas de blocage) ;
@@ -439,7 +531,14 @@ export class GatheringTransportsService {
         }))
         .filter((t) => t.id != null);
       const persons = (current?.persons ?? []).map((p) => ({ kind: p.kind, participantId: p.participant.id }));
-      const trips = computeTripOccupancy(car.serviceDates, [...existing, ...newTargets], persons, housed);
+      const allAssignments = await this.assignmentsRepository.find({ relations: { hostFamily: true } });
+      const ownFamilyIds = new Set<number>(
+        [
+          ...allAssignments.filter((a) => a.targetType === GatheringCarTarget.HOST_FAMILY && a.hostFamily).map((a) => a.hostFamily!.id),
+          ...newTargets.filter((t) => t.targetType === GatheringCarTarget.HOST_FAMILY).map((t) => t.id),
+        ],
+      );
+      const trips = computeTripOccupancy(car.serviceDates, [...existing, ...newTargets], persons, housed, false, ownFamilyIds);
       const worst = trips.reduce((m, t) => (t.count > m.count ? t : m), trips[0]);
       if (worst.count > car.capacity) {
         throw new BadRequestException(
@@ -458,9 +557,11 @@ export class GatheringTransportsService {
       } else {
         const family = await this.hostFamiliesRepository.findOneBy({ id: target.id });
         if (!family) throw new NotFoundException(`Hébergement ${target.id} introuvable`);
-        if (family.accommodationType !== AccommodationType.COLLECTIVE || family.hostingGroup) {
+        const ownChoice = family.hostingGroup ? await this.ownChoiceDiffers(family) : false;
+        const aloneCollective = family.accommodationType === AccommodationType.COLLECTIVE && !family.hostingGroup;
+        if (!aloneCollective && !ownChoice) {
           throw new BadRequestException(
-            'Seul un hébergement collectif hors de tout groupe se desservit seul ; sinon sa cible est son groupe.',
+            'Une famille d\'un groupe se dessert avec son groupe, sauf si son besoin de transport est marqué à part.',
           );
         }
       }

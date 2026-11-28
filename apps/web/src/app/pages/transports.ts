@@ -11,6 +11,7 @@ import {
   GatheringCar,
   GatheringCarPersonKind,
   GatheringTransportsBoard,
+  FamilyChoice,
   ServeTarget,
   StopPayload,
   TransportsApiService,
@@ -124,7 +125,7 @@ export class Transports implements OnInit {
     return this.board()?.undecidedTargets?.length ?? 0;
   }
   /** Marque le besoin de transport d'une cible (true = nécessaire, false = pas besoin, null = non renseigné). */
-  protected setNeed(t: ServeTarget, needsTransport: boolean | null) {
+  protected setNeed(t: Pick<ServeTarget, 'targetType' | 'id'>, needsTransport: boolean | null) {
     this.error.set('');
     this.api.setNeed(t, needsTransport).subscribe({
       next: () => this.reload(),
@@ -133,6 +134,14 @@ export class Transports implements OnInit {
         this.reload();
       },
     });
+  }
+  protected readonly showFamilies = signal(false);
+  protected familyChoices(): FamilyChoice[] {
+    return this.board()?.familyChoices ?? [];
+  }
+  /** Besoin propre d'une famille d'un groupe : null = elle suit le groupe. */
+  protected setFamilyNeed(f: FamilyChoice, needsTransport: boolean | null) {
+    this.setNeed({ targetType: 'HOST_FAMILY', id: f.id }, needsTransport);
   }
   protected servedCount(): number {
     return (this.board()?.targets ?? []).filter((t) => t.carId !== null).length;

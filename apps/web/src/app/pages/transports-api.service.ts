@@ -18,6 +18,17 @@ export interface ServeTarget {
   needsTransport: boolean | null;
 }
 
+export interface FamilyChoice {
+  id: number;
+  name: string;
+  groupId: number;
+  groupName: string;
+  personCount: number;
+  /** null = suit le groupe ; true/false = choix propre prioritaire. */
+  needsTransport: boolean | null;
+  separate: boolean;
+}
+
 export interface CarStop {
   id: number;
   orderIndex: number;
@@ -60,6 +71,7 @@ export interface GatheringTransportsBoard {
   undecidedTargets: ServeTarget[];
   /** Cibles marquées « pas besoin de transport », non listées. */
   notNeededCount: number;
+  familyChoices?: FamilyChoice[];
   cars: GatheringCar[];
 }
 

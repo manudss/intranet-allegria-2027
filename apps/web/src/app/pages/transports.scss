@@ -25,7 +25,7 @@
 .panel-head h2 { margin: 0 0 0.25rem; font-size: 1.05rem; }
 .panel-filters { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.5rem; margin: 0.5rem 0; }
 .check-all { display: flex; gap: 0.5rem; align-items: center; font-size: 0.9rem; padding-bottom: 0.25rem; }
-.panel-list { flex: 1; min-height: 0; overflow-y: auto; margin: 0; padding: 0 1rem; list-style: none; }
+.panel-list { flex: 1 1 6rem; min-height: 6rem; overflow-y: auto; margin: 0; padding: 0 1rem; list-style: none; }
 .panel-list.cards { display: flex; flex-direction: column; gap: 0.75rem; padding-bottom: 1rem; }
 .target-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; padding: 0.45rem 0.25rem; border-bottom: 1px solid var(--tui-border-normal, #f0f0f2); cursor: grab; }
 .target-row.selected { background: color-mix(in srgb, #d52f57 16%, transparent); }
@@ -64,6 +64,7 @@
   .steps { display: flex; }
   .panels { grid-template-columns: 1fr; height: auto; min-height: 0; }
   .panel { overflow: visible; }
+  .need-check { max-block-size: none; overflow: visible; }
   .panel-foot { position: sticky; bottom: 0; z-index: 1; border-radius: 0 0 0.75rem 0.75rem; }
   .panel.hidden-mobile { display: none; }
   .only-mobile { display: inline-flex; }
@@ -72,7 +73,7 @@
   .panel-foot .only-mobile { flex: 1; justify-content: center; }
 }
 
-.need-check { display: grid; gap: .4rem; padding: .5rem .75rem; border-top: 1px solid var(--line-soft); }
+.need-check { flex: none; max-block-size: 55%; overflow-y: auto; display: grid; gap: .4rem; padding: .5rem .75rem; border-top: 1px solid var(--line-soft); }
 .need-check .muted { color: var(--appearance-muted); font-size: .85rem; }
-.need-list { max-block-size: 14rem; overflow: auto; }
+.need-list { max-block-size: 10rem; overflow: auto; }
 .need-list .target-row { flex-wrap: wrap; }

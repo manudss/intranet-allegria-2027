@@ -342,3 +342,91 @@ describe('computeTripOccupancy', () => {
     expect(computeTripOccupancy(null, both, [], rows)[0].count).toBe(3);
   });
 });
+
+describe('besoin de transport : famille et groupe', () => {
+  // Les lignes d'hébergement pointent vers les vraies familles/groupes pour refléter les relations chargées.
+  const wired = () => {
+    const ctx = buildService();
+    const { state } = ctx;
+    for (const g of state.groups as any[]) g.needsTransport = null;
+    for (const f of state.families as any[]) {
+      f.needsTransport = null;
+      if (f.hostingGroup) f.hostingGroup = (state.groups as any[]).find((g) => g.id === f.hostingGroup.id);
+    }
+    for (const h of state.housedRows as any[]) h.hostFamily = (state.families as any[]).find((f) => f.id === h.hostFamily.id);
+    return ctx;
+  };
+  const group = (board: any, id: number) => board.targets.find((t: any) => t.targetType === GatheringCarTarget.HOSTING_GROUP && t.id === id);
+  const fam = (board: any, id: number) => board.targets.find((t: any) => t.targetType === GatheringCarTarget.HOST_FAMILY && t.id === id);
+
+  it('par défaut la famille suit le groupe : pas de cible séparée, effectif complet', async () => {
+    const { service, state } = wired();
+    (state.groups as any[])[0].needsTransport = true;
+    const board = await service.board();
+    expect(group(board, 1).personCount).toBe(3);
+    expect(fam(board, 10)).toBeUndefined();
+    expect(board.familyChoices.find((f) => f.id === 10)).toMatchObject({ needsTransport: null, separate: false });
+  });
+
+  it('famille « nécessaire » dans un groupe qui ne l\'est pas : cible séparée, sans double comptage', async () => {
+    const { service, state } = wired();
+    (state.groups as any[])[0].needsTransport = false;
+    (state.families as any[])[0].needsTransport = true; // Famille A : 2 personnes
+    const board = await service.board();
+    expect(fam(board, 10)).toMatchObject({ personCount: 2, needsTransport: true });
+    expect(board.notNeededCount).toBeGreaterThanOrEqual(1);
+    // Si le groupe est ensuite marqué nécessaire, la famille reste à part : le groupe ne la recompte pas.
+    (state.groups as any[])[0].needsTransport = true;
+    (state.families as any[])[0].needsTransport = true;
+    const board2 = await service.board();
+    expect(fam(board2, 10)).toBeUndefined(); // même choix que le groupe : comprise dans le groupe
+    expect(group(board2, 1).personCount).toBe(3);
+  });
+
+  it('famille « pas besoin » dans un groupe nécessaire : ses personnes sortent du décompte du groupe', async () => {
+    const { service, state } = wired();
+    (state.groups as any[])[0].needsTransport = true;
+    (state.families as any[])[0].needsTransport = false;
+    const board = await service.board();
+    expect(group(board, 1).personCount).toBe(1);
+    expect(group(board, 1).detail).toContain('à part');
+    expect(fam(board, 10)).toBeUndefined();
+  });
+
+  it('une famille déjà desservie à part reste visible et n\'est pas recomptée dans son groupe', async () => {
+    const { service, state } = wired();
+    (state.groups as any[])[0].needsTransport = true;
+    state.cars[0].assignments = [
+      { id: 60, targetType: GatheringCarTarget.HOST_FAMILY, hostingGroup: null, hostFamily: { id: 10, familyName: 'Famille A' } },
+    ];
+    const board = await service.board();
+    expect(fam(board, 10)?.carId).toBe(100);
+    expect(group(board, 1).personCount).toBe(1);
+  });
+
+  it('assign : une famille de groupe ne se dessert à part que si son besoin propre diffère du groupe', async () => {
+    const { service, state } = wired();
+    const target = [{ targetType: GatheringCarTarget.HOST_FAMILY, id: 10 }];
+    await expect(service.assign(100, target)).rejects.toBeInstanceOf(BadRequestException);
+    (state.families as any[])[0].needsTransport = true;
+    (state.groups as any[])[0].needsTransport = false;
+    const assignmentsRepository = repo([]);
+    (service as any).assignmentsRepository = assignmentsRepository;
+    await service.assign(100, target);
+    expect(assignmentsRepository.save).toHaveBeenCalled();
+  });
+
+  it('capacité : une famille servie à part avec son groupe sur le même car n\'est comptée qu\'une fois', () => {
+    const rows = [
+      { status: AssignmentStatus.CONFIRMED, participant: { id: 1 }, hostFamily: { id: 10, needsTransport: true, hostingGroup: { id: 1, needsTransport: true } } },
+      { status: AssignmentStatus.CONFIRMED, participant: { id: 2 }, hostFamily: { id: 11, needsTransport: null, hostingGroup: { id: 1, needsTransport: true } } },
+    ];
+    const both = [
+      { targetType: GatheringCarTarget.HOSTING_GROUP, id: 1 },
+      { targetType: GatheringCarTarget.HOST_FAMILY, id: 10 },
+    ];
+    expect(computeTripOccupancy(null, both, [], rows as any, false, new Set([10]))[0].count).toBe(2);
+    const excluded = [{ targetType: GatheringCarTarget.HOSTING_GROUP, id: 1 }];
+    expect(computeTripOccupancy(null, excluded, [], rows as any, false, new Set([10]))[0].count).toBe(1);
+  });
+});

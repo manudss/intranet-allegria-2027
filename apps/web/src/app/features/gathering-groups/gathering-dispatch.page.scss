@@ -27,7 +27,7 @@
 .chip { font-size: .72rem; padding: .05rem .5rem; border-radius: 1rem; background: var(--appearance-surface); border: 1px solid var(--appearance-border); color: #1b1f28; }
 .team-card.dragging { opacity: .5; }
 .team-card { flex-wrap: wrap; }
-.group-card.refused { opacity: .55; cursor: not-allowed; }
+.group-card.refused { opacity: .85; cursor: not-allowed; border-style: dashed; }
 .group-card.target { cursor: pointer; }
 .group-card.drop { outline: 2px solid var(--allegria-primary); background: var(--appearance-surface); }
 .refusal { margin: .2rem 0 0; color: var(--danger-fg); font-size: .8rem; }
@@ -63,7 +63,7 @@
 .group-card.overflow { box-shadow: inset 3px 0 0 #c62828; }
 .group-card.almost { box-shadow: inset 3px 0 0 #f5a623; }
 .group-card header { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
-.group-hit { display: flex; gap: .5rem; align-items: center; border: 0; background: none; font: inherit; cursor: pointer; padding: 0; }
+.group-hit { display: flex; flex-wrap: wrap; min-inline-size: 0; max-inline-size: 100%; text-align: start; color: inherit; gap: .25rem .5rem; align-items: center; border: 0; background: none; font: inherit; cursor: pointer; padding: 0; }
 .group-hit:disabled { cursor: default; }
 .cat { font-weight: 700; font-size: .8rem; }
 .cat-ta { color: var(--cat-ta-fg); }

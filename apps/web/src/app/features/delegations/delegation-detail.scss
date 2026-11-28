@@ -79,3 +79,9 @@
   .only-mobile { display: inline-flex; }
   .panel-filters { grid-template-columns: 1fr; }
 }
+
+.complete-note { margin: 0.15rem 0; color: #8a5a00; font-weight: 600; font-size: 0.9rem; }
+.jauge-fill.complete { background: #e08a00; }
+.summary { margin: 0.35rem 0; font-size: 0.9rem; color: #444; }
+.selection-reminder { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin: 0.4rem 0; padding: 0.45rem 0.7rem; border-radius: 0.5rem; background: #fdeef2; }
+.selection-reminder.empty-selection { background: #f0f0f2; color: #555; }

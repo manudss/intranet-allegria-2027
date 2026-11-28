@@ -52,6 +52,18 @@ const REPARTITION: Repartition = {
   exceptionsOutgoing: [],
 };
 
+
+describe('jauge : complet à capacité atteinte, dépassée seulement au-delà', () => {
+  const state = (occupancy: number, capacity: number | null) =>
+    (DelegationDetailPage.prototype as unknown as { gaugeState(t: { capacity: number | null; occupancy: number }): string }).gaugeState.call({}, { capacity, occupancy });
+  it('64/64 est complet, 65/64 est dépassé, sans jauge rien', () => {
+    expect(state(64, 64)).toBe('full');
+    expect(state(65, 64)).toBe('over');
+    expect(state(10, 64)).toBe('ok');
+    expect(state(10, null)).toBe('none');
+  });
+});
+
 describe('DelegationDetailPage (refonte : onglets, deux panneaux, sélection)', () => {
   beforeAll(() => {
     window.matchMedia ??= ((query: string) => ({
@@ -149,5 +161,26 @@ describe('DelegationDetailPage (refonte : onglets, deux panneaux, sélection)', 
     fixture.detectChanges();
     expect(el.querySelector<HTMLInputElement>('#t-dep-date')?.value).toBe('2027-10-31');
     expect(el.querySelector<HTMLInputElement>('#t-dep-time')?.value).toBe('');
+  });
+
+  it('carte compacte : détails et personnes repliés par défaut, dépliables', async () => {
+    const { fixture } = await setup();
+    const el: HTMLElement = fixture.nativeElement;
+    const card = () => el.querySelector('.transport-card')!;
+    expect(card().textContent).toContain('RDV Gare');
+    expect(card().querySelector('.placed')).toBeNull();
+    Array.from(card().querySelectorAll<HTMLButtonElement>('button')).find((b) => b.textContent?.includes('Détails'))!.click();
+    fixture.detectChanges();
+    expect(card().querySelector('.placed')).not.toBeNull();
+    expect(card().textContent).toContain('Infos pratiques');
+  });
+
+  it('rappel de sélection à l étape 2 avec compteur réel', async () => {
+    const { fixture } = await setup();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.selection-reminder')?.textContent).toContain('Aucune sélection');
+    el.querySelector<HTMLInputElement>('.person-row input[type="checkbox"]')!.click();
+    fixture.detectChanges();
+    expect(el.querySelector('.selection-reminder')?.textContent).toContain('1 personne(s) sélectionnée(s)');
   });
 });

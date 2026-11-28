@@ -110,53 +110,69 @@
           <header class="panel-head">
             <h2>Sous-délégations ({{ rep.transports.length }})</h2>
             <p class="help">Déposez la sélection sur une carte ou utilisez « Affecter la sélection ».</p>
+            <div class="selection-reminder" [class.empty-selection]="!selectionCount()" role="status">
+              @if (selectionCount()) {
+                <strong>{{ selectionCount() }} personne(s) sélectionnée(s)</strong>
+              } @else {
+                Aucune sélection.
+              }
+              <button type="button" class="link" (click)="step.set('personnes')">‹ Modifier la sélection</button>
+            </div>
           </header>
           <div class="panel-list cards">
             @for (t of rep.transports; track t.id) {
-              <article class="transport-card" [class.drop-over]="dragOverId() === t.id" [class.over-capacity]="t.full"
+              <article class="transport-card" [class.drop-over]="dragOverId() === t.id" [class.over-capacity]="gaugeState(t) === 'over'"
                 (dragover)="onDragOver($event, t.id)" (dragleave)="dragOverId.set(null)" (drop)="onDrop($event, t.id)">
                 <header>
                   <h3>{{ modeLabels[t.transportMode] || t.transportMode }} · {{ t.name }}</h3>
-                  <span class="gauge-text" [class.full]="t.full">
-                    @if (t.capacity !== null) { {{ t.occupancy }}/{{ t.capacity }} } @else { {{ t.occupancy }} placés, sans jauge }
+                  <span class="gauge-text" [class.full]="gaugeState(t) !== 'ok'">
+                    @if (t.capacity !== null) { {{ t.occupancy }}/{{ t.capacity }} } @else { {{ t.occupancy }} placés }
                   </span>
                 </header>
                 @if (t.capacity !== null) {
                   <div class="jauge-bar" role="img" [attr.aria-label]="'Jauge : ' + t.occupancy + ' sur ' + t.capacity">
-                    <div class="jauge-fill" [class.over]="t.full" [style.width.%]="jaugePercent(t)"></div>
+                    <div class="jauge-fill" [class.over]="gaugeState(t) === 'over'" [class.complete]="gaugeState(t) === 'full'" [style.width.%]="jaugePercent(t)"></div>
                   </div>
-                  @if (t.full) {
+                  @if (gaugeState(t) === 'full') {
+                    <p class="complete-note">Complet</p>
+                  } @else if (gaugeState(t) === 'over') {
                     <p class="full jauge-alerte">Jauge dépassée</p>
                   }
                 }
-                <dl class="meta">
-                  <dt>Départ</dt><dd>{{ fmt(t.departureDatetime) }}</dd>
-                  <dt>Arrivée</dt><dd>{{ fmt(t.arrivalDatetime) }}</dd>
-                  <dt>Rendez-vous</dt><dd>{{ t.meetingPoint || '—' }}</dd>
-                  <dt>Infos pratiques pour les parents</dt><dd>{{ t.practicalInfo || '—' }}</dd>
-                </dl>
+                <p class="summary">Départ {{ fmt(t.departureDatetime) }} · RDV {{ t.meetingPoint || '—' }}</p>
                 <div class="card-actions">
                   <button tuiButton size="s" type="button" [disabled]="!selectionCount() || assigning()" (click)="assignSelection(t.id)">
                     Affecter la sélection ({{ selectionCount() }})
                   </button>
-                  <button tuiButton size="s" appearance="secondary" type="button" (click)="editTransport(t.id)">Modifier</button>
-                  <button tuiButton size="s" appearance="secondary" type="button" (click)="removeTransport(t.id)">Supprimer</button>
+                  <button tuiButton size="s" appearance="secondary" type="button" [attr.aria-expanded]="isCardOpen(t.id)" (click)="toggleCard(t.id)">
+                    {{ isCardOpen(t.id) ? 'Masquer les détails' : 'Détails et personnes' }}
+                  </button>
                 </div>
-                <ul class="placed">
-                  @for (p of visiblePersons(t); track entryKey(p)) {
-                    <li>
-                      {{ personLabel(p.person) }}
-                      @if (p.person && p.person.delegationId !== delegation()?.id) {
-                        <span class="tui-badge">Exception reçue</span>
-                      }
-                      <button tuiButton size="xs" appearance="flat" type="button" (click)="unassign(p)">Retirer</button>
-                    </li>
+                @if (isCardOpen(t.id)) {
+                  <dl class="meta">
+                    <dt>Arrivée</dt><dd>{{ fmt(t.arrivalDatetime) }}</dd>
+                    <dt>Infos pratiques pour les parents</dt><dd>{{ t.practicalInfo || '—' }}</dd>
+                  </dl>
+                  <div class="card-actions">
+                    <button tuiButton size="s" appearance="secondary" type="button" (click)="editTransport(t.id)">Modifier</button>
+                    <button tuiButton size="s" appearance="secondary" type="button" (click)="removeTransport(t.id)">Supprimer</button>
+                  </div>
+                  <ul class="placed">
+                    @for (p of visiblePersons(t); track entryKey(p)) {
+                      <li>
+                        {{ personLabel(p.person) }}
+                        @if (p.person && p.person.delegationId !== delegation()?.id) {
+                          <span class="tui-badge">Exception reçue</span>
+                        }
+                        <button tuiButton size="xs" appearance="flat" type="button" (click)="unassign(p)">Retirer</button>
+                      </li>
+                    }
+                  </ul>
+                  @if (hiddenPersonsCount(t) > 0) {
+                    <button type="button" class="link" (click)="toggleTransportExpanded(t.id)">+ {{ hiddenPersonsCount(t) }} autres</button>
+                  } @else if (t.persons.length > 8 && isTransportExpanded(t.id)) {
+                    <button type="button" class="link" (click)="toggleTransportExpanded(t.id)">Réduire</button>
                   }
-                </ul>
-                @if (hiddenPersonsCount(t) > 0) {
-                  <button type="button" class="link" (click)="toggleTransportExpanded(t.id)">+ {{ hiddenPersonsCount(t) }} autres</button>
-                } @else if (t.persons.length > 8 && isTransportExpanded(t.id)) {
-                  <button type="button" class="link" (click)="toggleTransportExpanded(t.id)">Réduire</button>
                 }
               </article>
             } @empty {
@@ -262,10 +278,13 @@
         placeholder="Rechercher par nom…"
         (valueChange)="exceptionForm.update((f) => ({ ...f, personKey: $event ?? '' }))"
       />
-      <tui-textfield tuiChevron [stringify]="stringifyDelegation">
-        <label for="x-deleg" tuiLabel>Délégation d'accueil</label
-        ><select tuiSelect id="x-deleg" placeholder="Choisir…" [items]="otherDelegationIds()" [ngModel]="exceptionForm().toDelegationId" (ngModelChange)="exceptionForm.update((f) => ({ ...f, toDelegationId: $event }))" name="xdeleg"></select>
-      </tui-textfield>
+      <app-select-field
+        label="Délégation d'accueil"
+        [options]="delegationOptions()"
+        [value]="exceptionForm().toDelegationId === null ? null : '' + exceptionForm().toDelegationId"
+        placeholder="Rechercher une délégation…"
+        (valueChange)="exceptionForm.update((f) => ({ ...f, toDelegationId: $event ? +$event : null }))"
+      />
       <div class="field-block wide">
         <label class="field-label" for="x-note">Note (facultatif)</label>
         <tui-textfield>

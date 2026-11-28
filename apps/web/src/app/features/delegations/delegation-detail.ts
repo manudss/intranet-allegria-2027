@@ -365,6 +365,31 @@ export class DelegationDetailPage implements OnInit {
 
   protected entryKeyOf = entryKeyOf;
 
+  protected readonly openCards = signal<ReadonlySet<number>>(new Set());
+  protected isCardOpen(id: number): boolean {
+    return this.openCards().has(id);
+  }
+  protected toggleCard(id: number) {
+    this.openCards.update((set) => {
+      const next = new Set(set);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  /** Complet à capacité atteinte ; « dépassée » seulement au-delà. */
+  protected gaugeState(t: RepartitionTransport): 'none' | 'ok' | 'full' | 'over' {
+    if (t.capacity === null) return 'none';
+    if (t.occupancy > t.capacity) return 'over';
+    return t.occupancy === t.capacity ? 'full' : 'ok';
+  }
+  protected delegationOptions(): SelectOption<string>[] {
+    return this.otherDelegationIds().map((id) => ({
+      value: String(id),
+      label: this.stringifyDelegation(id),
+    }));
+  }
+
   protected openTransportDrawer() {
     this.editingTransportId.set(null);
     this.transportForm.set(this.emptyTransport());

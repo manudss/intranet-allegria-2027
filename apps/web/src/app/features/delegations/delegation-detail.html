@@ -273,6 +273,7 @@
     <form class="drawer-form" id="exception-form" (submit)="createException(); $event.preventDefault()">
       <app-select-field
         label="Personne (membre de cette délégation)"
+        [searchable]="true"
         [options]="memberOptions()"
         [value]="exceptionForm().personKey || null"
         placeholder="Rechercher par nom…"
@@ -280,6 +281,7 @@
       />
       <app-select-field
         label="Délégation d'accueil"
+        [searchable]="true"
         [options]="delegationOptions()"
         [value]="exceptionForm().toDelegationId === null ? null : '' + exceptionForm().toDelegationId"
         placeholder="Rechercher une délégation…"

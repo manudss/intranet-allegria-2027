@@ -183,4 +183,15 @@ describe('DelegationDetailPage (refonte : onglets, deux panneaux, sélection)', 
     fixture.detectChanges();
     expect(el.querySelector('.selection-reminder')?.textContent).toContain('1 personne(s) sélectionnée(s)');
   });
+
+  it('tiroir exception : les champs personne et délégation sont des champs à saisie (combobox)', async () => {
+    const { fixture } = await setup();
+    const el: HTMLElement = fixture.nativeElement;
+    Array.from(el.querySelectorAll<HTMLButtonElement>('.create-buttons button')).find((b) => b.textContent?.includes('+ Exception'))!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const form = el.querySelector('#exception-form')!;
+    expect(form.querySelectorAll('input[tuiComboBox], input[tuicombobox]').length).toBe(2);
+  });
 });

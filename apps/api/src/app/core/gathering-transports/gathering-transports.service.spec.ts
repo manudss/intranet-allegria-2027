@@ -291,6 +291,24 @@ describe('GatheringTransportsService', () => {
     );
   });
 
+  it('addPerson ADDED : refusé si le car dépasse sa capacité, accepté sinon, sans écriture en cas de refus', async () => {
+    const run = async (capacity: number | null) => {
+      const { service, state } = buildService();
+      state.cars[0].capacity = capacity;
+      const personsRepository = repo([]);
+      (service as any).personsRepository = personsRepository;
+      const result = await service
+        .addPerson(100, { participantId: 1001, kind: GatheringCarPersonKind.ADDED })
+        .then(() => null, (e) => e);
+      return { result, saved: personsRepository.save.mock.calls.length };
+    };
+    const full = await run(0);
+    expect(full.result).toBeInstanceOf(BadRequestException);
+    expect(full.saved).toBe(0);
+    expect((await run(5)).saved).toBe(1);
+    expect((await run(null)).saved).toBe(1);
+  });
+
   it('removeCar : 404 sur un car inconnu', async () => {
     const { service } = buildService();
     await expect(service.removeCar(999)).rejects.toBeInstanceOf(NotFoundException);

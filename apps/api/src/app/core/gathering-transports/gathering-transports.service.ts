@@ -632,6 +632,36 @@ export class GatheringTransportsService {
         );
       }
     }
+    if (dto.kind === GatheringCarPersonKind.ADDED && car.capacity != null) {
+      const [housed, current, allAssignments] = await Promise.all([
+        this.housedRepository.find({ relations: { hostFamily: { hostingGroup: true }, participant: true } }),
+        this.carsRepository.findOne({
+          where: { id: car.id },
+          relations: { assignments: { hostingGroup: true, hostFamily: true }, persons: { participant: true } },
+        }),
+        this.assignmentsRepository.find({ relations: { hostFamily: true } }),
+      ]);
+      const targets = (current?.assignments ?? [])
+        .map((a) => ({
+          targetType: a.targetType,
+          id: (a.targetType === GatheringCarTarget.HOSTING_GROUP ? a.hostingGroup?.id : a.hostFamily?.id) as number,
+        }))
+        .filter((t) => t.id != null);
+      const persons = (current?.persons ?? [])
+        .filter((p) => p.participant.id !== participant.id)
+        .map((p) => ({ kind: p.kind, participantId: p.participant.id }));
+      persons.push({ kind: GatheringCarPersonKind.ADDED, participantId: participant.id });
+      const ownFamilyIds = new Set<number>(
+        allAssignments.filter((a) => a.targetType === GatheringCarTarget.HOST_FAMILY && a.hostFamily).map((a) => a.hostFamily!.id),
+      );
+      const trips = computeTripOccupancy(car.serviceDates, targets, persons, housed, false, ownFamilyIds);
+      const worst = trips.reduce((m, t) => (t.count > m.count ? t : m), trips[0]);
+      if (worst.count > car.capacity) {
+        throw new BadRequestException(
+          `Capacité du car « ${car.name} » dépassée : ${worst.count} personnes pour ${car.capacity} places.`,
+        );
+      }
+    }
     const existing = await this.personsRepository.findOne({
       where: { car: { id: car.id }, participant: { id: participant.id } },
     });

@@ -53,13 +53,13 @@ export class DelegationFichePage implements OnInit {
 
   constructor() {
     this.access.load();
-    // Les notes relèvent du module PARTICIPANTS. Sans ce droit on ne les demande pas
+    // Les notes relèvent du module PERSON_NOTES. Sans ce droit on ne les demande pas
     // (un 403 renverrait toute la fiche vers « Accès refusé ») : la fiche s'ouvre sous
     // TRANSPORT seul et l'onglet Notes l'indique.
     effect(() => {
       if (this.notesRequested || !this.access.loaded()) return;
       this.notesRequested = true;
-      if (!this.access.can('PARTICIPANTS', 'VIEW')) {
+      if (!this.access.can('PERSON_NOTES', 'VIEW')) {
         this.notesUnavailable.set(true);
         return;
       }

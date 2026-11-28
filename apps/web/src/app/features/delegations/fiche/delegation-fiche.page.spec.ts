@@ -119,7 +119,7 @@ describe('DelegationFichePage (lot 4 : fiche en vues)', () => {
       .expectOne((r) => r.url === '/api/delegations/2/repartition' && r.params.get('direction') === 'RETOUR')
       .flush({ ...REPARTITION, direction: 'RETOUR', toAssign: [], exceptionsReceived: [] });
     http.expectOne('/api/access/me').flush({
-      grants: notesForbidden ? [] : [{ module: 'PARTICIPANTS', level: 'VIEW', scope: 'ALL' }],
+      grants: notesForbidden ? [] : [{ module: 'PERSON_NOTES', level: 'VIEW', scope: 'ALL' }],
     });
     fixture.detectChanges();
     if (notesForbidden) http.expectNone('/api/person-notes?filter=ALL');
@@ -130,7 +130,7 @@ describe('DelegationFichePage (lot 4 : fiche en vues)', () => {
     return { fixture };
   }
 
-  it("s'ouvre sous le seul droit TRANSPORT : sans droit PARTICIPANTS, aucune requête de notes (pas de 403 vers Accès refusé)", async () => {
+  it("s'ouvre sous le seul droit TRANSPORT : sans droit PERSON_NOTES, aucune requête de notes (pas de 403 vers Accès refusé)", async () => {
     const { fixture } = await setup(true);
     const el: HTMLElement = fixture.nativeElement;
     expect(el.textContent).toContain("Délégation d'Annecy");

@@ -144,15 +144,19 @@ export type DefaultAccessRule = {
 };
 
 function expand(kind: AccessSubjectKind, table: Record<string, Grants>): DefaultAccessRule[] {
-  return Object.entries(table).flatMap(([subjectKey, grants]) =>
-    Object.entries(grants).map(([module, level]) => ({
+  return Object.entries(table).flatMap(([subjectKey, grants]) => {
+    const rules = Object.entries(grants).map(([module, level]) => ({
       subjectKind: kind,
       subjectKey,
       module: module as AccessModuleCode,
       level: LVL[level as 'V' | 'E' | 'G'],
       scope: 'ALL' as const,
-    })),
-  );
+    }));
+    // Notes sur les personnes : même niveau que PARTICIPANTS au départ, pour que les accès
+    // existants ne changent pas (le module est séparé pour pouvoir donner les notes seules).
+    const participants = rules.find((r) => r.module === 'PARTICIPANTS');
+    return participants ? [...rules, { ...participants, module: 'PERSON_NOTES' as AccessModuleCode }] : rules;
+  });
 }
 
 export const DEFAULT_ACCESS_RULES: readonly DefaultAccessRule[] = [

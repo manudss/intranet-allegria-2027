@@ -63,14 +63,18 @@ jobs:
           [ "$(jq -r .head.repo.full_name pr.json)" = "${GITHUB_REPOSITORY}" ] || { echo "fork PR refused"; exit 1; }
           echo "sha=$(jq -r .head.sha pr.json)" >> "$GITHUB_OUTPUT"
           echo "repo=$(jq -r .head.repo.full_name pr.json)" >> "$GITHUB_OUTPUT"
-          run=true; image_only=false
+          run=true; image_only=false; migrate_only=false
           if [ "${{ github.event.action }}" = "synchronize" ]; then
             run=false
             msg=$(gh api "repos/${GITHUB_REPOSITORY}/commits/$(jq -r .head.sha pr.json)" --jq .commit.message)
             case "$msg" in *'[preview-image-only]'*) run=true; image_only=true ;; esac
+            # Migration ciblee : applique les migrations en attente (additives) SANS seed ni reset,
+            # puis reconstruit l'image sur le service existant. Reservee a la preview de cette PR.
+            case "$msg" in *'[preview-migrate-only]'*) run=true; image_only=true; migrate_only=true ;; esac
           fi
           echo "run=$run" >> "$GITHUB_OUTPUT"
           echo "image_only=$image_only" >> "$GITHUB_OUTPUT"
+          echo "migrate_only=$migrate_only" >> "$GITHUB_OUTPUT"
 
       - name: Trusted scripts (PR head before merge, default branch otherwise)
         if: steps.pr.outputs.run == 'true'
@@ -128,6 +132,17 @@ jobs:
           npm ci
           npm run migration:run
           npx tsx apps/api/src/database/seeds/seed.ts --profile=medium
+
+      - name: Targeted migration only (no seed, no reset of data)
+        if: steps.pr.outputs.run == 'true' && steps.pr.outputs.migrate_only == 'true'
+        working-directory: pr
+        env:
+          DATABASE_URL: ${{ steps.creds.outputs.db_url_pooled }}
+          DATABASE_URL_DIRECT: ${{ steps.creds.outputs.db_url }}
+          DB_SSL: 'true'
+        run: |
+          npm ci
+          npm run migration:run
 
       - uses: docker/setup-buildx-action@v3
         if: steps.pr.outputs.run == 'true'

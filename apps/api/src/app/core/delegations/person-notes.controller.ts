@@ -33,7 +33,7 @@ type UserRequest = { user: { id: number; email: string; roles: string[] } };
  */
 @ApiTags('PersonNotes')
 @UseGuards(RoleGuard)
-@AccessModule('PARTICIPANTS')
+@AccessModule('PERSON_NOTES')
 @GroupScopeAware()
 @Controller('person-notes')
 export class PersonNotesController {

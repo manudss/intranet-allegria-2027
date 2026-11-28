@@ -1,6 +1,7 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { MyAccessService } from '../../../core/my-access.service';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { catchError, forkJoin, of } from 'rxjs';
+import { forkJoin } from 'rxjs';
 import { SHARED_IMPORTS } from '../../../shared/shared-imports';
 import {
   DelegationSummary,
@@ -46,7 +47,28 @@ export class DelegationFichePage implements OnInit {
     this.noteRows().reduce((total, row) => total + row.notesCount, 0),
   );
   /** Le lien de retour n'a de sens que si la personne voit plusieurs délégations. */
+  private readonly access = inject(MyAccessService);
   protected readonly notesUnavailable = signal(false);
+  private notesRequested = false;
+
+  constructor() {
+    this.access.load();
+    // Les notes relèvent du module PARTICIPANTS. Sans ce droit on ne les demande pas
+    // (un 403 renverrait toute la fiche vers « Accès refusé ») : la fiche s'ouvre sous
+    // TRANSPORT seul et l'onglet Notes l'indique.
+    effect(() => {
+      if (this.notesRequested || !this.access.loaded()) return;
+      this.notesRequested = true;
+      if (!this.access.can('PARTICIPANTS', 'VIEW')) {
+        this.notesUnavailable.set(true);
+        return;
+      }
+      this.api.notesFeed('ALL').subscribe({
+        next: (rows) => this.noteRows.set(rows.filter((n) => n.delegationId === this.delegationId)),
+        error: () => this.notesUnavailable.set(true),
+      });
+    });
+  }
   protected readonly seesSeveral = signal(false);
   protected readonly delegationNames = signal<Map<number, string>>(new Map());
 
@@ -60,14 +82,6 @@ export class DelegationFichePage implements OnInit {
       persons: this.api.persons(this.delegationId),
       aller: this.api.repartition(this.delegationId, 'ALLER'),
       retour: this.api.repartition(this.delegationId, 'RETOUR'),
-      // Les notes relèvent du module PARTICIPANTS : sans ce droit, la fiche s'ouvre
-      // quand même (identité, personnes, répartition) et l'onglet Notes reste vide.
-      notes: this.api.notesFeed('ALL').pipe(
-        catchError(() => {
-          this.notesUnavailable.set(true);
-          return of([] as NoteFeedRow[]);
-        }),
-      ),
     }).subscribe({
       next: (r) => {
         this.summary.set(r.summaries.find((s) => s.id === this.delegationId) ?? null);
@@ -76,7 +90,6 @@ export class DelegationFichePage implements OnInit {
         this.persons.set(r.persons);
         this.aller.set(r.aller);
         this.retour.set(r.retour);
-        this.noteRows.set(r.notes.filter((n) => n.delegationId === this.delegationId));
         this.loading.set(false);
       },
       error: () => {

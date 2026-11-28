@@ -73,9 +73,8 @@ export interface CarView {
   capacity: number | null;
   serviceDates: string[] | null;
   notes: string | null;
-  /** Occupation maximale sur les trajets (dates de service). */
+  /** Personnes distinctes rattachées au car (exceptions comprises), sans répartition par date. */
   occupancy: number;
-  tripOccupancy: TripOccupancy[];
   stops: CarStopView[];
   assignments: CarAssignmentView[];
   persons: CarPersonView[];
@@ -92,7 +91,7 @@ export interface GatheringTransportsBoard {
 }
 
 export interface TripOccupancy {
-  /** null = car sans dates de service : tous les logés comptent. */
+  /** null = comptage sur toute la période (aucune hypothèse de date). */
   date: string | null;
   count: number;
 }
@@ -106,20 +105,25 @@ interface HousedLike {
 }
 
 /**
- * Occupation d'un car, trajet par trajet (un trajet = une date de service).
- * Un voyageur n'occupe le car à une date que s'il est logé ce jour-là (arrivée <= date <= départ) ;
- * il est compté une seule fois même s'il relève de deux cibles ; les exceptions REMOVED sont retirées
- * et les ADDED ajoutées, sur tous les trajets.
+ * Occupation d'un car : personnes distinctes rattachées à ses cibles, exceptions REMOVED retirées et ADDED ajoutées.
+ * Un voyageur relevant de deux cibles servies compte une fois, les logements annulés ne comptent pas.
+ *
+ * Aucun champ ne dit quelle personne prend quel trajet (le car n'a que des dates de service et des
+ * exceptions sans date), donc par défaut on ne répartit pas par date : le total est un majorant fiable.
+ * `filterByHousingDates` (hypothèse métier NON validée : « logé ce jour-là = prend le trajet ce jour-là »)
+ * est prêt mais n'est utilisé par aucun appelant en production.
  */
 export const computeTripOccupancy = (
   serviceDates: string[] | null,
   targets: { targetType: GatheringCarTarget; id: number }[],
   persons: { kind: GatheringCarPersonKind; participantId: number }[],
   housed: HousedLike[],
+  filterByHousingDates = false,
 ): TripOccupancy[] => {
   const removed = new Set(persons.filter((p) => p.kind === GatheringCarPersonKind.REMOVED).map((p) => p.participantId));
   const added = persons.filter((p) => p.kind === GatheringCarPersonKind.ADDED).map((p) => p.participantId);
-  const dates: (string | null)[] = serviceDates && serviceDates.length ? [...serviceDates].sort() : [null];
+  const dates: (string | null)[] =
+    filterByHousingDates && serviceDates && serviceDates.length ? [...serviceDates].sort() : [null];
   return dates.map((date) => {
     const ids = new Set<number>();
     for (const row of housed) {
@@ -321,7 +325,7 @@ export class GatheringTransportsService {
         persons,
         housed,
       );
-      const occupancy = Math.max(0, ...trips.map((t) => t.count));
+      const occupancy = trips[0]?.count ?? 0;
       return {
         id: car.id,
         name: car.name,
@@ -329,7 +333,6 @@ export class GatheringTransportsService {
         serviceDates: car.serviceDates,
         notes: car.notes,
         occupancy,
-        tripOccupancy: trips,
         stops: [...car.stops].sort((a, b) => a.orderIndex - b.orderIndex),
         assignments: assignmentViews,
         persons,
@@ -440,7 +443,7 @@ export class GatheringTransportsService {
       const worst = trips.reduce((m, t) => (t.count > m.count ? t : m), trips[0]);
       if (worst.count > car.capacity) {
         throw new BadRequestException(
-          `Capacité du car « ${car.name} » dépassée${worst.date ? ` le ${worst.date}` : ''} : ${worst.count} personnes pour ${car.capacity} places.`,
+          `Capacité du car « ${car.name} » dépassée : ${worst.count} personnes pour ${car.capacity} places.`,
         );
       }
     }

@@ -232,6 +232,32 @@ describe('GatheringTransportsService', () => {
     expect(assignmentsRepository.save).toHaveBeenCalled();
   });
 
+  it('assign : le blocage de capacité charge les affectations et exceptions déjà présentes sur le car', async () => {
+    const run = async (capacity: number, persons: Row[]) => {
+      const { service, state } = buildService();
+      state.cars[0].capacity = capacity;
+      state.cars[0].assignments = [
+        { id: 50, targetType: GatheringCarTarget.HOSTING_GROUP, hostingGroup: { id: 1 }, hostFamily: null },
+      ];
+      state.cars[0].persons = persons;
+      const assignmentsRepository = repo([]);
+      (service as any).assignmentsRepository = assignmentsRepository;
+      const result = await service
+        .assign(100, [{ targetType: GatheringCarTarget.HOSTING_GROUP, id: 2 }])
+        .then(() => 'ok', (e) => e);
+      return { result, saved: assignmentsRepository.save.mock.calls.length };
+    };
+    // Zone Nord = 3 (1001-1003) déjà sur le car, Paroisse Sud = 2 (1004, 1005) à ajouter.
+    expect((await run(4, [])).result).toBeInstanceOf(BadRequestException); // 5 > 4
+    expect((await run(5, [])).result).toBe('ok'); // 5 <= 5
+    const removed = [{ id: 1, kind: GatheringCarPersonKind.REMOVED, participant: { id: 1003 } }];
+    expect((await run(4, removed)).result).toBe('ok'); // exception REMOVED déjà présente : 4 <= 4
+    const added = [{ id: 2, kind: GatheringCarPersonKind.ADDED, participant: { id: 2001 } }];
+    const blocked = await run(5, added); // 6 > 5
+    expect(blocked.result).toBeInstanceOf(BadRequestException);
+    expect(blocked.saved).toBe(0);
+  });
+
   it('assign : un hébergement ordinaire ne se desservit pas seul (sa cible est son groupe)', async () => {
     const { service } = buildService();
     await expect(
@@ -300,9 +326,12 @@ describe('computeTripOccupancy', () => {
     expect(computeTripOccupancy(null, [G(1)], persons, rows)[0].count).toBe(3);
   });
 
-  it('trajets distincts : un voyageur parti avant la date ne compte pas, pas d\'addition entre trajets', () => {
-    const trips = computeTripOccupancy(['2027-10-30', '2027-10-31'], [G(1)], [], rows);
-    expect(trips).toEqual([
+  it('par défaut aucune répartition par date : un seul total, majorant des dates de service', () => {
+    expect(computeTripOccupancy(['2027-10-30', '2027-10-31'], [G(1)], [], rows)).toEqual([{ date: null, count: 3 }]);
+  });
+
+  it('option non validée filterByHousingDates : un logé parti avant la date ne compte pas', () => {
+    expect(computeTripOccupancy(['2027-10-30', '2027-10-31'], [G(1)], [], rows, true)).toEqual([
       { date: '2027-10-30', count: 3 },
       { date: '2027-10-31', count: 2 },
     ]);

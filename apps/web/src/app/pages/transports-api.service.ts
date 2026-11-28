@@ -49,7 +49,6 @@ export interface GatheringCar {
   serviceDates: string[] | null;
   notes: string | null;
   occupancy: number;
-  tripOccupancy?: { date: string | null; count: number }[];
   stops: CarStop[];
   assignments: CarAssignment[];
   persons: CarPerson[];

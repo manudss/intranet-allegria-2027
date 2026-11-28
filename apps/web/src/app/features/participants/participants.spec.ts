@@ -137,4 +137,17 @@ describe('ParticipantsPage - garde-fou trajets (lot 6)', () => {
     // Même délégation, pas de transport choisi : aucun appel réseau, pas d'erreur.
     expect(page.journeyError()).toBe('');
   });
+
+  it("signale l'échec de chargement des sous-délégations de la personne", async () => {
+    const api = {
+      ...makeDelegationsApi(() => of([])),
+      journeysForFiche: vi.fn(() => throwError(() => new Error('500'))),
+    };
+    const page = (await makePage(api)) as Testable;
+
+    page.open(participant);
+
+    expect(page.journeys()).toBeNull();
+    expect(page.journeyError()).toContain("n'ont pas pu être chargées");
+  });
 });

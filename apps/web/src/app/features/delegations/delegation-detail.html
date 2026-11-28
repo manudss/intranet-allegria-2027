@@ -99,10 +99,10 @@
               <label tuiLabel for="bulk-target">Affecter à…</label>
               <select tuiSelect id="bulk-target" [items]="transportIds()" [ngModel]="bulkTarget()" (ngModelChange)="bulkTarget.set($event)" name="bulk-target"></select>
             </tui-textfield>
-            <button tuiButton type="button" size="s" [disabled]="!selectionCount() || !bulkTarget() || assigning()" (click)="assignSelection(bulkTarget())">
+            <button tuiButton type="button" size="s" class="assign-btn" [disabled]="!selectionCount() || !bulkTarget() || assigning()" (click)="assignSelection(bulkTarget())">
               Affecter ({{ selectionCount() }})
             </button>
-            <button tuiButton type="button" size="s" appearance="secondary" class="only-mobile" (click)="step.set('destinations')">Choisir la destination</button>
+            <button tuiButton type="button" size="s" appearance="secondary" class="only-mobile" [disabled]="!selectionCount()" (click)="step.set('destinations')">Choisir la destination ({{ selectionCount() }})</button>
           </footer>
         </section>
 

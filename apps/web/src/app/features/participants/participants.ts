@@ -298,7 +298,12 @@ export class ParticipantsPage implements OnInit {
         this.journeys.set(j);
         this.initJourneyEdits();
       },
-      error: () => this.journeys.set(null),
+      error: () => {
+        this.journeys.set(null);
+        this.journeyError.set(
+          "Les sous-délégations de cette personne n'ont pas pu être chargées. Fermez puis rouvrez la fiche pour réessayer.",
+        );
+      },
     });
     if (!this.delegationOptions().length) {
       this.loadDelegationOptions();

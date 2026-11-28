@@ -72,7 +72,7 @@
   .tabbar { flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; margin-bottom: 0.4rem; }
   .tab { padding: 0.4rem 0.6rem; flex: none; }
   .toolbar { gap: 0.35rem; margin-bottom: 0.4rem; }
-  .toolbar > div { flex-wrap: nowrap; }
+  .toolbar > div { flex-wrap: wrap; min-width: 0; max-width: 100%; }
   .create-buttons button { font-size: 0.8rem; }
   .panel-head .help { display: none; }
   .panel-head { padding-top: 0.5rem; }
@@ -84,7 +84,8 @@
   .only-mobile { display: inline-flex; }
   .panel-filters { grid-template-columns: minmax(0, 1fr); }
   .panel-list { max-height: max(240px, calc(100dvh - 330px)); overflow-y: auto; }
-  .panel-foot .bulk-target { min-width: 0; flex: 1 1 8rem; }
+  .panel-foot .bulk-target, .panel-foot .assign-btn { display: none; }
+  .panel-foot .only-mobile { flex: 1; justify-content: center; }
 }
 
 .complete-note { margin: 0.15rem 0; color: #8a5a00; font-weight: 600; font-size: 0.9rem; }

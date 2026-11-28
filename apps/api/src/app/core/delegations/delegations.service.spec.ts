@@ -54,12 +54,15 @@ const assignment = (
 type Row = Record<string, unknown>;
 
 const repo = (rows: Row[] = []) => ({
-  find: vi.fn(async (options?: { where?: (Row & { delegation?: { id?: number } }) | Row[] }) => {
+  find: vi.fn(async (options?: { where?: (Row & { delegation?: { id?: number } }) | Row[]; relations?: Record<string, boolean> }) => {
+    // Comme TypeORM : une relation non demandée n'est pas chargée (transport absent).
+    const load = (list: Row[]) =>
+      list.map((r) => ('transport' in r && !options?.relations?.transport ? { ...r, transport: undefined } : r));
     const where = (Array.isArray(options?.where) ? options?.where[0] : options?.where) as
       | (Row & { delegation?: { id?: number }; group?: { id?: number } })
       | undefined;
-    if (!where) return rows;
-    return rows.filter((r) => {
+    if (!where) return load(rows);
+    return load(rows).filter((r) => {
       if (where.id !== undefined) {
         const w = where.id as number | { _value?: number[] };
         if (typeof w === 'object' && w !== null && Array.isArray(w._value)) {
@@ -155,6 +158,21 @@ describe('DelegationsService — stats', () => {
     expect(allerAnnecy.total).toBe(1);
     expect(allerAnnecy.exceptionsReceived).toBe(1);
     expect(allerAnnecy.exceptionsOutgoing).toBe(1);
+  });
+
+  it('une exception reçue déjà placée dans un véhicule ne compte plus dans à placer', async () => {
+    const svc = service({
+      participants: [participant(10, LYON, 'Camille', 'Roche'), participant(20, ANNECY, 'Léa', 'Fontaine')],
+      assignments: [
+        assignment(1, 10, LYON, 5),
+        // Léa (Annecy) reçue par Lyon et placée dans le véhicule 5.
+        assignment(2, 20, LYON, 5),
+      ],
+    });
+    const stats = await svc.stats(LYON, all);
+    const aller = stats.directions.find((d) => d.direction === TransportDirection.ALLER)!;
+    expect(aller.exceptionsReceived).toBe(1);
+    expect(aller.toPlace).toBe(0);
   });
 });
 

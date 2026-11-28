@@ -544,7 +544,7 @@ export class DelegationsService {
     await this.findDelegation(delegationId, scope);
     const members = await this.listMembers(delegationId);
     const memberKeys = new Set(members.map((m) => `${m.personType}:${m.id}`));
-    const rows = await this.assignmentsRepository.find({ relations: { delegation: true } });
+    const rows = await this.assignmentsRepository.find({ relations: { delegation: true, transport: true } });
     const relevant = rows.filter(
       (r) => r.delegation.id === delegationId || memberKeys.has(`${r.personType}:${r.personId}`),
     );
@@ -619,7 +619,7 @@ export class DelegationsService {
     const [participants, volunteers, assignments] = await Promise.all([
       this.participantsRepository.find({ relations: { group: true } }),
       this.volunteersRepository.find({ relations: { group: true } }),
-      this.assignmentsRepository.find({ relations: { delegation: true } }),
+      this.assignmentsRepository.find({ relations: { delegation: true, transport: true } }),
     ]);
 
     const responsableRows: { group_id: number; firstName: string | null; lastName: string | null; email: string }[] =

@@ -364,40 +364,46 @@ export class DelegationsService {
       throw new ForbiddenException('Ni la délégation d\'origine ni celle d\'accueil n\'est dans votre périmètre');
     }
     await this.findDelegation(dto.toDelegationId, { all: true });
-    const existing = await this.assignmentsRepository.findOne({
-      where: {
-        personType: dto.personType,
-        personId: dto.personId,
-        direction: dto.direction,
-      },
-    });
     const noteBody = dto.note?.trim();
-    const previous = existing
-      ? { delegation: existing.delegation, transport: existing.transport }
-      : null;
-    let saved: TransportAssignment;
-    if (existing) {
-      existing.delegation = { id: dto.toDelegationId } as Group;
-      existing.transport = null;
-      saved = await this.assignmentsRepository.save(existing);
-    } else {
-      const assignment = this.assignmentsRepository.create({
-        personType: dto.personType,
-        personId: dto.personId,
-        direction: dto.direction,
-        delegation: { id: dto.toDelegationId } as Group,
-        transport: null,
+    const personDelegationId = person.delegationId;
+    // Exception et note dans une seule transaction SQL : tout ou rien.
+    // Relecture sous verrou en écriture : deux requêtes concurrentes sur la même
+    // personne et le même sens se sérialisent, la contrainte unique protège le reste.
+    return this.assignmentsRepository.manager.transaction(async (em) => {
+      const assignmentsRepo = em.getRepository(TransportAssignment);
+      const existing = await assignmentsRepo.findOne({
+        where: {
+          personType: dto.personType,
+          personId: dto.personId,
+          direction: dto.direction,
+        },
+        lock: { mode: 'pessimistic_write' },
       });
-      saved = await this.assignmentsRepository.save(assignment);
-    }
-    if (noteBody && author) {
-      // Exception et note vont ensemble : si la note échoue, l'exception est annulée.
-      try {
-        await this.notesRepository.save(
-          this.notesRepository.create({
+      let saved: TransportAssignment;
+      if (existing) {
+        existing.delegation = { id: dto.toDelegationId } as Group;
+        existing.transport = null;
+        saved = await assignmentsRepo.save(existing);
+      } else {
+        saved = await assignmentsRepo.save(
+          assignmentsRepo.create({
             personType: dto.personType,
             personId: dto.personId,
-            delegation: { id: person.delegationId } as Group,
+            direction: dto.direction,
+            delegation: { id: dto.toDelegationId } as Group,
+            transport: null,
+          }),
+        );
+      }
+      if (noteBody && author) {
+        // Note rangée dans la délégation d'origine si elle est dans le périmètre de
+        // l'auteur, sinon dans la délégation d'accueil (cloisonnement inchangé).
+        const noteDelegationId = touchesScope(personDelegationId) ? personDelegationId : dto.toDelegationId;
+        await em.getRepository(PersonNote).save(
+          em.getRepository(PersonNote).create({
+            personType: dto.personType,
+            personId: dto.personId,
+            delegation: { id: noteDelegationId } as Group,
             author: { id: author.userId } as User,
             authorName: author.name,
             authorRole: author.role,
@@ -405,18 +411,9 @@ export class DelegationsService {
             body: `Exception ${dto.direction === TransportDirection.ALLER ? 'aller' : 'retour'} : ${noteBody}`,
           }),
         );
-      } catch (error) {
-        if (previous) {
-          saved.delegation = previous.delegation;
-          saved.transport = previous.transport;
-          await this.assignmentsRepository.save(saved);
-        } else {
-          await this.assignmentsRepository.remove(saved);
-        }
-        throw error;
       }
-    }
-    return saved;
+      return saved;
+    });
   }
 
   /** Retire une affectation : la personne retourne dans l'« à placer » de sa propre délégation. */

@@ -90,6 +90,16 @@ const repo = (rows: Row[] = []) => ({
   update: vi.fn(async () => undefined),
 });
 
+/** Simule manager.transaction : les repos passés sont ceux du service, un échec relance l'erreur (annulation simulée). */
+const withManager = (assignments: ReturnType<typeof repo>, notes: ReturnType<typeof repo>) => {
+  const a = assignments as ReturnType<typeof repo> & { manager?: unknown };
+  const em = {
+    getRepository: (entity: { name: string }) => (entity.name === 'PersonNote' ? notes : assignments),
+  };
+  a.manager = { transaction: async (cb: (m: typeof em) => Promise<unknown>) => cb(em) };
+  return assignments;
+};
+
 const service = (repos: {
   transports?: Row[];
   assignments?: Row[];
@@ -101,7 +111,7 @@ const service = (repos: {
 }) =>
   new DelegationsService(
     repo(repos.transports) as never,
-    repo(repos.assignments) as never,
+    withManager(repo(repos.assignments), repo(repos.notes)) as never,
     repo(repos.notes) as never,
     repo(repos.groups ?? [group(LYON, 'Lyon'), group(ANNECY, 'Annecy')]) as never,
     repo(repos.participants) as never,
@@ -280,8 +290,8 @@ describe('DelegationsService — note facultative à la création d une exceptio
     note,
   });
   const build = () => {
-    const assignments = repo([]);
     const notes = repo([]);
+    const assignments = withManager(repo([]), notes);
     const svc = new DelegationsService(
       repo() as never,
       assignments as never,
@@ -310,11 +320,27 @@ describe('DelegationsService — note facultative à la création d une exceptio
     expect(notes.save).not.toHaveBeenCalled();
   });
 
-  it('si la note échoue, l exception est annulée', async () => {
+  it('si la note échoue, l erreur remonte de la transaction (annulation SQL, pas de compensation manuelle)', async () => {
     const { svc, assignments, notes } = build();
     notes.save.mockRejectedValueOnce(new Error('échec note'));
     await expect(svc.createException(LYON, dto('x'), all, author)).rejects.toThrow('échec note');
-    expect(assignments.remove).toHaveBeenCalledTimes(1);
+    expect(assignments.remove).not.toHaveBeenCalled();
+  });
+
+  it('relit l affectation sous verrou en écriture dans la transaction', async () => {
+    const { svc, assignments } = build();
+    await svc.createException(LYON, dto(), all, author);
+    const options = assignments.findOne.mock.calls[0][0] as { lock?: { mode: string } };
+    expect(options.lock).toEqual({ mode: 'pessimistic_write' });
+  });
+
+  it('note rangée dans la délégation d origine si elle est dans le périmètre de l auteur, sinon dans l accueil', async () => {
+    const a = build();
+    await a.svc.createException(LYON, dto('x'), all, author);
+    expect((a.notes.save.mock.calls[0][0] as { delegation: { id: number } }).delegation.id).toBe(ANNECY);
+    const b = build();
+    await b.svc.createException(LYON, dto('x'), lyonOnly, author);
+    expect((b.notes.save.mock.calls[0][0] as { delegation: { id: number } }).delegation.id).toBe(LYON);
   });
 });
 

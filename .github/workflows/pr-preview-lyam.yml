@@ -133,6 +133,21 @@ jobs:
           npm run migration:run
           npx tsx apps/api/src/database/seeds/seed.ts --profile=medium
 
+      - name: Guard of the targeted migration (preview of this PR only, no seed)
+        if: steps.pr.outputs.run == 'true' && steps.pr.outputs.migrate_only == 'true'
+        working-directory: trusted
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action }}
+          BRANCH_NAME: preview/pr-${{ env.PR_NUMBER }}
+          IMAGE_ONLY: ${{ steps.pr.outputs.image_only }}
+          SEED: 'false'
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          export COMMIT_MESSAGE
+          COMMIT_MESSAGE=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${{ steps.pr.outputs.sha }}" --jq .commit.message)
+          node scripts/preview-migrate-guard.mjs
+
       - name: Targeted migration only (no seed, no reset of data)
         if: steps.pr.outputs.run == 'true' && steps.pr.outputs.migrate_only == 'true'
         working-directory: pr

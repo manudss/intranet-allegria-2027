@@ -21,20 +21,26 @@ describe('droit PERSON_NOTES séparé de PARTICIPANTS', () => {
 
   it('la migration copie sans rien modifier ni supprimer, est idempotente, et son retour ne touche que PERSON_NOTES', async () => {
     const queries: string[] = [];
-    const qr = { query: async (sql: string) => void queries.push(sql) } as never;
+    const qr = {
+      query: async (sql: string) => void queries.push(sql),
+      hasTable: async () => true,
+    } as never;
     const m = new SplitPersonNotesAccess1791200000000();
     await m.up(qr);
-    expect(queries).toHaveLength(2);
+    expect(queries).toHaveLength(3);
     const up = queries.join('\n');
     expect(up).toMatch(/ON CONFLICT \("subject_kind", "subject_key", "module"\) DO NOTHING/);
     expect(up).toMatch(/NOT EXISTS/);
     expect(up).not.toMatch(/\bUPDATE\b|\bDELETE\b|\bDROP\b/i);
+    expect(up).toMatch(/person_notes_split_log/);
     expect(up).toMatch(/WHERE "module" = 'PARTICIPANTS'/);
     queries.length = 0;
     await m.down(qr);
-    expect(queries).toHaveLength(2);
-    for (const q of queries) {
+    expect(queries).toHaveLength(3);
+    // Le retour ne supprime que les lignes retenues dans la table de suivi, jamais un PERSON_NOTES préexistant.
+    for (const q of queries.slice(0, 2)) {
       expect(q).toMatch(/DELETE FROM/);
+      expect(q).toMatch(/person_notes_split_log/);
       expect(q).toMatch(/"module" = 'PERSON_NOTES'/);
       expect(q).not.toMatch(/PARTICIPANTS/);
     }

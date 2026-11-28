@@ -67,8 +67,14 @@
 .empty { color: #666; padding: 1rem 0; }
 .only-mobile { display: none; }
 @media (max-width: 767px) {
+  .tabbar { flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; margin-bottom: 0.4rem; }
+  .tab { padding: 0.4rem 0.6rem; flex: none; }
+  .toolbar { flex-wrap: nowrap; overflow-x: auto; gap: 0.35rem; margin-bottom: 0.4rem; }
+  .toolbar > div { flex-wrap: nowrap; flex: none; }
+  .panel-head .help { display: none; }
+  .panel-head { padding-top: 0.5rem; }
   .steps { display: flex; }
-  .panels { grid-template-columns: 1fr; height: calc(100vh - 360px); min-height: 360px; }
+  .panels { grid-template-columns: 1fr; height: calc(100vh - 250px); min-height: 320px; }
   .panel.hidden-mobile { display: none; }
   .only-mobile { display: inline-flex; }
   .panel-filters { grid-template-columns: 1fr; }

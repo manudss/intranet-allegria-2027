@@ -1,6 +1,6 @@
 <app-page-layout
   [title]="delegation()?.name ? delegation()!.name + ' · Transports' : 'Transports de la délégation'"
-  description="Sous-délégations aller/retour, répartition des personnes et exceptions. Les responsables ne voient que leur délégation ; aucune donnée de santé n'est affichée ici."
+  description="Répartition aller/retour et exceptions. Aucune donnée de santé."
 >
   <nav class="tabbar" aria-label="Navigation de la délégation">
     <a routerLink="/rassemblement" class="tab back">‹ Délégations</a>
@@ -266,11 +266,13 @@
         <label for="x-deleg" tuiLabel>Délégation d'accueil</label
         ><select tuiSelect id="x-deleg" placeholder="Choisir…" [items]="otherDelegationIds()" [ngModel]="exceptionForm().toDelegationId" (ngModelChange)="exceptionForm.update((f) => ({ ...f, toDelegationId: $event }))" name="xdeleg"></select>
       </tui-textfield>
-      <tui-textfield>
-        <label for="x-note" tuiLabel>Note (facultatif)</label
-        ><textarea tuiTextarea id="x-note" [ngModel]="exceptionForm().note" (ngModelChange)="exceptionForm.update((f) => ({ ...f, note: $event }))" name="xnote"></textarea>
-      </tui-textfield>
-      <p class="help">
+      <div class="field-block wide">
+        <label class="field-label" for="x-note">Note (facultatif)</label>
+        <tui-textfield>
+          <textarea tuiTextarea id="x-note" [ngModel]="exceptionForm().note" (ngModelChange)="exceptionForm.update((f) => ({ ...f, note: $event }))" name="xnote"></textarea>
+        </tui-textfield>
+      </div>
+      <p class="help wide">
         Si une note est saisie, elle est créée avec l'exception, signée et datée, et visible dans le suivi des notes. Aucune donnée de santé.
       </p>
     </form>

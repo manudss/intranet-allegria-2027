@@ -25,6 +25,10 @@ export class HostingGroup {
   @Column({ type: 'text', nullable: true })
   notes!: string | null;
 
+  /** Besoin de transport du rassemblement : null = pas encore renseigné, false = pas besoin, true = à desservir. */
+  @Column({ name: 'needs_transport', type: 'boolean', nullable: true })
+  needsTransport!: boolean | null;
+
   @OneToMany(() => Team, (team) => team.hostingGroup)
   teams!: Team[];
 

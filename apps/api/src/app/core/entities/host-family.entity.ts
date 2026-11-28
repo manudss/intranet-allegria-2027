@@ -27,6 +27,10 @@ export class HostFamily {
   @Column({ type: 'varchar', length: 255, nullable: true })
   email!: string | null;
 
+  /** Besoin de transport du rassemblement : null = pas encore renseigné, false = pas besoin, true = à desservir. */
+  @Column({ name: 'needs_transport', type: 'boolean', nullable: true })
+  needsTransport!: boolean | null;
+
   @Column({ name: 'accommodation_type', type: 'varchar', length: 20, default: AccommodationType.FAMILY })
   accommodationType!: AccommodationType;
 

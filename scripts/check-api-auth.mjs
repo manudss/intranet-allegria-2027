@@ -80,6 +80,23 @@ for (const path of ['/api/participants', '/api/groups', '/api/host-families', '/
   );
 }
 
+// Transports du rassemblement : le tableau doit se charger sur de vraies lignes seedees
+// (relations persistantes, contrairement aux doubles de la spec unitaire).
+{
+  const res = await fetch(`${base}/api/gathering-transports/board`, {
+    headers: { authorization: `Bearer ${accessToken}` },
+  });
+  expect('authentifie GET /api/gathering-transports/board', res.status, (s) => s === 200);
+  if (res.status === 200) {
+    const board = await res.json();
+    expect(
+      'board : au moins une cible desservie par un car seede',
+      board.targets.some((t) => t.carName),
+      (v) => v === true,
+    );
+  }
+}
+
 if (failures > 0) {
   console.error(`${failures} verification(s) en echec`);
   process.exit(1);

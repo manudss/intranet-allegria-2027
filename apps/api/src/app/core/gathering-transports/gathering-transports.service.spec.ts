@@ -416,6 +416,22 @@ describe('besoin de transport : famille et groupe', () => {
     expect(assignmentsRepository.save).toHaveBeenCalled();
   });
 
+  it('assign : une famille déjà desservie à part peut être déplacée (avec confirmation) même si son groupe a ensuite le même besoin', async () => {
+    const { service, state } = wired();
+    (state.groups as any[])[0].needsTransport = true;
+    (state.families as any[])[0].needsTransport = true; // même besoin que le groupe : plus « à part »
+    state.cars.push({ id: 101, name: 'Car B', capacity: null, serviceDates: null, notes: null, stops: [], assignments: [], persons: [] });
+    const own = { id: 70, car: { id: 101 }, targetType: GatheringCarTarget.HOST_FAMILY, hostingGroup: null, hostFamily: { id: 10, familyName: 'Famille A' } };
+    const assignmentsRepository = repo([own]);
+    (service as any).assignmentsRepository = assignmentsRepository;
+    const target = [{ targetType: GatheringCarTarget.HOST_FAMILY, id: 10 }];
+    await expect(service.assign(100, target)).rejects.toBeInstanceOf(ConflictException);
+    expect(assignmentsRepository.remove).not.toHaveBeenCalled();
+    await service.assign(100, target, true);
+    expect(assignmentsRepository.remove).toHaveBeenCalled();
+    expect(assignmentsRepository.save).toHaveBeenCalled();
+  });
+
   it('capacité : une famille servie à part avec son groupe sur le même car n\'est comptée qu\'une fois', () => {
     const rows = [
       { status: AssignmentStatus.CONFIRMED, participant: { id: 1 }, hostFamily: { id: 10, needsTransport: true, hostingGroup: { id: 1, needsTransport: true } } },

@@ -106,6 +106,11 @@ export class Transports implements OnInit {
     this.api.board().subscribe({
       next: (board) => {
         this.board.set(board);
+        const live = new Set(board.targets.map((t) => t.key));
+        this.selectedKeys.update((keys) => {
+          const kept = [...keys].filter((k) => live.has(k));
+          return kept.length === keys.size ? keys : new Set(kept);
+        });
         this.loading.set(false);
       },
       error: () => {
@@ -173,8 +178,14 @@ export class Transports implements OnInit {
       return next;
     });
   }
+  /** Sélection réelle : uniquement les cibles encore listées (une cible retirée du tableau ne reste pas « sélectionnée »). */
   protected selectionCount(): number {
-    return this.selectedKeys().size;
+    const keys = this.selectedKeys();
+    return (this.board()?.targets ?? []).filter((t) => keys.has(t.key)).length;
+  }
+  /** Affecter n'a de sens que s'il reste au moins une personne à transporter dans la sélection. */
+  protected canAssign(): boolean {
+    return this.selectionCount() > 0 && this.selectionPersons() > 0;
   }
   protected selectionPersons(): number {
     return selectionPersonCount(this.board()?.targets ?? [], this.selectedKeys());
@@ -209,6 +220,10 @@ export class Transports implements OnInit {
     const targets = (this.board()?.targets ?? []).filter((t) => keys.has(t.key));
     if (!targets.length) {
       this.error.set('Sélectionnez au moins un groupe ou lieu à desservir.');
+      return;
+    }
+    if (!targets.some((t) => t.personCount > 0)) {
+      this.error.set('Aucune personne à transporter dans la sélection.');
       return;
     }
     this.error.set('');

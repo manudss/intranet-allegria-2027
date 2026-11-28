@@ -121,10 +121,10 @@
             placeholder="Choisir un car…"
             (valueChange)="targetCarId.set($event)"
           />
-          <button tuiButton type="button" size="s" class="assign-btn" [disabled]="!selectionCount() || !targetCarId() || assigning()" (click)="assignSelection(targetCarId())">
+          <button tuiButton type="button" size="s" class="assign-btn" [disabled]="!canAssign() || !targetCarId() || assigning()" (click)="assignSelection(targetCarId())">
             Affecter ({{ selectionCount() }})
           </button>
-          <button tuiButton type="button" size="s" appearance="secondary" class="only-mobile" [disabled]="!selectionCount()" (click)="step.set('cars')">Choisir le car ({{ selectionCount() }})</button>
+          <button tuiButton type="button" size="s" appearance="secondary" class="only-mobile" [disabled]="!canAssign()" (click)="step.set('cars')">Choisir le car ({{ selectionCount() }})</button>
         </footer>
       </section>
 
@@ -166,7 +166,7 @@
               </p>
               <p class="summary">{{ serviceDatesSummary(car.serviceDates) }}</p>
               <div class="card-actions">
-                <button tuiButton type="button" size="s" [disabled]="!selectionCount() || assigning()" (click)="assignSelection(car.id)">
+                <button tuiButton type="button" size="s" [disabled]="!canAssign() || assigning()" (click)="assignSelection(car.id)">
                   Affecter la sélection
                 </button>
                 <button tuiButton type="button" size="s" appearance="secondary" [attr.aria-expanded]="isCardOpen(car.id)" (click)="toggleCard(car.id)">

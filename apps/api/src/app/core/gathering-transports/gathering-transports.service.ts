@@ -560,7 +560,11 @@ export class GatheringTransportsService {
       } else {
         const family = await this.hostFamiliesRepository.findOneBy({ id: target.id });
         if (!family) throw new NotFoundException(`Hébergement ${target.id} introuvable`);
-        const ownChoice = family.hostingGroup ? await this.ownChoiceDiffers(family) : false;
+        // Une famille déjà desservie à part reste déplaçable même si son groupe a depuis le même besoin.
+        const alreadyOwn = family.hostingGroup
+          ? (await this.assignmentsRepository.findOne({ where: { hostFamily: { id: family.id } }, relations: { car: true } })) !== null
+          : false;
+        const ownChoice = family.hostingGroup ? alreadyOwn || (await this.ownChoiceDiffers(family)) : false;
         const aloneCollective = family.accommodationType === AccommodationType.COLLECTIVE && !family.hostingGroup;
         if (!aloneCollective && !ownChoice) {
           throw new BadRequestException(

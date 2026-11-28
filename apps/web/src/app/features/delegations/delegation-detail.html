@@ -313,13 +313,13 @@
           <p class="help">
             Retrouvez la personne par son prénom et son nom exacts. Aucune liste n'est affichée : seuls le nom, la délégation d'origine et le type apparaissent, sans coordonnées ni santé. La recherche est journalisée.
           </p>
-          <label class="field-label" for="x-first">Prénom exact</label>
-          <tui-textfield>
-            <input tuiTextfield id="x-first" name="xfirst" autocomplete="off" [ngModel]="hostLookup().first" (ngModelChange)="hostLookup.update((h) => ({ ...h, first: $event }))" />
+          <tui-textfield [tuiTextfieldCleaner]="false">
+            <label for="x-first" tuiLabel>Prénom exact</label
+            ><input tuiInput id="x-first" name="xfirst" autocomplete="off" [ngModel]="hostLookup().first" (ngModelChange)="hostLookup.update((h) => ({ ...h, first: $event }))" />
           </tui-textfield>
-          <label class="field-label" for="x-last">Nom exact</label>
-          <tui-textfield>
-            <input tuiTextfield id="x-last" name="xlast" autocomplete="off" [ngModel]="hostLookup().last" (ngModelChange)="hostLookup.update((h) => ({ ...h, last: $event }))" />
+          <tui-textfield [tuiTextfieldCleaner]="false">
+            <label for="x-last" tuiLabel>Nom exact</label
+            ><input tuiInput id="x-last" name="xlast" autocomplete="off" [ngModel]="hostLookup().last" (ngModelChange)="hostLookup.update((h) => ({ ...h, last: $event }))" />
           </tui-textfield>
           <button tuiButton type="button" size="s" appearance="secondary" [disabled]="hostLookup().loading" (click)="searchHostPerson()">
             Rechercher

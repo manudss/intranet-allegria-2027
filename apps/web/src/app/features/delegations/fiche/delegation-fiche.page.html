@@ -64,7 +64,7 @@
       [appearance]="view() === 'notes' ? 'primary' : 'secondary'"
       (click)="setView('notes')"
     >
-      Notes ({{ noteCount() }})
+      Notes @if (!notesUnavailable()) {({{ noteCount() }})}
     </button>
   </div>
 

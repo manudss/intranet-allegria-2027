@@ -135,6 +135,8 @@ describe('DelegationFichePage (lot 4 : fiche en vues)', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.textContent).toContain("Délégation d'Annecy");
     expect(el.textContent).not.toContain('Le chargement de la délégation a échoué');
+    // Accès indisponible n'est pas « zéro note » : pas de compteur.
+    expect(el.textContent).not.toMatch(/Notes\s*\(0\)/);
   });
 
   it("n'appelle pas /api/groups et masque le lien de retour pour une seule délégation", async () => {

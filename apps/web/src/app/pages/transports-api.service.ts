@@ -71,6 +71,7 @@ export interface GatheringTransportsBoard {
   undecidedTargets: ServeTarget[];
   /** Cibles marquées « pas besoin de transport », non listées. */
   notNeededCount: number;
+  notNeededTargets?: ServeTarget[];
   familyChoices?: FamilyChoice[];
   cars: GatheringCar[];
 }

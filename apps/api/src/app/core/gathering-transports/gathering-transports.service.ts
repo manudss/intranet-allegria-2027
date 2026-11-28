@@ -99,6 +99,8 @@ export interface GatheringTransportsBoard {
   undecidedTargets: ServeTargetView[];
   /** Nombre de cibles marquées « pas besoin de transport » (non listées). */
   notNeededCount: number;
+  /** Cibles marquées « pas besoin » non affectées : listées pour pouvoir revenir sur le choix. */
+  notNeededTargets: ServeTargetView[];
   /** Familles d'un groupe : choix propre (null = suit le groupe). */
   familyChoices: FamilyChoiceView[];
   cars: CarView[];
@@ -350,7 +352,8 @@ export class GatheringTransportsService {
     // Une cible déjà affectée reste toujours visible ; sinon seul « transport nécessaire » est listé.
     const listed = targets.filter((t) => t.carId !== null || t.needsTransport === true);
     const undecidedTargets = targets.filter((t) => t.carId === null && t.needsTransport === null);
-    const notNeededCount = targets.filter((t) => t.carId === null && t.needsTransport === false).length;
+    const notNeededTargets = targets.filter((t) => t.carId === null && t.needsTransport === false);
+    const notNeededCount = notNeededTargets.length;
     targets.length = 0;
     targets.push(...listed);
     targets.sort((a, b) => (a.carId ? 1 : 0) - (b.carId ? 1 : 0) || a.name.localeCompare(b.name, 'fr'));
@@ -426,7 +429,7 @@ export class GatheringTransportsService {
         };
       })
       .sort((a, b) => a.groupName.localeCompare(b.groupName, 'fr') || a.name.localeCompare(b.name, 'fr'));
-    return { targets, undecidedTargets, notNeededCount, familyChoices, cars: carViews };
+    return { targets, undecidedTargets, notNeededCount, notNeededTargets, familyChoices, cars: carViews };
   }
 
   // -------------------------------------------------------------------- cars

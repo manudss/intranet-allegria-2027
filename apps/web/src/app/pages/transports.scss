@@ -64,7 +64,7 @@
   .steps { display: flex; }
   .panels { grid-template-columns: 1fr; height: auto; min-height: 0; }
   .panel { overflow: visible; }
-  .need-check { max-block-size: none; overflow: visible; }
+  .need-check, .need-list { max-block-size: none; overflow: visible; }
   .panel-foot { position: sticky; bottom: 0; z-index: 1; border-radius: 0 0 0.75rem 0.75rem; }
   .panel.hidden-mobile { display: none; }
   .only-mobile { display: inline-flex; }
@@ -77,3 +77,9 @@
 .need-check .muted { color: var(--appearance-muted); font-size: .85rem; }
 .need-list { max-block-size: 10rem; overflow: auto; }
 .need-list .target-row { flex-wrap: wrap; }
+
+.need-check > button[tuiButton] { white-space: normal; block-size: auto; min-block-size: 2rem; text-align: center; }
+
+@media (max-width: 767px) {
+  .need-check, .need-list { max-block-size: none; overflow: visible; }
+}

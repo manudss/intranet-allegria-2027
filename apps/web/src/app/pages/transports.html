@@ -68,7 +68,7 @@
               {{ undecidedCount() }} non renseigné(s), à vérifier
             </button>
             @if (b.notNeededCount) {
-              <span class="muted">{{ b.notNeededCount }} marqué(s) « pas besoin de transport » (non listés)</span>
+              <span class="muted">{{ b.notNeededCount }} marqué(s) « pas besoin de transport », visibles en dépliant la section</span>
             }
             @if (showUndecided()) {
               <ul class="panel-list need-list">
@@ -77,6 +77,13 @@
                     <span class="target-label"><b>{{ t.name }}</b><small>{{ t.detail }}</small></span>
                     <button type="button" tuiButton appearance="secondary" size="xs" (click)="setNeed(t, true)" [attr.aria-label]="'Transport nécessaire pour ' + t.name">Transport nécessaire</button>
                     <button type="button" tuiButton appearance="flat" size="xs" (click)="setNeed(t, false)" [attr.aria-label]="'Pas besoin de transport pour ' + t.name">Pas besoin</button>
+                  </li>
+                }
+                @for (t of b.notNeededTargets ?? []; track t.key) {
+                  <li class="target-row">
+                    <span class="target-label"><b>{{ t.name }}</b><small>{{ t.detail }} · marqué « pas besoin »</small></span>
+                    <button type="button" tuiButton appearance="secondary" size="xs" (click)="setNeed(t, true)" [attr.aria-label]="'Finalement, transport nécessaire pour ' + t.name">Transport nécessaire</button>
+                    <button type="button" tuiButton appearance="flat" size="xs" (click)="setNeed(t, null)" [attr.aria-label]="'Remettre à vérifier ' + t.name">À vérifier</button>
                   </li>
                 }
               </ul>

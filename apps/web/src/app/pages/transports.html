@@ -132,7 +132,12 @@
                 <ul class="placed">
                   @for (a of car.assignments; track a.id) {
                     <li>
-                      {{ a.name }} · {{ a.personCount }} personne(s)
+                      {{ a.name }} ·
+                      @if (a.removedCount) {
+                        {{ a.personCount - a.removedCount }}/{{ a.personCount }} personnes (dont {{ a.removedCount }} retirée(s))
+                      } @else {
+                        {{ a.personCount }} personne(s)
+                      }
                       <button tuiButton size="xs" appearance="flat" type="button" (click)="unassign(a)">Retirer</button>
                     </li>
                   } @empty {

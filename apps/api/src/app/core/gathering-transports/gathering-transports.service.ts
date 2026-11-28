@@ -52,6 +52,8 @@ export interface CarAssignmentView {
   targetId: number;
   name: string;
   personCount: number;
+  /** Personnes de cette cible retirées du car en exception individuelle. */
+  removedCount: number;
 }
 
 export interface CarPersonView {
@@ -116,7 +118,7 @@ export class GatheringTransportsService {
           persons: { participant: true },
         },
       }),
-      this.housedRepository.find({ relations: { hostFamily: { hostingGroup: true } } }),
+      this.housedRepository.find({ relations: { hostFamily: { hostingGroup: true }, participant: true } }),
     ]);
 
     // Effectifs logés (affectations non annulées), par groupe et par hébergement.
@@ -127,6 +129,19 @@ export class GatheringTransportsService {
       countByFamily.set(row.hostFamily.id, (countByFamily.get(row.hostFamily.id) ?? 0) + 1);
       const groupId = row.hostFamily.hostingGroup?.id;
       if (groupId) countByGroup.set(groupId, (countByGroup.get(groupId) ?? 0) + 1);
+    }
+
+    // Cibles d'hébergement de chaque participant logé (pour rattacher les retraits aux cibles).
+    const targetsOfParticipant = new Map<number, { groupIds: Set<number>; familyIds: Set<number> }>();
+    for (const row of housed) {
+      if (row.status === AssignmentStatus.CANCELLED) continue;
+      const entry = targetsOfParticipant.get(row.participant.id) ?? {
+        groupIds: new Set<number>(),
+        familyIds: new Set<number>(),
+      };
+      entry.familyIds.add(row.hostFamily.id);
+      if (row.hostFamily.hostingGroup?.id) entry.groupIds.add(row.hostFamily.hostingGroup.id);
+      targetsOfParticipant.set(row.participant.id, entry);
     }
 
     const assignmentByTarget = new Map<string, { assignment: GatheringCarAssignment; car: GatheringCar }>();
@@ -184,6 +199,16 @@ export class GatheringTransportsService {
     targets.sort((a, b) => (a.carId ? 1 : 0) - (b.carId ? 1 : 0) || a.name.localeCompare(b.name, 'fr'));
 
     const carViews: CarView[] = cars.map((car) => {
+      const removedIds = new Set(
+        car.persons
+          .filter((p) => p.kind === GatheringCarPersonKind.REMOVED)
+          .map((p) => p.participant.id),
+      );
+      const removedIn = (groupId: number | null, familyId: number | null) =>
+        [...removedIds].filter((pid) => {
+          const t = targetsOfParticipant.get(pid);
+          return t && ((groupId !== null && t.groupIds.has(groupId)) || (familyId !== null && t.familyIds.has(familyId)));
+        }).length;
       const assignmentViews: CarAssignmentView[] = car.assignments
         .map((a) => {
           const isGroup = a.targetType === GatheringCarTarget.HOSTING_GROUP;
@@ -195,6 +220,7 @@ export class GatheringTransportsService {
             targetId: id,
             name: isGroup ? a.hostingGroup!.name : a.hostFamily!.familyName,
             personCount: isGroup ? countByGroup.get(id) ?? 0 : countByFamily.get(id) ?? 0,
+            removedCount: removedIn(isGroup ? id : null, isGroup ? null : id),
           };
         })
         .filter((a): a is CarAssignmentView => a !== null)

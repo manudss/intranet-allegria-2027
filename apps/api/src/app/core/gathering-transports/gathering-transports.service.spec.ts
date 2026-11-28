@@ -143,7 +143,8 @@ describe('GatheringTransportsService', () => {
     state.cars[0].persons = [
       { id: 60, kind: GatheringCarPersonKind.ADDED, participant: { id: 2001, firstName: 'X', lastName: 'Y' } },
       { id: 61, kind: GatheringCarPersonKind.ADDED, participant: { id: 2002, firstName: 'Z', lastName: 'W' } },
-      { id: 62, kind: GatheringCarPersonKind.REMOVED, participant: { id: 2003, firstName: 'R', lastName: 'S' } },
+      // 1001 est logée dans la Famille A (groupe 1) : le retrait se rattache à Zone Nord.
+      { id: 62, kind: GatheringCarPersonKind.REMOVED, participant: { id: 1001, firstName: 'R', lastName: 'S' } },
     ];
 
     const board = await service.board();
@@ -152,6 +153,8 @@ describe('GatheringTransportsService', () => {
     expect(car.occupancy).toBe(3 + 2 + 2 - 1);
     expect(car.stops.map((s) => s.label)).toEqual(['Zone Nord', 'Lieu du rassemblement']);
     expect(car.assignments.map((a) => a.name)).toEqual(['Internat Exemple', 'Zone Nord']);
+    expect(car.assignments.find((a) => a.name === 'Zone Nord')?.removedCount).toBe(1);
+    expect(car.assignments.find((a) => a.name === 'Internat Exemple')?.removedCount).toBe(0);
   });
 
   it('assign : déplace une cible déjà desservie par un autre car, ignore la réaffectation au même car', async () => {

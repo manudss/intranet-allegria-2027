@@ -193,16 +193,30 @@
             name="tmode"
           ></select>
         </tui-textfield>
-        <tui-textfield>
-          <label for="t-dep" tuiLabel>Départ</label
-          ><input tuiInput id="t-dep" type="datetime-local" [ngModel]="transportForm().departureDatetime"
-            (ngModelChange)="transportForm.update((f) => ({ ...f, departureDatetime: $event }))" name="tdep" />
-        </tui-textfield>
-        <tui-textfield>
-          <label for="t-arr" tuiLabel>Arrivée</label
-          ><input tuiInput id="t-arr" type="datetime-local" [ngModel]="transportForm().arrivalDatetime"
-            (ngModelChange)="transportForm.update((f) => ({ ...f, arrivalDatetime: $event }))" name="tarr" />
-        </tui-textfield>
+        <div class="datetime-row">
+          <tui-textfield>
+            <label for="t-dep-date" tuiLabel>Départ : date</label
+            ><input tuiInput id="t-dep-date" type="date" [ngModel]="transportTimes().depDate"
+              (ngModelChange)="transportTimes.update((f) => ({ ...f, depDate: $event }))" name="tdepdate" />
+          </tui-textfield>
+          <tui-textfield>
+            <label for="t-dep-time" tuiLabel>Départ : heure</label
+            ><input tuiInput id="t-dep-time" type="time" [ngModel]="transportTimes().depTime"
+              (ngModelChange)="transportTimes.update((f) => ({ ...f, depTime: $event }))" name="tdeptime" />
+          </tui-textfield>
+        </div>
+        <div class="datetime-row">
+          <tui-textfield>
+            <label for="t-arr-date" tuiLabel>Arrivée : date</label
+            ><input tuiInput id="t-arr-date" type="date" [ngModel]="transportTimes().arrDate"
+              (ngModelChange)="transportTimes.update((f) => ({ ...f, arrDate: $event }))" name="tarrdate" />
+          </tui-textfield>
+          <tui-textfield>
+            <label for="t-arr-time" tuiLabel>Arrivée : heure</label
+            ><input tuiInput id="t-arr-time" type="time" [ngModel]="transportTimes().arrTime"
+              (ngModelChange)="transportTimes.update((f) => ({ ...f, arrTime: $event }))" name="tarrtime" />
+          </tui-textfield>
+        </div>
         <tui-textfield>
           <label for="t-rdv" tuiLabel>Lieu de rendez-vous</label
           ><input tuiInput id="t-rdv" [ngModel]="transportForm().meetingPoint"

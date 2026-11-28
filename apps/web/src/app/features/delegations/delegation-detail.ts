@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
+import { DEFAULT_DATE_BY_DIRECTION, TransportTimes, composeIso, defaultTimes, splitIso } from './transport-dates';
 import { Group } from '../../models/models';
 import { GroupsApiService } from '../../services/api.services';
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
@@ -65,6 +66,7 @@ export class DelegationDetailPage implements OnInit {
   protected readonly stats = signal<DelegationStats | null>(null);
 
   protected readonly transportForm = signal<TransportPayload>(this.emptyTransport());
+  protected readonly transportTimes = signal<TransportTimes>(defaultTimes('ALLER'));
   protected readonly editingTransportId = signal<number | null>(null);
   protected readonly exceptionForm = signal({
     personKey: '',
@@ -124,6 +126,7 @@ export class DelegationDetailPage implements OnInit {
   protected setDirection(d: TransportDirection) {
     this.direction.set(d);
     this.transportForm.set(this.emptyTransport());
+    this.transportTimes.set(defaultTimes(d));
     this.editingTransportId.set(null);
     this.toAssignSearch.set('');
     this.toAssignShowAll.set(false);
@@ -233,12 +236,16 @@ export class DelegationDetailPage implements OnInit {
     const t = this.repartition()?.transports.find((x) => x.id === id);
     if (!t) return;
     this.editingTransportId.set(id);
+    const fallback = DEFAULT_DATE_BY_DIRECTION[t.direction];
+    const dep = splitIso(t.departureDatetime, fallback);
+    const arr = splitIso(t.arrivalDatetime, fallback);
+    this.transportTimes.set({ depDate: dep.date, depTime: dep.time, arrDate: arr.date, arrTime: arr.time });
     this.transportForm.set({
       direction: t.direction,
       transportMode: t.transportMode,
       name: t.name,
-      departureDatetime: t.departureDatetime ? t.departureDatetime.slice(0, 16) : null,
-      arrivalDatetime: t.arrivalDatetime ? t.arrivalDatetime.slice(0, 16) : null,
+      departureDatetime: null,
+      arrivalDatetime: null,
       meetingPoint: t.meetingPoint,
       practicalInfo: t.practicalInfo,
       capacity: t.capacity,
@@ -249,15 +256,17 @@ export class DelegationDetailPage implements OnInit {
   protected cancelTransportEdit() {
     this.editingTransportId.set(null);
     this.transportForm.set(this.emptyTransport());
+    this.transportTimes.set(defaultTimes(this.direction()));
   }
 
   protected saveTransport() {
     const f = this.transportForm();
+    const times = this.transportTimes();
     const payload: TransportPayload = {
       ...f,
       direction: this.direction(),
-      departureDatetime: f.departureDatetime ? new Date(f.departureDatetime).toISOString() : null,
-      arrivalDatetime: f.arrivalDatetime ? new Date(f.arrivalDatetime).toISOString() : null,
+      departureDatetime: composeIso(times.depDate, times.depTime),
+      arrivalDatetime: composeIso(times.arrDate, times.arrTime),
       capacity: f.capacity === null || (f.capacity as unknown as string) === '' ? null : Number(f.capacity),
     };
     const editing = this.editingTransportId();

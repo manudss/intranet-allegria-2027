@@ -103,6 +103,13 @@
   .team-card .dot { grid-row: 1 / span 3; align-self: start; margin-block-start: .35rem; }
   .team-card .team-name { grid-column: 2; }
   .team-card .muted { grid-column: 2; margin-inline-start: 0; }
+
+  /* Équipe placée dans un groupe : le nom garde une largeur lisible et les
+     badges d'appartenance passent à la ligne, au lieu de compresser le nom
+     lettre par lettre (overflow-wrap: anywhere) et de déborder de la carte. */
+  .placed li { flex-wrap: wrap; column-gap: .5rem; row-gap: .2rem; }
+  .placed .team-name { flex: 1 1 11rem; min-width: 11rem; overflow-wrap: break-word; }
+  .placed .chip { max-inline-size: 100%; overflow-wrap: anywhere; }
 }
 
 /* Grand écran : la colonne des groupes reste visible pendant qu'on fait défiler la longue liste d'équipes. */

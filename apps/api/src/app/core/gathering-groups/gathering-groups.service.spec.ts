@@ -267,6 +267,109 @@ describe('proposition automatique', () => {
       { teamId: 11, teamName: 'Équipe 11', reason: 'Aucun groupe de sa piste' },
     ]);
   });
+
+  it('répartit uniformément entre 3 groupes sans limite (cas remonté : plus de remplissage du premier)', async () => {
+    const { service } = build({
+      groups: [
+        group(1, { category: GatheringGroupCategory.TA, capacityPersons: null }),
+        group(2, { category: GatheringGroupCategory.TA, capacityPersons: null }),
+        group(3, { category: GatheringGroupCategory.TA, capacityPersons: null }),
+      ],
+      teams: [
+        team(11, ProgramSequenceTrack.TA, 'T11'),
+        team(12, ProgramSequenceTrack.TA, 'T12'),
+        team(13, ProgramSequenceTrack.TA, 'T13'),
+        team(14, ProgramSequenceTrack.TA, 'T14'),
+        team(15, ProgramSequenceTrack.TA, 'T15'),
+        team(16, ProgramSequenceTrack.TA, 'T16'),
+      ],
+      sizes: {
+        11: { jeunes: 11, animateurs: 1 }, // 12
+        12: { jeunes: 10, animateurs: 1 }, // 11
+        13: { jeunes: 9, animateurs: 1 }, // 10
+        14: { jeunes: 8, animateurs: 1 }, // 9
+        15: { jeunes: 7, animateurs: 1 }, // 8
+        16: { jeunes: 6, animateurs: 1 }, // 7
+      },
+    });
+    const out = await service.propose(1, ALL);
+    expect(out.unplaced).toEqual([]);
+    // Charges finales : 19 personnes et 2 équipes par groupe (12+7, 11+8, 10+9).
+    const byGroup = new Map<number, { teams: number; persons: number }>();
+    const sizeOf = new Map([
+      [11, 12], [12, 11], [13, 10], [14, 9], [15, 8], [16, 7],
+    ]);
+    for (const a of out.assignments) {
+      const acc = byGroup.get(a.groupId) ?? { teams: 0, persons: 0 };
+      acc.teams += 1;
+      acc.persons += sizeOf.get(a.teamId) ?? 0;
+      byGroup.set(a.groupId, acc);
+    }
+    expect([...byGroup.keys()].sort()).toEqual([1, 2, 3]);
+    for (const acc of byGroup.values()) {
+      expect(acc.persons).toBe(19);
+      expect(acc.teams).toBe(2);
+    }
+  });
+
+  it('équilibre les charges avec des jauges finies sans jamais dépasser le plafond', async () => {
+    const { service } = build({
+      groups: [
+        group(1, { category: GatheringGroupCategory.TA, capacityPersons: 13 }),
+        group(2, { category: GatheringGroupCategory.TA, capacityPersons: 30 }),
+      ],
+      teams: [
+        team(11, ProgramSequenceTrack.TA, 'T11'),
+        team(12, ProgramSequenceTrack.TA, 'T12'),
+        team(13, ProgramSequenceTrack.TA, 'T13'),
+      ],
+      sizes: {
+        11: { jeunes: 11, animateurs: 1 }, // 12
+        12: { jeunes: 10, animateurs: 1 }, // 11
+        13: { jeunes: 9, animateurs: 1 }, // 10
+      },
+    });
+    const out = await service.propose(1, ALL);
+    expect(out.unplaced).toEqual([]);
+    // T11 (12) dans le groupe 1 ; T12 (11) dans le groupe 2 (moins chargé) ;
+    // T13 (10) ne rentre plus dans le groupe 1 (reste 1) : groupe 2, sans dérogation.
+    expect(out.assignments).toEqual([
+      { teamId: 11, groupId: 1, groupName: 'Groupe 1' },
+      { teamId: 12, groupId: 2, groupName: 'Groupe 2' },
+      { teamId: 13, groupId: 2, groupName: 'Groupe 2' },
+    ]);
+  });
+
+  it('équilibre entre groupes mixtes limité et illimité avec des tailles différentes', async () => {
+    const { service } = build({
+      groups: [
+        group(1, { category: GatheringGroupCategory.TA, capacityPersons: 14 }),
+        group(2, { category: GatheringGroupCategory.TA, capacityPersons: null }),
+      ],
+      teams: [
+        team(11, ProgramSequenceTrack.TA, 'T11'),
+        team(12, ProgramSequenceTrack.TA, 'T12'),
+        team(13, ProgramSequenceTrack.TA, 'T13'),
+        team(14, ProgramSequenceTrack.TA, 'T14'),
+      ],
+      sizes: {
+        11: { jeunes: 11, animateurs: 1 }, // 12
+        12: { jeunes: 7, animateurs: 1 }, // 8
+        13: { jeunes: 7, animateurs: 1 }, // 8
+        14: { jeunes: 7, animateurs: 1 }, // 8
+      },
+    });
+    const out = await service.propose(1, ALL);
+    expect(out.unplaced).toEqual([]);
+    // T11 (12) groupe 1 ; les suivantes vont au moins chargé : le groupe 2 illimité
+    // absorbe sans que la jauge 14 du groupe 1 soit dépassée.
+    expect(out.assignments).toEqual([
+      { teamId: 11, groupId: 1, groupName: 'Groupe 1' },
+      { teamId: 12, groupId: 2, groupName: 'Groupe 2' },
+      { teamId: 13, groupId: 2, groupName: 'Groupe 2' },
+      { teamId: 14, groupId: 2, groupName: 'Groupe 2' },
+    ]);
+  });
 });
 
 describe('application en une transaction', () => {

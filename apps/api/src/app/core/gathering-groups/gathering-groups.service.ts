@@ -738,8 +738,9 @@ export class GatheringGroupsService {
 
   /**
    * Proposition automatique de dispatch (aucune écriture) : équipes les plus grosses d'abord,
-   * meilleur groupe compatible (piste + place restante). Les équipes qui n'entrent nulle part
-   * sont renvoyées avec la raison.
+   * placées dans le groupe compatible le moins chargé — répartition équilibrée entre tous les
+   * groupes admissibles, avec ou sans limite (la capacité est un plafond, jamais un objectif
+   * de remplissage). Les équipes qui n'entrent nulle part sont renvoyées avec la raison.
    */
   async propose(repartitionId: number, scope: GatheringScopeInfo) {
     const board = await this.board(repartitionId, scope);
@@ -748,6 +749,7 @@ export class GatheringGroupsService {
       ...g,
       remaining: g.capacity == null ? Number.POSITIVE_INFINITY : g.capacity - g.persons,
     }));
+    const load = new Map(groups.map((g) => [g.id, g.persons]));
     const teams = [...board.unplacedTeams].sort((a, b) => b.persons - a.persons || a.id - b.id);
     const assignments: { teamId: number; groupId: number; groupName: string }[] = [];
     const unplaced: { teamId: number; teamName: string; reason: string }[] = [];
@@ -755,7 +757,7 @@ export class GatheringGroupsService {
       const candidates = groups
         .filter((g) => GatheringGroupsService.trackAllowed(g.category, team.track))
         .filter((g) => team.persons <= g.remaining || repartition.allowOverflow)
-        .sort((a, b) => a.remaining - b.remaining || a.id - b.id);
+        .sort((a, b) => (load.get(a.id) ?? 0) - (load.get(b.id) ?? 0) || a.id - b.id);
       const target = candidates[0];
       if (!target) {
         unplaced.push({
@@ -769,6 +771,7 @@ export class GatheringGroupsService {
       }
       assignments.push({ teamId: team.id, groupId: target.id, groupName: target.name });
       target.remaining -= team.persons;
+      load.set(target.id, (load.get(target.id) ?? 0) + team.persons);
     }
     return { assignments, unplaced };
   }

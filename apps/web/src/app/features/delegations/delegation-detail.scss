@@ -69,12 +69,16 @@
 @media (max-width: 767px) {
   .tabbar { flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; margin-bottom: 0.4rem; }
   .tab { padding: 0.4rem 0.6rem; flex: none; }
-  .toolbar { flex-wrap: nowrap; overflow-x: auto; gap: 0.35rem; margin-bottom: 0.4rem; }
-  .toolbar > div { flex-wrap: nowrap; flex: none; }
+  .toolbar { gap: 0.35rem; margin-bottom: 0.4rem; }
+  .toolbar > div { flex-wrap: nowrap; }
+  .create-buttons button { font-size: 0.8rem; }
   .panel-head .help { display: none; }
   .panel-head { padding-top: 0.5rem; }
   .steps { display: flex; }
-  .panels { grid-template-columns: 1fr; height: calc(100vh - 250px); min-height: 320px; }
+  .panels { grid-template-columns: 1fr; height: auto; min-height: 0; }
+  .panel { overflow: visible; }
+  .panel-list { overflow: visible; }
+  .panel-foot { position: sticky; bottom: 0; z-index: 1; border-radius: 0 0 0.75rem 0.75rem; }
   .panel.hidden-mobile { display: none; }
   .only-mobile { display: inline-flex; }
   .panel-filters { grid-template-columns: 1fr; }

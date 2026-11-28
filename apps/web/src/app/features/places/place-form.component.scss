@@ -1,0 +1,8 @@
+:host { display: block; min-width: 0; }
+.pf { display: grid; gap: 0.85rem; max-width: 46rem; min-width: 0; }
+.pf > *, .pf-row > * { min-width: 0; }
+.pf-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; }
+.pf-title { margin: 0.5rem 0 0; font-size: 1.05rem; }
+.pf-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.pf-error { color: var(--tui-text-negative); margin: 0; }
+@media (max-width: 480px) { .pf-row { grid-template-columns: minmax(0, 1fr); } }

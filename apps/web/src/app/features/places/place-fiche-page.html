@@ -1,0 +1,138 @@
+<app-page-layout [title]="fiche()?.name ?? 'Fiche lieu'">
+  <a routerLink="/lieux" class="back">‹ Tous les lieux</a>
+  @if (loading()) {
+    <p class="hint">Chargement…</p>
+  } @else if (error()) {
+    <p class="hint" role="alert">{{ error() }}</p>
+  } @else if (fiche(); as f) {
+    <header class="fiche-head">
+      <span class="badge" aria-hidden="true">{{ f.name.slice(0, 2).toUpperCase() }}</span>
+      <div class="fiche-title">
+        <h2>{{ f.name }}</h2>
+        <div class="tags">
+          <span class="tag">{{ kindLabel[f.kind] }}</span>
+          <span class="tag" [attr.data-track]="f.track">{{ trackLabel[f.track] }}</span>
+          <span class="tag" [attr.data-on]="f.isActive">{{ f.isActive ? 'Actif' : 'Désactivé' }}</span>
+        </div>
+      </div>
+      <button tuiButton type="button" appearance="outline" (click)="editing.set(!editing())">{{ editing() ? 'Fermer' : 'Modifier' }}</button>
+    </header>
+
+    @if (feedback(); as m) {
+      <p class="feedback" [class.err]="m.error" role="status">{{ m.text }}</p>
+    }
+
+    @if (editing()) {
+      <app-place-form [place]="f" [extra]="{ description: f.description, practicalInfo: f.practicalInfo }" (saved)="onSaved()" (cancelled)="editing.set(false)" />
+    } @else {
+      <tui-tabs [activeItemIndex]="tabIndex()" (activeItemIndexChange)="selectTab($event)">
+        @for (t of tabs(); track t.key) {
+          <button tuiTab type="button">{{ t.label }}</button>
+        }
+      </tui-tabs>
+
+      @switch (tab()) {
+        @case ('infos') {
+          <section class="panel infos" aria-label="Infos">
+            <div class="infos-text">
+              <h3>Adresse</h3>
+              @if (fullAddress()) {
+                <p>{{ fullAddress() }}</p>
+              } @else {
+                <p class="muted">Adresse non renseignée. Modifiez le lieu pour la saisir et le situer sur la carte.</p>
+              }
+              @if (f.responsible !== undefined) {
+                <h3>Responsable</h3>
+                <p>{{ f.responsible?.name ?? 'Responsable à nommer' }}</p>
+                <app-person-picker label="Choisir un responsable (bénévole)" source="volunteers" [filters]="false" (valueChange)="setResponsible($event)" />
+              }
+              @if (f.description) {
+                <h3>Description</h3>
+                <p class="pre">{{ f.description }}</p>
+              }
+              <h3>Infos pratiques</h3>
+              <p class="pre">{{ f.practicalInfo || 'Aucune information renseignée.' }}</p>
+              @if (hiddenSome()) {
+                <p class="lock">Certaines relations (événements, créneaux, groupes, équipes) ne sont visibles qu'avec le droit correspondant.</p>
+              }
+            </div>
+            <div class="infos-map">
+              @if (f.latitude != null) {
+                <app-places-map class="fiche-map" [places]="mapPlaces()" [selectedId]="f.id" />
+                <p class="map-actions">
+                  @if (itinerary(); as url) {
+                    <a [href]="url" target="_blank" rel="noopener">Itinéraire</a>
+                  }
+                  · <button type="button" class="linkish" (click)="copyAddress()">Copier l'adresse</button>
+                </p>
+              } @else {
+                <p class="muted">Pas encore de point sur la carte.</p>
+              }
+            </div>
+          </section>
+        }
+        @case ('events') {
+          <section class="panel" aria-label="Événements">
+            @for (e of f.relations.events.items; track e.id) {
+              <p class="rel"><b>{{ e.title }}</b> <span class="muted">{{ e.eventDate }} · {{ e.startTime.slice(0, 5) }}–{{ e.endTime.slice(0, 5) }}{{ e.room ? ' · ' + e.room : '' }}</span></p>
+            } @empty { <p class="muted">Aucun événement rattaché à ce lieu.</p> }
+          </section>
+        }
+        @case ('shifts') {
+          <section class="panel" aria-label="Créneaux bénévoles">
+            @for (s of f.relations.shifts.items; track s.id) {
+              <p class="rel"><b>{{ s.missionTitle }}</b> <span class="muted">{{ s.startAt }}{{ s.room ? ' · ' + s.room : '' }}</span></p>
+            } @empty { <p class="muted">Aucun créneau bénévole rattaché à ce lieu.</p> }
+          </section>
+        }
+        @case ('groups') {
+          <section class="panel" aria-label="Groupes">
+            @for (g of f.relations.groups.items; track g.id) {
+              <p class="rel"><b>{{ g.name }}</b> <span class="muted">{{ g.room ?? '' }}</span></p>
+            } @empty { <p class="muted">Aucun groupe de rassemblement rattaché à ce lieu.</p> }
+          </section>
+        }
+        @case ('teams') {
+          <section class="panel" aria-label="Équipes">
+            @if (editingTeams()) {
+              @for (t of teamOptions() ?? []; track t.id) {
+                <label class="check"><input type="checkbox" [checked]="teamIds().includes(t.id)" (change)="toggleTeam(t.id)" /> {{ t.name }}</label>
+              } @empty { <p class="muted">Aucune équipe disponible.</p> }
+              <div class="row-actions">
+                <button tuiButton type="button" size="m" (click)="saveTeams()">Enregistrer</button>
+                <button tuiButton type="button" size="m" appearance="outline" (click)="editingTeams.set(false)">Annuler</button>
+              </div>
+            } @else {
+              @for (t of f.relations.teams.items; track t.id) {
+                <p class="rel"><b>{{ t.name }}</b> <span class="muted">{{ t.code }}</span></p>
+              } @empty { <p class="muted">Aucune équipe portée par ce lieu.</p> }
+              <button tuiButton type="button" size="m" appearance="outline" (click)="startTeams()">Modifier les équipes du lieu</button>
+            }
+          </section>
+        }
+        @case ('rooms') {
+          <section class="panel" aria-label="Salles">
+            <p class="muted">Une salle n'a qu'un nom : l'adresse et le point GPS restent ceux du lieu. Elle s'affiche « {{ f.name }} · Nom de la salle ».</p>
+            @for (r of f.rooms; track r.id) {
+              <div class="room">
+                @if (renaming()?.id === r.id) {
+                  <input class="room-input" [ngModel]="renaming()!.name" (ngModelChange)="renaming.set({ id: r.id, name: $event })" aria-label="Nom de la salle" />
+                  <button tuiButton type="button" size="s" (click)="saveRename()">OK</button>
+                  <button tuiButton type="button" size="s" appearance="outline" (click)="renaming.set(null)">Annuler</button>
+                } @else {
+                  <span class="room-name">{{ r.displayName }}</span>
+                  <button tuiButton type="button" size="s" appearance="outline" (click)="renaming.set({ id: r.id, name: r.name })">Renommer</button>
+                  <button tuiButton type="button" size="s" appearance="outline" (click)="removeRoom(r.id)">Supprimer</button>
+                }
+              </div>
+            } @empty { <p class="muted">Ce lieu n'a pas de salle : on peut l'utiliser seul.</p> }
+            <div class="room add">
+              <input class="room-input" placeholder="Nom de la nouvelle salle" aria-label="Nom de la nouvelle salle" [ngModel]="newRoom()" (ngModelChange)="newRoom.set($event)" (keydown.enter)="addRoom()" />
+              <button tuiButton type="button" size="m" [disabled]="!newRoom().trim()" (click)="addRoom()">Ajouter la salle</button>
+            </div>
+          </section>
+        }
+      }
+    }
+  }
+</app-page-layout>

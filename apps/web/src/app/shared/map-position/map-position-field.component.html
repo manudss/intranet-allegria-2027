@@ -1,0 +1,51 @@
+<div class="mp">
+  <div class="mp-grid">
+    <tui-textfield class="mp-wide">
+      <label tuiLabel for="mp-address">Adresse précise</label>
+      <input tuiInput id="mp-address" autocomplete="off" [disabled]="disabled()" [ngModel]="value().address ?? ''" (ngModelChange)="patch('address', $event)" />
+    </tui-textfield>
+    <tui-textfield>
+      <label tuiLabel for="mp-postal">Code postal</label>
+      <input tuiInput id="mp-postal" autocomplete="off" [disabled]="disabled()" [ngModel]="value().postalCode ?? ''" (ngModelChange)="patch('postalCode', $event)" />
+    </tui-textfield>
+    <tui-textfield>
+      <label tuiLabel for="mp-city">Ville</label>
+      <input tuiInput id="mp-city" autocomplete="off" [disabled]="disabled()" [ngModel]="value().city ?? ''" (ngModelChange)="patch('city', $event)" />
+    </tui-textfield>
+  </div>
+
+  @if (search()) {
+    <div class="mp-search">
+      <button tuiButton type="button" size="m" appearance="outline" [disabled]="disabled() || busy()" (click)="find()">
+        {{ busy() ? 'Recherche…' : 'Rechercher cette adresse sur la carte' }}
+      </button>
+    </div>
+  }
+  @if (message()) {
+    <p class="mp-msg" role="status">{{ message() }}</p>
+  }
+  @if (candidates().length) {
+    <ul class="mp-candidates" aria-label="Adresses trouvées">
+      @for (c of candidates(); track $index) {
+        <li><button type="button" (click)="choose(c)">{{ c.label }}</button></li>
+      }
+    </ul>
+  }
+
+  <p class="mp-help">Glissez le repère ou touchez la carte pour régler le point exact.</p>
+  <div #mapHost class="mp-map" role="application" aria-label="Carte : point exact du lieu"></div>
+
+  <div class="mp-coords">
+    <tui-textfield>
+      <label tuiLabel for="mp-lat">Latitude</label>
+      <input tuiInput id="mp-lat" inputmode="decimal" [disabled]="disabled()" [ngModel]="value().latitude ?? ''" (change)="setCoordinate('latitude', $any($event.target).value)" />
+    </tui-textfield>
+    <tui-textfield>
+      <label tuiLabel for="mp-lon">Longitude</label>
+      <input tuiInput id="mp-lon" inputmode="decimal" [disabled]="disabled()" [ngModel]="value().longitude ?? ''" (change)="setCoordinate('longitude', $any($event.target).value)" />
+    </tui-textfield>
+    @if (value().latitude != null) {
+      <button tuiButton type="button" size="s" appearance="flat" [disabled]="disabled()" (click)="clearPoint()">Retirer le point</button>
+    }
+  </div>
+</div>

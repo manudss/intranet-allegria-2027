@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { PlaceListItem, PlacePayload } from './places.models';
+import { PlaceFiche, PlaceListItem, PlacePayload, PlaceRoom } from './places.models';
 
 @Injectable({ providedIn: 'root' })
 export class PlacesApiService {
@@ -19,5 +19,20 @@ export class PlacesApiService {
   }
   update(id: number, payload: Partial<PlacePayload>): Observable<PlaceListItem> {
     return this.http.patch<PlaceListItem>(`${this.path}/${id}`, payload);
+  }
+  fiche(id: number): Observable<PlaceFiche> {
+    return this.http.get<PlaceFiche>(`${this.path}/${id}`);
+  }
+  addRoom(id: number, name: string): Observable<PlaceRoom> {
+    return this.http.post<PlaceRoom>(`${this.path}/${id}/rooms`, { name });
+  }
+  renameRoom(id: number, roomId: number, name: string): Observable<PlaceRoom> {
+    return this.http.patch<PlaceRoom>(`${this.path}/${id}/rooms/${roomId}`, { name });
+  }
+  removeRoom(id: number, roomId: number): Observable<{ deleted: boolean }> {
+    return this.http.delete<{ deleted: boolean }>(`${this.path}/${id}/rooms/${roomId}`);
+  }
+  setTeams(id: number, volunteerTeamIds: number[]): Observable<{ volunteerTeamIds: number[] }> {
+    return this.http.put<{ volunteerTeamIds: number[] }>(`${this.path}/${id}/teams`, { volunteerTeamIds });
   }
 }

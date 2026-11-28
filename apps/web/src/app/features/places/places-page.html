@@ -5,6 +5,7 @@
         <label tuiLabel for="places-search">Rechercher un lieu</label>
         <input tuiInput id="places-search" [ngModel]="search()" (ngModelChange)="search.set($event)" autocomplete="off" />
       </tui-textfield>
+      <a tuiButton size="m" routerLink="/lieux/nouveau" class="new-place">Nouveau lieu</a>
       <div class="mobile-switch" role="group" aria-label="Affichage">
         <button tuiButton size="s" type="button" [appearance]="mobileView() === 'list' ? 'primary' : 'outline'" (click)="mobileView.set('list')">Liste</button>
         <button tuiButton size="s" type="button" [appearance]="mobileView() === 'map' ? 'primary' : 'outline'" (click)="mobileView.set('map')">Carte</button>
@@ -30,7 +31,8 @@
                 <span class="place-badge" aria-hidden="true">{{ initials(p.name) }}</span>
                 <span class="place-text">
                   <b>{{ p.name }}</b>
-                  <span class="muted">{{ kindLabel[p.kind] }} · {{ summary(p) }}</span>
+                  <span class="muted">{{ kindLabel[p.kind] }}</span>
+                  <span class="muted">{{ summary(p) }}</span>
                 </span>
                 <span class="track-tag" [attr.data-track]="p.track">{{ trackLabel[p.track] }}</span>
               </button>

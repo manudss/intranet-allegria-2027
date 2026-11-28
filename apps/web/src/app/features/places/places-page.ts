@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { TuiButton, TuiInput } from '@taiga-ui/core';
 import { TuiChip } from '@taiga-ui/kit';
 import { FormsModule } from '@angular/forms';
@@ -12,7 +12,7 @@ import { PlacesMapComponent } from './places-map.component';
 @Component({
   selector: 'app-places-page',
   standalone: true,
-  imports: [PageLayoutComponent, PlacesMapComponent, TuiButton, TuiChip, FormsModule, ...TuiInput],
+  imports: [RouterLink, PageLayoutComponent, PlacesMapComponent, TuiButton, TuiChip, FormsModule, ...TuiInput],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './places-page.html',
   styleUrls: ['./places-page.scss'],
@@ -73,10 +73,10 @@ export class PlacesPageComponent implements OnInit {
   }
   summary(p: PlaceListItem): string {
     const parts: string[] = [];
-    if (p.counts?.events != null) parts.push(`${p.counts.events} événement(s)`);
-    if (p.counts?.shifts != null) parts.push(`${p.counts.shifts} créneau(x) bénévole(s)`);
-    if (p.counts?.groups != null) parts.push(`${p.counts.groups} groupe(s)`);
-    if (p.rooms.length) parts.push(`${p.rooms.length} salle(s)`);
+    if (p.counts?.events != null) parts.push(`${p.counts.events} évén.`);
+    if (p.counts?.shifts != null) parts.push(`${p.counts.shifts} créneaux`);
+    if (p.counts?.groups != null) parts.push(`${p.counts.groups} groupes`);
+    if (p.rooms.length) parts.push(`${p.rooms.length} salles`);
     return parts.join(' · ') || (p.city ?? 'Aucun rattachement');
   }
   open(p: PlaceListItem): void {

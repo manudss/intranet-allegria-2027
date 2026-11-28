@@ -53,9 +53,24 @@ export interface PlacePayload {
   isActive?: boolean;
 }
 
-/** Point de départ de la carte : Saint-Étienne. */
-export const SAINT_ETIENNE: [number, number] = [45.439695, 4.387178];
+export { OSM_ATTRIBUTION, OSM_TILE_URL, SAINT_ETIENNE } from '../../shared/map-position/map-config';
 
-/** Fond de carte OpenStreetMap : URL officielle exigée par la politique des tuiles, attribution visible. */
-export const OSM_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-export const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
+export interface Relation<T> {
+  visible: boolean;
+  count?: number;
+  items?: T[];
+}
+export interface PlaceFiche extends PlaceListItem {
+  country: string | null;
+  description: string | null;
+  practicalInfo: string | null;
+  /** Absent si la personne n'a pas le droit sur l'annuaire des bénévoles. */
+  responsible?: { id: number; name: string } | null;
+  relations: {
+    events: Relation<{ id: number; title: string; eventDate: string; startTime: string; endTime: string; room: string | null }>;
+    missions: Relation<{ id: number; title: string; room: string | null }>;
+    shifts: Relation<{ id: number; missionId: number; missionTitle: string; startAt: string; endAt: string; room: string | null }>;
+    groups: Relation<{ id: number; name: string; room: string | null }>;
+    teams: Relation<{ id: number; name: string; code: string }>;
+  };
+}

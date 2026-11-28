@@ -1,0 +1,30 @@
+<form class="pf" (ngSubmit)="save()">
+  <tui-textfield>
+    <label tuiLabel for="pf-name">Nom du lieu</label>
+    <input tuiInput id="pf-name" name="name" required autocomplete="off" [ngModel]="name()" (ngModelChange)="name.set($event)" />
+  </tui-textfield>
+  <div class="pf-row">
+    <app-select-field label="Type de lieu" [options]="kindOptions" [value]="kind()" (valueChange)="kind.set($event ?? 'OTHER')" />
+    <app-select-field label="Piste" [options]="trackOptions" [value]="track()" (valueChange)="track.set($event ?? 'COMMON')" />
+  </div>
+
+  <h3 class="pf-title">Adresse et position</h3>
+  <app-map-position-field [(value)]="position" [search]="search" />
+
+  <tui-textfield>
+    <textarea tuiTextarea id="pf-desc" name="description" rows="3" [ngModel]="description()" (ngModelChange)="description.set($event)"></textarea>
+    <label tuiLabel for="pf-desc">Description</label>
+  </tui-textfield>
+  <tui-textfield>
+    <textarea tuiTextarea id="pf-info" name="practicalInfo" rows="3" [ngModel]="practicalInfo()" (ngModelChange)="practicalInfo.set($event)"></textarea>
+    <label tuiLabel for="pf-info">Informations pratiques</label>
+  </tui-textfield>
+
+  @if (error()) {
+    <p class="pf-error" role="alert">{{ error() }}</p>
+  }
+  <div class="pf-actions">
+    <button tuiButton type="submit" [disabled]="!valid() || saving()">{{ saving() ? 'Enregistrement…' : 'Enregistrer' }}</button>
+    <button tuiButton type="button" appearance="outline" (click)="cancelled.emit()">Annuler</button>
+  </div>
+</form>

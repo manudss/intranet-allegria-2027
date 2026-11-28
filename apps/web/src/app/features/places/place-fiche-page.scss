@@ -1,0 +1,31 @@
+.back { display: inline-block; margin-bottom: 0.6rem; }
+.fiche-head { display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.8rem; }
+.badge { width: 2.6rem; height: 2.6rem; border-radius: 0.5rem; display: grid; place-items: center; font-weight: 700; color: #fff; background: var(--tui-background-accent-1); }
+.fiche-title { flex: 1; min-width: 12rem; }
+.fiche-title h2 { margin: 0; font-size: 1.3rem; }
+.tags { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.25rem; }
+.tag { font-size: 0.75rem; padding: 0.1rem 0.6rem; border-radius: 99px; background: var(--tui-background-neutral-1); }
+.tag[data-track='TA'] { background: #dbe8ff; color: #1c3a6e; }
+.tag[data-track='ES'] { background: #d8f0dc; color: #1d5e2b; }
+.tag[data-on='true'] { background: #d8f0dc; color: #1d5e2b; }
+.panel { padding: 1rem 0; display: grid; gap: 0.5rem; }
+.infos { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 1.2rem; align-items: start; }
+.infos h3 { margin: 0.6rem 0 0.1rem; font-size: 0.95rem; }
+.infos p { margin: 0; }
+.fiche-map { height: 16rem; display: block; }
+.map-actions { margin-top: 0.4rem !important; color: var(--tui-text-secondary); }
+.linkish { background: none; border: 0; padding: 0; color: var(--tui-text-action); font: inherit; cursor: pointer; text-decoration: underline; }
+.muted { color: var(--tui-text-secondary); font-size: 0.9rem; }
+.pre { white-space: pre-wrap; }
+.lock { color: var(--tui-text-negative); font-size: 0.85rem; margin-top: 0.8rem !important; }
+.rel { margin: 0; padding: 0.5rem 0; border-bottom: 1px solid var(--tui-border-normal); }
+.rel .muted { margin-left: 0.4rem; }
+.check { display: flex; gap: 0.5rem; align-items: center; min-height: 2.5rem; }
+.row-actions { display: flex; gap: 0.5rem; }
+.room { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; padding: 0.35rem 0; }
+.room-name { flex: 1 1 10rem; font-weight: 600; }
+.room-input { flex: 1 1 12rem; min-height: 2.75rem; padding: 0 0.75rem; border: 1px solid var(--tui-border-normal); border-radius: 0.6rem; background: var(--tui-background-base); color: inherit; font: inherit; }
+.feedback { margin: 0 0 0.6rem; color: var(--tui-text-positive); }
+.feedback.err { color: var(--tui-text-negative); }
+.hint { color: var(--tui-text-secondary); }
+@media (max-width: 760px) { .infos { grid-template-columns: 1fr; } .infos-map { order: -1; } }

@@ -1,0 +1,13 @@
+.mp { min-width: 0; }
+:host { display: block; min-width: 0; }
+.mp > *, .mp-grid > * { min-width: 0; }
+.mp { display: grid; gap: 0.7rem; }
+.mp-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; }
+.mp-wide { grid-column: 1 / -1; }
+.mp-msg, .mp-help { margin: 0; color: var(--tui-text-secondary); font-size: 0.85rem; }
+.mp-candidates { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.3rem; }
+.mp-candidates button { width: 100%; text-align: left; padding: 0.6rem 0.75rem; min-height: 2.75rem; border: 1px solid var(--tui-border-normal); border-radius: 0.6rem; background: var(--tui-background-elevation-1); color: inherit; font: inherit; cursor: pointer; }
+.mp-map { height: 18rem; border-radius: 0.8rem; border: 1px solid var(--tui-border-normal); z-index: 0; }
+.mp-coords { display: flex; gap: 0.65rem; align-items: flex-end; flex-wrap: wrap; }
+.mp-coords tui-textfield { flex: 1 1 8rem; }
+@media (max-width: 480px) { .mp-grid { grid-template-columns: minmax(0, 1fr); } .mp-map { height: 14rem; } }

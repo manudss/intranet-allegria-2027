@@ -201,6 +201,16 @@ export const appRoutes: Route[] = [
         loadComponent: () => import('./features/places/places-page').then((m) => m.PlacesPageComponent),
       },
       {
+        path: 'lieux/nouveau',
+        title: 'Nouveau lieu',
+        loadComponent: () => import('./features/places/place-new-page').then((m) => m.PlaceNewPageComponent),
+      },
+      {
+        path: 'lieux/:id',
+        title: 'Fiche lieu',
+        loadComponent: () => import('./features/places/place-fiche-page').then((m) => m.PlaceFichePageComponent),
+      },
+      {
         path: 'hebergement/carte',
         title: 'Hébergement : carte',
         loadComponent: () =>

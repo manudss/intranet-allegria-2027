@@ -7,9 +7,11 @@ name: PR Preview DB repair
 # execute deja. Ni migration, ni seed, ni build d'image : les donnees de la base ne sont pas touchees.
 # Les chaines de connexion restent des sorties d'etape masquees, jamais affichees ni commentees.
 # Pour relancer : retirer puis rajouter le label (le workflow le retire a la fin).
+# Second declencheur, sans droit sur les labels : un commit de la PR dont le message contient
+# `[repair-preview-db]` (par exemple un commit vide). Un push ordinaire ne declenche rien.
 on:
   pull_request:
-    types: [labeled]
+    types: [labeled, synchronize]
 
 permissions:
   contents: read
@@ -23,22 +25,40 @@ concurrency:
 jobs:
   repair:
     name: Repair the database credentials of the PR preview
-    if: github.event.label.name == 'repair-preview-db' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number != 42
+    if: (github.event.action == 'synchronize' || github.event.label.name == 'repair-preview-db') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number != 42
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
       PR_NUMBER: ${{ github.event.pull_request.number }}
     steps:
+      - name: Decide whether this run repairs (label, or tagged commit message)
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTION: ${{ github.event.action }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          go=false
+          if [ "$ACTION" = "labeled" ]; then go=true; fi
+          if [ "$ACTION" = "synchronize" ]; then
+            msg=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA" --jq .commit.message)
+            case "$msg" in *'[repair-preview-db]'*) go=true ;; esac
+          fi
+          echo "go=$go" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v5
+        if: steps.gate.outputs.go == 'true'
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
 
       - uses: actions/setup-node@v5
+        if: steps.gate.outputs.go == 'true'
         with:
           node-version-file: .nvmrc
 
       - name: Neon branch of this PR (existing branch is reused)
+        if: steps.gate.outputs.go == 'true'
         id: neon
         uses: neondatabase/create-branch-action@v6
         with:
@@ -48,6 +68,7 @@ jobs:
           branch_name: preview/pr-${{ github.event.pull_request.number }}
 
       - name: Fresh DB credentials for the PR Neon branch only
+        if: steps.gate.outputs.go == 'true'
         id: creds
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
@@ -58,12 +79,14 @@ jobs:
         run: node scripts/neon-branch-credentials.mjs
 
       - name: Check the connection with the new credentials (no output of the string)
+        if: steps.gate.outputs.go == 'true'
         env:
           PGCONNECT_TIMEOUT: '30'
           DB_URL: ${{ steps.creds.outputs.db_url }}
         run: psql "$DB_URL" --quiet --tuples-only --command 'select 1' > /dev/null
 
       - name: Write only the two database variables and redeploy the same image
+        if: steps.gate.outputs.go == 'true'
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
           PREVIEW_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
@@ -73,7 +96,7 @@ jobs:
         run: node scripts/render-pr-lyam-db-repair.mjs
 
       - name: Remove the label so that it can be added again
-        if: always()
+        if: always() && steps.gate.outputs.go == 'true' && github.event.action == 'labeled'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label repair-preview-db

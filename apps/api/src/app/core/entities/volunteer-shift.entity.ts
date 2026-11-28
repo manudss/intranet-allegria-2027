@@ -33,6 +33,13 @@ export class VolunteerShift {
   @Column({ type: 'varchar', length: 200, nullable: true })
   location!: string | null;
 
+  /** Lieu structuré (le texte « location » reste, repris du lieu et de la salle quand ils sont choisis). */
+  @Column({ name: 'place_id', type: 'int', nullable: true })
+  placeId!: number | null;
+
+  @Column({ name: 'room_id', type: 'int', nullable: true })
+  roomId!: number | null;
+
   @Column({ type: 'int', nullable: true })
   capacity!: number | null;
 

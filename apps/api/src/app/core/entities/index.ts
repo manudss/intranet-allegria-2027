@@ -84,3 +84,7 @@ export { AssignmentPersonType } from './assignment-person-type.enum';
 export { DelegationTransport } from './delegation-transport.entity';
 export { TransportAssignment } from './transport-assignment.entity';
 export { PersonNote } from './person-note.entity';
+export { PlaceKind, PLACE_KIND_LABELS } from './place-kind.enum';
+export { Place } from './place.entity';
+export { PlaceRoom } from './place-room.entity';
+export { PlaceVolunteerTeam } from './place-volunteer-team.entity';

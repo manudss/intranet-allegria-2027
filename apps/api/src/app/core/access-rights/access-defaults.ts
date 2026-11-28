@@ -155,7 +155,10 @@ function expand(kind: AccessSubjectKind, table: Record<string, Grants>): Default
     // Notes sur les personnes : même niveau que PARTICIPANTS au départ, pour que les accès
     // existants ne changent pas (le module est séparé pour pouvoir donner les notes seules).
     const participants = rules.find((r) => r.module === 'PARTICIPANTS');
-    return participants ? [...rules, { ...participants, module: 'PERSON_NOTES' as AccessModuleCode }] : rules;
+    const withNotes = participants ? [...rules, { ...participants, module: 'PERSON_NOTES' as AccessModuleCode }] : rules;
+    // Lieux et salles : même niveau que l'agenda au départ (rien n'est élargi), modifiable en admin.
+    const agenda = rules.find((r) => r.module === 'AGENDA');
+    return agenda ? [...withNotes, { ...agenda, module: 'PLACES' as AccessModuleCode }] : withNotes;
   });
 }
 

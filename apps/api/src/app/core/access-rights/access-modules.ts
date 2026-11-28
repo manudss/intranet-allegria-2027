@@ -39,6 +39,7 @@ export const ACCESS_MODULES = [
   { code: 'VOLUNTEER_DIRECTORY', label: 'Annuaire des bénévoles' },
   { code: 'OPERATIONAL_TEAMS', label: 'Équipes opérationnelles et missions' },
   { code: 'AGENDA', label: 'Agenda et programme' },
+  { code: 'PLACES', label: 'Lieux et salles' },
   { code: 'DASHBOARD', label: 'Tableau de bord Jour J et incidents' },
   { code: 'BADGES', label: 'Badges et impression' },
   { code: 'SCAN', label: 'Scan sur le terrain' },

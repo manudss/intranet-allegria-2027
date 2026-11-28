@@ -90,7 +90,7 @@ describe('DelegationFichePage (lot 4 : fiche en vues)', () => {
 
   afterEach(() => TestBed.resetTestingModule());
 
-  async function setup() {
+  async function setup(notesForbidden = false) {
     await TestBed.configureTestingModule({
       imports: [HostComponent],
       providers: [
@@ -107,11 +107,9 @@ describe('DelegationFichePage (lot 4 : fiche en vues)', () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.detectChanges();
     const http = TestBed.inject(HttpTestingController);
-    http.expectOne('/api/groups/2').flush({
-      id: 2,
-      name: "Délégation d'Annecy",
-      diocese: 'Annecy',
-    });
+    // Non-régression : la fiche ne lit plus /api/groups/:id (module PARTICIPANTS),
+    // elle s'ouvre avec le seul droit TRANSPORT.
+    http.expectNone('/api/groups/2');
     http.expectOne('/api/delegations').flush([SUMMARY]);
     http.expectOne('/api/delegations/2/persons').flush(PERSONS);
     http
@@ -120,12 +118,65 @@ describe('DelegationFichePage (lot 4 : fiche en vues)', () => {
     http
       .expectOne((r) => r.url === '/api/delegations/2/repartition' && r.params.get('direction') === 'RETOUR')
       .flush({ ...REPARTITION, direction: 'RETOUR', toAssign: [], exceptionsReceived: [] });
-    http.expectOne('/api/person-notes?filter=ALL').flush([]);
+    http.expectOne('/api/access/me').flush({
+      grants: notesForbidden ? [] : [{ module: 'PERSON_NOTES', level: 'VIEW', scope: 'ALL' }],
+    });
+    fixture.detectChanges();
+    if (notesForbidden) http.expectNone('/api/person-notes?filter=WITH_NOTES');
+    else http.expectOne('/api/person-notes?filter=WITH_NOTES').flush([]);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
     return { fixture };
   }
+
+  async function setupFailure() {
+    await TestBed.configureTestingModule({
+      imports: [HostComponent],
+      providers: [
+        provideTaiga(),
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: new Map([['id', '2']]) } },
+        },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/delegations').flush('panne', { status: 500, statusText: 'Erreur' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return { fixture };
+  }
+
+  it('chargement en échec : message seul, ni zéro personne, ni barres, ni onglets présentés comme des données', async () => {
+    const { fixture } = await setupFailure();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('Le chargement de la délégation a échoué');
+    expect(el.textContent).not.toContain('0 personnes');
+    expect(el.textContent).not.toContain('Personnes (0)');
+    expect(el.textContent).not.toContain('Répartition des déplacements');
+  });
+
+  it("s'ouvre sous le seul droit TRANSPORT : sans droit PERSON_NOTES, aucune requête de notes (pas de 403 vers Accès refusé)", async () => {
+    const { fixture } = await setup(true);
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain("Délégation d'Annecy");
+    expect(el.textContent).not.toContain('Le chargement de la délégation a échoué');
+    // Accès indisponible n'est pas « zéro note » : pas de compteur.
+    expect(el.textContent).not.toMatch(/Notes\s*\(0\)/);
+  });
+
+  it("n'appelle pas /api/groups et masque le lien de retour pour une seule délégation", async () => {
+    const { fixture } = await setup();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('a[href="/rassemblement"]')).toBeNull();
+  });
 
   it("vue d'ensemble : identité, responsables et répartition par sens", async () => {
     const { fixture } = await setup();

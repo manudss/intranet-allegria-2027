@@ -30,6 +30,7 @@ export const ACCESS_SCOPE_LABELS: Record<AccessScope, string> = {
 
 export const ACCESS_MODULES = [
   { code: 'PARTICIPANTS', label: 'Inscriptions et participants' },
+  { code: 'PERSON_NOTES', label: 'Notes sur les personnes (lire, écrire, répondre)' },
   { code: 'HEALTH', label: 'Dossiers santé' },
   { code: 'HOST_FAMILIES', label: "Familles d'accueil" },
   { code: 'HOUSING', label: 'Hébergement et placement' },

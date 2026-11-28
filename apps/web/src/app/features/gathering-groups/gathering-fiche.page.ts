@@ -8,6 +8,8 @@ import {
   signal,
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { TuiIcon } from '@taiga-ui/core';
+import { TuiAutoColorPipe, TuiAvatar } from '@taiga-ui/kit';
 import { Subject, forkJoin, switchMap, takeUntil } from 'rxjs';
 import { MyAccessService } from '../../core/my-access.service';
 import { VolunteerTeamsApiService } from '../../services/api.services';
@@ -35,7 +37,7 @@ type Notice = { kind: 'error' | 'info'; text: string };
 @Component({
   selector: 'app-gathering-fiche',
   standalone: true,
-  imports: [...SHARED_IMPORTS, SelectFieldComponent, PersonPickerComponent, RouterLink],
+  imports: [...SHARED_IMPORTS, SelectFieldComponent, PersonPickerComponent, RouterLink, TuiIcon, TuiAvatar, TuiAutoColorPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './gathering-fiche.page.html',
   styleUrl: './gathering-fiche.page.scss',
@@ -141,6 +143,50 @@ export class GatheringFichePage implements OnInit, OnDestroy {
     this.volunteerTeamOptions().filter((o) => !this.attachedVolunteerTeamIds().has(o.value)),
   );
   protected readonly personLabel = personLabel;
+
+  /** Logos officiels des pistes (TA, ES) et logo MEJ pour la piste commune. */
+  protected readonly trackLogos: Record<string, string> = {
+    TA: '/assets/branches/ta.jpg',
+    ES: '/assets/branches/es.jpg',
+    COMMON: '/assets/branches/mej.png',
+  };
+
+  /**
+   * Avatar d'une personne. Pour les jeunes (mineurs), seul le prénom sert : deux premières lettres du
+   * prénom, jamais l'initiale du nom de famille.
+   */
+  protected initialsOfFirstName(firstName: string): string {
+    return (firstName.trim() || '?').slice(0, 2);
+  }
+
+  /** Avatar d'un adulte (animateur) : première lettre de chaque mot du nom affiché. */
+  protected initialsOfName(displayName: string): string {
+    const words = displayName.split(/\s+/).filter(Boolean);
+    if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+    return (words[0] ?? '?').slice(0, 2).toUpperCase();
+  }
+
+  /** Deux lettres d'une équipe ou d'un créneau pour un avatar carré. */
+  protected initialsOfLabel(label: string): string {
+    return this.initialsOfName(label.replace(/[-–]+/g, ' '));
+  }
+
+  /** Créneaux triés comme un agenda : par jour puis par heure, regroupés par jour. */
+  protected groupSequencesByDay(list: readonly GatheringSequenceRef[]): { date: string; items: GatheringSequenceRef[] }[] {
+    const sorted = [...list].sort((a, b) =>
+      `${a.eventDate}T${a.startTime}`.localeCompare(`${b.eventDate}T${b.startTime}`),
+    );
+    const days = new Map<string, GatheringSequenceRef[]>();
+    for (const q of sorted) {
+      const day = days.get(q.eventDate);
+      if (day) {
+        day.push(q);
+      } else {
+        days.set(q.eventDate, [q]);
+      }
+    }
+    return [...days.entries()].map(([date, items]) => ({ date, items }));
+  }
 
   ngOnInit(): void {
     this.myAccess.load();

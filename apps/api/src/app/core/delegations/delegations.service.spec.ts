@@ -54,12 +54,15 @@ const assignment = (
 type Row = Record<string, unknown>;
 
 const repo = (rows: Row[] = []) => ({
-  find: vi.fn(async (options?: { where?: (Row & { delegation?: { id?: number } }) | Row[] }) => {
+  find: vi.fn(async (options?: { where?: (Row & { delegation?: { id?: number } }) | Row[]; relations?: Record<string, boolean> }) => {
+    // Comme TypeORM : une relation non demandée n'est pas chargée (transport absent).
+    const load = (list: Row[]) =>
+      list.map((r) => ('transport' in r && !options?.relations?.transport ? { ...r, transport: undefined } : r));
     const where = (Array.isArray(options?.where) ? options?.where[0] : options?.where) as
       | (Row & { delegation?: { id?: number }; group?: { id?: number } })
       | undefined;
-    if (!where) return rows;
-    return rows.filter((r) => {
+    if (!where) return load(rows);
+    return load(rows).filter((r) => {
       if (where.id !== undefined) {
         const w = where.id as number | { _value?: number[] };
         if (typeof w === 'object' && w !== null && Array.isArray(w._value)) {
@@ -90,6 +93,16 @@ const repo = (rows: Row[] = []) => ({
   update: vi.fn(async () => undefined),
 });
 
+/** Simule manager.transaction : les repos passés sont ceux du service, un échec relance l'erreur (annulation simulée). */
+const withManager = (assignments: ReturnType<typeof repo>, notes: ReturnType<typeof repo>) => {
+  const a = assignments as ReturnType<typeof repo> & { manager?: unknown };
+  const em = {
+    getRepository: (entity: { name: string }) => (entity.name === 'PersonNote' ? notes : assignments),
+  };
+  a.manager = { transaction: async (cb: (m: typeof em) => Promise<unknown>) => cb(em) };
+  return assignments;
+};
+
 const service = (repos: {
   transports?: Row[];
   assignments?: Row[];
@@ -101,7 +114,7 @@ const service = (repos: {
 }) =>
   new DelegationsService(
     repo(repos.transports) as never,
-    repo(repos.assignments) as never,
+    withManager(repo(repos.assignments), repo(repos.notes)) as never,
     repo(repos.notes) as never,
     repo(repos.groups ?? [group(LYON, 'Lyon'), group(ANNECY, 'Annecy')]) as never,
     repo(repos.participants) as never,
@@ -111,6 +124,78 @@ const service = (repos: {
 
 const all = { all: true } as const;
 const lyonOnly = { all: false, groupIds: [LYON] } as const;
+
+describe('DelegationsService — destinations d exception', () => {
+  it('ne renvoie que id et nom de chaque délégation, aucune autre donnée', async () => {
+    const rows = await service({}).destinations();
+    expect(rows).toEqual([
+      { id: LYON, name: 'Lyon' },
+      { id: ANNECY, name: 'Annecy' },
+    ]);
+    for (const r of rows) expect(Object.keys(r).sort()).toEqual(['id', 'name']);
+  });
+});
+
+describe('DelegationsService — recherche ciblée côté accueil', () => {
+  const person = (id: number, delegationId: number, firstName: string, lastName: string) => ({
+    id,
+    firstName,
+    lastName,
+    type: 'JEUNE',
+    dateOfBirth: '2010-01-01',
+    emergencyContactPhone: '0600000000',
+    group: group(delegationId, delegationId === LYON ? 'Lyon' : 'Annecy'),
+  });
+  const build = (participants: Row[], volunteers: Row[] = []) =>
+    new DelegationsService(
+      repo() as never,
+      repo() as never,
+      repo() as never,
+      repo([group(LYON, 'Lyon'), group(ANNECY, 'Annecy')]) as never,
+      { find: vi.fn(async () => participants) } as never,
+      { find: vi.fn(async () => volunteers) } as never,
+      repo([]) as never,
+    );
+
+  it('prénom et nom exacts (casse ignorée) : résultat minimal, sans date de naissance ni contact', async () => {
+    const svc = build([person(1, ANNECY, 'Camille', 'Martin')]);
+    const out = await svc.lookupPersonForException(LYON, ' camille ', 'MARTIN', lyonOnly, 9);
+    expect(out).toEqual([
+      { personType: 'PARTICIPANT', id: 1, firstName: 'Camille', lastName: 'Martin', delegationName: 'Annecy', kind: 'JEUNE' },
+    ]);
+    expect(JSON.stringify(out)).not.toMatch(/2010|0600000000/);
+  });
+
+  it('refuse toute saisie partielle : un préfixe ne renvoie rien', async () => {
+    const svc = build([person(1, ANNECY, 'Camille', 'Martin')]);
+    expect(await svc.lookupPersonForException(LYON, 'Cam', 'Martin', lyonOnly)).toEqual([]);
+    expect(await svc.lookupPersonForException(LYON, 'Camille', 'Mart', lyonOnly)).toEqual([]);
+  });
+
+  it('exclut les membres de la délégation d accueil (déjà visibles chez elle) et plafonne à 5', async () => {
+    const many = Array.from({ length: 8 }, (_, i) => person(10 + i, ANNECY, 'Jean', 'Dupont'));
+    const svc = build([person(99, LYON, 'Jean', 'Dupont'), ...many]);
+    const out = await svc.lookupPersonForException(LYON, 'Jean', 'Dupont', lyonOnly);
+    expect(out).toHaveLength(5);
+    expect(out.some((r) => r.id === 99)).toBe(false);
+  });
+
+  it('délégation d accueil hors périmètre : refusé ; saisie trop courte : refusée', async () => {
+    const svc = build([person(1, ANNECY, 'Camille', 'Martin')]);
+    await expect(svc.lookupPersonForException(ANNECY, 'Camille', 'Martin', lyonOnly)).rejects.toThrow();
+    await expect(svc.lookupPersonForException(LYON, 'C', 'M', lyonOnly)).rejects.toThrow();
+  });
+
+  it('la journalisation ne contient pas les noms saisis', async () => {
+    const svc = build([person(1, ANNECY, 'Camille', 'Martin')]);
+    const log = vi.spyOn((svc as unknown as { logger: { log: (m: string) => void } }).logger, 'log').mockImplementation(() => undefined);
+    await svc.lookupPersonForException(LYON, 'Camille', 'Martin', lyonOnly, 9);
+    expect(log).toHaveBeenCalledTimes(1);
+    const line = String(log.mock.calls[0][0]);
+    expect(line).toContain('resultats=1');
+    expect(line).not.toMatch(/Camille|Martin/);
+  });
+});
 
 describe('DelegationsService — stats', () => {
   it('une exception reçue compte dans les totaux de l accueil, une sortante sort des totaux de l origine', async () => {
@@ -145,6 +230,21 @@ describe('DelegationsService — stats', () => {
     expect(allerAnnecy.total).toBe(1);
     expect(allerAnnecy.exceptionsReceived).toBe(1);
     expect(allerAnnecy.exceptionsOutgoing).toBe(1);
+  });
+
+  it('une exception reçue déjà placée dans un véhicule ne compte plus dans à placer', async () => {
+    const svc = service({
+      participants: [participant(10, LYON, 'Camille', 'Roche'), participant(20, ANNECY, 'Léa', 'Fontaine')],
+      assignments: [
+        assignment(1, 10, LYON, 5),
+        // Léa (Annecy) reçue par Lyon et placée dans le véhicule 5.
+        assignment(2, 20, LYON, 5),
+      ],
+    });
+    const stats = await svc.stats(LYON, all);
+    const aller = stats.directions.find((d) => d.direction === TransportDirection.ALLER)!;
+    expect(aller.exceptionsReceived).toBe(1);
+    expect(aller.toPlace).toBe(0);
   });
 });
 
@@ -267,6 +367,89 @@ describe('DelegationsService — exceptions', () => {
         { all: false, groupIds: [LYON] },
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+});
+
+describe('DelegationsService — note facultative à la création d une exception', () => {
+  const author = { userId: 9, name: 'S. Vivier', role: 'Coordination' };
+  const dto = (note?: string) => ({
+    personType: AssignmentPersonType.PARTICIPANT,
+    personId: 20,
+    direction: TransportDirection.ALLER,
+    toDelegationId: LYON,
+    note,
+  });
+  const build = () => {
+    const notes = repo([]);
+    const assignments = withManager(repo([]), notes);
+    const svc = new DelegationsService(
+      repo() as never,
+      assignments as never,
+      notes as never,
+      repo([group(LYON, 'Lyon'), group(ANNECY, 'Annecy')]) as never,
+      repo([participant(20, ANNECY)]) as never,
+      repo([]) as never,
+      repo([]) as never,
+    );
+    return { svc, assignments, notes };
+  };
+
+  it('avec une note : exception et note signée sont créées ensemble', async () => {
+    const { svc, notes } = build();
+    await svc.createException(LYON, dto('Famille à Lyon ce week-end'), all, author);
+    expect(notes.save).toHaveBeenCalledTimes(1);
+    const saved = notes.save.mock.calls[0][0] as { body: string; authorName: string };
+    expect(saved.body).toContain('Famille à Lyon ce week-end');
+    expect(saved.authorName).toBe('S. Vivier');
+  });
+
+  it('sans note ou note vide : exception seule, aucune note créée', async () => {
+    const { svc, notes } = build();
+    await svc.createException(LYON, dto(), all, author);
+    await svc.createException(LYON, dto('   '), all, author);
+    expect(notes.save).not.toHaveBeenCalled();
+  });
+
+  it('si la note échoue, l erreur remonte de la transaction (annulation SQL, pas de compensation manuelle)', async () => {
+    const { svc, assignments, notes } = build();
+    notes.save.mockRejectedValueOnce(new Error('échec note'));
+    await expect(svc.createException(LYON, dto('x'), all, author)).rejects.toThrow('échec note');
+    expect(assignments.remove).not.toHaveBeenCalled();
+  });
+
+  it('relit l affectation sous verrou en écriture dans la transaction', async () => {
+    const { svc, assignments } = build();
+    await svc.createException(LYON, dto(), all, author);
+    const options = assignments.findOne.mock.calls[0][0] as { lock?: { mode: string } };
+    expect(options.lock).toEqual({ mode: 'pessimistic_write' });
+  });
+
+  it('droit de note : sans PERSON_NOTES MANAGE (null) ou hors périmètre, exception créée sans note ; avec le droit, note créée', async () => {
+    const none = build();
+    const r1 = await none.svc.createException(LYON, dto('x'), all, author, null);
+    expect(none.assignments.save).toHaveBeenCalled();
+    expect(none.notes.save).not.toHaveBeenCalled();
+    expect(r1.noteStatus).toBe('NOT_ALLOWED');
+    const elsewhere = build();
+    const r2 = await elsewhere.svc.createException(LYON, dto('x'), all, author, { all: false, groupIds: [999] });
+    expect(elsewhere.notes.save).not.toHaveBeenCalled();
+    expect(r2.noteStatus).toBe('NOT_ALLOWED');
+    const allowed = build();
+    const r3 = await allowed.svc.createException(LYON, dto('x'), lyonOnly, author, { all: false, groupIds: [LYON] });
+    expect(allowed.notes.save).toHaveBeenCalledTimes(1);
+    expect(r3.noteStatus).toBe('SAVED');
+    const noNote = build();
+    const r4 = await noNote.svc.createException(LYON, dto(), all, author, null);
+    expect(r4.noteStatus).toBe('NOT_REQUESTED');
+  });
+
+  it('note rangée dans la délégation d origine si elle est dans le périmètre de l auteur, sinon dans l accueil', async () => {
+    const a = build();
+    await a.svc.createException(LYON, dto('x'), all, author);
+    expect((a.notes.save.mock.calls[0][0] as { delegation: { id: number } }).delegation.id).toBe(ANNECY);
+    const b = build();
+    await b.svc.createException(LYON, dto('x'), lyonOnly, author);
+    expect((b.notes.save.mock.calls[0][0] as { delegation: { id: number } }).delegation.id).toBe(LYON);
   });
 });
 

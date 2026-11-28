@@ -1,7 +1,9 @@
 <app-page-layout
-  [title]="group()?.name ?? 'Délégation'"
+  [title]="summary()?.name ?? 'Délégation'"
   [description]="
-    (group()?.diocese ? 'Diocèse de ' + group()!.diocese + ' · ' : '') +
+    !summary()
+      ? ''
+      : (summary()?.diocese ? 'Diocèse de ' + summary()!.diocese + ' · ' : '') +
     (summary()?.total ?? 0) +
     ' personnes (' +
     (summary()?.jeunes ?? 0) +
@@ -12,12 +14,14 @@
     ' bénévoles) · périmètre appliqué côté serveur, sans données de santé'
   "
 >
+  @if (seesSeveral()) {
   <nav class="delegation-nav"><a routerLink="/rassemblement">Toutes les délégations</a></nav>
+  }
   @if (error(); as err) {
   <p class="error">{{ err }}</p>
   } @if (loading()) {
   <app-loading-skeleton />
-  } @else {
+  } @else if (!error()) {
   <div class="direction-switch" role="tablist">
     <button
       tuiButton
@@ -62,7 +66,7 @@
       [appearance]="view() === 'notes' ? 'primary' : 'secondary'"
       (click)="setView('notes')"
     >
-      Notes ({{ noteCount() }})
+      Notes @if (!notesUnavailable()) {({{ noteCount() }})}
     </button>
   </div>
 
@@ -71,9 +75,9 @@
     <h2>Identité</h2>
     <dl>
       <dt>Nom</dt>
-      <dd>{{ group()?.name }}</dd>
+      <dd>{{ summary()?.name }}</dd>
       <dt>Diocèse</dt>
-      <dd>{{ group()?.diocese ?? '—' }}</dd>
+      <dd>{{ summary()?.diocese ?? '—' }}</dd>
       <dt>Responsables</dt>
       <dd class="resp-line">
         @for (r of summary()?.responsables ?? []; track r) {
@@ -82,10 +86,6 @@
         <span class="muted">Aucun responsable rattaché</span>
         }
       </dd>
-      @if (group()?.notes) {
-      <dt>Notes</dt>
-      <dd>{{ group()!.notes }}</dd>
-      }
     </dl>
   </section>
   <section class="panel">
@@ -234,6 +234,9 @@
   } @if (view() === 'notes') {
   <section class="panel">
     <h2>Notes logistiques des personnes de la délégation</h2>
+    @if (notesUnavailable()) {
+    <p class="muted">Les notes ne sont pas accessibles avec vos droits actuels.</p>
+    }
     @for (row of noteRows(); track row.person ? row.person.personType + ':' + row.person.id :
     $index) {
     <p class="note-line">

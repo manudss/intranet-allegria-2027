@@ -1,9 +1,8 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { MyAccessService } from '../../../core/my-access.service';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { SHARED_IMPORTS } from '../../../shared/shared-imports';
-import { Group } from '../../../models/models';
-import { GroupsApiService } from '../../../services/api.services';
 import {
   DelegationSummary,
   DelegationsApiService,
@@ -32,14 +31,12 @@ type PersonFilter = 'TOUT' | 'JEUNE' | 'ANIMATEUR' | 'BENEVOLE';
 export class DelegationFichePage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(DelegationsApiService);
-  private readonly groupsApi = inject(GroupsApiService);
 
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
   protected readonly view = signal<FicheView>('ensemble');
 
   protected delegationId = 0;
-  protected readonly group = signal<Group | null>(null);
   protected readonly summary = signal<DelegationSummary | null>(null);
   protected readonly persons = signal<PersonLite[]>([]);
   protected readonly aller = signal<Repartition | null>(null);
@@ -49,6 +46,31 @@ export class DelegationFichePage implements OnInit {
   protected readonly noteCount = computed(() =>
     this.noteRows().reduce((total, row) => total + row.notesCount, 0),
   );
+  /** Le lien de retour n'a de sens que si la personne voit plusieurs délégations. */
+  private readonly access = inject(MyAccessService);
+  protected readonly notesUnavailable = signal(false);
+  private notesRequested = false;
+
+  constructor() {
+    this.access.load();
+    // Les notes relèvent du module PERSON_NOTES. Sans ce droit on ne les demande pas
+    // (un 403 renverrait toute la fiche vers « Accès refusé ») : la fiche s'ouvre sous
+    // TRANSPORT seul et l'onglet Notes l'indique.
+    effect(() => {
+      if (this.notesRequested || !this.access.loaded()) return;
+      this.notesRequested = true;
+      if (!this.access.can('PERSON_NOTES', 'VIEW')) {
+        this.notesUnavailable.set(true);
+        return;
+      }
+      // Seules les personnes qui ont des notes (original : « que ceux où il y a des notes »).
+      this.api.notesFeed('WITH_NOTES').subscribe({
+        next: (rows) => this.noteRows.set(rows.filter((n) => n.delegationId === this.delegationId)),
+        error: () => this.notesUnavailable.set(true),
+      });
+    });
+  }
+  protected readonly seesSeveral = signal(false);
   protected readonly delegationNames = signal<Map<number, string>>(new Map());
 
   protected readonly personFilter = signal<PersonFilter>('TOUT');
@@ -57,21 +79,18 @@ export class DelegationFichePage implements OnInit {
     this.delegationId = Number(this.route.snapshot.paramMap.get('id'));
     this.loading.set(true);
     forkJoin({
-      group: this.groupsApi.get(this.delegationId),
       summaries: this.api.listSummaries(),
       persons: this.api.persons(this.delegationId),
       aller: this.api.repartition(this.delegationId, 'ALLER'),
       retour: this.api.repartition(this.delegationId, 'RETOUR'),
-      notes: this.api.notesFeed('ALL'),
     }).subscribe({
       next: (r) => {
-        this.group.set(r.group);
         this.summary.set(r.summaries.find((s) => s.id === this.delegationId) ?? null);
+        this.seesSeveral.set(r.summaries.length > 1);
         this.delegationNames.set(new Map(r.summaries.map((s) => [s.id, s.name])));
         this.persons.set(r.persons);
         this.aller.set(r.aller);
         this.retour.set(r.retour);
-        this.noteRows.set(r.notes.filter((n) => n.delegationId === this.delegationId));
         this.loading.set(false);
       },
       error: () => {

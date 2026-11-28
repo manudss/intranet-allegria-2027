@@ -11,9 +11,13 @@ name: PR Preview (second Render account, image)
 #   cette version lit alors la branche par defaut, donc disponible APRES fusion.
 # Isolation : les scripts qui voient la cle Render viennent du dossier `trusted/` ; le code de la PR
 # (dossier `pr/`) ne voit que l'URL de sa propre base Neon. Les PR de fork sont refusees.
+# - mode « image seulement » : un commit de la PR dont le message contient `[preview-image-only]`
+#   reconstruit l'image sur la tete de la PR et la redeploie sur le service EXISTANT, SANS migration
+#   ni seed (les donnees de la base ne bougent pas ; le mot de passe de la branche est regenere et
+#   resynchronise). Un push ordinaire ne declenche rien. Si le service n'existe pas, le mode refuse.
 on:
   pull_request:
-    types: [labeled, closed]
+    types: [labeled, closed, synchronize]
   workflow_dispatch:
     inputs:
       pr:
@@ -36,6 +40,9 @@ jobs:
     name: Build the image and deploy the free preview
     if: >-
       github.event_name == 'workflow_dispatch' ||
+      (github.event.action == 'synchronize' &&
+       github.event.pull_request.number != 42 &&
+       github.event.pull_request.head.repo.full_name == github.repository) ||
       (github.event.action == 'labeled' && github.event.label.name == 'deploy-preview-lyam' &&
        github.event.pull_request.number != 42 &&
        github.event.pull_request.head.repo.full_name == github.repository)
@@ -56,8 +63,21 @@ jobs:
           [ "$(jq -r .head.repo.full_name pr.json)" = "${GITHUB_REPOSITORY}" ] || { echo "fork PR refused"; exit 1; }
           echo "sha=$(jq -r .head.sha pr.json)" >> "$GITHUB_OUTPUT"
           echo "repo=$(jq -r .head.repo.full_name pr.json)" >> "$GITHUB_OUTPUT"
+          run=true; image_only=false; migrate_only=false
+          if [ "${{ github.event.action }}" = "synchronize" ]; then
+            run=false
+            msg=$(gh api "repos/${GITHUB_REPOSITORY}/commits/$(jq -r .head.sha pr.json)" --jq .commit.message)
+            case "$msg" in *'[preview-image-only]'*) run=true; image_only=true ;; esac
+            # Migration ciblee : applique les migrations en attente (additives) SANS seed ni reset,
+            # puis reconstruit l'image sur le service existant. Reservee a la preview de cette PR.
+            case "$msg" in *'[preview-migrate-only]'*) run=true; image_only=true; migrate_only=true ;; esac
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "image_only=$image_only" >> "$GITHUB_OUTPUT"
+          echo "migrate_only=$migrate_only" >> "$GITHUB_OUTPUT"
 
       - name: Trusted scripts (PR head before merge, default branch otherwise)
+        if: steps.pr.outputs.run == 'true'
         uses: actions/checkout@v5
         with:
           ref: ${{ github.event_name == 'pull_request' && steps.pr.outputs.sha || github.event.repository.default_branch }}
@@ -65,6 +85,7 @@ jobs:
           persist-credentials: false
 
       - name: PR code (built and seeded without any Render key)
+        if: steps.pr.outputs.run == 'true'
         uses: actions/checkout@v5
         with:
           ref: ${{ steps.pr.outputs.sha }}
@@ -72,12 +93,14 @@ jobs:
           persist-credentials: false
 
       - uses: actions/setup-node@v5
+        if: steps.pr.outputs.run == 'true'
         with:
           node-version: 24.15.0
           cache: npm
           cache-dependency-path: pr/package-lock.json
 
       - name: Neon branch of this PR (existing branch is reused)
+        if: steps.pr.outputs.run == 'true'
         id: neon
         uses: neondatabase/create-branch-action@v6
         with:
@@ -87,6 +110,7 @@ jobs:
           branch_name: preview/pr-${{ env.PR_NUMBER }}
 
       - name: Fresh credentials for the PR Neon branch
+        if: steps.pr.outputs.run == 'true'
         id: creds
         working-directory: trusted
         env:
@@ -98,6 +122,7 @@ jobs:
         run: node scripts/neon-branch-credentials.mjs
 
       - name: Install, migrate and seed the PR database (fictional data)
+        if: steps.pr.outputs.run == 'true' && steps.pr.outputs.image_only != 'true'
         working-directory: pr
         env:
           DATABASE_URL: ${{ steps.creds.outputs.db_url_pooled }}
@@ -108,13 +133,42 @@ jobs:
           npm run migration:run
           npx tsx apps/api/src/database/seeds/seed.ts --profile=medium
 
+      - name: Guard of the targeted migration (preview of this PR only, no seed)
+        if: steps.pr.outputs.run == 'true' && steps.pr.outputs.migrate_only == 'true'
+        working-directory: trusted
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action }}
+          BRANCH_NAME: preview/pr-${{ env.PR_NUMBER }}
+          IMAGE_ONLY: ${{ steps.pr.outputs.image_only }}
+          SEED: 'false'
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          export COMMIT_MESSAGE
+          COMMIT_MESSAGE=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${{ steps.pr.outputs.sha }}" --jq .commit.message)
+          node scripts/preview-migrate-guard.mjs
+
+      - name: Targeted migration only (no seed, no reset of data)
+        if: steps.pr.outputs.run == 'true' && steps.pr.outputs.migrate_only == 'true'
+        working-directory: pr
+        env:
+          DATABASE_URL: ${{ steps.creds.outputs.db_url_pooled }}
+          DATABASE_URL_DIRECT: ${{ steps.creds.outputs.db_url }}
+          DB_SSL: 'true'
+        run: |
+          npm ci
+          npm run migration:run
+
       - uses: docker/setup-buildx-action@v3
+        if: steps.pr.outputs.run == 'true'
       - uses: docker/login-action@v3
+        if: steps.pr.outputs.run == 'true'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build the API + intranet image, no latest tag
+        if: steps.pr.outputs.run == 'true'
         id: image
         uses: docker/build-push-action@v6
         with:
@@ -127,10 +181,12 @@ jobs:
           cache-to: type=gha,mode=max,scope=pr-preview-lyam
 
       - name: Create or update only the free image service in the second account
+        if: steps.pr.outputs.run == 'true'
         id: deploy
         working-directory: trusted
         env:
           PREVIEW_HEAD_REPO: ${{ steps.pr.outputs.repo }}
+          PREVIEW_IMAGE_ONLY: ${{ steps.pr.outputs.image_only }}
           RENDER_LYAM_PREVIEW_API_KEY: ${{ secrets.RENDER_LYAM_PREVIEW_API_KEY }}
           FAMILY_RESEND_API_KEY: ${{ secrets.FAMILY_RESEND_API_KEY }}
           PREVIEW_DB_URL: ${{ steps.creds.outputs.db_url_pooled }}
@@ -139,6 +195,7 @@ jobs:
         run: node scripts/render-pr-lyam.mjs
 
       - name: Post the preview links on the PR
+        if: steps.pr.outputs.run == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           COMMENT: ${{ steps.deploy.outputs.comment }}

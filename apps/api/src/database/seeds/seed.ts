@@ -720,6 +720,7 @@ async function run(): Promise<void> {
           "gathering_car_assignments",
           "gathering_car_stops",
           "gathering_cars",
+          "person_notes_split_log",
           "gathering_group_managers",
           "gathering_group_volunteer_teams",
           "gathering_group_teams",

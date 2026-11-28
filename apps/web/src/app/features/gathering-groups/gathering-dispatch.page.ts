@@ -8,6 +8,8 @@ import {
   signal,
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { TuiIcon } from '@taiga-ui/core';
+import { TuiAutoColorPipe, TuiAvatar, TuiAvatarStack } from '@taiga-ui/kit';
 import { Subject, switchMap, takeUntil } from 'rxjs';
 import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { SelectFieldComponent, SelectOption } from '../../shared/select-field.component';
@@ -36,7 +38,7 @@ type Notice = { kind: 'error' | 'info'; text: string };
 @Component({
   selector: 'app-gathering-dispatch',
   standalone: true,
-  imports: [...SHARED_IMPORTS, SelectFieldComponent, RouterLink],
+  imports: [...SHARED_IMPORTS, SelectFieldComponent, RouterLink, TuiIcon, TuiAvatar, TuiAvatarStack, TuiAutoColorPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './gathering-dispatch.page.html',
   styleUrl: './gathering-dispatch.page.scss',
@@ -156,6 +158,44 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
     })),
   );
 
+
+  /** Logos officiels des pistes et de la catégorie commune (même dossier que les logos existants). */
+  protected readonly trackLogos: Record<Track, string> = {
+    TA: '/assets/branches/ta.jpg',
+    ES: '/assets/branches/es.jpg',
+    COMMON: '/assets/branches/mej.png',
+  };
+
+  protected categoryLogo(category: GatheringCategory): string {
+    if (category === 'TA') return this.trackLogos.TA;
+    if (category === 'ES') return this.trackLogos.ES;
+    return this.trackLogos.COMMON;
+  }
+
+  /** Deux lettres d'une équipe ou d'un groupe pour un avatar (nom composé : première lettre de chaque mot). */
+  protected initials(name: string): string {
+    const words = name.split(/[\s–-]+/).filter((w) => /\p{L}|\p{N}/u.test(w));
+    if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+    return (words[0] ?? name).slice(0, 2).toUpperCase();
+  }
+
+  /** Équipes dont la liste est dépliée dans un groupe : repliée par défaut pour voir tous les groupes d'un coup. */
+  protected readonly expandedGroups = signal<ReadonlySet<number>>(new Set());
+
+  protected isGroupExpanded(groupId: number): boolean {
+    return this.expandedGroups().has(groupId);
+  }
+
+  protected toggleGroupExpanded(groupId: number): void {
+    const next = new Set(this.expandedGroups());
+    if (next.has(groupId)) {
+      next.delete(groupId);
+    } else {
+      next.add(groupId);
+    }
+    this.expandedGroups.set(next);
+  }
+
   ngOnInit(): void {
     this.route.paramMap
       .pipe(
@@ -221,7 +261,7 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
     }
     const allowOverflow = this.board()?.repartition.allowOverflow;
     if (!allowOverflow && group.capacity != null && group.persons + team.persons > group.capacity) {
-      return `Capacité dépassée (${group.persons + team.persons}/${group.capacity})`;
+      return `Refusé : avec cette équipe (+${team.persons}), le groupe passerait à ${group.persons + team.persons}/${group.capacity} (actuel : ${group.persons}/${group.capacity})`;
     }
     return null;
   }

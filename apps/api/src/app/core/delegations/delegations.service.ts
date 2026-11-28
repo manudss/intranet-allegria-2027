@@ -2,10 +2,11 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { ILike, In, Repository } from 'typeorm';
 import type { AccessScopeInfo } from '../auth/access-module.decorator';
 import {
   AssignmentPersonType,
@@ -346,7 +347,14 @@ export class DelegationsService {
     delegationId: number,
     dto: CreateExceptionDto,
     scope: AccessScopeInfo,
-  ): Promise<TransportAssignment> {
+    author?: NoteAuthor,
+    /**
+     * Périmètre du droit PERSON_NOTES (MANAGE) de l'appelant : même contrôle d'écriture que les
+     * notes ordinaires. null = pas de droit : l'exception est créée sans la note.
+     * Absent = on reprend le périmètre de l'exception (appels internes et anciens tests).
+     */
+    noteScope?: AccessScopeInfo | null,
+  ): Promise<TransportAssignment & { noteStatus: 'SAVED' | 'NOT_REQUESTED' | 'NOT_ALLOWED' }> {
     await this.findDelegation(delegationId, scope);
     const person = await this.getPerson(dto.personType, dto.personId);
     if (!person.delegationId) {
@@ -363,26 +371,68 @@ export class DelegationsService {
       throw new ForbiddenException('Ni la délégation d\'origine ni celle d\'accueil n\'est dans votre périmètre');
     }
     await this.findDelegation(dto.toDelegationId, { all: true });
-    const existing = await this.assignmentsRepository.findOne({
-      where: {
-        personType: dto.personType,
-        personId: dto.personId,
-        direction: dto.direction,
-      },
+    const requestedNote = dto.note?.trim();
+    const effectiveNoteScope = noteScope === undefined ? scope : noteScope;
+    const inNoteScope = (id: number) =>
+      !!effectiveNoteScope && (effectiveNoteScope.all || effectiveNoteScope.groupIds.includes(id));
+    const personDelegationId = person.delegationId;
+    // Droit d'écrire une note sur cette personne : même règle que les notes ordinaires
+    // (périmètre PERSON_NOTES couvrant sa délégation d'origine ou d'accueil).
+    const mayNote = inNoteScope(personDelegationId) || inNoteScope(dto.toDelegationId);
+    const noteBody = requestedNote && mayNote ? requestedNote : undefined;
+    const noteStatus: 'SAVED' | 'NOT_REQUESTED' | 'NOT_ALLOWED' = !requestedNote
+      ? 'NOT_REQUESTED'
+      : noteBody
+        ? 'SAVED'
+        : 'NOT_ALLOWED';
+    // Exception et note dans une seule transaction SQL : tout ou rien.
+    // Relecture sous verrou en écriture : deux requêtes concurrentes sur la même
+    // personne et le même sens se sérialisent, la contrainte unique protège le reste.
+    return this.assignmentsRepository.manager.transaction(async (em) => {
+      const assignmentsRepo = em.getRepository(TransportAssignment);
+      const existing = await assignmentsRepo.findOne({
+        where: {
+          personType: dto.personType,
+          personId: dto.personId,
+          direction: dto.direction,
+        },
+        lock: { mode: 'pessimistic_write' },
+      });
+      let saved: TransportAssignment;
+      if (existing) {
+        existing.delegation = { id: dto.toDelegationId } as Group;
+        existing.transport = null;
+        saved = await assignmentsRepo.save(existing);
+      } else {
+        saved = await assignmentsRepo.save(
+          assignmentsRepo.create({
+            personType: dto.personType,
+            personId: dto.personId,
+            direction: dto.direction,
+            delegation: { id: dto.toDelegationId } as Group,
+            transport: null,
+          }),
+        );
+      }
+      if (noteBody && author) {
+        // Note rangée dans la délégation d'origine si elle est dans le périmètre de
+        // l'auteur, sinon dans la délégation d'accueil (cloisonnement inchangé).
+        const noteDelegationId = inNoteScope(personDelegationId) ? personDelegationId : dto.toDelegationId;
+        await em.getRepository(PersonNote).save(
+          em.getRepository(PersonNote).create({
+            personType: dto.personType,
+            personId: dto.personId,
+            delegation: { id: noteDelegationId } as Group,
+            author: { id: author.userId } as User,
+            authorName: author.name,
+            authorRole: author.role,
+            parent: null,
+            body: `Exception ${dto.direction === TransportDirection.ALLER ? 'aller' : 'retour'} : ${noteBody}`,
+          }),
+        );
+      }
+      return Object.assign(saved, { noteStatus });
     });
-    if (existing) {
-      existing.delegation = { id: dto.toDelegationId } as Group;
-      existing.transport = null;
-      return this.assignmentsRepository.save(existing);
-    }
-    const assignment = this.assignmentsRepository.create({
-      personType: dto.personType,
-      personId: dto.personId,
-      direction: dto.direction,
-      delegation: { id: dto.toDelegationId } as Group,
-      transport: null,
-    });
-    return this.assignmentsRepository.save(assignment);
   }
 
   /** Retire une affectation : la personne retourne dans l'« à placer » de sa propre délégation. */
@@ -513,7 +563,7 @@ export class DelegationsService {
     await this.findDelegation(delegationId, scope);
     const members = await this.listMembers(delegationId);
     const memberKeys = new Set(members.map((m) => `${m.personType}:${m.id}`));
-    const rows = await this.assignmentsRepository.find({ relations: { delegation: true } });
+    const rows = await this.assignmentsRepository.find({ relations: { delegation: true, transport: true } });
     const relevant = rows.filter(
       (r) => r.delegation.id === delegationId || memberKeys.has(`${r.personType}:${r.personId}`),
     );
@@ -582,13 +632,82 @@ export class DelegationsService {
    * une passe pour toutes les délégations visibles du périmètre, sans données
    * de santé. Les métadonnées zone/pays viennent du catalogue vérifié CEF.
    */
+  private readonly logger = new Logger(DelegationsService.name);
+
+  /**
+   * Côté accueil : retrouver UNE personne d'une autre délégation par prénom ET nom exacts
+   * (insensible à la casse), pour lui créer une exception vers la délégation d'accueil.
+   * Jamais de liste ni de recherche partielle ; au plus 5 résultats ; seulement prénom, nom,
+   * délégation d'origine et type. Aucune date de naissance, aucun contact, aucune donnée de santé.
+   * La recherche est journalisée (compte, délégation d'accueil, nombre de résultats), sans les noms saisis.
+   */
+  async lookupPersonForException(
+    hostDelegationId: number,
+    firstName: string,
+    lastName: string,
+    scope: AccessScopeInfo,
+    userId?: number,
+  ): Promise<
+    { personType: AssignmentPersonType; id: number; firstName: string; lastName: string; delegationName: string; kind: string }[]
+  > {
+    await this.findDelegation(hostDelegationId, scope);
+    const first = firstName.trim().toLowerCase();
+    const last = lastName.trim().toLowerCase();
+    if (first.length < 2 || last.length < 2) {
+      throw new BadRequestException('Prénom et nom exacts requis (2 lettres minimum chacun)');
+    }
+    const exact = (value: string) => ILike(value.trim().replace(/[\\%_]/g, (c) => `\\${c}`));
+    const where = { firstName: exact(firstName), lastName: exact(lastName) };
+    const [participants, volunteers] = await Promise.all([
+      this.participantsRepository.find({ where, relations: { group: true }, take: 20 }),
+      this.volunteersRepository.find({ where, relations: { group: true }, take: 20 }),
+    ]);
+    const matches = (p: { firstName: string; lastName: string; group?: { id: number } | null }) =>
+      p.firstName.trim().toLowerCase() === first &&
+      p.lastName.trim().toLowerCase() === last &&
+      !!p.group &&
+      p.group.id !== hostDelegationId;
+    const results = [
+      ...participants.filter(matches).map((p) => ({
+        personType: AssignmentPersonType.PARTICIPANT,
+        id: p.id,
+        firstName: p.firstName,
+        lastName: p.lastName,
+        delegationName: p.group!.name,
+        kind: String(p.type),
+      })),
+      ...volunteers.filter(matches).map((v) => ({
+        personType: AssignmentPersonType.VOLUNTEER,
+        id: v.id,
+        firstName: v.firstName,
+        lastName: v.lastName,
+        delegationName: v.group!.name,
+        kind: 'BENEVOLE',
+      })),
+    ].slice(0, 5);
+    this.logger.log(
+      `exception-lookup user=${userId ?? 'n/a'} accueil=${hostDelegationId} resultats=${results.length}`,
+    );
+    return results;
+  }
+
+  /**
+   * Destinations possibles d'une exception : id et nom de chaque délégation, rien d'autre
+   * (ni effectifs, ni personnes, ni responsables). Nécessaire pour qu'un responsable puisse
+   * choisir où envoyer l'une de SES personnes ; aucune donnée de personne hors périmètre.
+   */
+  async destinations(): Promise<{ id: number; name: string }[]> {
+    const groups = await this.groupsRepository.find({ order: { name: 'ASC' } });
+    return groups.map((g) => ({ id: g.id, name: g.name }));
+  }
+
   async listSummaries(scope: AccessScopeInfo) {
     const groups = await this.groupsRepository.find({ order: { name: 'ASC' } });
     const visible = scope.all ? groups : groups.filter((g) => scope.groupIds.includes(g.id));
     const [participants, volunteers, assignments] = await Promise.all([
       this.participantsRepository.find({ relations: { group: true } }),
       this.volunteersRepository.find({ relations: { group: true } }),
-      this.assignmentsRepository.find({ relations: { delegation: true } }),
+      this.assignmentsRepository.find({ relations: { delegation: true, transport: true } }),
     ]);
 
     const responsableRows: { group_id: number; firstName: string | null; lastName: string | null; email: string }[] =

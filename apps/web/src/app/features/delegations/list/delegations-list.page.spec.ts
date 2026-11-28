@@ -2,9 +2,11 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Component } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
+import { signal } from '@angular/core';
+import { MyAccessService } from '../../../core/my-access.service';
 import { provideTaiga, TuiRoot } from '@taiga-ui/core';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DelegationsListPage } from './delegations-list.page';
 import { DelegationSummary } from '../delegations-api.service';
 
@@ -133,5 +135,54 @@ describe('DelegationsListPage (lot 3 : cartes des délégations)', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.textContent).not.toContain('santé');
     expect(el.querySelector('.error')).toBeNull();
+  });
+});
+
+describe('DelegationsListPage (lot 2 : arrivée directe du responsable, test local avec accès simulé)', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  async function setupWith(scope: string, rows: DelegationSummary[]) {
+    window.matchMedia ??= ((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+      onchange: null,
+    })) as unknown as typeof window.matchMedia;
+    const access = { load: vi.fn(), loaded: signal(true), scopeOf: () => scope };
+    await TestBed.configureTestingModule({
+      imports: [HostComponent],
+      providers: [
+        provideTaiga(),
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: MyAccessService, useValue: access },
+      ],
+    }).compileComponents();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.detectChanges();
+    TestBed.inject(HttpTestingController).expectOne('/api/delegations').flush(rows);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return navigate;
+  }
+
+  it('un responsable limité à une délégation est envoyé sur sa fiche', async () => {
+    const navigate = await setupWith('OWN', [ROWS[1]]);
+    expect(navigate).toHaveBeenCalledWith(['/delegations', 2], { replaceUrl: true });
+  });
+
+  it('un compte à portée complète ou avec plusieurs délégations garde la liste', async () => {
+    const all = await setupWith('ALL', [ROWS[1]]);
+    expect(all).not.toHaveBeenCalled();
+    TestBed.resetTestingModule();
+    const several = await setupWith('OWN', [ROWS[0], ROWS[1]]);
+    expect(several).not.toHaveBeenCalled();
   });
 });

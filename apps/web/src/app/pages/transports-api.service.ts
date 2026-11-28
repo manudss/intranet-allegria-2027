@@ -29,6 +29,7 @@ export interface CarAssignment {
   targetId: number;
   name: string;
   personCount: number;
+  removedCount: number;
 }
 
 export interface CarPerson {

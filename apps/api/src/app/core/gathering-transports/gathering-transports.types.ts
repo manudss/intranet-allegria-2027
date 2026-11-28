@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsEnum,
   IsInt,
   IsOptional,
@@ -10,6 +11,7 @@ import {
   Matches,
   MaxLength,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { GatheringCarPersonKind, GatheringCarTarget } from '../entities';
@@ -85,6 +87,13 @@ export class AssignTargetsDto {
   @Type(() => AssignTargetDto)
   @ArrayMaxSize(100)
   targets!: AssignTargetDto[];
+}
+
+export class SetTransportNeedDto {
+  @ApiProperty({ nullable: true, type: Boolean, description: 'true = transport nécessaire, false = pas besoin, null = non renseigné.' })
+  @ValidateIf((_o, v) => v !== null)
+  @IsBoolean()
+  needsTransport!: boolean | null;
 }
 
 export class AddCarPersonDto {

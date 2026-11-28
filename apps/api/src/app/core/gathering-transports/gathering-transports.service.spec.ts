@@ -105,6 +105,26 @@ const buildService = (state = makeState()) => {
 };
 
 describe('GatheringTransportsService', () => {
+  it('board : « non renseigné » n\'est pas « pas besoin » et une cible déjà affectée n\'est jamais masquée', async () => {
+    const { service, state } = buildService();
+    state.cars[0].assignments = [
+      { id: 50, targetType: GatheringCarTarget.HOSTING_GROUP, hostingGroup: { id: 1 }, hostFamily: null },
+    ];
+    const groups = state.groups as any[];
+    groups[0].needsTransport = false; // déjà affecté : reste visible malgré « pas besoin »
+    groups[1].needsTransport = true;
+    groups[2].needsTransport = false;
+    for (const f of state.families as any[]) f.needsTransport = null;
+
+    const board = await service.board();
+
+    expect(board.targets.map((t) => t.id).sort()).toEqual([1, 2]);
+    expect(board.targets.find((t) => t.id === 1)?.carId).toBe(100);
+    expect(board.notNeededCount).toBe(1);
+    expect(board.undecidedTargets.every((t) => t.needsTransport === null && t.carId === null)).toBe(true);
+    expect(board.undecidedTargets.length).toBeGreaterThan(0);
+  });
+
   it('board : cibles = groupes + collectifs isolés, avec effectifs logés et car affecté', async () => {
     const { service, state } = buildService();
     state.cars[0].assignments = [
@@ -112,6 +132,9 @@ describe('GatheringTransportsService', () => {
       { id: 50, targetType: GatheringCarTarget.HOSTING_GROUP, hostingGroup: { id: 1 }, hostFamily: null },
     ];
 
+    // Tout est marqué « transport nécessaire » ici : ce test vérifie les effectifs et le car.
+    for (const g of state.groups as any[]) g.needsTransport = true;
+    for (const f of state.families as any[]) f.needsTransport = true;
     const board = await service.board();
 
     // Zone Nord : 3 personnes (2 Famille A + 1 Famille B) ; Paroisse Sud : 2 (Famille C + collectif) ;

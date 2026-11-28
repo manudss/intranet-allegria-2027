@@ -20,6 +20,7 @@ import {
   AssignTargetsDto,
   CreateCarDto,
   SetStopsDto,
+  SetTransportNeedDto,
   UpdateCarDto,
 } from './gathering-transports.types';
 
@@ -40,6 +41,24 @@ export class GatheringTransportsController {
   @Get('board')
   board() {
     return this.service.board();
+  }
+
+  @ApiOperation({ summary: 'Marquer le besoin de transport d\'un groupe d\'hébergement' })
+  @Patch('hosting-groups/:id/transport-need')
+  setGroupNeed(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ValidationPipe({ whitelist: true })) dto: SetTransportNeedDto,
+  ) {
+    return this.service.setGroupTransportNeed(id, dto.needsTransport);
+  }
+
+  @ApiOperation({ summary: 'Marquer le besoin de transport d\'une famille ou d\'un hébergement' })
+  @Patch('host-families/:id/transport-need')
+  setFamilyNeed(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ValidationPipe({ whitelist: true })) dto: SetTransportNeedDto,
+  ) {
+    return this.service.setFamilyTransportNeed(id, dto.needsTransport);
   }
 
   @ApiOperation({ summary: 'Créer un car du rassemblement' })

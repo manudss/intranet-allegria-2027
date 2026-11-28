@@ -37,6 +37,8 @@ export interface ServeTargetView {
   assignmentId: number | null;
   carId: number | null;
   carName: string | null;
+  /** null = pas encore renseigné, false = pas besoin de transport, true = à desservir. */
+  needsTransport: boolean | null;
 }
 
 export interface CarStopView {
@@ -77,7 +79,12 @@ export interface CarView {
 }
 
 export interface GatheringTransportsBoard {
+  /** Cibles marquées « transport nécessaire » + toute cible déjà affectée à un car (jamais masquée). */
   targets: ServeTargetView[];
+  /** Cibles dont le besoin n'est pas renseigné : à vérifier, sans présumer qu'elles ont besoin de transport. */
+  undecidedTargets: ServeTargetView[];
+  /** Nombre de cibles marquées « pas besoin de transport » (non listées). */
+  notNeededCount: number;
   cars: CarView[];
 }
 
@@ -104,6 +111,24 @@ export class GatheringTransportsService {
     @InjectRepository(Participant)
     private readonly participantsRepository: Repository<Participant>,
   ) {}
+
+  // ------------------------------------------------------- besoin de transport
+
+  /** Marque le besoin de transport d'un groupe d'hébergement (null = remettre « non renseigné »). Ne touche à aucune affectation. */
+  async setGroupTransportNeed(id: number, needsTransport: boolean | null): Promise<{ id: number; needsTransport: boolean | null }> {
+    const group = await this.hostingGroupsRepository.findOneBy({ id });
+    if (!group) throw new NotFoundException(`Groupe d'hébergement ${id} introuvable`);
+    await this.hostingGroupsRepository.update({ id }, { needsTransport });
+    return { id, needsTransport };
+  }
+
+  /** Marque le besoin de transport d'une famille / d'un hébergement. Ne touche à aucune affectation. */
+  async setFamilyTransportNeed(id: number, needsTransport: boolean | null): Promise<{ id: number; needsTransport: boolean | null }> {
+    const family = await this.hostFamiliesRepository.findOneBy({ id });
+    if (!family) throw new NotFoundException(`Hébergement ${id} introuvable`);
+    await this.hostFamiliesRepository.update({ id }, { needsTransport });
+    return { id, needsTransport };
+  }
 
   // ------------------------------------------------------------------- board
 
@@ -177,6 +202,7 @@ export class GatheringTransportsService {
         assignmentId: entry?.assignment.id ?? null,
         carId: entry?.car.id ?? null,
         carName: entry?.car.name ?? null,
+        needsTransport: group.needsTransport ?? null,
       });
     }
     // Hébergements collectifs hors de tout groupe : desservis comme une cible propre.
@@ -194,8 +220,15 @@ export class GatheringTransportsService {
         assignmentId: entry?.assignment.id ?? null,
         carId: entry?.car.id ?? null,
         carName: entry?.car.name ?? null,
+        needsTransport: family.needsTransport ?? null,
       });
     }
+    // Une cible déjà affectée reste toujours visible ; sinon seul « transport nécessaire » est listé.
+    const listed = targets.filter((t) => t.carId !== null || t.needsTransport === true);
+    const undecidedTargets = targets.filter((t) => t.carId === null && t.needsTransport === null);
+    const notNeededCount = targets.filter((t) => t.carId === null && t.needsTransport === false).length;
+    targets.length = 0;
+    targets.push(...listed);
     targets.sort((a, b) => (a.carId ? 1 : 0) - (b.carId ? 1 : 0) || a.name.localeCompare(b.name, 'fr'));
 
     const carViews: CarView[] = cars.map((car) => {
@@ -250,7 +283,8 @@ export class GatheringTransportsService {
     });
     carViews.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
 
-    return { targets, cars: carViews };
+    undecidedTargets.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+    return { targets, undecidedTargets, notNeededCount, cars: carViews };
   }
 
   // -------------------------------------------------------------------- cars

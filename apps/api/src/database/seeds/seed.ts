@@ -30,6 +30,12 @@ import {
   AssignmentPersonType,
   AssignmentStatus,
   DelegationTransport,
+  GatheringCar,
+  GatheringCarAssignment,
+  GatheringCarPerson,
+  GatheringCarPersonKind,
+  GatheringCarStop,
+  GatheringCarTarget,
   Group,
   HostFamily,
   AccommodationType,
@@ -710,6 +716,10 @@ async function run(): Promise<void> {
     try {
       await queryRunner.query(`
         TRUNCATE TABLE
+          "gathering_car_persons",
+          "gathering_car_assignments",
+          "gathering_car_stops",
+          "gathering_cars",
           "gathering_group_managers",
           "gathering_group_volunteer_teams",
           "gathering_group_teams",
@@ -2016,6 +2026,124 @@ async function run(): Promise<void> {
     }
 
     await assignmentRepository.save(assignmentsToCreate, { chunk: 1000 });
+
+    // Cars du rassemblement : couvre les cas de l'interface (car avec arrets horaires,
+    // car plein a la jauge avec retrait individuel, car libre avec ajout individuel,
+    // hebergement collectif cible directement). Tout est fictif.
+    const carRepository = dataSource.getRepository(GatheringCar);
+    const carStopRepository = dataSource.getRepository(GatheringCarStop);
+    const carAssignmentRepository = dataSource.getRepository(GatheringCarAssignment);
+    const carPersonRepository = dataSource.getRepository(GatheringCarPerson);
+
+    const hostedAssignments = assignmentsToCreate.filter(
+      (row) => row.status !== AssignmentStatus.CANCELLED,
+    );
+    const hostedByFamily = new Map<number, Participant[]>();
+    for (const row of hostedAssignments) {
+      hostedByFamily.set(row.hostFamily.id, [
+        ...(hostedByFamily.get(row.hostFamily.id) ?? []),
+        row.participant,
+      ]);
+    }
+    const groupsByHostedCount = [...familiesByHostingGroup.entries()]
+      .map(([groupId, families]) => ({
+        groupId,
+        hosted: families.flatMap((family) => hostedByFamily.get(family.id) ?? []),
+      }))
+      .filter((row) => row.hosted.length > 0)
+      .sort((a, b) => b.hosted.length - a.hosted.length);
+    const collectiveFamily = hostFamilies.find(
+      (family) =>
+        family.accommodationType === AccommodationType.COLLECTIVE &&
+        !family.hostingGroup &&
+        (hostedByFamily.get(family.id) ?? []).length > 0,
+    );
+
+    if (groupsByHostedCount.length >= 2) {
+      const [first, second] = groupsByHostedCount;
+      const carOne = await carRepository.save(
+        carRepository.create({
+          name: 'Car 1 · Samedi et mardi',
+          capacity: 53,
+          serviceDates: ['2027-10-30', '2027-11-03'],
+          notes: 'Deux arrets dans la zone, horaires a confirmer avec le transporteur.',
+        }),
+      );
+      await carStopRepository.save([
+        carStopRepository.create({ car: carOne, orderIndex: 0, label: 'Gare routiere', time: '14:30' }),
+        carStopRepository.create({ car: carOne, orderIndex: 1, label: 'Halle des sports', time: '15:10' }),
+      ]);
+      await carAssignmentRepository.save(
+        carAssignmentRepository.create({
+          car: carOne,
+          targetType: GatheringCarTarget.HOSTING_GROUP,
+          hostingGroup: { id: first.groupId } as HostingGroup,
+          hostFamily: null,
+        }),
+      );
+
+      const carTwo = await carRepository.save(
+        carRepository.create({
+          name: 'Car 2 · Plein a la jauge',
+          capacity: Math.max(1, second.hosted.length - 1),
+          serviceDates: null,
+          notes: 'Jauge volontairement ajustee pour illustrer le cas complet (avertissement sans blocage).',
+        }),
+      );
+      await carAssignmentRepository.save(
+        carAssignmentRepository.create({
+          car: carTwo,
+          targetType: GatheringCarTarget.HOSTING_GROUP,
+          hostingGroup: { id: second.groupId } as HostingGroup,
+          hostFamily: null,
+        }),
+      );
+      await carPersonRepository.save(
+        carPersonRepository.create({
+          car: carTwo,
+          participant: second.hosted[0],
+          kind: GatheringCarPersonKind.REMOVED,
+        }),
+      );
+
+      const carThree = await carRepository.save(
+        carRepository.create({
+          name: 'Car 3 · Sans affectation',
+          capacity: null,
+          serviceDates: ['2027-11-03'],
+          notes: null,
+        }),
+      );
+      await carPersonRepository.save(
+        carPersonRepository.create({
+          car: carThree,
+          participant: second.hosted[1] ?? first.hosted[0],
+          kind: GatheringCarPersonKind.ADDED,
+        }),
+      );
+
+      if (collectiveFamily) {
+        const carFour = await carRepository.save(
+          carRepository.create({
+            name: 'Navette collectif',
+            capacity: 24,
+            serviceDates: null,
+            notes: null,
+          }),
+        );
+        await carAssignmentRepository.save(
+          carAssignmentRepository.create({
+            car: carFour,
+            targetType: GatheringCarTarget.HOST_FAMILY,
+            hostingGroup: null,
+            hostFamily: collectiveFamily,
+          }),
+        );
+      }
+      console.log(
+        `Cars du rassemblement: ${collectiveFamily ? 4 : 3} cars (arrets horaires, jauge pleine, exception individuelle)`,
+      );
+    }
 
     const medicalAuthors = [adminUser, healthUser];
     const participantHealthToCreate: ParticipantHealth[] = [];

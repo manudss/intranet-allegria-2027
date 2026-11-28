@@ -1,15 +1,270 @@
 <app-page-layout
   title="Transports"
-  description="Les transports du rassemblement s'organisent par délégation : sous-délégations (véhicules, horaires, rendez-vous), répartition des jeunes et des bénévoles, exceptions."
+  description="Cars du rassemblement : desserte des groupes d'hébergement et des lieux éloignés. Les trajets aller/retour des délégations se gèrent dans la fiche de chaque délégation."
 >
-  <p>
-    Choisissez une délégation depuis la rubrique
-    <a routerLink="/rassemblement">Délégations</a> : sa fiche regroupe les sous-délégations
-    aller et retour, la répartition et les exceptions. Un responsable rattaché à une seule
-    délégation y arrive directement.
-  </p>
-  <p>
-    <a routerLink="/suivi-notes">Notes sur les participants</a> : commentaires logistiques
-    signés et datés, sans données de santé.
-  </p>
+  <div class="toolbar">
+    <p class="help">
+      Cochez des groupes ou des lieux puis choisissez un car, ou glissez-les sur un car. Sur mobile, le parcours est en deux étapes.
+    </p>
+    <div class="create-buttons">
+      <button tuiButton type="button" size="s" appearance="secondary" (click)="openCarDrawer(null)">+ Car</button>
+    </div>
+  </div>
+  @if (error()) {
+    <p class="api-error" role="alert">{{ error() }}</p>
+  }
+  @if (loading() && !board()) {
+    <app-loading-skeleton />
+  } @else if (board(); as b) {
+    <div class="steps" role="tablist" aria-label="Étapes">
+      <button type="button" class="step" role="tab" [class.active]="step() === 'cibles'" [attr.aria-selected]="step() === 'cibles'" (click)="step.set('cibles')">
+        1 À desservir
+      </button>
+      <button type="button" class="step" role="tab" [class.active]="step() === 'cars'" [attr.aria-selected]="step() === 'cars'" (click)="step.set('cars')">
+        2 Cars
+      </button>
+    </div>
+    <div class="panels">
+      <section class="panel targets" [class.hidden-mobile]="step() !== 'cibles'" aria-label="Groupes et lieux à desservir">
+        <header class="panel-head">
+          <h2>À desservir ({{ b.targets.length }})</h2>
+          <div class="panel-filters">
+            <tui-textfield iconStart="@tui.search" class="target-search">
+              <label tuiLabel for="target-search">Rechercher un groupe ou un lieu…</label>
+              <input tuiInput id="target-search" [ngModel]="search()" (ngModelChange)="search.set($event)" name="target-search" />
+            </tui-textfield>
+          </div>
+          <label class="check-all">
+            <input type="checkbox" [checked]="allVisibleSelected()" (change)="toggleAllVisible()" />
+            Tout cocher ({{ panelTargets().length }})
+          </label>
+        </header>
+        <ul class="panel-list">
+          @for (t of panelTargets(); track t.key) {
+            <li class="target-row" [class.selected]="isSelected(t)" draggable="true" (dragstart)="onDragStart($event, t)">
+              <input type="checkbox" [checked]="isSelected(t)" (change)="toggleSelect(t)" [attr.aria-label]="'Sélectionner ' + t.name" />
+              <span class="target-label">
+                <b>{{ t.name }}</b>
+                <small>{{ t.detail }}</small>
+              </span>
+              <span class="tui-badge" [class.served]="t.carId !== null">{{ t.carName || 'Non desservie' }}</span>
+            </li>
+          } @empty {
+            <li class="empty">
+              @if (b.targets.length) {
+                Aucun groupe ou lieu ne correspond à la recherche.
+              } @else {
+                Aucun groupe d'hébergement ni hébergement collectif. Ils se gèrent dans « Hébergement ».
+              }
+            </li>
+          }
+        </ul>
+        <footer class="panel-foot">
+          <span class="hint">{{ selectionCount() }} sélectionné(s), {{ selectionPersons() }} personnes · {{ servedCount() }}/{{ b.targets.length }} desservis</span>
+          <app-select-field
+            class="bulk-target"
+            label="Affecter à…"
+            [options]="carOptions()"
+            [value]="targetCarId()"
+            placeholder="Choisir un car…"
+            (valueChange)="targetCarId.set($event)"
+          />
+          <button tuiButton type="button" size="s" class="assign-btn" [disabled]="!selectionCount() || !targetCarId() || assigning()" (click)="assignSelection(targetCarId())">
+            Affecter ({{ selectionCount() }})
+          </button>
+          <button tuiButton type="button" size="s" appearance="secondary" class="only-mobile" [disabled]="!selectionCount()" (click)="step.set('cars')">Choisir le car ({{ selectionCount() }})</button>
+        </footer>
+      </section>
+
+      <section class="panel cars" [class.hidden-mobile]="step() !== 'cars'" aria-label="Cars du rassemblement">
+        <header class="panel-head">
+          <h2>Cars du rassemblement ({{ b.cars.length }})</h2>
+          <p class="help">Déposez la sélection sur une carte ou utilisez « Affecter la sélection ».</p>
+          <div class="selection-reminder" [class.empty-selection]="!selectionCount()" role="status">
+            @if (selectionCount()) {
+              <strong>Sélection : {{ selectionCount() }} cible(s), {{ selectionPersons() }} personnes</strong>
+            } @else {
+              Aucune sélection.
+            }
+            <button type="button" class="link" (click)="step.set('cibles')">‹ Modifier la sélection</button>
+          </div>
+        </header>
+        <div class="panel-list cards">
+          @for (car of b.cars; track car.id) {
+            <article class="transport-card" [class.drop-over]="dragOverId() === car.id" [class.over-capacity]="gaugeState(car) === 'over'"
+              (dragover)="onDragOver($event, car.id)" (dragleave)="dragOverId.set(null)" (drop)="onDrop($event, car.id)">
+              <header>
+                <h3>{{ car.name }}</h3>
+                <span class="gauge-text" [class.full]="gaugeState(car) !== 'ok'">
+                  @if (car.capacity !== null) { {{ car.occupancy }}/{{ car.capacity }} places } @else { {{ car.occupancy }} personnes, sans jauge }
+                </span>
+              </header>
+              @if (car.capacity !== null) {
+                <div class="jauge-bar" role="img" [attr.aria-label]="'Jauge : ' + car.occupancy + ' sur ' + car.capacity">
+                  <div class="jauge-fill" [class.over]="gaugeState(car) === 'over'" [class.complete]="gaugeState(car) === 'full'" [style.width.%]="jaugePercent(car)"></div>
+                </div>
+                @if (gaugeState(car) === 'full') {
+                  <p class="complete-note">Complet</p>
+                } @else if (gaugeState(car) === 'over') {
+                  <p class="full jauge-alerte">Jauge dépassée</p>
+                }
+              }
+              <p class="summary">
+                @if (car.stops.length) { {{ stopsSummary(car.stops) }} } @else { Aucun arrêt défini. }
+              </p>
+              <p class="summary">{{ serviceDatesSummary(car.serviceDates) }}</p>
+              <div class="card-actions">
+                <button tuiButton type="button" size="s" [disabled]="!selectionCount() || assigning()" (click)="assignSelection(car.id)">
+                  Affecter la sélection
+                </button>
+                <button tuiButton type="button" size="s" appearance="secondary" [attr.aria-expanded]="isCardOpen(car.id)" (click)="toggleCard(car.id)">
+                  {{ isCardOpen(car.id) ? 'Masquer les détails' : 'Détails' }}
+                </button>
+              </div>
+              @if (isCardOpen(car.id)) {
+                <div class="card-actions">
+                  <button tuiButton type="button" size="s" appearance="secondary" (click)="openCarDrawer(car)">Modifier</button>
+                  <button tuiButton type="button" size="s" appearance="secondary" (click)="openStopsDrawer(car)">Arrêts ({{ car.stops.length }})</button>
+                  <button tuiButton type="button" size="s" appearance="secondary" (click)="openPersonDrawer(car)">+ Personne</button>
+                  <button tuiButton type="button" size="s" appearance="secondary" (click)="removeCar(car)">Supprimer</button>
+                </div>
+                <h4 class="detail-title">Desserte ({{ car.assignments.length }})</h4>
+                <ul class="placed">
+                  @for (a of car.assignments; track a.id) {
+                    <li>
+                      {{ a.name }} · {{ a.personCount }} personne(s)
+                      <button tuiButton size="xs" appearance="flat" type="button" (click)="unassign(a)">Retirer</button>
+                    </li>
+                  } @empty {
+                    <li class="empty">Aucune cible desservie.</li>
+                  }
+                </ul>
+                @if (car.persons.length) {
+                  <h4 class="detail-title">Exceptions individuelles</h4>
+                  <ul class="placed">
+                    @for (p of car.persons; track p.id) {
+                      <li>
+                        {{ p.firstName }} {{ p.lastName }}
+                        <span class="tui-badge">{{ p.kind === 'ADDED' ? 'Part avec ce car' : 'Ne part pas' }}</span>
+                        <button tuiButton size="xs" appearance="flat" type="button" (click)="removePerson(p.id)">Annuler</button>
+                      </li>
+                    }
+                  </ul>
+                }
+                @if (car.notes) {
+                  <p class="summary">Notes : {{ car.notes }}</p>
+                }
+              }
+            </article>
+          } @empty {
+            <p class="empty">Aucun car. Utilisez « + Car » pour créer le premier.</p>
+          }
+        </div>
+      </section>
+    </div>
+  }
 </app-page-layout>
+
+@if (drawer() === 'car') {
+  <tui-drawer direction="end">
+    <header>
+      <h2>{{ editingCarId() ? 'Modifier le car' : 'Nouveau car' }}</h2>
+    </header>
+    <form class="drawer-form" id="car-form" (submit)="saveCar(); $event.preventDefault()">
+      <tui-textfield>
+        <label for="c-name" tuiLabel>Libellé</label
+        ><input tuiInput id="c-name" [ngModel]="carForm().name" (ngModelChange)="carForm.update((f) => ({ ...f, name: $event }))" name="cname" required />
+      </tui-textfield>
+      <tui-textfield>
+        <label for="c-cap" tuiLabel>Jauge (places, vide = sans limite)</label
+        ><input tuiInput id="c-cap" type="number" min="1" [ngModel]="carForm().capacity" (ngModelChange)="carForm.update((f) => ({ ...f, capacity: $event === '' || $event === null ? null : +$event }))" name="ccap" />
+      </tui-textfield>
+      <div class="field-block wide">
+        <span class="field-label">Jours de circulation</span>
+        <div class="day-choices">
+          @for (day of dayOptions; track day.value) {
+            <label class="day-choice">
+              <input type="checkbox" [checked]="carForm().serviceDates.includes(day.value)" (change)="toggleDay(day.value)" />
+              {{ day.label }}
+            </label>
+          }
+        </div>
+      </div>
+      <div class="field-block">
+        <label class="field-label" for="c-notes">Notes (chauffeur, contact…)</label>
+        <tui-textfield>
+          <textarea tuiTextarea id="c-notes" [ngModel]="carForm().notes" (ngModelChange)="carForm.update((f) => ({ ...f, notes: $event }))" name="cnotes"></textarea>
+        </tui-textfield>
+      </div>
+    </form>
+    <footer>
+      <button tuiButton appearance="flat" type="button" (click)="drawer.set(null)">Annuler</button>
+      <button tuiButton type="submit" form="car-form" [disabled]="!carForm().name.trim()">
+        {{ editingCarId() ? 'Enregistrer' : 'Créer le car' }}
+      </button>
+    </footer>
+  </tui-drawer>
+}
+
+@if (drawer() === 'stops') {
+  <tui-drawer direction="end">
+    <header>
+      <h2>Arrêts du car, dans l'ordre du trajet</h2>
+    </header>
+    <form class="drawer-form" id="stops-form" (submit)="saveStops(); $event.preventDefault()">
+      @for (stop of stopsForm(); track $index) {
+        <div class="stop-row">
+          <tui-textfield class="stop-label">
+            <label [attr.for]="'s-label-' + $index" tuiLabel>Arrêt {{ $index + 1 }}</label
+            ><input tuiInput [id]="'s-label-' + $index" [ngModel]="stop.label" (ngModelChange)="updateStop($index, { label: $event })" [name]="'slabel' + $index" required />
+          </tui-textfield>
+          <tui-textfield class="stop-time">
+            <label [attr.for]="'s-time-' + $index" tuiLabel>Heure</label
+            ><input tuiInput [id]="'s-time-' + $index" type="time" [ngModel]="stop.time" (ngModelChange)="updateStop($index, { time: $event || null })" [name]="'stime' + $index" />
+          </tui-textfield>
+          <div class="stop-actions">
+            <button tuiButton type="button" size="xs" appearance="flat" [disabled]="$index === 0" (click)="moveStop($index, -1)">↑</button>
+            <button tuiButton type="button" size="xs" appearance="flat" [disabled]="$index === stopsForm().length - 1" (click)="moveStop($index, 1)">↓</button>
+            <button tuiButton type="button" size="xs" appearance="flat" (click)="removeStop($index)">✕</button>
+          </div>
+        </div>
+      }
+      <button tuiButton type="button" size="s" appearance="secondary" (click)="addStop()">+ Ajouter un arrêt</button>
+    </form>
+    <footer>
+      <button tuiButton appearance="flat" type="button" (click)="drawer.set(null)">Annuler</button>
+      <button tuiButton type="submit" form="stops-form">Enregistrer les arrêts</button>
+    </footer>
+  </tui-drawer>
+}
+
+@if (drawer() === 'person') {
+  <tui-drawer direction="end">
+    <header>
+      <h2>Exception individuelle</h2>
+    </header>
+    <form class="drawer-form" id="person-form" (submit)="savePerson(); $event.preventDefault()">
+      <app-select-field
+        label="Type d'exception"
+        [options]="kindOptions"
+        [value]="personForm().kind"
+        (valueChange)="personForm.update((f) => ({ ...f, kind: $event ?? 'ADDED' }))"
+      />
+      <app-person-picker
+        label="Personne (jeune ou animateur)"
+        source="participants"
+        [filters]="false"
+        [value]="personForm().person"
+        (valueChange)="personForm.update((f) => ({ ...f, person: $event }))"
+      />
+      <p class="help wide">
+        « Part avec ce car » : la personne voyage avec ce car alors que son lieu d'hébergement n'est pas desservi par lui.
+        « Ne part pas » : elle ne voyage pas avec ce car alors que son lieu y est desservi. Aucune donnée de santé.
+      </p>
+    </form>
+    <footer>
+      <button tuiButton appearance="flat" type="button" (click)="drawer.set(null)">Annuler</button>
+      <button tuiButton type="submit" form="person-form" [disabled]="!personForm().person">Enregistrer</button>
+    </footer>
+  </tui-drawer>
+}

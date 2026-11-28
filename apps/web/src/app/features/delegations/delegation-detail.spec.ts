@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { provideTaiga, TuiRoot } from '@taiga-ui/core';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -209,5 +210,23 @@ describe('DelegationDetailPage (refonte : onglets, deux panneaux, sélection)', 
     expect(ask).toHaveBeenCalledTimes(1);
     expect(ask.mock.calls[0]).toBeDefined();
     http.expectNone((r) => r.method === 'DELETE');
+  });
+
+  it('note refusée (NOT_ALLOWED) : exception créée, texte conservé, message honnête sans « note enregistrée »', async () => {
+    const { fixture, http } = await setup();
+    const page = fixture.debugElement.query(By.directive(DelegationDetailPage)).componentInstance as {
+      exceptionForm: { set: (v: unknown) => void; (): { note: string } };
+      createException: () => void;
+      error: () => string;
+    };
+    page.exceptionForm.set({ personKey: 'PARTICIPANT:7', toDelegationId: 4, note: 'Famille à Annecy ce week-end' });
+    page.createException();
+    http
+      .expectOne((r) => r.method === 'POST' && r.url === '/api/delegations/2/exceptions')
+      .flush({ id: 1, noteStatus: 'NOT_ALLOWED' });
+    expect(page.exceptionForm().note).toBe('Famille à Annecy ce week-end');
+    expect(page.error()).toContain('créée');
+    expect(page.error()).toContain('pas été enregistrée');
+    http.match(() => true).forEach((r) => r.flush([]));
   });
 });

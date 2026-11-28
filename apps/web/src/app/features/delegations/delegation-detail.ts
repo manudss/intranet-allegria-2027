@@ -366,10 +366,21 @@ export class DelegationDetailPage implements OnInit {
         note: f.note.trim() || undefined,
       })
       .subscribe({
-        next: () => {
-          this.exceptionForm.set({ personKey: '', toDelegationId: null, note: '' });
+        next: (created) => {
+          const noteRefused = (created as { noteStatus?: string } | null)?.noteStatus === 'NOT_ALLOWED';
+          // Note refusée : l'exception est bien créée, le texte saisi est conservé et rien n'annonce une note enregistrée.
+          this.exceptionForm.set({
+            personKey: '',
+            toDelegationId: null,
+            note: noteRefused ? f.note : '',
+          });
           this.drawer.set(null);
           this.reload();
+          if (noteRefused) {
+            this.error.set(
+              'L’exception est créée, mais votre note n’a pas été enregistrée : vous n’avez pas le droit d’écrire des notes. Le texte est conservé dans le formulaire d’exception.',
+            );
+          }
         },
         error: () => this.error.set('L’exception n’a pas pu être créée.'),
       });

@@ -4,7 +4,9 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { provideTaiga, TuiRoot } from '@taiga-ui/core';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { of } from 'rxjs';
+import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { DelegationDetailPage } from './delegation-detail';
 import { PersonLite, Repartition } from './delegations-api.service';
 
@@ -45,7 +47,7 @@ const REPARTITION: Repartition = {
       notes: null,
       occupancy: 3,
       full: false,
-      persons: [],
+      persons: [{ assignmentId: 5, person: person(12, 'PARTICIPANT', 'Jean', 'Placé'), transportId: 1, delegationId: 2 }],
     },
   ],
   exceptionsReceived: [],
@@ -79,7 +81,7 @@ describe('DelegationDetailPage (refonte : onglets, deux panneaux, sélection)', 
   });
   afterEach(() => TestBed.resetTestingModule());
 
-  async function setup() {
+  async function setup(extra: unknown[] = []) {
     await TestBed.configureTestingModule({
       imports: [HostComponent],
       providers: [
@@ -88,6 +90,7 @@ describe('DelegationDetailPage (refonte : onglets, deux panneaux, sélection)', 
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map([['id', '2']]) } } },
+        ...(extra as never[]),
       ],
     }).compileComponents();
     const fixture = TestBed.createComponent(HostComponent);
@@ -193,5 +196,18 @@ describe('DelegationDetailPage (refonte : onglets, deux panneaux, sélection)', 
     fixture.detectChanges();
     const form = el.querySelector('#exception-form')!;
     expect(form.querySelectorAll('input[tuiComboBox], input[tuicombobox]').length).toBe(2);
+  });
+
+  it('« Retirer » demande une confirmation et n envoie rien si on annule', async () => {
+    const ask = vi.fn(() => of(false));
+    const { fixture, http } = await setup([{ provide: ConfirmDialogService, useValue: { ask, askDelete: vi.fn() } }]);
+    const el: HTMLElement = fixture.nativeElement;
+    const card = el.querySelector('.transport-card')!;
+    Array.from(card.querySelectorAll<HTMLButtonElement>('button')).find((b) => b.textContent?.includes('Détails'))!.click();
+    fixture.detectChanges();
+    Array.from(card.querySelectorAll<HTMLButtonElement>('button')).find((b) => b.textContent?.includes('Retirer'))!.click();
+    expect(ask).toHaveBeenCalledTimes(1);
+    expect(ask.mock.calls[0]).toBeDefined();
+    http.expectNone((r) => r.method === 'DELETE');
   });
 });

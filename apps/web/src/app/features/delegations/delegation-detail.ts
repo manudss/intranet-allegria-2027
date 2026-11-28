@@ -324,10 +324,24 @@ export class DelegationDetailPage implements OnInit {
 
   protected unassign(entry: AssignmentEntry) {
     if (!entry.assignmentId) return;
-    this.api.unassign(entry.assignmentId).subscribe({
-      next: () => this.reload(),
-      error: () => this.error.set('Le retrait n’a pas pu être enregistré.'),
-    });
+    const assignmentId = entry.assignmentId;
+    const isException = !!entry.person && entry.person.delegationId !== this.delegation()?.id;
+    const name = entry.person ? this.personLabel(entry.person) : 'cette personne';
+    this.confirmDialog
+      .ask({
+        title: `Retirer ${name} ?`,
+        message: isException
+          ? 'C’est une exception : elle sera supprimée et la personne retournera dans sa délégation d’origine.'
+          : 'La personne retourne dans l’« à placer ».',
+        yes: 'Retirer',
+      })
+      .subscribe((ok) => {
+        if (!ok) return;
+        this.api.unassign(assignmentId).subscribe({
+          next: () => this.reload(),
+          error: () => this.error.set('Le retrait n’a pas pu être enregistré.'),
+        });
+      });
   }
 
   protected setAssignTarget(key: string, value: number | null) {

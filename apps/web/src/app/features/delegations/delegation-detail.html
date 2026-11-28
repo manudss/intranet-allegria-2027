@@ -271,11 +271,11 @@
       <h2>Nouvelle exception ({{ direction() === 'ALLER' ? 'aller' : 'retour' }})</h2>
     </header>
     <form class="drawer-form" id="exception-form" (submit)="createException(); $event.preventDefault()">
-      <div class="field-block wide" role="group" aria-label="Sens de l'exception">
+      <div class="field-block wide exception-mode" role="group" aria-label="Sens de l'exception">
         <button
           tuiButton
           type="button"
-          size="s"
+          size="m"
           [appearance]="exceptionMode() === 'origin' ? 'primary' : 'secondary'"
           (click)="setExceptionMode('origin')"
         >
@@ -284,7 +284,7 @@
         <button
           tuiButton
           type="button"
-          size="s"
+          size="m"
           [appearance]="exceptionMode() === 'host' ? 'primary' : 'secondary'"
           (click)="setExceptionMode('host')"
         >

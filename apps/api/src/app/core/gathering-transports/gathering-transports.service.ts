@@ -129,11 +129,11 @@ export class GatheringTransportsService {
       if (groupId) countByGroup.set(groupId, (countByGroup.get(groupId) ?? 0) + 1);
     }
 
-    const assignmentByTarget = new Map<string, GatheringCarAssignment>();
+    const assignmentByTarget = new Map<string, { assignment: GatheringCarAssignment; car: GatheringCar }>();
     for (const car of cars) {
       for (const a of car.assignments) {
         const id = a.targetType === GatheringCarTarget.HOSTING_GROUP ? a.hostingGroup?.id : a.hostFamily?.id;
-        if (id !== undefined && id !== null) assignmentByTarget.set(targetKey(a.targetType, id), a);
+        if (id !== undefined && id !== null) assignmentByTarget.set(targetKey(a.targetType, id), { assignment: a, car });
       }
     }
 
@@ -151,7 +151,7 @@ export class GatheringTransportsService {
       if (familyCount) parts.push(`${familyCount} ${plural(familyCount, 'famille d\'accueil', 'familles d\'accueil')}`);
       if (collectiveCount) parts.push(`${collectiveCount} ${plural(collectiveCount, 'hébergement collectif', 'hébergements collectifs')}`);
       const personCount = countByGroup.get(group.id) ?? 0;
-      const assignment = assignmentByTarget.get(targetKey(GatheringCarTarget.HOSTING_GROUP, group.id));
+      const entry = assignmentByTarget.get(targetKey(GatheringCarTarget.HOSTING_GROUP, group.id));
       targets.push({
         key: targetKey(GatheringCarTarget.HOSTING_GROUP, group.id),
         targetType: GatheringCarTarget.HOSTING_GROUP,
@@ -159,16 +159,16 @@ export class GatheringTransportsService {
         name: group.name,
         detail: `${parts.join(', ') || 'Aucun hébergement'} · ${personCount} ${plural(personCount, 'personne', 'personnes')} · ${kindLabel(group.kind)}`,
         personCount,
-        assignmentId: assignment?.id ?? null,
-        carId: assignment?.car.id ?? null,
-        carName: assignment?.car.name ?? null,
+        assignmentId: entry?.assignment.id ?? null,
+        carId: entry?.car.id ?? null,
+        carName: entry?.car.name ?? null,
       });
     }
     // Hébergements collectifs hors de tout groupe : desservis comme une cible propre.
     for (const family of families) {
       if (family.accommodationType !== AccommodationType.COLLECTIVE || family.hostingGroup) continue;
       const personCount = countByFamily.get(family.id) ?? 0;
-      const assignment = assignmentByTarget.get(targetKey(GatheringCarTarget.HOST_FAMILY, family.id));
+      const entry = assignmentByTarget.get(targetKey(GatheringCarTarget.HOST_FAMILY, family.id));
       targets.push({
         key: targetKey(GatheringCarTarget.HOST_FAMILY, family.id),
         targetType: GatheringCarTarget.HOST_FAMILY,
@@ -176,9 +176,9 @@ export class GatheringTransportsService {
         name: family.familyName,
         detail: `Hébergement collectif · ${family.city} · ${personCount} ${plural(personCount, 'personne', 'personnes')}`,
         personCount,
-        assignmentId: assignment?.id ?? null,
-        carId: assignment?.car.id ?? null,
-        carName: assignment?.car.name ?? null,
+        assignmentId: entry?.assignment.id ?? null,
+        carId: entry?.car.id ?? null,
+        carName: entry?.car.name ?? null,
       });
     }
     targets.sort((a, b) => (a.carId ? 1 : 0) - (b.carId ? 1 : 0) || a.name.localeCompare(b.name, 'fr'));

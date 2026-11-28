@@ -203,11 +203,30 @@ export class Transports implements OnInit {
       return;
     }
     this.error.set('');
+    const moved = targets.filter((t) => t.carId != null && t.carId !== carId);
+    if (!moved.length) {
+      this.sendAssign(carId, targets, false);
+      return;
+    }
+    const carName = this.board()?.cars.find((c) => c.id === carId)?.name ?? 'ce car';
+    this.confirmDialog
+      .ask({
+        title: 'Déplacer vers un autre car ?',
+        message: `${moved.map((t) => `${t.name} (actuellement ${t.carName ?? 'un autre car'})`).join(', ')} : déplacer vers « ${carName} » ?`,
+        yes: 'Déplacer',
+      })
+      .subscribe((ok) => {
+        if (ok) this.sendAssign(carId, targets, true);
+      });
+  }
+
+  private sendAssign(carId: number, targets: ServeTarget[], confirmMove: boolean) {
     this.assigning.set(true);
     this.api
       .assign(
         carId,
         targets.map((t) => ({ targetType: t.targetType, id: t.id })),
+        confirmMove,
       )
       .subscribe({
         next: () => {
@@ -216,9 +235,14 @@ export class Transports implements OnInit {
           this.targetCarId.set(null);
           this.reload();
         },
-        error: () => {
+        error: (err) => {
           this.assigning.set(false);
-          this.error.set('L\'affectation n\'a pas pu être enregistrée. Rechargement de l\'état réel.');
+          const msg = err?.error?.message;
+          this.error.set(
+            err?.status === 400 && typeof msg === 'string'
+              ? msg
+              : 'L\'affectation n\'a pas pu être enregistrée. Rechargement de l\'état réel.',
+          );
           this.reload();
         },
       });

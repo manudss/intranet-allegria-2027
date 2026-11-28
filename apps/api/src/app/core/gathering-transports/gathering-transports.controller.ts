@@ -98,7 +98,7 @@ export class GatheringTransportsController {
     @Param('id', ParseIntPipe) id: number,
     @Body(new ValidationPipe({ whitelist: true, transform: true })) dto: AssignTargetsDto,
   ) {
-    return this.service.assign(id, dto.targets);
+    return this.service.assign(id, dto.targets, dto.confirmMove === true);
   }
 
   @ApiOperation({ summary: 'Retirer une cible d\'un car (retour dans « à desservir »)' })

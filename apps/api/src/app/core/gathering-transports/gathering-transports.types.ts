@@ -87,6 +87,11 @@ export class AssignTargetsDto {
   @Type(() => AssignTargetDto)
   @ArrayMaxSize(100)
   targets!: AssignTargetDto[];
+
+  @ApiPropertyOptional({ description: 'Confirme le déplacement de cibles déjà affectées à un autre car.' })
+  @IsOptional()
+  @IsBoolean()
+  confirmMove?: boolean;
 }
 
 export class SetTransportNeedDto {

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -337,8 +338,56 @@ export class GatheringTransportsService {
   // ------------------------------------------------------------- affectations
 
   /** Affecte des cibles à un car : une cible déjà desservie ailleurs est déplacée. */
-  async assign(carId: number, targets: AssignTargetDto[]): Promise<CarView> {
+  /** Personnes logées (affectations non annulées) d'une cible : groupe d'hébergement ou hébergement collectif. */
+  private async targetPersonCount(target: AssignTargetDto): Promise<number> {
+    const rows = await this.housedRepository.find({ relations: { hostFamily: { hostingGroup: true } } });
+    return rows.filter(
+      (r) =>
+        r.status !== AssignmentStatus.CANCELLED &&
+        (target.targetType === GatheringCarTarget.HOSTING_GROUP
+          ? r.hostFamily?.hostingGroup?.id === target.id
+          : r.hostFamily?.id === target.id),
+    ).length;
+  }
+
+  /**
+   * Affecte des cibles à un car. Règles validées par l'utilisateur :
+   * - on bloque une affectation qui dépasse la capacité renseignée du car (sans capacité : pas de blocage) ;
+   * - déplacer une cible déjà affectée à un autre car demande une confirmation explicite (confirmMove).
+   * Rien n'est modifié si l'une des deux règles refuse.
+   */
+  async assign(carId: number, targets: AssignTargetDto[], confirmMove = false): Promise<CarView> {
     const car = await this.findCar(carId);
+    const moved: string[] = [];
+    let added = 0;
+    for (const target of targets) {
+      const where =
+        target.targetType === GatheringCarTarget.HOSTING_GROUP
+          ? { hostingGroup: { id: target.id } }
+          : { hostFamily: { id: target.id } };
+      const current = await this.assignmentsRepository.findOne({
+        where,
+        relations: { car: true, hostingGroup: true, hostFamily: true },
+      });
+      if (current && current.car.id === car.id) continue;
+      added += await this.targetPersonCount(target);
+      if (current) moved.push(current.hostingGroup?.name ?? current.hostFamily?.familyName ?? `#${target.id}`);
+    }
+    if (moved.length && !confirmMove) {
+      throw new ConflictException({
+        code: 'CONFIRM_MOVE',
+        message: `Déplacer vers « ${car.name} » : ${moved.join(', ')} est déjà affecté à un autre car. Confirmation requise.`,
+        moved,
+      });
+    }
+    if (car.capacity != null && added > 0) {
+      const occupancy = (await this.carView(carId)).occupancy;
+      if (occupancy + added > car.capacity) {
+        throw new BadRequestException(
+          `Capacité du car « ${car.name} » dépassée : ${occupancy} + ${added} = ${occupancy + added} pour ${car.capacity} places.`,
+        );
+      }
+    }
     for (const target of targets) {
       const where =
         target.targetType === GatheringCarTarget.HOSTING_GROUP

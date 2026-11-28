@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import {
   AccommodationType,
@@ -189,13 +189,47 @@ describe('GatheringTransportsService', () => {
     (service as any).assignmentsRepository = assignmentsRepository;
     carsRepository.save.mockImplementation(async (c: Row) => c);
 
-    const view = await service.assign(100, [{ targetType: GatheringCarTarget.HOSTING_GROUP, id: 1 }]);
+    const view = await service.assign(100, [{ targetType: GatheringCarTarget.HOSTING_GROUP, id: 1 }], true);
 
     expect(assignmentsRepository.remove).toHaveBeenCalled();
     expect(assignmentsRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({ targetType: GatheringCarTarget.HOSTING_GROUP }),
     );
     expect(view.id).toBe(100);
+  });
+
+  it('assign : refuse le déplacement d\'une cible déjà affectée sans confirmation, sans rien modifier', async () => {
+    const { service, state } = buildService();
+    state.cars.push({ id: 101, name: 'Car B', capacity: null, serviceDates: null, notes: null, stops: [], assignments: [], persons: [] });
+    const assignmentsRepository = repo([
+      { id: 50, car: { id: 101 }, targetType: GatheringCarTarget.HOSTING_GROUP, hostingGroup: { id: 1, name: 'Zone Nord' }, hostFamily: null },
+    ]);
+    (service as any).assignmentsRepository = assignmentsRepository;
+    await expect(
+      service.assign(100, [{ targetType: GatheringCarTarget.HOSTING_GROUP, id: 1 }]),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(assignmentsRepository.remove).not.toHaveBeenCalled();
+    expect(assignmentsRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('assign : bloque une affectation qui dépasse la capacité du car (Zone Nord = 3 personnes)', async () => {
+    const { service, state } = buildService();
+    state.cars[0].capacity = 2;
+    const assignmentsRepository = repo([]);
+    (service as any).assignmentsRepository = assignmentsRepository;
+    await expect(
+      service.assign(100, [{ targetType: GatheringCarTarget.HOSTING_GROUP, id: 1 }]),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(assignmentsRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('assign : accepte quand la capacité suffit', async () => {
+    const { service, state } = buildService();
+    state.cars[0].capacity = 3;
+    const assignmentsRepository = repo([]);
+    (service as any).assignmentsRepository = assignmentsRepository;
+    await service.assign(100, [{ targetType: GatheringCarTarget.HOSTING_GROUP, id: 1 }]);
+    expect(assignmentsRepository.save).toHaveBeenCalled();
   });
 
   it('assign : un hébergement ordinaire ne se desservit pas seul (sa cible est son groupe)', async () => {

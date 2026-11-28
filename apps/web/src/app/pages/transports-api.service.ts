@@ -95,8 +95,8 @@ export class TransportsApiService {
   setStops(id: number, stops: StopPayload[]) {
     return this.http.put<GatheringCar>(`${this.base}/cars/${id}/stops`, { stops });
   }
-  assign(id: number, targets: { targetType: GatheringCarTarget; id: number }[]) {
-    return this.http.put<GatheringCar>(`${this.base}/cars/${id}/assignments`, { targets });
+  assign(id: number, targets: { targetType: GatheringCarTarget; id: number }[], confirmMove = false) {
+    return this.http.put<GatheringCar>(`${this.base}/cars/${id}/assignments`, { targets, confirmMove });
   }
   setNeed(target: Pick<ServeTarget, 'targetType' | 'id'>, needsTransport: boolean | null) {
     const path = target.targetType === 'HOSTING_GROUP' ? 'hosting-groups' : 'host-families';

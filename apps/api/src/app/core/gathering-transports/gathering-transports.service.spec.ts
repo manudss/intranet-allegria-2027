@@ -6,7 +6,7 @@ import {
   GatheringCarPersonKind,
   GatheringCarTarget,
 } from '../entities';
-import { GatheringTransportsService } from './gathering-transports.service';
+import { GatheringTransportsService, computeTripOccupancy } from './gathering-transports.service';
 
 type Row = Record<string, any>;
 
@@ -268,5 +268,48 @@ describe('GatheringTransportsService', () => {
   it('removeCar : 404 sur un car inconnu', async () => {
     const { service } = buildService();
     await expect(service.removeCar(999)).rejects.toBeInstanceOf(NotFoundException);
+  });
+});
+
+describe('computeTripOccupancy', () => {
+  const row = (pid: number, familyId: number, groupId: number | null, arrival: string, departure: string, status = AssignmentStatus.CONFIRMED) => ({
+    status,
+    arrivalDate: arrival,
+    departureDate: departure,
+    participant: { id: pid },
+    hostFamily: { id: familyId, hostingGroup: groupId ? { id: groupId } : null },
+  });
+  const G = (id: number) => ({ targetType: GatheringCarTarget.HOSTING_GROUP, id });
+  const rows = [
+    row(1, 10, 1, '2027-10-28', '2027-10-31'),
+    row(2, 10, 1, '2027-10-28', '2027-10-31'),
+    row(3, 11, 1, '2027-10-28', '2027-10-30'),
+    row(4, 11, 1, '2027-10-28', '2027-10-31', AssignmentStatus.CANCELLED),
+  ];
+
+  it('groupe entier : tous les logés comptent, annulés exclus, dates de service nulles = un seul total', () => {
+    expect(computeTripOccupancy(null, [G(1)], [], rows)).toEqual([{ date: null, count: 3 }]);
+  });
+
+  it('exceptions : REMOVED retire, ADDED ajoute, sans compter deux fois', () => {
+    const persons = [
+      { kind: GatheringCarPersonKind.REMOVED, participantId: 2 },
+      { kind: GatheringCarPersonKind.ADDED, participantId: 99 },
+      { kind: GatheringCarPersonKind.ADDED, participantId: 1 },
+    ];
+    expect(computeTripOccupancy(null, [G(1)], persons, rows)[0].count).toBe(3);
+  });
+
+  it('trajets distincts : un voyageur parti avant la date ne compte pas, pas d\'addition entre trajets', () => {
+    const trips = computeTripOccupancy(['2027-10-30', '2027-10-31'], [G(1)], [], rows);
+    expect(trips).toEqual([
+      { date: '2027-10-30', count: 3 },
+      { date: '2027-10-31', count: 2 },
+    ]);
+  });
+
+  it('un participant relevant de deux cibles servies est compté une fois', () => {
+    const both = [G(1), { targetType: GatheringCarTarget.HOST_FAMILY, id: 10 }];
+    expect(computeTripOccupancy(null, both, [], rows)[0].count).toBe(3);
   });
 });

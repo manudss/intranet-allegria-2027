@@ -73,7 +73,9 @@ export interface CarView {
   capacity: number | null;
   serviceDates: string[] | null;
   notes: string | null;
+  /** Occupation maximale sur les trajets (dates de service). */
   occupancy: number;
+  tripOccupancy: TripOccupancy[];
   stops: CarStopView[];
   assignments: CarAssignmentView[];
   persons: CarPersonView[];
@@ -88,6 +90,53 @@ export interface GatheringTransportsBoard {
   notNeededCount: number;
   cars: CarView[];
 }
+
+export interface TripOccupancy {
+  /** null = car sans dates de service : tous les logés comptent. */
+  date: string | null;
+  count: number;
+}
+
+interface HousedLike {
+  status: AssignmentStatus;
+  arrivalDate?: string | null;
+  departureDate?: string | null;
+  participant: { id: number };
+  hostFamily: { id: number; hostingGroup?: { id: number } | null };
+}
+
+/**
+ * Occupation d'un car, trajet par trajet (un trajet = une date de service).
+ * Un voyageur n'occupe le car à une date que s'il est logé ce jour-là (arrivée <= date <= départ) ;
+ * il est compté une seule fois même s'il relève de deux cibles ; les exceptions REMOVED sont retirées
+ * et les ADDED ajoutées, sur tous les trajets.
+ */
+export const computeTripOccupancy = (
+  serviceDates: string[] | null,
+  targets: { targetType: GatheringCarTarget; id: number }[],
+  persons: { kind: GatheringCarPersonKind; participantId: number }[],
+  housed: HousedLike[],
+): TripOccupancy[] => {
+  const removed = new Set(persons.filter((p) => p.kind === GatheringCarPersonKind.REMOVED).map((p) => p.participantId));
+  const added = persons.filter((p) => p.kind === GatheringCarPersonKind.ADDED).map((p) => p.participantId);
+  const dates: (string | null)[] = serviceDates && serviceDates.length ? [...serviceDates].sort() : [null];
+  return dates.map((date) => {
+    const ids = new Set<number>();
+    for (const row of housed) {
+      if (row.status === AssignmentStatus.CANCELLED) continue;
+      if (date && row.arrivalDate && row.departureDate && (date < row.arrivalDate || date > row.departureDate)) continue;
+      const served = targets.some((t) =>
+        t.targetType === GatheringCarTarget.HOSTING_GROUP
+          ? row.hostFamily.hostingGroup?.id === t.id
+          : row.hostFamily.id === t.id,
+      );
+      if (served) ids.add(row.participant.id);
+    }
+    for (const id of removed) ids.delete(id);
+    for (const id of added) ids.add(id);
+    return { date, count: ids.size };
+  });
+};
 
 const targetKey = (targetType: GatheringCarTarget, id: number) => `${targetType}:${id}`;
 const plural = (n: number, one: string, many: string) => (n > 1 ? many : one);
@@ -266,10 +315,13 @@ export class GatheringTransportsService {
         firstName: p.participant.firstName,
         lastName: p.participant.lastName,
       }));
-      const occupancy =
-        assignmentViews.reduce((sum, a) => sum + a.personCount, 0) +
-        persons.filter((p) => p.kind === GatheringCarPersonKind.ADDED).length -
-        persons.filter((p) => p.kind === GatheringCarPersonKind.REMOVED).length;
+      const trips = computeTripOccupancy(
+        car.serviceDates,
+        assignmentViews.map((a) => ({ targetType: a.targetType, id: a.targetId })),
+        persons,
+        housed,
+      );
+      const occupancy = Math.max(0, ...trips.map((t) => t.count));
       return {
         id: car.id,
         name: car.name,
@@ -277,6 +329,7 @@ export class GatheringTransportsService {
         serviceDates: car.serviceDates,
         notes: car.notes,
         occupancy,
+        tripOccupancy: trips,
         stops: [...car.stops].sort((a, b) => a.orderIndex - b.orderIndex),
         assignments: assignmentViews,
         persons,
@@ -338,18 +391,6 @@ export class GatheringTransportsService {
   // ------------------------------------------------------------- affectations
 
   /** Affecte des cibles à un car : une cible déjà desservie ailleurs est déplacée. */
-  /** Personnes logées (affectations non annulées) d'une cible : groupe d'hébergement ou hébergement collectif. */
-  private async targetPersonCount(target: AssignTargetDto): Promise<number> {
-    const rows = await this.housedRepository.find({ relations: { hostFamily: { hostingGroup: true } } });
-    return rows.filter(
-      (r) =>
-        r.status !== AssignmentStatus.CANCELLED &&
-        (target.targetType === GatheringCarTarget.HOSTING_GROUP
-          ? r.hostFamily?.hostingGroup?.id === target.id
-          : r.hostFamily?.id === target.id),
-    ).length;
-  }
-
   /**
    * Affecte des cibles à un car. Règles validées par l'utilisateur :
    * - on bloque une affectation qui dépasse la capacité renseignée du car (sans capacité : pas de blocage) ;
@@ -359,7 +400,7 @@ export class GatheringTransportsService {
   async assign(carId: number, targets: AssignTargetDto[], confirmMove = false): Promise<CarView> {
     const car = await this.findCar(carId);
     const moved: string[] = [];
-    let added = 0;
+    const newTargets: AssignTargetDto[] = [];
     for (const target of targets) {
       const where =
         target.targetType === GatheringCarTarget.HOSTING_GROUP
@@ -370,7 +411,7 @@ export class GatheringTransportsService {
         relations: { car: true, hostingGroup: true, hostFamily: true },
       });
       if (current && current.car.id === car.id) continue;
-      added += await this.targetPersonCount(target);
+      newTargets.push(target);
       if (current) moved.push(current.hostingGroup?.name ?? current.hostFamily?.familyName ?? `#${target.id}`);
     }
     if (moved.length && !confirmMove) {
@@ -380,11 +421,26 @@ export class GatheringTransportsService {
         moved,
       });
     }
-    if (car.capacity != null && added > 0) {
-      const occupancy = (await this.carView(carId)).occupancy;
-      if (occupancy + added > car.capacity) {
+    if (car.capacity != null && newTargets.length) {
+      const [housed, current] = await Promise.all([
+        this.housedRepository.find({ relations: { hostFamily: { hostingGroup: true }, participant: true } }),
+        this.carsRepository.findOne({
+          where: { id: carId },
+          relations: { assignments: { hostingGroup: true, hostFamily: true }, persons: { participant: true } },
+        }),
+      ]);
+      const existing = (current?.assignments ?? [])
+        .map((a) => ({
+          targetType: a.targetType,
+          id: (a.targetType === GatheringCarTarget.HOSTING_GROUP ? a.hostingGroup?.id : a.hostFamily?.id) as number,
+        }))
+        .filter((t) => t.id != null);
+      const persons = (current?.persons ?? []).map((p) => ({ kind: p.kind, participantId: p.participant.id }));
+      const trips = computeTripOccupancy(car.serviceDates, [...existing, ...newTargets], persons, housed);
+      const worst = trips.reduce((m, t) => (t.count > m.count ? t : m), trips[0]);
+      if (worst.count > car.capacity) {
         throw new BadRequestException(
-          `Capacité du car « ${car.name} » dépassée : ${occupancy} + ${added} = ${occupancy + added} pour ${car.capacity} places.`,
+          `Capacité du car « ${car.name} » dépassée${worst.date ? ` le ${worst.date}` : ''} : ${worst.count} personnes pour ${car.capacity} places.`,
         );
       }
     }

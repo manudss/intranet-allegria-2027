@@ -99,9 +99,9 @@ export class Transports implements OnInit {
     this.reload();
   }
 
-  protected reload() {
+  protected reload(keepError = false) {
     this.loading.set(true);
-    this.error.set('');
+    if (!keepError) this.error.set('');
     this.api.board().subscribe({
       next: (board) => {
         this.board.set(board);
@@ -243,7 +243,7 @@ export class Transports implements OnInit {
               ? msg
               : 'L\'affectation n\'a pas pu être enregistrée. Rechargement de l\'état réel.',
           );
-          this.reload();
+          this.reload(true);
         },
       });
   }

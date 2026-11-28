@@ -80,9 +80,11 @@
 
 .placed { list-style: none; margin: .25rem 0 0; padding: 0; display: grid; gap: .2rem; }
 .placed-scroll { max-block-size: 14rem; overflow-y: auto; }
-.placed-toggle { display: flex; align-items: center; gap: .5rem; inline-size: 100%; border: 0; background: none; font: inherit; padding: .25rem .1rem; border-radius: .5rem; cursor: pointer; text-align: start; }
+.placed-toggle { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; inline-size: 100%; border: 0; background: none; font: inherit; padding: .25rem .1rem; border-radius: .5rem; cursor: pointer; text-align: start; }
 .placed-toggle:hover, .placed-toggle:focus-visible { background: var(--appearance-surface); }
-.placed-stack { margin-inline-start: auto; }
+.placed-stack { margin-inline-start: auto; max-inline-size: 100%; }
+.placed-toggle > span:not(.placed-stack) { white-space: nowrap; }
+.placed-stack [tuiAvatar].stack-more { inline-size: auto; min-inline-size: 1.5rem; padding-inline: .3rem; border-radius: .5rem; background: var(--stack-more-bg); color: var(--stack-more-fg); border: 1px solid var(--appearance-border); font-weight: 700; }
 .placed li { display: flex; gap: .5rem; align-items: center; font-size: .9rem; }
 .placed .link { margin-left: auto; }
 
@@ -129,10 +131,12 @@
 :host {
   --warn-soft-bg: #fdf0dc; --warn-soft-fg: #5c4400; --danger-fg: #b3261e;
   --cat-ta-fg: #c40002; --cat-es-fg: #00767a; --cat-mixte-fg: #5a4f44;
+  --stack-more-bg: #ece7e1; --stack-more-fg: #1b1f28;
 }
 :host-context([data-theme='dark']) {
   --warn-soft-bg: #4a3910; --warn-soft-fg: #ffe6a8; --danger-fg: #ff9a92;
   --cat-ta-fg: #ff8a8c; --cat-es-fg: #5fe0e0; --cat-mixte-fg: #d9cfc4;
+  --stack-more-bg: #4a4350; --stack-more-fg: #ffffff;
 }
 :host-context([data-theme='dark']) .chip { color: #1b1f28; }
 :host-context([data-theme='dark']) .group-card.overflow .gauge .bar { background: #ff6b63; }

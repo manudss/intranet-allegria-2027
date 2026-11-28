@@ -261,7 +261,7 @@ export class GatheringDispatchPage implements OnInit, OnDestroy {
     }
     const allowOverflow = this.board()?.repartition.allowOverflow;
     if (!allowOverflow && group.capacity != null && group.persons + team.persons > group.capacity) {
-      return `Capacité dépassée (${group.persons + team.persons}/${group.capacity})`;
+      return `Refusé : avec cette équipe (+${team.persons}), le groupe passerait à ${group.persons + team.persons}/${group.capacity} (actuel : ${group.persons}/${group.capacity})`;
     }
     return null;
   }

@@ -112,7 +112,7 @@
           </section>
         }
         <footer class="panel-foot">
-          <span class="hint">{{ selectionCount() }} sélectionné(s), {{ selectionPersons() }} personnes · {{ servedCount() }}/{{ b.targets.length }} desservis</span>
+          <span class="hint">{{ selectionCount() }} sélectionné(s), {{ selectionPersons() }} {{ selectionPersons() > 1 ? 'personnes' : 'personne' }} · {{ servedCount() }}/{{ b.targets.length }} desservis</span>
           <app-select-field
             class="bulk-target"
             label="Affecter à…"
@@ -134,7 +134,7 @@
           <p class="help">Déposez la sélection sur une carte ou utilisez « Affecter la sélection ».</p>
           <div class="selection-reminder" [class.empty-selection]="!selectionCount()" role="status">
             @if (selectionCount()) {
-              <strong>Sélection : {{ selectionCount() }} cible(s), {{ selectionPersons() }} personnes</strong>
+              <strong>Sélection : {{ selectionCount() }} cible(s), {{ selectionPersons() }} {{ selectionPersons() > 1 ? 'personnes' : 'personne' }}</strong>
             } @else {
               Aucune sélection.
             }
@@ -148,7 +148,7 @@
               <header>
                 <h3>{{ car.name }}</h3>
                 <span class="gauge-text" [class.full]="gaugeState(car) !== 'ok'">
-                  @if (car.capacity !== null) { {{ car.occupancy }}/{{ car.capacity }} places } @else { {{ car.occupancy }} personnes, sans jauge }
+                  @if (car.capacity !== null) { {{ car.occupancy }}/{{ car.capacity }} places } @else { {{ car.occupancy }} {{ car.occupancy > 1 ? 'personnes' : 'personne' }}, sans jauge }
                 </span>
               </header>
               @if (car.capacity !== null) {

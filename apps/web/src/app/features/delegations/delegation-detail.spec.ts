@@ -229,4 +229,40 @@ describe('DelegationDetailPage (refonte : onglets, deux panneaux, sélection)', 
     expect(page.error()).toContain('pas été enregistrée');
     http.match(() => true).forEach((r) => r.flush([]));
   });
+
+  it('côté accueil : recherche exacte, résultat minimal, exception créée vers cette délégation', async () => {
+    const { fixture, http } = await setup();
+    const page = fixture.debugElement.query(By.directive(DelegationDetailPage)).componentInstance as {
+      setExceptionMode: (m: 'origin' | 'host') => void;
+      hostLookup: { set: (v: unknown) => void; (): { results: unknown[]; searched: boolean } };
+      searchHostPerson: () => void;
+      pickHostPerson: (r: unknown) => void;
+      createException: () => void;
+    };
+    page.setExceptionMode('host');
+    page.hostLookup.set({ first: 'Camille', last: 'Martin', results: [], searched: false, loading: false, error: '' });
+    page.searchHostPerson();
+    const lookup = http.expectOne((r) => r.method === 'POST' && r.url === '/api/delegations/2/exception-lookup');
+    expect(lookup.request.body).toEqual({ firstName: 'Camille', lastName: 'Martin' });
+    const row = { personType: 'PARTICIPANT', id: 7, firstName: 'Camille', lastName: 'Martin', delegationName: 'Lyon', kind: 'JEUNE' };
+    lookup.flush([row]);
+    expect(page.hostLookup().results).toHaveLength(1);
+    page.pickHostPerson(row);
+    page.createException();
+    const create = http.expectOne((r) => r.method === 'POST' && r.url === '/api/delegations/2/exceptions');
+    expect(create.request.body).toMatchObject({ personType: 'PARTICIPANT', personId: 7, toDelegationId: 2 });
+    create.flush({ id: 1 });
+    http.match(() => true).forEach((r) => r.flush([]));
+  });
+
+  it('côté accueil : saisie trop courte, aucune requête envoyée', async () => {
+    const { fixture, http } = await setup();
+    const page = fixture.debugElement.query(By.directive(DelegationDetailPage)).componentInstance as {
+      hostLookup: { set: (v: unknown) => void };
+      searchHostPerson: () => void;
+    };
+    page.hostLookup.set({ first: 'C', last: 'M', results: [], searched: false, loading: false, error: '' });
+    page.searchHostPerson();
+    http.expectNone((r) => r.url.endsWith('/exception-lookup'));
+  });
 });

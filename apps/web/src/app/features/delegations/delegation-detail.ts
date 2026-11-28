@@ -11,6 +11,7 @@ import {
   AssignmentEntry,
   DelegationStats,
   DelegationsApiService,
+  ExceptionLookupRow,
   PersonLite,
   Repartition,
   RepartitionTransport,
@@ -352,11 +353,55 @@ export class DelegationDetailPage implements OnInit {
 
   // --------------------------------------------------------------- exceptions
 
+  /** Création d'exception : depuis l'origine (une de mes personnes) ou côté accueil (une personne d'ailleurs, retrouvée par nom exact). */
+  protected readonly exceptionMode = signal<'origin' | 'host'>('origin');
+  protected readonly hostLookup = signal<{
+    first: string;
+    last: string;
+    results: ExceptionLookupRow[];
+    searched: boolean;
+    loading: boolean;
+    error: string;
+  }>({ first: '', last: '', results: [], searched: false, loading: false, error: '' });
+
+  protected setExceptionMode(mode: 'origin' | 'host') {
+    this.exceptionMode.set(mode);
+    this.exceptionForm.update((f) => ({ ...f, personKey: '' }));
+  }
+
+  protected searchHostPerson() {
+    const h = this.hostLookup();
+    if (h.first.trim().length < 2 || h.last.trim().length < 2) {
+      this.hostLookup.update((x) => ({ ...x, error: 'Saisissez le prénom et le nom exacts (2 lettres minimum).' }));
+      return;
+    }
+    this.hostLookup.update((x) => ({ ...x, loading: true, error: '', results: [] }));
+    this.api.lookupExceptionPerson(this.delegationId, h.first, h.last).subscribe({
+      next: (results) =>
+        this.hostLookup.update((x) => ({ ...x, results, searched: true, loading: false })),
+      error: () =>
+        this.hostLookup.update((x) => ({
+          ...x,
+          loading: false,
+          searched: false,
+          error: 'La recherche n’a pas pu être faite.',
+        })),
+    });
+  }
+
+  protected pickHostPerson(row: ExceptionLookupRow) {
+    this.exceptionForm.update((f) => ({ ...f, personKey: `${row.personType}:${row.id}` }));
+  }
+
+  protected kindLabel(kind: string): string {
+    return kind === 'JEUNE' ? 'Jeune' : kind === 'ANIMATEUR' ? 'Animateur' : kind === 'BENEVOLE' ? 'Bénévole' : kind;
+  }
+
   protected createException() {
     const f = this.exceptionForm();
     const [personType, idStr] = f.personKey.split(':');
     const personId = Number(idStr);
-    const toDelegationId = f.toDelegationId;
+    const toDelegationId = this.exceptionMode() === 'host' ? this.delegationId : f.toDelegationId;
     if ((personType !== 'PARTICIPANT' && personType !== 'VOLUNTEER') || !personId || !toDelegationId)
       return;
     this.api
@@ -371,6 +416,7 @@ export class DelegationDetailPage implements OnInit {
         next: (created) => {
           const noteRefused = (created as { noteStatus?: string } | null)?.noteStatus === 'NOT_ALLOWED';
           // Note refusée : l'exception est bien créée, le texte saisi est conservé et rien n'annonce une note enregistrée.
+          this.hostLookup.set({ first: '', last: '', results: [], searched: false, loading: false, error: '' });
           this.exceptionForm.set({
             personKey: '',
             toDelegationId: null,

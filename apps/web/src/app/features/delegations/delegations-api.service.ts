@@ -29,6 +29,15 @@ export interface TransportPayload {
   notes?: string | null;
 }
 
+export interface ExceptionLookupRow {
+  personType: PersonType;
+  id: number;
+  firstName: string;
+  lastName: string;
+  delegationName: string;
+  kind: string;
+}
+
 export interface PersonLite {
   personType: PersonType;
   id: number;
@@ -202,6 +211,14 @@ export class DelegationsApiService {
     },
   ) {
     return this.http.post(`${this.base}/${delegationId}/exceptions`, payload);
+  }
+
+  /** Côté accueil : une personne d'une autre délégation, par prénom et nom exacts (résultat minimal). */
+  lookupExceptionPerson(delegationId: number, firstName: string, lastName: string) {
+    return this.http.post<ExceptionLookupRow[]>(`${this.base}/${delegationId}/exception-lookup`, {
+      firstName,
+      lastName,
+    });
   }
 
   /** Id et nom de toutes les délégations (destinations d'une exception), sans autre donnée. */

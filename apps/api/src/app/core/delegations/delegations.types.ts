@@ -7,6 +7,7 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  MinLength,
   Min,
 } from 'class-validator';
 import { AssignmentPersonType, TransportDirection, TransportMode } from '../entities';
@@ -98,6 +99,20 @@ export class AssignTransportDto {
   @ApiProperty({ example: 128 })
   @IsInt()
   personId!: number;
+}
+
+export class ExceptionLookupDto {
+  @ApiProperty({ example: 'Camille' })
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  firstName!: string;
+
+  @ApiProperty({ example: 'Martin' })
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  lastName!: string;
 }
 
 export class CreateNoteDto {

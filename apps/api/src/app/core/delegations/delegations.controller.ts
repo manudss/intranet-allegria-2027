@@ -29,6 +29,7 @@ type UserRequest = { user: { id: number; email: string; roles: string[] } };
 import {
   AssignTransportDto,
   CreateExceptionDto,
+  ExceptionLookupDto,
   CreateTransportDto,
   RepartitionQueryDto,
   TransportsQueryDto,
@@ -132,6 +133,20 @@ export class DelegationsController {
         ? { all: false, groupIds: await this.accessRights.groupIdsForUser(req.user.id) }
         : null;
     return this.delegationsService.createException(id, dto, scope, author, noteScope);
+  }
+
+  @ApiOperation({
+    summary:
+      'Côté accueil : retrouver une personne d une autre délégation par prénom et nom exacts (résultat minimal, 5 maximum, journalisé)',
+  })
+  @Post(':id/exception-lookup')
+  exceptionLookup(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ValidationPipe({ whitelist: true })) dto: ExceptionLookupDto,
+    @Req() req: UserRequest,
+    @AccessScope() scope: AccessScopeInfo,
+  ) {
+    return this.delegationsService.lookupPersonForException(id, dto.firstName, dto.lastName, scope, req.user.id);
   }
 
   @ApiOperation({ summary: 'Retirer une affectation (retour dans l à placer de la délégation d origine)' })

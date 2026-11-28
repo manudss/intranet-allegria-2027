@@ -271,22 +271,80 @@
       <h2>Nouvelle exception ({{ direction() === 'ALLER' ? 'aller' : 'retour' }})</h2>
     </header>
     <form class="drawer-form" id="exception-form" (submit)="createException(); $event.preventDefault()">
-      <app-select-field
-        label="Personne (membre de cette délégation)"
-        [searchable]="true"
-        [options]="memberOptions()"
-        [value]="exceptionForm().personKey || null"
-        placeholder="Rechercher par nom…"
-        (valueChange)="exceptionForm.update((f) => ({ ...f, personKey: $event ?? '' }))"
-      />
-      <app-select-field
-        label="Délégation d'accueil"
-        [searchable]="true"
-        [options]="delegationOptions()"
-        [value]="exceptionForm().toDelegationId === null ? null : '' + exceptionForm().toDelegationId"
-        placeholder="Rechercher une délégation…"
-        (valueChange)="exceptionForm.update((f) => ({ ...f, toDelegationId: $event ? +$event : null }))"
-      />
+      <div class="field-block wide" role="group" aria-label="Sens de l'exception">
+        <button
+          tuiButton
+          type="button"
+          size="s"
+          [appearance]="exceptionMode() === 'origin' ? 'primary' : 'secondary'"
+          (click)="setExceptionMode('origin')"
+        >
+          Une personne de cette délégation part ailleurs
+        </button>
+        <button
+          tuiButton
+          type="button"
+          size="s"
+          [appearance]="exceptionMode() === 'host' ? 'primary' : 'secondary'"
+          (click)="setExceptionMode('host')"
+        >
+          Une personne d'une autre délégation vient chez nous
+        </button>
+      </div>
+      @if (exceptionMode() === 'origin') {
+        <app-select-field
+          label="Personne (membre de cette délégation)"
+          [searchable]="true"
+          [options]="memberOptions()"
+          [value]="exceptionForm().personKey || null"
+          placeholder="Rechercher par nom…"
+          (valueChange)="exceptionForm.update((f) => ({ ...f, personKey: $event ?? '' }))"
+        />
+        <app-select-field
+          label="Délégation d'accueil"
+          [searchable]="true"
+          [options]="delegationOptions()"
+          [value]="exceptionForm().toDelegationId === null ? null : '' + exceptionForm().toDelegationId"
+          placeholder="Rechercher une délégation…"
+          (valueChange)="exceptionForm.update((f) => ({ ...f, toDelegationId: $event ? +$event : null }))"
+        />
+      } @else {
+        <div class="field-block wide host-lookup">
+          <p class="help">
+            Retrouvez la personne par son prénom et son nom exacts. Aucune liste n'est affichée : seuls le nom, la délégation d'origine et le type apparaissent, sans coordonnées ni santé. La recherche est journalisée.
+          </p>
+          <label class="field-label" for="x-first">Prénom exact</label>
+          <tui-textfield>
+            <input tuiTextfield id="x-first" name="xfirst" autocomplete="off" [ngModel]="hostLookup().first" (ngModelChange)="hostLookup.update((h) => ({ ...h, first: $event }))" />
+          </tui-textfield>
+          <label class="field-label" for="x-last">Nom exact</label>
+          <tui-textfield>
+            <input tuiTextfield id="x-last" name="xlast" autocomplete="off" [ngModel]="hostLookup().last" (ngModelChange)="hostLookup.update((h) => ({ ...h, last: $event }))" />
+          </tui-textfield>
+          <button tuiButton type="button" size="s" appearance="secondary" [disabled]="hostLookup().loading" (click)="searchHostPerson()">
+            Rechercher
+          </button>
+          @if (hostLookup().error) {
+            <p class="error" role="alert">{{ hostLookup().error }}</p>
+          }
+          @if (hostLookup().searched && hostLookup().results.length === 0) {
+            <p class="help">Aucune personne avec ce prénom et ce nom exacts dans une autre délégation.</p>
+          }
+          @for (row of hostLookup().results; track row.personType + row.id) {
+            <button
+              tuiButton
+              type="button"
+              size="s"
+              class="host-result"
+              [appearance]="exceptionForm().personKey === row.personType + ':' + row.id ? 'primary' : 'outline'"
+              (click)="pickHostPerson(row)"
+            >
+              {{ row.firstName }} {{ row.lastName }} · {{ row.delegationName }} · {{ kindLabel(row.kind) }}
+            </button>
+          }
+          <p class="help">Délégation d'accueil : cette délégation.</p>
+        </div>
+      }
       <div class="field-block wide">
         <label class="field-label" for="x-note">Note (facultatif)</label>
         <tui-textfield>

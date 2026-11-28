@@ -136,6 +136,67 @@ describe('DelegationsService — destinations d exception', () => {
   });
 });
 
+describe('DelegationsService — recherche ciblée côté accueil', () => {
+  const person = (id: number, delegationId: number, firstName: string, lastName: string) => ({
+    id,
+    firstName,
+    lastName,
+    type: 'JEUNE',
+    dateOfBirth: '2010-01-01',
+    emergencyContactPhone: '0600000000',
+    group: group(delegationId, delegationId === LYON ? 'Lyon' : 'Annecy'),
+  });
+  const build = (participants: Row[], volunteers: Row[] = []) =>
+    new DelegationsService(
+      repo() as never,
+      repo() as never,
+      repo() as never,
+      repo([group(LYON, 'Lyon'), group(ANNECY, 'Annecy')]) as never,
+      { find: vi.fn(async () => participants) } as never,
+      { find: vi.fn(async () => volunteers) } as never,
+      repo([]) as never,
+    );
+
+  it('prénom et nom exacts (casse ignorée) : résultat minimal, sans date de naissance ni contact', async () => {
+    const svc = build([person(1, ANNECY, 'Camille', 'Martin')]);
+    const out = await svc.lookupPersonForException(LYON, ' camille ', 'MARTIN', lyonOnly, 9);
+    expect(out).toEqual([
+      { personType: 'PARTICIPANT', id: 1, firstName: 'Camille', lastName: 'Martin', delegationName: 'Annecy', kind: 'JEUNE' },
+    ]);
+    expect(JSON.stringify(out)).not.toMatch(/2010|0600000000/);
+  });
+
+  it('refuse toute saisie partielle : un préfixe ne renvoie rien', async () => {
+    const svc = build([person(1, ANNECY, 'Camille', 'Martin')]);
+    expect(await svc.lookupPersonForException(LYON, 'Cam', 'Martin', lyonOnly)).toEqual([]);
+    expect(await svc.lookupPersonForException(LYON, 'Camille', 'Mart', lyonOnly)).toEqual([]);
+  });
+
+  it('exclut les membres de la délégation d accueil (déjà visibles chez elle) et plafonne à 5', async () => {
+    const many = Array.from({ length: 8 }, (_, i) => person(10 + i, ANNECY, 'Jean', 'Dupont'));
+    const svc = build([person(99, LYON, 'Jean', 'Dupont'), ...many]);
+    const out = await svc.lookupPersonForException(LYON, 'Jean', 'Dupont', lyonOnly);
+    expect(out).toHaveLength(5);
+    expect(out.some((r) => r.id === 99)).toBe(false);
+  });
+
+  it('délégation d accueil hors périmètre : refusé ; saisie trop courte : refusée', async () => {
+    const svc = build([person(1, ANNECY, 'Camille', 'Martin')]);
+    await expect(svc.lookupPersonForException(ANNECY, 'Camille', 'Martin', lyonOnly)).rejects.toThrow();
+    await expect(svc.lookupPersonForException(LYON, 'C', 'M', lyonOnly)).rejects.toThrow();
+  });
+
+  it('la journalisation ne contient pas les noms saisis', async () => {
+    const svc = build([person(1, ANNECY, 'Camille', 'Martin')]);
+    const log = vi.spyOn((svc as unknown as { logger: { log: (m: string) => void } }).logger, 'log').mockImplementation(() => undefined);
+    await svc.lookupPersonForException(LYON, 'Camille', 'Martin', lyonOnly, 9);
+    expect(log).toHaveBeenCalledTimes(1);
+    const line = String(log.mock.calls[0][0]);
+    expect(line).toContain('resultats=1');
+    expect(line).not.toMatch(/Camille|Martin/);
+  });
+});
+
 describe('DelegationsService — stats', () => {
   it('une exception reçue compte dans les totaux de l accueil, une sortante sort des totaux de l origine', async () => {
     const svc = service({

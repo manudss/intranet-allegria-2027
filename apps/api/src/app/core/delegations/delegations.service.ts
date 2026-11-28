@@ -2,10 +2,11 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { ILike, In, Repository } from 'typeorm';
 import type { AccessScopeInfo } from '../auth/access-module.decorator';
 import {
   AssignmentPersonType,
@@ -631,6 +632,65 @@ export class DelegationsService {
    * une passe pour toutes les délégations visibles du périmètre, sans données
    * de santé. Les métadonnées zone/pays viennent du catalogue vérifié CEF.
    */
+  private readonly logger = new Logger(DelegationsService.name);
+
+  /**
+   * Côté accueil : retrouver UNE personne d'une autre délégation par prénom ET nom exacts
+   * (insensible à la casse), pour lui créer une exception vers la délégation d'accueil.
+   * Jamais de liste ni de recherche partielle ; au plus 5 résultats ; seulement prénom, nom,
+   * délégation d'origine et type. Aucune date de naissance, aucun contact, aucune donnée de santé.
+   * La recherche est journalisée (compte, délégation d'accueil, nombre de résultats), sans les noms saisis.
+   */
+  async lookupPersonForException(
+    hostDelegationId: number,
+    firstName: string,
+    lastName: string,
+    scope: AccessScopeInfo,
+    userId?: number,
+  ): Promise<
+    { personType: AssignmentPersonType; id: number; firstName: string; lastName: string; delegationName: string; kind: string }[]
+  > {
+    await this.findDelegation(hostDelegationId, scope);
+    const first = firstName.trim().toLowerCase();
+    const last = lastName.trim().toLowerCase();
+    if (first.length < 2 || last.length < 2) {
+      throw new BadRequestException('Prénom et nom exacts requis (2 lettres minimum chacun)');
+    }
+    const exact = (value: string) => ILike(value.trim().replace(/[\\%_]/g, (c) => `\\${c}`));
+    const where = { firstName: exact(firstName), lastName: exact(lastName) };
+    const [participants, volunteers] = await Promise.all([
+      this.participantsRepository.find({ where, relations: { group: true }, take: 20 }),
+      this.volunteersRepository.find({ where, relations: { group: true }, take: 20 }),
+    ]);
+    const matches = (p: { firstName: string; lastName: string; group?: { id: number } | null }) =>
+      p.firstName.trim().toLowerCase() === first &&
+      p.lastName.trim().toLowerCase() === last &&
+      !!p.group &&
+      p.group.id !== hostDelegationId;
+    const results = [
+      ...participants.filter(matches).map((p) => ({
+        personType: AssignmentPersonType.PARTICIPANT,
+        id: p.id,
+        firstName: p.firstName,
+        lastName: p.lastName,
+        delegationName: p.group!.name,
+        kind: String(p.type),
+      })),
+      ...volunteers.filter(matches).map((v) => ({
+        personType: AssignmentPersonType.VOLUNTEER,
+        id: v.id,
+        firstName: v.firstName,
+        lastName: v.lastName,
+        delegationName: v.group!.name,
+        kind: 'BENEVOLE',
+      })),
+    ].slice(0, 5);
+    this.logger.log(
+      `exception-lookup user=${userId ?? 'n/a'} accueil=${hostDelegationId} resultats=${results.length}`,
+    );
+    return results;
+  }
+
   /**
    * Destinations possibles d'une exception : id et nom de chaque délégation, rien d'autre
    * (ni effectifs, ni personnes, ni responsables). Nécessaire pour qu'un responsable puisse

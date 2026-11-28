@@ -90,7 +90,7 @@ describe('DelegationFichePage (lot 4 : fiche en vues)', () => {
 
   afterEach(() => TestBed.resetTestingModule());
 
-  async function setup() {
+  async function setup(notesForbidden = false) {
     await TestBed.configureTestingModule({
       imports: [HostComponent],
       providers: [
@@ -118,12 +118,21 @@ describe('DelegationFichePage (lot 4 : fiche en vues)', () => {
     http
       .expectOne((r) => r.url === '/api/delegations/2/repartition' && r.params.get('direction') === 'RETOUR')
       .flush({ ...REPARTITION, direction: 'RETOUR', toAssign: [], exceptionsReceived: [] });
-    http.expectOne('/api/person-notes?filter=ALL').flush([]);
+    const notesReq = http.expectOne('/api/person-notes?filter=ALL');
+    if (notesForbidden) notesReq.flush({ message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
+    else notesReq.flush([]);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
     return { fixture };
   }
+
+  it("s'ouvre sous le seul droit TRANSPORT : notes refusées (403) n'empêchent pas la fiche", async () => {
+    const { fixture } = await setup(true);
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain("Délégation d'Annecy");
+    expect(el.textContent).not.toContain('Le chargement de la délégation a échoué');
+  });
 
   it("n'appelle pas /api/groups et masque le lien de retour pour une seule délégation", async () => {
     const { fixture } = await setup();

@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { catchError, forkJoin, of } from 'rxjs';
 import { SHARED_IMPORTS } from '../../../shared/shared-imports';
 import {
   DelegationSummary,
@@ -46,6 +46,7 @@ export class DelegationFichePage implements OnInit {
     this.noteRows().reduce((total, row) => total + row.notesCount, 0),
   );
   /** Le lien de retour n'a de sens que si la personne voit plusieurs délégations. */
+  protected readonly notesUnavailable = signal(false);
   protected readonly seesSeveral = signal(false);
   protected readonly delegationNames = signal<Map<number, string>>(new Map());
 
@@ -59,7 +60,14 @@ export class DelegationFichePage implements OnInit {
       persons: this.api.persons(this.delegationId),
       aller: this.api.repartition(this.delegationId, 'ALLER'),
       retour: this.api.repartition(this.delegationId, 'RETOUR'),
-      notes: this.api.notesFeed('ALL'),
+      // Les notes relèvent du module PARTICIPANTS : sans ce droit, la fiche s'ouvre
+      // quand même (identité, personnes, répartition) et l'onglet Notes reste vide.
+      notes: this.api.notesFeed('ALL').pipe(
+        catchError(() => {
+          this.notesUnavailable.set(true);
+          return of([] as NoteFeedRow[]);
+        }),
+      ),
     }).subscribe({
       next: (r) => {
         this.summary.set(r.summaries.find((s) => s.id === this.delegationId) ?? null);

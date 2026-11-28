@@ -232,6 +232,9 @@
   } @if (view() === 'notes') {
   <section class="panel">
     <h2>Notes logistiques des personnes de la délégation</h2>
+    @if (notesUnavailable()) {
+    <p class="muted">Les notes ne sont pas accessibles avec vos droits actuels.</p>
+    }
     @for (row of noteRows(); track row.person ? row.person.personType + ':' + row.person.id :
     $index) {
     <p class="note-line">

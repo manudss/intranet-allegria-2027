@@ -631,6 +631,16 @@ export class DelegationsService {
    * une passe pour toutes les délégations visibles du périmètre, sans données
    * de santé. Les métadonnées zone/pays viennent du catalogue vérifié CEF.
    */
+  /**
+   * Destinations possibles d'une exception : id et nom de chaque délégation, rien d'autre
+   * (ni effectifs, ni personnes, ni responsables). Nécessaire pour qu'un responsable puisse
+   * choisir où envoyer l'une de SES personnes ; aucune donnée de personne hors périmètre.
+   */
+  async destinations(): Promise<{ id: number; name: string }[]> {
+    const groups = await this.groupsRepository.find({ order: { name: 'ASC' } });
+    return groups.map((g) => ({ id: g.id, name: g.name }));
+  }
+
   async listSummaries(scope: AccessScopeInfo) {
     const groups = await this.groupsRepository.find({ order: { name: 'ASC' } });
     const visible = scope.all ? groups : groups.filter((g) => scope.groupIds.includes(g.id));

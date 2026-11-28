@@ -204,6 +204,11 @@ export class DelegationsApiService {
     return this.http.post(`${this.base}/${delegationId}/exceptions`, payload);
   }
 
+  /** Id et nom de toutes les délégations (destinations d'une exception), sans autre donnée. */
+  destinations() {
+    return this.http.get<{ id: number; name: string }[]>(`${this.base}/destinations`);
+  }
+
   notesFeed(filter: 'WITH_NOTES' | 'UNANSWERED' | 'ALL', q?: string) {
     let params = new HttpParams().set('filter', filter);
     if (q) params = params.set('q', q);

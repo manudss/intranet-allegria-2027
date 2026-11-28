@@ -97,7 +97,7 @@ describe('DelegationDetailPage (refonte : onglets, deux panneaux, sélection)', 
     const fixture = TestBed.createComponent(HostComponent);
     fixture.detectChanges();
     const http = TestBed.inject(HttpTestingController);
-    http.expectOne((r) => r.url === '/api/delegations').flush([{ id: 2, name: "Délégation d'Annecy" }]);
+    http.expectOne((r) => r.url === '/api/delegations/destinations').flush([{ id: 2, name: "Délégation d'Annecy" }]);
     http.match((r) => r.url === '/api/delegations/2/persons').forEach((r) => r.flush([]));
     http.expectOne((r) => r.url === '/api/delegations/2/repartition').flush(REPARTITION);
     http.expectOne('/api/delegations/2/stats').flush({

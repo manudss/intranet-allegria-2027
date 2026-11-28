@@ -52,6 +52,12 @@ export class DelegationsController {
     return this.delegationsService.listSummaries(scope);
   }
 
+  @ApiOperation({ summary: 'Destinations possibles d une exception : id et nom des délégations, sans autre donnée' })
+  @Get('destinations')
+  destinations() {
+    return this.delegationsService.destinations();
+  }
+
   @ApiOperation({ summary: 'Sous-délégations (trajets) d une délégation' })
   @Get(':id/transports')
   listTransports(

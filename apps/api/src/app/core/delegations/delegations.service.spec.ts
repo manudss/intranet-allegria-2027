@@ -125,6 +125,17 @@ const service = (repos: {
 const all = { all: true } as const;
 const lyonOnly = { all: false, groupIds: [LYON] } as const;
 
+describe('DelegationsService — destinations d exception', () => {
+  it('ne renvoie que id et nom de chaque délégation, aucune autre donnée', async () => {
+    const rows = await service({}).destinations();
+    expect(rows).toEqual([
+      { id: LYON, name: 'Lyon' },
+      { id: ANNECY, name: 'Annecy' },
+    ]);
+    for (const r of rows) expect(Object.keys(r).sort()).toEqual(['id', 'name']);
+  });
+});
+
 describe('DelegationsService — stats', () => {
   it('une exception reçue compte dans les totaux de l accueil, une sortante sort des totaux de l origine', async () => {
     const svc = service({

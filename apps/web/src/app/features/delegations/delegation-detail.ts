@@ -116,10 +116,10 @@ export class DelegationDetailPage implements OnInit {
   ngOnInit() {
     this.delegationId = Number(this.route.snapshot.paramMap.get('id'));
     // Delegations visibles pour ce compte (périmètre serveur) : un responsable n'a pas accès à /api/groups
-    // (403 puis /unauthorized). On lit donc les résumés de délégations, déjà bornés à son périmètre.
+    // (403 puis /unauthorized). On lit la liste id et nom des délégations (destinations d'une exception), sans autre donnée.
     forkJoin({
       groups: this.api
-        .listSummaries()
+        .destinations()
         .pipe(map((rows) => rows.map((r) => ({ id: r.id, name: r.name }) as unknown as Group))),
     }).subscribe({
       next: ({ groups }) => {

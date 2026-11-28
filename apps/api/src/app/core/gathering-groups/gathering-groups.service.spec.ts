@@ -115,12 +115,17 @@ const build = (data: {
     } as never,
     sequenceLinks as never,
     {
-      find: vi.fn(async ({ where }: { where?: { repartitionId?: number; groupId?: number } }) =>
-        (data.links ?? []).filter(
-          (l) =>
-            (where?.repartitionId == null || l.repartitionId === where.repartitionId) &&
-            (where?.groupId == null || l.groupId === where.groupId),
-        ),
+      find: vi.fn(async ({ where }: { where?: { repartitionId?: number; groupId?: number | { _value?: number[] } } }) =>
+        (data.links ?? []).filter((l) => {
+          const gid = where?.groupId;
+          const gidOk =
+            gid == null
+              ? true
+              : typeof gid === 'object' && Array.isArray((gid as { _value?: number[] })._value)
+                ? (gid as { _value: number[] })._value.includes(l.groupId)
+                : l.groupId === gid;
+          return (where?.repartitionId == null || l.repartitionId === where.repartitionId) && gidOk;
+        }),
       ),
       delete: vi.fn(async () => undefined),
     } as never,
@@ -369,6 +374,33 @@ describe('proposition automatique', () => {
       { teamId: 13, groupId: 2, groupName: 'Groupe 2' },
       { teamId: 14, groupId: 2, groupName: 'Groupe 2' },
     ]);
+  });
+
+  it('tient compte des équipes déjà placées : le nouveau dispatch équilibre avec la charge initiale', async () => {
+    const { service } = build({
+      groups: [
+        group(1, { category: GatheringGroupCategory.TA, capacityPersons: null }),
+        group(2, { category: GatheringGroupCategory.TA, capacityPersons: null }),
+      ],
+      teams: [
+        team(20, ProgramSequenceTrack.TA, 'Déjà placée'),
+        team(11, ProgramSequenceTrack.TA, 'T11'),
+        team(12, ProgramSequenceTrack.TA, 'T12'),
+      ],
+      links: [{ groupId: 1, teamId: 20, repartitionId: 1 }],
+      sizes: {
+        20: { jeunes: 9, animateurs: 1 }, // 10 déjà dans le groupe 1
+        11: { jeunes: 5, animateurs: 1 }, // 6
+        12: { jeunes: 5, animateurs: 1 }, // 6
+      },
+    });
+    const out = await service.propose(1, ALL);
+    expect(out.unplaced).toEqual([]);
+    // L'équipe déjà placée n'est JAMAIS redistribuée : la proposition ne porte que sur les non placées.
+    expect(out.assignments.some((a) => a.teamId === 20)).toBe(false);
+    // Le groupe 2 (vide) reçoit la première équipe malgré l'ordre des identifiants,
+    // car le groupe 1 porte déjà 10 personnes.
+    expect(out.assignments[0]).toEqual({ teamId: 11, groupId: 2, groupName: 'Groupe 2' });
   });
 });
 

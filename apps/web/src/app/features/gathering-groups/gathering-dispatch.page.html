@@ -21,7 +21,10 @@
       @if (b.repartition.allowOverflow) {
         <span class="badge-derogation">Dérogation active</span>
       }
-      <span class="muted">{{ b.unplacedTeams.length }} équipe{{ b.unplacedTeams.length > 1 ? 's' : '' }} à placer</span>
+      <span class="muted">
+        {{ filteredTeams().length }} équipe{{ filteredTeams().length > 1 ? 's' : '' }} à placer
+        @if (activeFilters()) { (sur {{ b.unplacedTeams.length }} au total) }
+      </span>
     </div>
 
     @if (proposal(); as p) {
@@ -76,7 +79,7 @@
         [class.on]="panel() === 'teams'"
         (click)="panel.set('teams')"
       >
-        Équipes à placer ({{ b.unplacedTeams.length }})
+        Équipes à placer ({{ filteredTeams().length }}{{ activeFilters() ? ' sur ' + b.unplacedTeams.length : '' }})
       </button>
       <button
         type="button"
@@ -117,7 +120,7 @@
         </p>
         @if (filteredTeams().length === 0) {
           <p class="empty-state">
-            {{ filter() ? 'Aucune équipe ne correspond au filtre.' : 'Toutes les équipes sont placées.' }}
+            {{ activeFilters() ? 'Aucune équipe ne correspond aux filtres actifs.' : 'Toutes les équipes sont placées.' }}
           </p>
         }
         <ul class="team-list">

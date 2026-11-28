@@ -54,6 +54,15 @@ let nextId = 0;
       display: block;
       min-inline-size: 12rem;
     }
+
+    /* Taiga 5.16 ne fait flotter le libellé que pour un <label> placé APRÈS le champ
+       (sélecteur ~) ; notre libellé est avant. On reproduit le flottement dès que le
+       champ a une valeur ou le focus, sinon le libellé chevauche la valeur. */
+    :host tui-textfield:has(input:not(:placeholder-shown)) label[tuiLabel],
+    :host tui-textfield:focus-within label[tuiLabel] {
+      font: var(--t-label-font);
+      transform: translateY(calc(var(--t-label-y) - var(--tui-font-offset) / 2));
+    }
   `,
 })
 export class SelectFieldComponent<T> {
